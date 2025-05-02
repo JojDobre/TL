@@ -1,4 +1,5 @@
-const { League, Season, Round, Match, User } = require('../models');
+const { League, Season, Round, Match, User, UserSeason, Team, Sequelize } = require('../models');
+const { Op } = Sequelize;
 
 // Získanie všetkých líg
 const getAllLeagues = async (req, res) => {
@@ -10,31 +11,37 @@ const getAllLeagues = async (req, res) => {
     if (seasonId) where.seasonId = seasonId;
     if (type) where.type = type;
     
-    // Načítanie líg s počtom kôl
+    // Načítanie líg bez pokročilých agregácií
     const leagues = await League.findAll({
       where,
       include: [
         {
           model: Season,
           attributes: ['id', 'name', 'type']
-        },
-        {
-          model: Round,
-          attributes: ['id', 'name']
         }
       ],
-      attributes: {
-        include: [
-          [sequelize.fn('COUNT', sequelize.col('Rounds.id')), 'roundsCount']
-        ]
-      },
-      group: ['League.id', 'Season.id', 'Rounds.id'],
       order: [['createdAt', 'DESC']]
     });
     
+    // Manuálne načítame počty kôl pre každú ligu
+    const leaguesWithCounts = await Promise.all(
+      leagues.map(async (league) => {
+        const roundsCount = await Round.count({
+          where: { leagueId: league.id }
+        });
+        
+        // Vrátime ligu s pridaným počtom kôl
+        const leagueJson = league.toJSON();
+        return {
+          ...leagueJson,
+          roundsCount
+        };
+      })
+    );
+    
     res.status(200).json({
       success: true,
-      data: leagues
+      data: leaguesWithCounts
     });
   } catch (error) {
     console.error('Chyba pri získavaní líg:', error);
@@ -50,6 +57,8 @@ const getAllLeagues = async (req, res) => {
 const getLeagueById = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    console.log(`Fetching league with ID: ${id}`);
     
     // Načítanie ligy s kolami a zápasmi
     const league = await League.findByPk(id, {
@@ -67,15 +76,7 @@ const getLeagueById = async (req, res) => {
         },
         {
           model: Round,
-          include: [
-            {
-              model: Match,
-              include: [
-                { model: Team, as: 'homeTeam' },
-                { model: Team, as: 'awayTeam' }
-              ]
-            }
-          ]
+          attributes: ['id', 'name', 'description', 'startDate', 'endDate', 'active']
         }
       ]
     });
@@ -87,9 +88,28 @@ const getLeagueById = async (req, res) => {
       });
     }
     
+    // Manuálne načítame počty zápasov pre každé kolo
+    const rounds = await Promise.all(
+      league.Rounds.map(async (round) => {
+        const matchesCount = await Match.count({
+          where: { roundId: round.id }
+        });
+        
+        const roundJson = round.toJSON();
+        return {
+          ...roundJson,
+          matchesCount
+        };
+      })
+    );
+    
+    // Vytvoríme objekt s výslednou ligou a kolami
+    const result = league.toJSON();
+    result.Rounds = rounds;
+    
     res.status(200).json({
       success: true,
-      data: league
+      data: result
     });
   } catch (error) {
     console.error('Chyba pri získavaní detailu ligy:', error);

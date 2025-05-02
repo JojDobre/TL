@@ -1,4 +1,5 @@
 const db = require('../models');
+const seedTeams = require('../seeds/teams.seed');
 
 const syncDatabase = async () => {
   try {
@@ -24,14 +25,17 @@ const initializeData = async () => {
     // Vytvorenie admin používateľa
     const adminUser = await db.User.create({
       username: 'admin',
-      email: 'admin@example.com',
-      password: '$2b$10$OMRu/9Yxf8AK3f8POQgMbeHIQQlvVMYG1QZ4uQTIGOTcS0/bA2VZq', // heslo: admin123
+      email: 'admin@admin.com',
+      password: 'admin', // heslo: admin123
       role: 'admin',
       firstName: 'Admin',
       lastName: 'User',
     });
     
     console.log('Admin používateľ bol vytvorený:', adminUser.id);
+
+    // Vloženie základných tímov
+    await seedTeams();
     
     // Vytvorenie základných achievementov
     const achievements = [

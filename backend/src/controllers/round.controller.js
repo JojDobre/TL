@@ -1,5 +1,5 @@
-const { Round, League, Match, User, UserSeason, Team } = require('../models');
-const { Op } = require('sequelize');
+const { Round, League, Match, User, UserSeason, Season, Team, Tip, Sequelize } = require('../models');
+const { Op } = Sequelize;
 
 // Získanie všetkých kôl
 const getAllRounds = async (req, res) => {
@@ -10,31 +10,37 @@ const getAllRounds = async (req, res) => {
     let where = {};
     if (leagueId) where.leagueId = leagueId;
     
-    // Načítanie kôl s počtom zápasov
+    // Načítanie kôl bez pokročilých agregácií
     const rounds = await Round.findAll({
       where,
       include: [
         {
           model: League,
           attributes: ['id', 'name', 'seasonId']
-        },
-        {
-          model: Match,
-          attributes: ['id', 'homeTeamId', 'awayTeamId', 'status']
         }
       ],
-      attributes: {
-        include: [
-          [sequelize.fn('COUNT', sequelize.col('Matches.id')), 'matchesCount']
-        ]
-      },
-      group: ['Round.id', 'League.id', 'Matches.id'],
       order: [['startDate', 'ASC']]
     });
     
+    // Manuálne načítame počty zápasov pre každé kolo
+    const roundsWithCounts = await Promise.all(
+      rounds.map(async (round) => {
+        const matchesCount = await Match.count({
+          where: { roundId: round.id }
+        });
+        
+        // Vrátime kolo s pridaným počtom zápasov
+        const roundJson = round.toJSON();
+        return {
+          ...roundJson,
+          matchesCount
+        };
+      })
+    );
+    
     res.status(200).json({
       success: true,
-      data: rounds
+      data: roundsWithCounts
     });
   } catch (error) {
     console.error('Chyba pri získavaní kôl:', error);

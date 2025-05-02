@@ -11,6 +11,10 @@ const userRoutes = require('./src/routes/user.routes');
 const seasonRoutes = require('./src/routes/season.routes');
 const leagueRoutes = require('./src/routes/league.routes');
 const roundRoutes = require('./src/routes/round.routes');
+const matchRoutes = require('./src/routes/match.routes');
+const teamRoutes = require('./src/routes/team.routes');
+const tipRoutes = require('./src/routes/tip.routes');
+
 // Vytvorenie express aplikácie
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -28,6 +32,10 @@ app.use('/api/users', userRoutes);
 app.use('/api/seasons', seasonRoutes);
 app.use('/api/leagues', leagueRoutes);
 app.use('/api/rounds', roundRoutes);
+app.use('/api/matches', matchRoutes);
+app.use('/api/teams', teamRoutes);
+app.use('/api/tips', tipRoutes);
+
 
 // Základná route pre testovanie
 app.get('/', (req, res) => {
