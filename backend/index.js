@@ -1,25 +1,49 @@
-// backend/index.js
-require('dotenv').config();                 // Nacitanie premennych z .env suboru
-const express = require('express');         // Import express frameworku
-const cors = require('cors');               // Import CORS middleware pre cross-origin requesty
-const helmet = require('helmet');           // Import helmet pre zabezpecenie HTTP hlaviciek
-const morgan = require('morgan');           // Import morgan pre logovanie HTTP requestov
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const syncDatabase = require('./src/config/db.sync');
 
-// Vytvorenie express aplikacie
+// Importovanie routes
+const authRoutes = require('./src/routes/auth.routes');
+const userRoutes = require('./src/routes/user.routes');
+const seasonRoutes = require('./src/routes/season.routes');
+const leagueRoutes = require('./src/routes/league.routes');
+const roundRoutes = require('./src/routes/round.routes');
+// Vytvorenie express aplikácie
 const app = express();
-const PORT = process.env.PORT || 5000;      // Definovanie portu z .env alebo default 5000
+const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());                            // Povolenie CORS
-app.use(helmet());                          // Pridanie bezpecnostnych hlaviciek
-app.use(morgan('dev'));                     // Logovanie requestov
-app.use(express.json());                    // Parsovanie JSON tela requestov
-app.use(express.urlencoded({ extended: true })); // Parsovanie URL-encoded tela requestov
+app.use(cors());
+app.use(helmet());
+app.use(morgan('dev'));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Zakladna route pre testovanie
+// Registrácia routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/seasons', seasonRoutes);
+app.use('/api/leagues', leagueRoutes);
+app.use('/api/rounds', roundRoutes);
+
+// Základná route pre testovanie
 app.get('/', (req, res) => {
   res.send('Tipovacia aplikácia API beží!');
 });
+
+// Synchronizácia databázy pri spustení aplikácie (len pre vývoj)
+if (process.env.NODE_ENV === 'development') {
+  syncDatabase()
+    .then(() => {
+      console.log('Databáza bola úspešne inicializovaná.');
+    })
+    .catch((error) => {
+      console.error('Chyba pri inicializácii databázy:', error);
+    });
+}
 
 // Spustenie servera
 app.listen(PORT, () => {
