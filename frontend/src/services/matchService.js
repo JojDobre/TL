@@ -55,3 +55,16 @@ export const deleteMatch = async (id) => {
     throw error;
   }
 };
+
+// Vyhodnotenie zápasu
+export const evaluateMatch = async (id, resultData) => {
+  try {
+    const response = await axios.post(`/api/matches/${id}/evaluate`, resultData);
+    return response.data.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+
+

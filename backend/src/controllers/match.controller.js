@@ -1,5 +1,5 @@
 // backend/src/controllers/match.controller.js
-const { Match, Round, Team, League, Season, User, Sequelize } = require('../models');
+const { Match, Round, Team, League, Season, User, Sequelize, Tip } = require('../models');
 const { Op } = Sequelize;
 
 // Získanie všetkých zápasov
@@ -337,10 +337,160 @@ const deleteMatch = async (req, res) => {
   }
 };
 
+// Vyhodnotenie zápasu a výpočet bodov za tipy
+const evaluateMatch = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { homeScore, awayScore, status } = req.body;
+    const userId = req.userId;
+    
+    // Načítanie zápasu
+    const match = await Match.findByPk(id, {
+      include: [
+        {
+          model: Round,
+          include: [
+            {
+              model: League,
+              attributes: ['id', 'seasonId', 'scoringSystem'],
+              include: [
+                {
+                  model: Season
+                }
+              ]
+            }
+          ]
+        },
+        {
+          model: Tip,
+          include: [
+            {
+              model: User,
+              attributes: ['id', 'username']
+            }
+          ]
+        }
+      ]
+    });
+    
+    if (!match) {
+      return res.status(404).json({
+        success: false,
+        message: 'Zápas nebol nájdený.'
+      });
+    }
+    
+    // Kontrola, či má užívateľ oprávnenie vyhodnotiť zápas
+    const user = await User.findByPk(userId);
+    
+    // Admin má vždy oprávnenie
+    if (user.role !== 'admin' && match.Round.League.Season.creatorId !== userId) {
+      // Tu by bola kontrola, či je používateľ admin sezóny
+      const userSeasonRole = await UserSeason.findOne({
+        where: { 
+          userId, 
+          seasonId: match.Round.League.Season.id,
+          role: 'admin'
+        }
+      });
+      
+      if (!userSeasonRole) {
+        return res.status(403).json({
+          success: false,
+          message: 'Nemáte oprávnenie na vyhodnotenie tohto zápasu.'
+        });
+      }
+    }
+    
+    // Aktualizácia zápasu
+    match.homeScore = homeScore;
+    match.awayScore = awayScore;
+    match.status = status || 'finished';
+    
+    await match.save();
+    
+    // Výpočet bodov za tipy
+    if (status === 'finished' && match.Tips && match.Tips.length > 0) {
+      const scoringSystem = match.Round.League.scoringSystem || {
+        exactScore: 10,
+        correctGoals: 1,
+        correctWinner: 3,
+        goalDifference: 2
+      };
+      
+      // Výpočet pre každý tip
+      for (const tip of match.Tips) {
+        let points = 0;
+        
+        // Určenie víťaza zápasu
+        const matchWinner = homeScore > awayScore 
+          ? 'home' 
+          : homeScore < awayScore 
+            ? 'away' 
+            : 'draw';
+        
+        // Výpočet bodov pre rôzne typy tipov
+        if (match.tipType === 'exact_score') {
+          // Presný výsledok
+          if (tip.homeScore === homeScore && tip.awayScore === awayScore) {
+            points += scoringSystem.exactScore;
+          } else {
+            // Správny počet gólov domáceho tímu
+            if (tip.homeScore === homeScore) {
+              points += scoringSystem.correctGoals;
+            }
+            
+            // Správny počet gólov hosťujúceho tímu
+            if (tip.awayScore === awayScore) {
+              points += scoringSystem.correctGoals;
+            }
+            
+            // Správny víťaz alebo remíza
+            if (tip.winner === matchWinner) {
+              points += scoringSystem.correctWinner;
+            }
+            
+            // Správny gólový rozdiel
+            const matchGoalDiff = homeScore - awayScore;
+            const tipGoalDiff = tip.homeScore - tip.awayScore;
+            
+            if (matchGoalDiff === tipGoalDiff) {
+              points += scoringSystem.goalDifference;
+            }
+          }
+        } else if (match.tipType === 'winner') {
+          // Iba víťaz
+          if (tip.winner === matchWinner) {
+            points += scoringSystem.correctWinner;
+          }
+        }
+        
+        // Aktualizácia bodov za tip
+        tip.points = points;
+        await tip.save();
+      }
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Zápas bol úspešne vyhodnotený.',
+      data: match
+    });
+  } catch (error) {
+    console.error('Chyba pri vyhodnotení zápasu:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Chyba pri vyhodnotení zápasu.',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllMatches,
   getMatchById,
   createMatch,
   updateMatch,
-  deleteMatch
+  deleteMatch,
+  evaluateMatch
 };

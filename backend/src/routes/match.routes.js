@@ -5,7 +5,8 @@ const {
   getMatchById, 
   createMatch, 
   updateMatch, 
-  deleteMatch 
+  deleteMatch,
+  evaluateMatch 
 } = require('../controllers/match.controller');
 const { verifyToken } = require('../middleware/auth.middleware');
 
@@ -20,5 +21,6 @@ router.use(verifyToken);
 router.post('/', createMatch);
 router.put('/:id', updateMatch);
 router.delete('/:id', deleteMatch);
+router.post('/:id/evaluate', evaluateMatch);
 
 module.exports = router;

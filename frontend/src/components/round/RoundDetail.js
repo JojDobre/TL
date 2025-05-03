@@ -19,6 +19,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getRoundById, updateRound, deleteRound } from '../../services/roundService';
 import { getAllMatches } from '../../services/matchService';
 import { getUserTips, createOrUpdateTip } from '../../services/tipService';
+import EvaluateMatchDialog from '../match/EvaluateMatch';
+
 
 // TabPanel komponent pre zobrazenie obsahu tabu
 function TabPanel(props) {
@@ -53,6 +55,10 @@ const RoundDetail = () => {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // State pre vyhodnotenie
+  const [evaluateDialogOpen, setEvaluateDialogOpen] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState(null);
 
     // Nový stav pre tipy
     const [tips, setTips] = useState({});
@@ -191,6 +197,36 @@ const handleTipChange = (matchId, field, value) => {
       return updatedTips;
     });
   };
+
+  // Pridáme handler pre otvorenie dialógu na vyhodnotenie zápasu
+    const handleOpenEvaluateDialog = (match) => {
+      setSelectedMatch(match);
+      setEvaluateDialogOpen(true);
+    };
+
+    // Pridáme handler pre zatvorenie dialógu
+    const handleCloseEvaluateDialog = () => {
+      setEvaluateDialogOpen(false);
+      setSelectedMatch(null);
+    };
+
+    // Pridáme handler pre úspešné vyhodnotenie zápasu
+    const handleEvaluateSuccess = async () => {
+      // Aktualizácia dát po vyhodnotení zápasu
+      try {
+        const response = await getRoundById(id);
+        if (response) {
+          setRound(response);
+          
+          const matchesResponse = await getAllMatches({ roundId: id });
+          if (matchesResponse) {
+            setMatches(matchesResponse);
+          }
+        }
+      } catch (err) {
+        console.error('Chyba pri aktualizácii dát po vyhodnotení zápasu:', err);
+      }
+    };
   
   // Handler pre uloženie tipu
   const handleSaveTip = async (matchId) => {
@@ -696,6 +732,17 @@ const handleTipChange = (matchId, field, value) => {
                             </Button>
                           </CardActions>
                         )}
+
+                        {hasEditPermission() && match.status !== 'finished' && (
+                          <Button
+                            size="small"
+                            color="primary"
+                            onClick={() => handleOpenEvaluateDialog(match)}
+                            startIcon={<EditIcon />}
+                          >
+                            Zadať výsledok
+                          </Button>
+                        )}
                       </Card>
                     </Grid>
                   ))}
@@ -765,17 +812,53 @@ const handleTipChange = (matchId, field, value) => {
                             
                             {tip.Match?.status === 'finished' && (
                               <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #eee' }}>
-                                <Typography variant="subtitle2" align="center">
-                                  Konečný výsledok:
+                              <Typography variant="subtitle2" align="center">
+                                Konečný výsledok:
+                              </Typography>
+                              <Typography variant="h6" align="center" fontWeight="bold">
+                                {tip.Match.homeScore} : {tip.Match.awayScore}
+                              </Typography>
+                              <Box sx={{ mt: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                <Typography variant="body2" align="center">
+                                  Získané body: 
                                 </Typography>
-                                <Typography variant="h6" align="center" fontWeight="bold">
-                                  {tip.Match.homeScore} : {tip.Match.awayScore}
-                                </Typography>
-                                <Typography variant="body2" align="center" sx={{ mt: 1 }}>
-                                  Získané body: <strong>{tip.points}</strong>
+                                <Typography 
+                                  variant="body1" 
+                                  fontWeight="bold" 
+                                  color={tip.points > 0 ? 'success.main' : 'text.primary'}
+                                  sx={{ ml: 1 }}
+                                >
+                                  {tip.points}
                                 </Typography>
                               </Box>
-                            )}
+                              
+                              {/* Vysvetlenie bodovania */}
+                              {tip.points > 0 && (
+                                <Box sx={{ mt: 1, fontSize: '0.8rem', color: 'text.secondary' }}>
+                                  <Typography variant="caption" align="center" display="block">
+                                    Body získané za:
+                                  </Typography>
+                                  <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 0.5, mt: 0.5 }}>
+                                    {tip.homeScore === tip.Match.homeScore && tip.awayScore === tip.Match.awayScore && (
+                                      <Chip label="Presný výsledok" size="small" color="success" variant="outlined" />
+                                    )}
+                                    {(tip.homeScore === tip.Match.homeScore || tip.awayScore === tip.Match.awayScore) && 
+                                    !(tip.homeScore === tip.Match.homeScore && tip.awayScore === tip.Match.awayScore) && (
+                                      <Chip label="Presný počet gólov" size="small" color="info" variant="outlined" />
+                                    )}
+                                    {(tip.homeScore > tip.awayScore && tip.Match.homeScore > tip.Match.awayScore) ||
+                                    (tip.homeScore < tip.awayScore && tip.Match.homeScore < tip.Match.awayScore) ||
+                                    (tip.homeScore === tip.awayScore && tip.Match.homeScore === tip.Match.awayScore) && (
+                                      <Chip label="Správny víťaz" size="small" color="primary" variant="outlined" />
+                                    )}
+                                    {(tip.homeScore - tip.awayScore) === (tip.Match.homeScore - tip.Match.awayScore) && (
+                                      <Chip label="Gólový rozdiel" size="small" color="secondary" variant="outlined" />
+                                    )}
+                                  </Box>
+                                </Box>
+                                    )}
+                                    </Box>
+                                  )}
                           </CardContent>
                         </Card>
                       </Grid>
@@ -805,9 +888,127 @@ const handleTipChange = (matchId, field, value) => {
             
             {/* Tab pre výsledky */}
             <TabPanel value={tabValue} index={2}>
-              <Typography variant="body1" sx={{ textAlign: 'center', my: 4 }}>
-                Výsledky pre toto kolo sa zobrazia tu po ukončení zápasov.
-              </Typography>
+              {matches.length === 0 ? (
+                <Typography variant="body1" sx={{ textAlign: 'center', my: 4 }}>
+                  V tomto kole zatiaľ nie sú žiadne zápasy.
+                </Typography>
+              ) : (
+                <Grid container spacing={3}>
+                  {matches.map((match) => (
+                    <Grid item xs={12} sm={6} md={4} key={match.id}>
+                      <Card sx={{ height: '100%' }}>
+                        <CardContent>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {new Date(match.matchTime).toLocaleString()}
+                            </Typography>
+                            <Chip 
+                              label={match.status === 'scheduled' ? 'Plánovaný' : 
+                                    match.status === 'in_progress' ? 'Prebieha' :
+                                    match.status === 'finished' ? 'Ukončený' : 'Zrušený'}
+                              color={match.status === 'scheduled' ? 'primary' : 
+                                    match.status === 'in_progress' ? 'warning' :
+                                    match.status === 'finished' ? 'success' : 'error'}
+                              size="small"
+                            />
+                          </Box>
+                          
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '40%' }}>
+                              <Box 
+                                component="img"
+                                src={match.homeTeam?.logo || '/placeholder-team.png'}
+                                alt={match.homeTeam?.name}
+                                sx={{ width: 60, height: 60, objectFit: 'contain', mb: 1 }}
+                              />
+                              <Typography variant="body1" align="center">
+                                {match.homeTeam?.name || 'Domáci tím'}
+                              </Typography>
+                            </Box>
+                            
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '20%' }}>
+                              {match.status === 'finished' ? (
+                                <Typography variant="h5" fontWeight="bold">
+                                  {match.homeScore} : {match.awayScore}
+                                </Typography>
+                              ) : (
+                                <Typography variant="h5" fontWeight="bold">
+                                  VS
+                                </Typography>
+                              )}
+                            </Box>
+                            
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '40%' }}>
+                              <Box 
+                                component="img"
+                                src={match.awayTeam?.logo || '/placeholder-team.png'}
+                                alt={match.awayTeam?.name}
+                                sx={{ width: 60, height: 60, objectFit: 'contain', mb: 1 }}
+                              />
+                              <Typography variant="body1" align="center">
+                                {match.awayTeam?.name || 'Hosťujúci tím'}
+                              </Typography>
+                            </Box>
+                          </Box>
+                          
+                          {match.status === 'finished' && (
+                            <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #eee' }}>
+                              <Typography variant="subtitle2" gutterBottom align="center">
+                                Štatistiky tipov
+                              </Typography>
+                              
+                              {/* Tu by sa zobrazovali štatistiky tipov, ak máme k dispozícii */}
+                              {match.Tips && match.Tips.length > 0 ? (
+                                <Box>
+                                  <Typography variant="body2" align="center">
+                                    Počet tipujúcich: {match.Tips.length}
+                                  </Typography>
+                                  <Typography variant="body2" align="center">
+                                    Priemerné body: {
+                                      (match.Tips.reduce((sum, tip) => sum + tip.points, 0) / match.Tips.length).toFixed(1)
+                                    }
+                                  </Typography>
+                                </Box>
+                              ) : (
+                                <Typography variant="body2" align="center" color="text.secondary">
+                                  Pre tento zápas zatiaľ nie sú žiadne tipy.
+                                </Typography>
+                              )}
+                            </Box>
+                          )}
+                          
+                          {/* Tlačidlo pre vyhodnotenie zápasu - len pre adminov/správcov */}
+                          {hasEditPermission() && (
+                            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+                              {match.status === 'finished' ? (
+                                <Button
+                                  size="small"
+                                  color="info"
+                                  variant="outlined"
+                                  onClick={() => handleOpenEvaluateDialog(match)}
+                                  startIcon={<EditIcon />}
+                                >
+                                  Upraviť výsledok
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="small"
+                                  color="primary"
+                                  variant="contained"
+                                  onClick={() => handleOpenEvaluateDialog(match)}
+                                  startIcon={<EditIcon />}
+                                >
+                                  Zadať výsledok
+                                </Button>
+                              )}
+                            </Box>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              )}
             </TabPanel>
           </Paper>
         </Paper>
@@ -881,6 +1082,14 @@ const handleTipChange = (matchId, field, value) => {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Dialóg pre vyhodnotenie zápasu */}
+        <EvaluateMatchDialog
+          open={evaluateDialogOpen}
+          onClose={handleCloseEvaluateDialog}
+          match={selectedMatch}
+          onSuccess={handleEvaluateSuccess}
+        />
         
         {/* Dialóg pre vymazanie kola */}
         <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>

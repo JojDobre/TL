@@ -1,5 +1,7 @@
 const db = require('../models');
 const seedTeams = require('../seeds/teams.seed');
+const seedInitialData = require('../seeds/initial-data.seed');
+
 
 const syncDatabase = async () => {
   try {
@@ -11,6 +13,7 @@ const syncDatabase = async () => {
     
     // Môžeme tu pridať inicializačné dáta (seeders)
     await initializeData();
+    await seedInitialData();
     
     console.log('Inicializačné dáta boli úspešne vložené do databázy.');
   } catch (error) {
@@ -26,9 +29,18 @@ const initializeData = async () => {
     const adminUser = await db.User.create({
       username: 'admin',
       email: 'admin@admin.com',
-      password: 'admin', // heslo: admin123
+      password: '$2b$10$ksEjSjxcDlrSIWkvLTDI5Oj7pij2jU4oKqdk4nc3MP3wwEzyx8UUm', // heslo: user
       role: 'admin',
       firstName: 'Admin',
+      lastName: 'User',
+    });
+
+    const vipUser = await db.User.create({
+      username: 'vip',
+      email: 'vip@vip.com',
+      password: '$2b$10$ksEjSjxcDlrSIWkvLTDI5Oj7pij2jU4oKqdk4nc3MP3wwEzyx8UUm', // heslo: user
+      role: 'vip',
+      firstName: 'vip',
       lastName: 'User',
     });
     
