@@ -3,69 +3,35 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link as RouterLink } from 'react-router-dom';
 import { 
   Container, Typography, Box, Paper, Button, Chip, Divider,
-  Card, CardContent, CardActions, Grid, CircularProgress,
-  Alert, Tabs, Tab, IconButton, Dialog, DialogTitle, DialogContent,
-  DialogContentText, DialogActions, TextField, FormControl,
-  InputLabel, Select, MenuItem, Radio, RadioGroup, FormControlLabel
+  CircularProgress, Alert, Dialog, DialogTitle, DialogContent,
+  DialogContentText, DialogActions, TextField,
+  Grid, MenuItem, FormControl, InputLabel, Select
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { 
-  Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon,
-  Save as SaveIcon, Check as CheckIcon
+  Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { getRoundById, updateRound, deleteRound } from '../../services/roundService';
-import { getAllMatches } from '../../services/matchService';
-import { getUserTips, createOrUpdateTip } from '../../services/tipService';
+import { getAllMatches, updateMatch } from '../../services/matchService';
+import { getUserTips } from '../../services/tipService';
+import MatchCard from '../match/MatchCard';
 import EvaluateMatchDialog from '../match/EvaluateMatch';
 
 
-// TabPanel komponent pre zobrazenie obsahu tabu
-function TabPanel(props) {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`round-tabpanel-${index}`}
-      aria-labelledby={`round-tab-${index}`}
-      {...other}
-    >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
-    </div>
-  );
-}
 
 const RoundDetail = () => {
   // Parameter z URL
   const { id } = useParams();
   
-  // State pre záložky
-  const [tabValue, setTabValue] = useState(0);
-  
   // State pre detail kola
   const [round, setRound] = useState(null);
   const [matches, setMatches] = useState([]);
+  const [userTips, setUserTips] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
-  // State pre vyhodnotenie
-  const [evaluateDialogOpen, setEvaluateDialogOpen] = useState(false);
-  const [selectedMatch, setSelectedMatch] = useState(null);
-
-    // Nový stav pre tipy
-    const [tips, setTips] = useState({});
-    const [userTips, setUserTips] = useState([]);
-    const [tipLoading, setTipLoading] = useState({});
-    const [tipError, setTipError] = useState({});
-    const [tipSuccess, setTipSuccess] = useState({});
   
   // State pre dialóg na úpravu kola
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -85,27 +51,174 @@ const RoundDetail = () => {
   
   // Hook pre autentifikáciu
   const { user, isAuthenticated } = useAuth();
-  
-  // Načítanie detailu kola a zápasov pri načítaní komponenty
-  useEffect(() => {
 
-    const fetchUserTips = async () => {
-        try {
-          const tipsData = await getUserTips({ round: id });
+
+
+  // Pridané state pre dialóg vyhodnotenia zápasu
+const [evaluateDialogOpen, setEvaluateDialogOpen] = useState(false);
+const [selectedMatch, setSelectedMatch] = useState(null);
+const [evaluateFormData, setEvaluateFormData] = useState({
+  homeScore: '',
+  awayScore: '',
+  status: 'finished'
+});
+const [evaluateLoading, setEvaluateLoading] = useState(false);
+const [evaluateError, setEvaluateError] = useState('');
+
+// Handler pre otvorenie dialógu pre vyhodnotenie zápasu
+const handleOpenEvaluateDialog = (match) => {
+  setSelectedMatch(match);
+  setEvaluateFormData({
+    homeScore: match.homeScore !== null ? match.homeScore : '',
+    awayScore: match.awayScore !== null ? match.awayScore : '',
+    status: match.status || 'finished'
+  });
+  setEvaluateError('');
+  setEvaluateDialogOpen(true);
+};
+
+const fetchRoundDetail = async () => {
+  try {
+    setLoading(true);
+    setError('');
+    
+    console.log('Fetching round with ID:', id);
+    
+    // Načítanie detailu kola
+    const response = await getRoundById(id);
+    console.log('Round API response:', response);
+    
+    if (response) {
+      setRound(response);
+      
+      // Nastavenie dát pre formulár úpravy
+      setEditFormData({
+        name: response.name || '',
+        description: response.description || '',
+        startDate: new Date(response.startDate),
+        endDate: new Date(response.endDate),
+        active: response.active !== undefined ? response.active : true
+      });
+      
+      // Načítanie zápasov pre kolo
+      try {
+        const matchesResponse = await getAllMatches({ roundId: id });
+        console.log('Matches API response:', matchesResponse);
+        
+        if (matchesResponse) {
+          // Zoradenie zápasov podľa dátumu
+          const sortedMatches = [...matchesResponse].sort((a, b) => 
+            new Date(a.matchTime) - new Date(b.matchTime)
+          );
           
-          // Vytvorenie objektu, kde kľúč je matchId a hodnota je tip
+          setMatches(sortedMatches);
+        } else {
+          console.log('No matches data in response');
+          setMatches([]);
+        }
+      } catch (matchesError) {
+        console.error('Error fetching matches:', matchesError);
+        setMatches([]);
+      }
+      
+      // Načítanie tipov pre kolo (ak je užívateľ prihlásený)
+      if (isAuthenticated) {
+        try {
+          const tipsResponse = await getUserTips({ roundId: id });
+          
+          // Vytvorenie mapy tipov podľa matchId
           const tipsMap = {};
-          tipsData.forEach(tip => {
+          tipsResponse.forEach(tip => {
             tipsMap[tip.matchId] = tip;
           });
           
-          setUserTips(tipsData);
-          setTips(tipsMap);
-        } catch (err) {
-          console.error('Chyba pri načítavaní tipov:', err);
+          setUserTips(tipsMap);
+        } catch (tipsError) {
+          console.error('Error fetching tips:', tipsError);
         }
-      };
+      }
+    } else {
+      throw new Error('Invalid response format from server');
+    }
+  } catch (err) {
+    console.error('Error fetching round detail:', err);
+    const errorMessage = err.response?.data?.message || err.message || 'Nepodarilo sa načítať detail kola. Skúste to znova neskôr.';
+    setError(errorMessage);
+  } finally {
+    setLoading(false);
+  }
+};
 
+// Načítanie detailu kola a zápasov pri načítaní komponenty
+useEffect(() => {
+  fetchRoundDetail();
+}, [id, isAuthenticated]);
+
+
+// Handler pre zatvorenie dialógu pre vyhodnotenie zápasu
+const handleCloseEvaluateDialog = () => {
+  setEvaluateDialogOpen(false);
+  setSelectedMatch(null);
+};
+
+// Handler pre zmenu inputov vo formulári vyhodnotenia
+const handleEvaluateFormChange = (e) => {
+  const { name, value } = e.target;
+  setEvaluateFormData(prevData => ({
+    ...prevData,
+    [name]: name === 'homeScore' || name === 'awayScore' 
+      ? value === '' ? '' : parseInt(value, 10) || 0
+      : value
+  }));
+};
+
+// Handler pre odoslanie formulára vyhodnotenia
+const handleEvaluateMatch = async () => {
+  if (!selectedMatch) return;
+  
+  // Validácia formulára
+  if (evaluateFormData.homeScore === '' || evaluateFormData.awayScore === '') {
+    setEvaluateError('Vyplňte skóre pre oba tímy.');
+    return;
+  }
+  
+  try {
+    setEvaluateLoading(true);
+    setEvaluateError('');
+    
+    // Aktualizácia zápasu
+    const updatedMatch = await updateMatch(selectedMatch.id, {
+      homeScore: evaluateFormData.homeScore,
+      awayScore: evaluateFormData.awayScore,
+      status: evaluateFormData.status
+    });
+    
+    // Aktualizácia zápasu v zozname
+    setMatches(prevMatches => 
+      prevMatches.map(match => 
+        match.id === updatedMatch.id ? updatedMatch : match
+      )
+    );
+    
+    // Zatvorenie dialógu
+    handleCloseEvaluateDialog();
+    
+    // Opätovné načítanie zápasov po vyhodnotení (pre aktualizáciu tipov a bodov)
+    // Táto časť je voliteľná, závisí od implementácie backendu
+    fetchRoundDetail();
+  } catch (err) {
+    console.error('Chyba pri vyhodnotení zápasu:', err);
+    setEvaluateError(err.response?.data?.message || 'Nepodarilo sa vyhodnotiť zápas. Skúste to znova neskôr.');
+  } finally {
+    setEvaluateLoading(false);
+  }
+};
+
+
+
+  
+  // Načítanie detailu kola a zápasov pri načítaní komponenty
+  useEffect(() => {
     const fetchRoundDetail = async () => {
       try {
         setLoading(true);
@@ -135,7 +248,12 @@ const RoundDetail = () => {
             console.log('Matches API response:', matchesResponse);
             
             if (matchesResponse) {
-              setMatches(matchesResponse);
+              // Zoradenie zápasov podľa dátumu
+              const sortedMatches = [...matchesResponse].sort((a, b) => 
+                new Date(a.matchTime) - new Date(b.matchTime)
+              );
+              
+              setMatches(sortedMatches);
             } else {
               console.log('No matches data in response');
               setMatches([]);
@@ -143,6 +261,23 @@ const RoundDetail = () => {
           } catch (matchesError) {
             console.error('Error fetching matches:', matchesError);
             setMatches([]);
+          }
+          
+          // Načítanie tipov pre kolo (ak je užívateľ prihlásený)
+          if (isAuthenticated) {
+            try {
+              const tipsResponse = await getUserTips({ roundId: id });
+              
+              // Vytvorenie mapy tipov podľa matchId
+              const tipsMap = {};
+              tipsResponse.forEach(tip => {
+                tipsMap[tip.matchId] = tip;
+              });
+              
+              setUserTips(tipsMap);
+            } catch (tipsError) {
+              console.error('Error fetching tips:', tipsError);
+            }
           }
         } else {
           throw new Error('Invalid response format from server');
@@ -157,135 +292,18 @@ const RoundDetail = () => {
     };
     
     fetchRoundDetail();
-    fetchUserTips();
-  }, [id]);
+  }, [id, isAuthenticated]);
   
-// Handler pre zmenu tipu
-const handleTipChange = (matchId, field, value) => {
-    setTips(prevTips => {
-      const updatedTips = { ...prevTips };
-      
-      // Ak tip pre tento zápas ešte neexistuje, vytvoríme ho
-      if (!updatedTips[matchId]) {
-        updatedTips[matchId] = {
-          matchId,
-          homeScore: null,
-          awayScore: null,
-          winner: null
-        };
-      }
-      
-      // Aktualizácia hodnoty
-      updatedTips[matchId][field] = value;
-      
-      // Ak sa zmení homeScore alebo awayScore, určíme víťaza
-      if (field === 'homeScore' || field === 'awayScore') {
-        const homeScore = field === 'homeScore' ? value : updatedTips[matchId].homeScore;
-        const awayScore = field === 'awayScore' ? value : updatedTips[matchId].awayScore;
-        
-        if (homeScore !== null && awayScore !== null) {
-          if (homeScore > awayScore) {
-            updatedTips[matchId].winner = 'home';
-          } else if (homeScore < awayScore) {
-            updatedTips[matchId].winner = 'away';
-          } else {
-            updatedTips[matchId].winner = 'draw';
-          }
-        }
-      }
-      
-      return updatedTips;
-    });
-  };
-
-  // Pridáme handler pre otvorenie dialógu na vyhodnotenie zápasu
-    const handleOpenEvaluateDialog = (match) => {
-      setSelectedMatch(match);
-      setEvaluateDialogOpen(true);
-    };
-
-    // Pridáme handler pre zatvorenie dialógu
-    const handleCloseEvaluateDialog = () => {
-      setEvaluateDialogOpen(false);
-      setSelectedMatch(null);
-    };
-
-    // Pridáme handler pre úspešné vyhodnotenie zápasu
-    const handleEvaluateSuccess = async () => {
-      // Aktualizácia dát po vyhodnotení zápasu
-      try {
-        const response = await getRoundById(id);
-        if (response) {
-          setRound(response);
-          
-          const matchesResponse = await getAllMatches({ roundId: id });
-          if (matchesResponse) {
-            setMatches(matchesResponse);
-          }
-        }
-      } catch (err) {
-        console.error('Chyba pri aktualizácii dát po vyhodnotení zápasu:', err);
-      }
-    };
-  
-  // Handler pre uloženie tipu
-  const handleSaveTip = async (matchId) => {
-    // Kontrola, či je tip vyplnený
-    if (!tips[matchId]) return;
-    
-    const match = matches.find(m => m.id === matchId);
-    if (!match) return;
-    
-    // Nastavenie loadingu
-    setTipLoading(prev => ({ ...prev, [matchId]: true }));
-    setTipError(prev => ({ ...prev, [matchId]: null }));
-    setTipSuccess(prev => ({ ...prev, [matchId]: null }));
-    
-    try {
-      // Vytvorenie objektu s údajmi tipu
-      const tipData = {
+  // Handler pre zmenu tipu
+  const handleTipChange = (matchId, newTip) => {
+    setUserTips(prevTips => ({
+      ...prevTips,
+      [matchId]: {
+        ...prevTips[matchId],
+        ...newTip,
         matchId
-      };
-      
-      // Pridanie údajov podľa typu tipovania
-      if (match.tipType === 'exact_score') {
-        tipData.homeScore = tips[matchId].homeScore;
-        tipData.awayScore = tips[matchId].awayScore;
-      } else {
-        tipData.winner = tips[matchId].winner;
       }
-      
-      // Odoslanie tipu na server
-      await createOrUpdateTip(tipData);
-      
-      // Nastavenie úspechu
-      setTipSuccess(prev => ({ ...prev, [matchId]: 'Tip bol úspešne uložený.' }));
-      
-      // Po 3 sekundách skryjeme hlášku o úspechu
-      setTimeout(() => {
-        setTipSuccess(prev => ({ ...prev, [matchId]: null }));
-      }, 3000);
-    } catch (err) {
-      console.error('Chyba pri ukladaní tipu:', err);
-      setTipError(prev => ({ ...prev, [matchId]: err.response?.data?.message || 'Chyba pri ukladaní tipu.' }));
-    } finally {
-      setTipLoading(prev => ({ ...prev, [matchId]: false }));
-    }
-  };
-
-  // Kontrola, či je možné tipovať
-  const canSubmitTips = () => {
-    if (!round) return false;
-    
-    const now = new Date();
-    const endDate = new Date(round.endDate);
-    
-    return now <= endDate;
-  };
-
-  // Handler pre zmenu tabu
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
+    }));
   };
   
   // Handler pre zmenu inputov vo formulári úpravy
@@ -397,6 +415,16 @@ const handleTipChange = (matchId, field, value) => {
     }
   };
   
+  // Kontrola, či je možné tipovať
+  const canSubmitTips = () => {
+    if (!round) return false;
+    
+    const now = new Date();
+    const endDate = new Date(round.endDate);
+    
+    return now <= endDate && round.active;
+  };
+  
   // Rendering komponenty
   if (loading) {
     return (
@@ -447,6 +475,7 @@ const handleTipChange = (matchId, field, value) => {
   }
   
   const roundStatus = getRoundStatus();
+  const roundClosed = !canSubmitTips();
   
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -535,483 +564,113 @@ const handleTipChange = (matchId, field, value) => {
           
           <Divider sx={{ my: 3 }} />
           
-          <Paper sx={{ mb: 4 }}>
-            <Tabs
-              value={tabValue}
-              onChange={handleTabChange}
-              indicatorColor="primary"
-              textColor="primary"
-              variant="fullWidth"
-            >
-              <Tab label="Zápasy" id="round-tab-0" />
-              <Tab label="Moje tipy" id="round-tab-1" />
-              <Tab label="Výsledky" id="round-tab-2" />
-            </Tabs>
-            
-               {/* Tab pre zápasy */}
-            <TabPanel value={tabValue} index={0}>
-              <Box sx={{ mb: 3 }}>
-                {hasEditPermission() && (
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<AddIcon />}
-                    component={RouterLink}
-                    to={`/matches/create?roundId=${round.id}`}
-                  >
-                    Pridať zápasy
-                  </Button>
-                )}
-              </Box>
-              
-              {matches.length === 0 ? (
-                <Typography variant="body1" sx={{ textAlign: 'center', my: 4 }}>
-                  V tomto kole zatiaľ nie sú žiadne zápasy.
-                </Typography>
-              ) : (
-                <Grid container spacing={3}>
-                  {matches.map((match) => (
-                    <Grid item xs={12} sm={6} key={match.id}>
-                      <Card sx={{ display: 'flex', flexDirection: 'column' }}>
-                        <CardContent>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                            <Typography variant="caption" color="text.secondary">
-                              {new Date(match.matchTime).toLocaleString()}
-                            </Typography>
-                            <Chip 
-                              label={match.status === 'scheduled' ? 'Plánovaný' : 
-                                    match.status === 'in_progress' ? 'Prebieha' :
-                                    match.status === 'finished' ? 'Ukončený' : 'Zrušený'}
-                              color={match.status === 'scheduled' ? 'primary' : 
-                                    match.status === 'in_progress' ? 'warning' :
-                                    match.status === 'finished' ? 'success' : 'error'}
-                              size="small"
-                            />
-                          </Box>
-                          
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '40%' }}>
-                              <Box 
-                                component="img"
-                                src={match.homeTeam?.logo || '/placeholder-team.png'}
-                                alt={match.homeTeam?.name}
-                                sx={{ width: 60, height: 60, objectFit: 'contain', mb: 1 }}
-                              />
-                              <Typography variant="body1" align="center">
-                                {match.homeTeam?.name || 'Domáci tím'}
-                              </Typography>
-                            </Box>
-                            
-                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '20%' }}>
-                              {match.status === 'finished' ? (
-                                <Typography variant="h5" fontWeight="bold">
-                                  {match.homeScore} : {match.awayScore}
-                                </Typography>
-                              ) : (
-                                <Typography variant="h5" fontWeight="bold">
-                                  VS
-                                </Typography>
-                              )}
-                            </Box>
-                            
-                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '40%' }}>
-                              <Box 
-                                component="img"
-                                src={match.awayTeam?.logo || '/placeholder-team.png'}
-                                alt={match.awayTeam?.name}
-                                sx={{ width: 60, height: 60, objectFit: 'contain', mb: 1 }}
-                              />
-                              <Typography variant="body1" align="center">
-                                {match.awayTeam?.name || 'Hosťujúci tím'}
-                              </Typography>
-                            </Box>
-                          </Box>
-                          
-                          {/* Sekcia pre tipovanie */}
-                          {isAuthenticated && canSubmitTips() && (
-                            <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #eee' }}>
-                              <Typography variant="subtitle2" gutterBottom>
-                                Môj tip:
-                              </Typography>
-                              
-                              {match.tipType === 'exact_score' ? (
-                                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 1 }}>
-                                  <TextField
-                                    type="number"
-                                    size="small"
-                                    InputProps={{ inputProps: { min: 0 } }}
-                                    sx={{ width: 60 }}
-                                    value={tips[match.id]?.homeScore !== null ? tips[match.id]?.homeScore : ''}
-                                    onChange={(e) => handleTipChange(match.id, 'homeScore', e.target.value === '' ? null : parseInt(e.target.value))}
-                                  />
-                                  <Typography variant="h6" sx={{ mx: 2 }}>:</Typography>
-                                  <TextField
-                                    type="number"
-                                    size="small"
-                                    InputProps={{ inputProps: { min: 0 } }}
-                                    sx={{ width: 60 }}
-                                    value={tips[match.id]?.awayScore !== null ? tips[match.id]?.awayScore : ''}
-                                    onChange={(e) => handleTipChange(match.id, 'awayScore', e.target.value === '' ? null : parseInt(e.target.value))}
-                                  />
-                                </Box>
-                              ) : (
-                                <RadioGroup
-                                  row
-                                  value={tips[match.id]?.winner || ''}
-                                  onChange={(e) => handleTipChange(match.id, 'winner', e.target.value)}
-                                  sx={{ justifyContent: 'center' }}
-                                >
-                                  <FormControlLabel 
-                                    value="home" 
-                                    control={<Radio size="small" />} 
-                                    label={match.homeTeam?.name || 'Domáci'} 
-                                  />
-                                  <FormControlLabel 
-                                    value="draw" 
-                                    control={<Radio size="small" />} 
-                                    label="Remíza" 
-                                  />
-                                  <FormControlLabel 
-                                    value="away" 
-                                    control={<Radio size="small" />} 
-                                    label={match.awayTeam?.name || 'Hostia'} 
-                                  />
-                                </RadioGroup>
-                              )}
-                              
-                              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                                <Button
-                                  variant="contained"
-                                  color="primary"
-                                  size="small"
-                                  startIcon={tipSuccess[match.id] ? <CheckIcon /> : <SaveIcon />}
-                                  onClick={() => handleSaveTip(match.id)}
-                                  disabled={tipLoading[match.id]}
-                                >
-                                  {tipLoading[match.id] ? 
-                                    <CircularProgress size={20} /> : 
-                                    tipSuccess[match.id] ? 'Uložené' : 'Uložiť tip'}
-                                </Button>
-                              </Box>
-                              
-                              {tipError[match.id] && (
-                                <Alert severity="error" sx={{ mt: 1, fontSize: '0.8rem' }}>
-                                  {tipError[match.id]}
-                                </Alert>
-                              )}
-                              
-                              {tipSuccess[match.id] && (
-                                <Alert severity="success" sx={{ mt: 1, fontSize: '0.8rem' }}>
-                                  {tipSuccess[match.id]}
-                                </Alert>
-                              )}
-                            </Box>
-                          )}
-                          
-                          {/* Zobrazenie výsledku pre ukončené zápasy */}
-                          {match.status === 'finished' && (
-                            <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #eee' }}>
-                              <Typography variant="subtitle2" align="center" gutterBottom>
-                                Konečný výsledok
-                              </Typography>
-                              <Typography variant="h6" align="center" fontWeight="bold">
-                                {match.homeScore} : {match.awayScore}
-                              </Typography>
-                            </Box>
-                          )}
-                        </CardContent>
-                        
-                        {hasEditPermission() && (
-                          <CardActions>
-                            <Button 
-                              size="small" 
-                              component={RouterLink} 
-                              to={`/matches/${match.id}/edit`}
-                            >
-                              Upraviť zápas
-                            </Button>
-                          </CardActions>
-                        )}
-
-                        {hasEditPermission() && match.status !== 'finished' && (
-                          <Button
-                            size="small"
-                            color="primary"
-                            onClick={() => handleOpenEvaluateDialog(match)}
-                            startIcon={<EditIcon />}
-                          >
-                            Zadať výsledok
-                          </Button>
-                        )}
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
-              )}
-            </TabPanel>
-            
-            {/* Tab pre moje tipy */}
-            <TabPanel value={tabValue} index={1}>
-              {isAuthenticated ? (
-                userTips.length > 0 ? (
-                  <Grid container spacing={3}>
-                    {userTips.map(tip => (
-                      <Grid item xs={12} sm={6} key={tip.id}>
-                        <Card>
-                          <CardContent>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                              <Typography variant="caption" color="text.secondary">
-                                {tip.Match?.matchTime ? new Date(tip.Match.matchTime).toLocaleString() : 'N/A'}
-                              </Typography>
-                              <Chip 
-                                label={tip.submitted ? 'Odoslaný' : 'Rozpracovaný'}
-                                color={tip.submitted ? 'success' : 'warning'}
-                                size="small"
-                              />
-                            </Box>
-                            
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Typography variant="body2" sx={{ width: '40%', textAlign: 'center' }}>
-                                {tip.Match?.homeTeam?.name || 'Domáci tím'}
-                              </Typography>
-                              
-                              <Typography variant="body1" sx={{ width: '20%', textAlign: 'center', fontWeight: 'bold' }}>
-                                VS
-                              </Typography>
-                              
-                              <Typography variant="body2" sx={{ width: '40%', textAlign: 'center' }}>
-                                {tip.Match?.awayTeam?.name || 'Hosťujúci tím'}
-                              </Typography>
-                            </Box>
-                            
-                            <Box sx={{ mt: 2, textAlign: 'center' }}>
-                              <Typography variant="subtitle2">
-                                Váš tip:
-                              </Typography>
-                              
-                              {tip.Match?.tipType === 'exact_score' ? (
-                                <Typography variant="h6" fontWeight="bold">
-                                  {tip.homeScore !== null && tip.awayScore !== null 
-                                    ? `${tip.homeScore} : ${tip.awayScore}`
-                                    : 'Nezadaný'
-                                  }
-                                </Typography>
-                              ) : (
-                                <Typography variant="body1">
-                                  {tip.winner === 'home' 
-                                    ? `Víťaz: ${tip.Match?.homeTeam?.name || 'Domáci'}`
-                                    : tip.winner === 'away'
-                                    ? `Víťaz: ${tip.Match?.awayTeam?.name || 'Hostia'}`
-                                    : tip.winner === 'draw'
-                                    ? 'Remíza'
-                                    : 'Nezadaný'
-                                  }
-                                </Typography>
-                              )}
-                            </Box>
-                            
-                            {tip.Match?.status === 'finished' && (
-                              <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #eee' }}>
-                              <Typography variant="subtitle2" align="center">
-                                Konečný výsledok:
-                              </Typography>
-                              <Typography variant="h6" align="center" fontWeight="bold">
-                                {tip.Match.homeScore} : {tip.Match.awayScore}
-                              </Typography>
-                              <Box sx={{ mt: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                <Typography variant="body2" align="center">
-                                  Získané body: 
-                                </Typography>
-                                <Typography 
-                                  variant="body1" 
-                                  fontWeight="bold" 
-                                  color={tip.points > 0 ? 'success.main' : 'text.primary'}
-                                  sx={{ ml: 1 }}
-                                >
-                                  {tip.points}
-                                </Typography>
-                              </Box>
-                              
-                              {/* Vysvetlenie bodovania */}
-                              {tip.points > 0 && (
-                                <Box sx={{ mt: 1, fontSize: '0.8rem', color: 'text.secondary' }}>
-                                  <Typography variant="caption" align="center" display="block">
-                                    Body získané za:
-                                  </Typography>
-                                  <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 0.5, mt: 0.5 }}>
-                                    {tip.homeScore === tip.Match.homeScore && tip.awayScore === tip.Match.awayScore && (
-                                      <Chip label="Presný výsledok" size="small" color="success" variant="outlined" />
-                                    )}
-                                    {(tip.homeScore === tip.Match.homeScore || tip.awayScore === tip.Match.awayScore) && 
-                                    !(tip.homeScore === tip.Match.homeScore && tip.awayScore === tip.Match.awayScore) && (
-                                      <Chip label="Presný počet gólov" size="small" color="info" variant="outlined" />
-                                    )}
-                                    {(tip.homeScore > tip.awayScore && tip.Match.homeScore > tip.Match.awayScore) ||
-                                    (tip.homeScore < tip.awayScore && tip.Match.homeScore < tip.Match.awayScore) ||
-                                    (tip.homeScore === tip.awayScore && tip.Match.homeScore === tip.Match.awayScore) && (
-                                      <Chip label="Správny víťaz" size="small" color="primary" variant="outlined" />
-                                    )}
-                                    {(tip.homeScore - tip.awayScore) === (tip.Match.homeScore - tip.Match.awayScore) && (
-                                      <Chip label="Gólový rozdiel" size="small" color="secondary" variant="outlined" />
-                                    )}
-                                  </Box>
-                                </Box>
-                                    )}
-                                    </Box>
-                                  )}
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                    ))}
-                  </Grid>
-                ) : (
-                  <Typography variant="body1" sx={{ textAlign: 'center', my: 4 }}>
-                    Zatiaľ nemáte žiadne tipy pre toto kolo.
-                  </Typography>
-                )
-              ) : (
-                <Box sx={{ textAlign: 'center', my: 4 }}>
-                  <Typography variant="body1" paragraph>
-                    Pre zobrazenie vašich tipov sa musíte prihlásiť.
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    component={RouterLink}
-                    to="/login"
-                  >
-                    Prihlásiť sa
-                  </Button>
-                </Box>
-              )}
-            </TabPanel>
-            
-            {/* Tab pre výsledky */}
-            <TabPanel value={tabValue} index={2}>
-              {matches.length === 0 ? (
-                <Typography variant="body1" sx={{ textAlign: 'center', my: 4 }}>
-                  V tomto kole zatiaľ nie sú žiadne zápasy.
-                </Typography>
-              ) : (
-                <Grid container spacing={3}>
-                  {matches.map((match) => (
-                    <Grid item xs={12} sm={6} md={4} key={match.id}>
-                      <Card sx={{ height: '100%' }}>
-                        <CardContent>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                            <Typography variant="caption" color="text.secondary">
-                              {new Date(match.matchTime).toLocaleString()}
-                            </Typography>
-                            <Chip 
-                              label={match.status === 'scheduled' ? 'Plánovaný' : 
-                                    match.status === 'in_progress' ? 'Prebieha' :
-                                    match.status === 'finished' ? 'Ukončený' : 'Zrušený'}
-                              color={match.status === 'scheduled' ? 'primary' : 
-                                    match.status === 'in_progress' ? 'warning' :
-                                    match.status === 'finished' ? 'success' : 'error'}
-                              size="small"
-                            />
-                          </Box>
-                          
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '40%' }}>
-                              <Box 
-                                component="img"
-                                src={match.homeTeam?.logo || '/placeholder-team.png'}
-                                alt={match.homeTeam?.name}
-                                sx={{ width: 60, height: 60, objectFit: 'contain', mb: 1 }}
-                              />
-                              <Typography variant="body1" align="center">
-                                {match.homeTeam?.name || 'Domáci tím'}
-                              </Typography>
-                            </Box>
-                            
-                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '20%' }}>
-                              {match.status === 'finished' ? (
-                                <Typography variant="h5" fontWeight="bold">
-                                  {match.homeScore} : {match.awayScore}
-                                </Typography>
-                              ) : (
-                                <Typography variant="h5" fontWeight="bold">
-                                  VS
-                                </Typography>
-                              )}
-                            </Box>
-                            
-                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '40%' }}>
-                              <Box 
-                                component="img"
-                                src={match.awayTeam?.logo || '/placeholder-team.png'}
-                                alt={match.awayTeam?.name}
-                                sx={{ width: 60, height: 60, objectFit: 'contain', mb: 1 }}
-                              />
-                              <Typography variant="body1" align="center">
-                                {match.awayTeam?.name || 'Hosťujúci tím'}
-                              </Typography>
-                            </Box>
-                          </Box>
-                          
-                          {match.status === 'finished' && (
-                            <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #eee' }}>
-                              <Typography variant="subtitle2" gutterBottom align="center">
-                                Štatistiky tipov
-                              </Typography>
-                              
-                              {/* Tu by sa zobrazovali štatistiky tipov, ak máme k dispozícii */}
-                              {match.Tips && match.Tips.length > 0 ? (
-                                <Box>
-                                  <Typography variant="body2" align="center">
-                                    Počet tipujúcich: {match.Tips.length}
-                                  </Typography>
-                                  <Typography variant="body2" align="center">
-                                    Priemerné body: {
-                                      (match.Tips.reduce((sum, tip) => sum + tip.points, 0) / match.Tips.length).toFixed(1)
-                                    }
-                                  </Typography>
-                                </Box>
-                              ) : (
-                                <Typography variant="body2" align="center" color="text.secondary">
-                                  Pre tento zápas zatiaľ nie sú žiadne tipy.
-                                </Typography>
-                              )}
-                            </Box>
-                          )}
-                          
-                          {/* Tlačidlo pre vyhodnotenie zápasu - len pre adminov/správcov */}
-                          {hasEditPermission() && (
-                            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
-                              {match.status === 'finished' ? (
-                                <Button
-                                  size="small"
-                                  color="info"
-                                  variant="outlined"
-                                  onClick={() => handleOpenEvaluateDialog(match)}
-                                  startIcon={<EditIcon />}
-                                >
-                                  Upraviť výsledok
-                                </Button>
-                              ) : (
-                                <Button
-                                  size="small"
-                                  color="primary"
-                                  variant="contained"
-                                  onClick={() => handleOpenEvaluateDialog(match)}
-                                  startIcon={<EditIcon />}
-                                >
-                                  Zadať výsledok
-                                </Button>
-                              )}
-                            </Box>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
-              )}
-            </TabPanel>
-          </Paper>
+          <Box sx={{ mb: 3 }}>
+            {hasEditPermission() && (
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AddIcon />}
+                component={RouterLink}
+                to={`/matches/create?roundId=${round.id}`}
+              >
+                Pridať zápasy
+              </Button>
+            )}
+          </Box>
+          
+          {matches.length === 0 ? (
+            <Typography variant="body1" sx={{ textAlign: 'center', my: 4 }}>
+              V tomto kole zatiaľ nie sú žiadne zápasy.
+            </Typography>
+          ) : (
+<Grid container spacing={3} justifyContent="center">
+  {matches.map((match) => (
+    <Grid item key={match.id}>
+      <MatchCard 
+        match={match}
+        userTip={userTips[match.id]}
+        onTipChange={handleTipChange}
+        roundClosed={roundClosed}
+        hasEditPermission={hasEditPermission()}
+        onEvaluateMatch={handleOpenEvaluateDialog}
+      />
+    </Grid>
+  ))}
+</Grid>
+          )}
         </Paper>
+
+
+        // Pridaný dialóg pre vyhodnotenie zápasu
+<Dialog open={evaluateDialogOpen} onClose={handleCloseEvaluateDialog} maxWidth="sm" fullWidth>
+  <DialogTitle>
+    {selectedMatch?.status === 'finished' ? 'Upraviť výsledok' : 'Zadať výsledok'}
+  </DialogTitle>
+  <DialogContent>
+    {evaluateError && <Alert severity="error" sx={{ mb: 3 }}>{evaluateError}</Alert>}
+    
+    {selectedMatch && (
+      <Box sx={{ mt: 2 }}>
+        <Typography variant="subtitle1" gutterBottom>
+          {selectedMatch.homeTeam?.name || 'Domáci'} vs {selectedMatch.awayTeam?.name || 'Hostia'}
+        </Typography>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', my: 3 }}>
+          <TextField
+            label="Skóre domácich"
+            name="homeScore"
+            type="number"
+            InputProps={{ inputProps: { min: 0 } }}
+            value={evaluateFormData.homeScore}
+            onChange={handleEvaluateFormChange}
+            size="small"
+            sx={{ width: 120 }}
+          />
+          <Typography variant="h6" sx={{ mx: 2 }}>:</Typography>
+          <TextField
+            label="Skóre hostí"
+            name="awayScore"
+            type="number"
+            InputProps={{ inputProps: { min: 0 } }}
+            value={evaluateFormData.awayScore}
+            onChange={handleEvaluateFormChange}
+            size="small"
+            sx={{ width: 120 }}
+          />
+        </Box>
+        
+        <FormControl fullWidth margin="normal">
+          <InputLabel id="match-status-label">Stav zápasu</InputLabel>
+          <Select
+            labelId="match-status-label"
+            name="status"
+            value={evaluateFormData.status}
+            onChange={handleEvaluateFormChange}
+            label="Stav zápasu"
+          >
+            <MenuItem value="scheduled">Plánovaný</MenuItem>
+            <MenuItem value="in_progress">Prebieha</MenuItem>
+            <MenuItem value="finished">Ukončený</MenuItem>
+            <MenuItem value="canceled">Zrušený</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
+    )}
+  </DialogContent>
+  <DialogActions>
+    <Button onClick={handleCloseEvaluateDialog}>Zrušiť</Button>
+    <Button 
+      onClick={handleEvaluateMatch} 
+      variant="contained" 
+      color="primary"
+      disabled={evaluateLoading}
+    >
+      {evaluateLoading ? <CircularProgress size={24} /> : 'Uložiť výsledok'}
+    </Button>
+  </DialogActions>
+</Dialog>
+
+
         
         {/* Dialóg pre úpravu kola */}
         <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="md" fullWidth>
@@ -1082,14 +741,6 @@ const handleTipChange = (matchId, field, value) => {
             </Button>
           </DialogActions>
         </Dialog>
-
-        {/* Dialóg pre vyhodnotenie zápasu */}
-        <EvaluateMatchDialog
-          open={evaluateDialogOpen}
-          onClose={handleCloseEvaluateDialog}
-          match={selectedMatch}
-          onSuccess={handleEvaluateSuccess}
-        />
         
         {/* Dialóg pre vymazanie kola */}
         <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
