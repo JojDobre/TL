@@ -16,6 +16,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getSeasonById, updateSeason, deleteSeason } from '../../services/seasonService';
 import { getAllLeagues } from '../../services/leagueService';
 import axios from 'axios';
+import HeroSection from '../layout/HeroSection';
+
 
 
 // TabPanel komponent pre zobrazenie obsahu tabu
@@ -73,6 +75,17 @@ const SeasonDetail = () => {
   
   // Hook pre autentifikáciu
   const { user, isAuthenticated } = useAuth();
+
+  // Vytvorenie subtitle pre hero sekciu
+  const getHeroSubtitle = () => {
+    if (!season) return '';
+    
+    const participantsCount = season.participantsCount || 0;
+    const inviteCode = season.inviteCode || '000000';
+    
+    return `HRÁČI: ${participantsCount}/100 | ID: #${inviteCode}`;
+  };
+
   
   // Načítanie detailu sezóny a líg pri načítaní komponenty
   useEffect(() => {
@@ -269,6 +282,16 @@ const SeasonDetail = () => {
   console.log('Rendering leagues:', leagues);
 
   return (
+
+
+    <>
+  <HeroSection 
+    title={season?.name || 'SEZÓNA'} 
+    subtitle={getHeroSubtitle()}
+    seasonType={season?.type || 'community'}
+  />
+    
+
     <Container maxWidth="lg">
       <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -639,7 +662,7 @@ const SeasonDetail = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </Container></>
   );
 };
 

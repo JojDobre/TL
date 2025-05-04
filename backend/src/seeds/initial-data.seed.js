@@ -17,7 +17,7 @@ const seedInitialData = async () => {
     const adminUser = await db.User.create({
       username: 'administrator',
       email: 'admin@example.com',
-      password: hashedPassword,
+      password: '$2b$10$ksEjSjxcDlrSIWkvLTDI5Oj7pij2jU4oKqdk4nc3MP3wwEzyx8UUm',
       firstName: 'Admin',
       lastName: 'User',
       role: 'admin',
@@ -27,7 +27,7 @@ const seedInitialData = async () => {
     const vipUser = await db.User.create({
       username: 'vipuser',
       email: 'vip@example.com',
-      password: hashedPassword,
+      password: '$2b$10$ksEjSjxcDlrSIWkvLTDI5Oj7pij2jU4oKqdk4nc3MP3wwEzyx8UUm',
       firstName: 'VIP',
       lastName: 'User',
       role: 'vip',
@@ -37,7 +37,7 @@ const seedInitialData = async () => {
     const regularUser = await db.User.create({
       username: 'user',
       email: 'user@example.com',
-      password: hashedPassword,
+      password: '$2b$10$ksEjSjxcDlrSIWkvLTDI5Oj7pij2jU4oKqdk4nc3MP3wwEzyx8UUm',
       firstName: 'Regular',
       lastName: 'User',
       role: 'player',

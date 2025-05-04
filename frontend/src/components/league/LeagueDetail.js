@@ -15,6 +15,8 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { getLeagueById, updateLeague, deleteLeague } from '../../services/leagueService';
 import { getAllRounds } from '../../services/roundService';
+import HeroSection from '../layout/HeroSection';
+
 
 // TabPanel komponent pre zobrazenie obsahu tabu
 function TabPanel(props) {
@@ -36,6 +38,7 @@ function TabPanel(props) {
     </div>
   );
 }
+
 
 const LeagueDetail = () => {
   // Parameter z URL
@@ -164,6 +167,18 @@ const LeagueDetail = () => {
       }));
     }
   };
+
+  // Vytvorenie subtitle pre hero sekciu
+  const getHeroSubtitle = () => {
+    if (!league || !league.Season) return '';
+  
+    const seasonName = league.Season.name || '';
+    const participantsCount = league.Season.participantsCount || 0;
+    const inviteCode = league.Season.inviteCode || '000000';
+    
+    return `HRÁČI: ${participantsCount}/100 | ID: #${inviteCode}`;
+  };
+
   
   // Handler pre odoslanie formulára úpravy
   const handleEditLeague = async () => {
@@ -284,6 +299,17 @@ const LeagueDetail = () => {
   console.log('Rendering rounds:', rounds);
   
   return (
+
+<>
+<HeroSection 
+    title={league?.Season?.name || 'SEZÓNA'} 
+    subtitle={getHeroSubtitle()}
+    seasonType={league?.Season?.type || 'community'}
+  />
+
+
+
+
     <Container maxWidth="lg">
       <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -689,7 +715,7 @@ const LeagueDetail = () => {
          </Button>
        </DialogActions>
      </Dialog>
-   </Container>
+   </Container> </>
  );
 };
 
