@@ -15,6 +15,8 @@ import {
 import SportsSoccerIcon from '@mui/icons-material/SportsSoccer';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import GroupIcon from '@mui/icons-material/Group';
+import HomeHero from '../layout/HeroHome';
+
 
 const Home = () => {
   const { isAuthenticated } = useAuth();
@@ -22,6 +24,7 @@ const Home = () => {
   return (
     <Box>
       {/* Hero sekcia */}
+      <HomeHero />
       <Box
         sx={{
           bgcolor: 'primary.main',

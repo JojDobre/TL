@@ -19,6 +19,7 @@ import { getAllMatches, updateMatch } from '../../services/matchService';
 import { getUserTips } from '../../services/tipService';
 import MatchCard from '../match/MatchCard';
 import EvaluateMatchDialog from '../match/EvaluateMatch';
+import HeroSection from '../layout/HeroSection';
 
 
 
@@ -52,7 +53,15 @@ const RoundDetail = () => {
   // Hook pre autentifikáciu
   const { user, isAuthenticated } = useAuth();
 
-
+// Vytvorenie subtitle pre hero sekciu
+const getHeroSubtitle = () => {
+  if (!round || !round.League || !round.League.Season) return '';
+  
+  const participantsCount = round.League.Season.participantsCount || 0;
+  const inviteCode = round.League.Season.inviteCode || '000000';
+  
+  return `HRÁČI: ${participantsCount}/100 | ID: #${inviteCode}`;
+};
 
   // Pridané state pre dialóg vyhodnotenia zápasu
 const [evaluateDialogOpen, setEvaluateDialogOpen] = useState(false);
@@ -478,6 +487,13 @@ const handleEvaluateMatch = async () => {
   const roundClosed = !canSubmitTips();
   
   return (
+    <>
+    <HeroSection 
+      title={round.League?.Season?.name || 'SEZÓNA'} 
+      subtitle={getHeroSubtitle()}
+      seasonType={round.League?.Season?.type || 'community'}
+    />
+
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Container maxWidth="lg">
         <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
@@ -763,7 +779,7 @@ const handleEvaluateMatch = async () => {
           </DialogActions>
         </Dialog>
       </Container>
-    </LocalizationProvider>
+    </LocalizationProvider></>
   );
 };
 

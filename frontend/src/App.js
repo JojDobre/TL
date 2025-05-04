@@ -35,6 +35,7 @@ import RoundDetail from './components/round/RoundDetail';
 // Komponenty pre zápasy
 import CreateMatches from './components/match/CreateMatches';
 
+
 // Vytvorenie témy
 const theme = createTheme({
   palette: {

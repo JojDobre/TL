@@ -1,6 +1,6 @@
 
 // frontend/src/components/layout/Navbar.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -24,7 +24,10 @@ const Navbar = () => {
   // State pre mobilné menu
   const [anchorElNav, setAnchorElNav] = useState(null);
   const [anchorElUser, setAnchorElUser] = useState(null);
-  
+
+  // Nový state pre sledovanie scrollu
+  const [scrolled, setScrolled] = useState(false);
+
   // Hook pre navigáciu a autentifikáciu
   const navigate = useNavigate();
   const { user, logout, isAuthenticated, isAdmin } = useAuth();
@@ -36,6 +39,25 @@ const Navbar = () => {
     { title: 'O nás', path: '/about' },
     { title: 'Blog', path: '/blog' },
   ];
+
+    // Effect pre sledovanie scrollu
+  useEffect(() => {
+    const handleScroll = () => {
+      // Nastavíme threshold na 50px - po scrollovaní 50px sa zmení pozadie
+      const isScrolled = window.scrollY > 50;
+      if (isScrolled !== scrolled) {
+        setScrolled(isScrolled);
+      }
+    };
+    
+    // Pridáme event listener pre scroll
+    window.addEventListener('scroll', handleScroll);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [scrolled]);
   
   // Položky používateľského menu pre prihlásených používateľov
   const userMenuItems = [
@@ -47,6 +69,7 @@ const Navbar = () => {
   if (isAdmin) {
     userMenuItems.push({ title: 'Admin', path: '/admin' });
   }
+  
   
   // Handlery pre otvorenie/zatvorenie menu
   const handleOpenNavMenu = (event) => {
@@ -78,11 +101,21 @@ const Navbar = () => {
   };
   
   return (
-    <AppBar position="static">
+    <AppBar 
+      position="fixed" 
+      sx={{ 
+        background: scrolled ? 'rgba(32, 31, 31, 0.95)' : 'transparent', // Zmena pozadia podľa scrollu
+        boxShadow: scrolled ? '0 4px 6px rgba(0, 0, 0, 0.1)' : 'none', // Pridanie tieňa pri scrolle
+        backdropFilter: scrolled ? 'blur(10px)' : 'none', // Pridanie efektu blur pri scrolle
+        transition: 'all 0.3s ease', // Plynulá animácia zmien
+        zIndex: 10,
+      }}
+      elevation={scrolled ? 4 : 0}
+    >
       <Container maxWidth="xl">
         <Toolbar disableGutters>
           {/* Logo pre desktop */}
-          <SportsSoccerIcon sx={{ display: { xs: 'none', md: 'flex' }, mr: 1 }} />
+          <SportsSoccerIcon sx={{ display: { xs: 'none', md: 'flex' }, mr: 1, color: 'white' }} />
           <Typography
             variant="h6"
             noWrap
@@ -94,7 +127,7 @@ const Navbar = () => {
               fontFamily: 'monospace',
               fontWeight: 700,
               letterSpacing: '.3rem',
-              color: 'inherit',
+              color: 'white',
               textDecoration: 'none',
             }}
           >
@@ -109,7 +142,7 @@ const Navbar = () => {
               aria-controls="menu-appbar"
               aria-haspopup="true"
               onClick={handleOpenNavMenu}
-              color="inherit"
+              sx={{ color: 'white' }}
             >
               <MenuIcon />
             </IconButton>
@@ -146,7 +179,7 @@ const Navbar = () => {
           </Box>
 
           {/* Logo pre mobilné zariadenia */}
-          <SportsSoccerIcon sx={{ display: { xs: 'flex', md: 'none' }, mr: 1 }} />
+          <SportsSoccerIcon sx={{ display: { xs: 'flex', md: 'none' }, mr: 1, color: 'white' }} />
           <Typography
             variant="h5"
             noWrap
@@ -159,7 +192,7 @@ const Navbar = () => {
               fontFamily: 'monospace',
               fontWeight: 700,
               letterSpacing: '.3rem',
-              color: 'inherit',
+              color: 'white',
               textDecoration: 'none',
             }}
           >
@@ -212,17 +245,8 @@ const Navbar = () => {
                   open={Boolean(anchorElUser)}
                   onClose={handleCloseUserMenu}
                 >
-                  {userMenuItems.map((item) => (
-                    <MenuItem 
-                      key={item.title} 
-                      onClick={() => handleUserMenuItemClick(item.path)}
-                    >
-                      <Typography textAlign="center">{item.title}</Typography>
-                    </MenuItem>
-                  ))}
-                  <MenuItem onClick={() => handleUserMenuItemClick('logout')}>
-                    <Typography textAlign="center">Odhlásiť sa</Typography>
-                  </MenuItem>
+                  {/* Položky používateľského menu */}
+                  {/* ... */}
                 </Menu>
               </>
             ) : (
