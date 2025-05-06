@@ -17,6 +17,9 @@ import { getLeagueById, updateLeague, deleteLeague } from '../../services/league
 import { getAllRounds } from '../../services/roundService';
 import HeroSection from '../layout/HeroSection';
 
+import Leaderboard from '../common/Leaderboard';
+import { getLeagueLeaderboard } from '../../services/leagueService';
+
 
 // TabPanel komponent pre zobrazenie obsahu tabu
 function TabPanel(props) {
@@ -53,6 +56,12 @@ const LeagueDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
+// stav pre rebríček
+const [leaderboard, setLeaderboard] = useState([]);
+const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+const [leaderboardError, setLeaderboardError] = useState('');
+
+
   // State pre dialóg na úpravu ligy
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({
@@ -143,6 +152,11 @@ const LeagueDetail = () => {
   // Handler pre zmenu tabu
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
+    
+    // Načítanie rebríčka pri prepnutí na záložku Rebríček
+    if (newValue === 1 && leaderboard.length === 0 && !leaderboardLoading) {
+      fetchLeaderboard();
+    }
   };
   
   // Handler pre zmenu inputov vo formulári úpravy
@@ -167,6 +181,22 @@ const LeagueDetail = () => {
       }));
     }
   };
+
+  //  funkciu pre načítanie rebríčka
+const fetchLeaderboard = async () => {
+  try {
+    setLeaderboardLoading(true);
+    setLeaderboardError('');
+    
+    const leaderboardData = await getLeagueLeaderboard(id);
+    setLeaderboard(leaderboardData);
+  } catch (err) {
+    console.error('Chyba pri načítavaní rebríčka:', err);
+    setLeaderboardError('Nepodarilo sa načítať rebríček. Skúste to znova neskôr.');
+  } finally {
+    setLeaderboardLoading(false);
+  }
+};
 
   // Vytvorenie subtitle pre hero sekciu
   const getHeroSubtitle = () => {
@@ -479,7 +509,7 @@ const LeagueDetail = () => {
       ))}
     </Grid>
   )}
-          </TabPanel>
+            </TabPanel>
           
           {/* Tab pre rebríček */}
           <TabPanel value={tabValue} index={1}>
@@ -490,10 +520,12 @@ const LeagueDetail = () => {
               </Typography>
             </Box>
             
-            {/* Tu bude implementovaný rebríček ligy */}
-            <Typography variant="body1" sx={{ textAlign: 'center', my: 4 }}>
-              Rebríček bude dostupný po prvých odohraných zápasoch.
-            </Typography>
+            <Leaderboard
+              data={leaderboard}
+              loading={leaderboardLoading}
+              error={leaderboardError}
+              title={`Rebríček pre ligu: ${league.name}`}
+            />
           </TabPanel>
           
           {/* Tab pre bodovací systém */}

@@ -217,6 +217,9 @@ const updateMatch = async (req, res) => {
               ]
             }
           ]
+        },
+        {
+          model: Tip
         }
       ]
     });
@@ -250,6 +253,65 @@ const updateMatch = async (req, res) => {
     if (tipType) match.tipType = tipType;
     
     await match.save();
+    
+    // Ak sa nastavil výsledok zápasu a stav je "finished", prepočítať body pre tipy
+    if (match.status === 'finished' && homeScore !== undefined && awayScore !== undefined) {
+      // Získanie bodovacieho systému ligy
+      const league = match.Round.League;
+      const scoringSystem = league.scoringSystem || {
+        exactScore: 10,
+        correctGoals: 1,
+        correctWinner: 3,
+        goalDifference: 2
+      };
+      
+      // Výpočet skutočného výsledku
+      const actualResult = homeScore > awayScore ? 'home' : (homeScore < awayScore ? 'away' : 'draw');
+      const actualGoalDifference = Math.abs(homeScore - awayScore);
+      
+      // Vyhodnotenie tipov
+      for (const tip of match.Tips) {
+        let points = 0;
+        
+        if (tip.homeScore !== null && tip.awayScore !== null) {
+          // Presný výsledok
+          if (tip.homeScore === homeScore && tip.awayScore === awayScore) {
+            points += scoringSystem.exactScore;
+          } else {
+            // Správny počet gólov domáceho tímu
+            if (tip.homeScore === homeScore) {
+              points += scoringSystem.correctGoals;
+            }
+            
+            // Správny počet gólov hosťujúceho tímu
+            if (tip.awayScore === awayScore) {
+              points += scoringSystem.correctGoals;
+            }
+            
+            // Správny víťaz alebo remíza
+            const tippedResult = tip.homeScore > tip.awayScore ? 'home' : (tip.homeScore < tip.awayScore ? 'away' : 'draw');
+            if (tippedResult === actualResult) {
+              points += scoringSystem.correctWinner;
+            }
+            
+            // Správny gólový rozdiel
+            const tippedGoalDifference = Math.abs(tip.homeScore - tip.awayScore);
+            if (tippedGoalDifference === actualGoalDifference) {
+              points += scoringSystem.goalDifference;
+            }
+          }
+        } else if (tip.winner) {
+          // Ak je len tipovaný víťaz
+          if (tip.winner === actualResult) {
+            points += scoringSystem.correctWinner;
+          }
+        }
+        
+        // Aktualizácia bodov za tip
+        tip.points = points;
+        await tip.save();
+      }
+    }
     
     res.status(200).json({
       success: true,

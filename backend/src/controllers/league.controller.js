@@ -1,4 +1,4 @@
-const { League, Season, Round, Match, User, UserSeason, Team, Sequelize } = require('../models');
+const { League, Season, Round, Match, User, UserSeason, Team, Tip, Sequelize } = require('../models');
 const { Op } = Sequelize;
 
 // Získanie všetkých líg
@@ -400,7 +400,7 @@ const getLeagueLeaderboard = async (req, res) => {
       });
     }
     
-    // Získanie všetkých tipov v lige
+    // Získanie všetkých tipov v zápasoch, ktoré patria do tejto ligy
     const tips = await Tip.findAll({
       include: [
         {
@@ -408,9 +408,17 @@ const getLeagueLeaderboard = async (req, res) => {
           include: [
             {
               model: Round,
-              where: { leagueId: id }
+              where: { leagueId: id },  // Dôležitý filter - len kolá patriace do tejto ligy
+              required: true,  // Vyžaduje sa, aby každý tip bol spojený s kolom patriacim do tejto ligy
+              include: [
+                {
+                  model: League,
+                  attributes: ['id', 'name']
+                }
+              ]
             }
-          ]
+          ],
+          required: true  // Vyžaduje sa, aby každý tip bol spojený s takým zápasom
         },
         {
           model: User,

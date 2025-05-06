@@ -16,6 +16,16 @@ export const getAllRounds = async (filters = {}) => {
   }
 };
 
+// Získanie rebríčka kola
+export const getRoundLeaderboard = async (id) => {
+  try {
+    const response = await axios.get(`/api/rounds/${id}/leaderboard`);
+    return response.data.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Získanie detailu kola
 export const getRoundById = async (id) => {
   try {

@@ -17,6 +17,9 @@ import { getSeasonById, updateSeason, deleteSeason } from '../../services/season
 import { getAllLeagues } from '../../services/leagueService';
 import axios from 'axios';
 import HeroSection from '../layout/HeroSection';
+import Leaderboard from '../common/Leaderboard';
+import { getSeasonLeaderboard } from '../../services/seasonService';
+import { getLeagueLeaderboard } from '../../services/leagueService';
 
 
 
@@ -53,7 +56,23 @@ const SeasonDetail = () => {
   const [leagues, setLeagues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
+
+  //stav pre rebríček
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [leaderboardError, setLeaderboardError] = useState('');
+    // State pre vnorené záložky rebríčka
+  const [leaderboardTabIndex, setLeaderboardTabIndex] = useState(0);
+
+  // State pre rebríček sezóny
+  const [seasonLeaderboard, setSeasonLeaderboard] = useState([]);
+  const [seasonLeaderboardLoading, setSeasonLeaderboardLoading] = useState(false);
+  const [seasonLeaderboardError, setSeasonLeaderboardError] = useState('');
+
+  // State pre rebríčky líg
+  const [leagueLeaderboards, setLeagueLeaderboards] = useState({});
+  const [leagueLeaderboardsLoading, setLeagueLeaderboardsLoading] = useState({});
+  const [leagueLeaderboardsErrors, setLeagueLeaderboardsErrors] = useState({});
   // State pre dialóg na kopírovanie kódu
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   
@@ -145,6 +164,11 @@ const SeasonDetail = () => {
   // Handler pre zmenu tabu
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
+    
+    // Načítanie rebríčka pri prepnutí na záložku Rebríček
+    if (newValue === 1 && seasonLeaderboard.length === 0 && !seasonLeaderboardLoading) {
+      fetchSeasonLeaderboard();
+    }
   };
   
   // Handler pre kopírovanie kódu pre pripojenie
@@ -169,6 +193,22 @@ const SeasonDetail = () => {
       ...prevData,
       [name]: type === 'checkbox' ? checked : value
     }));
+  };
+
+  // Handler pre zmenu vnorenýcjh záložiek rebríčka
+  const handleLeaderboardTabChange = (event, newValue) => {
+    setLeaderboardTabIndex(newValue);
+    
+    // Ak sa preplo na celkový rebríček a ešte nebol načítaný
+    if (newValue === 0) {
+      fetchSeasonLeaderboard();
+    } 
+    // Ak sa preplo na rebríček ligy
+    else if (newValue > 0 && leagues && leagues.length >= newValue) {
+      const leagueId = leagues[newValue - 1].id;
+      // Vždy načítať rebríček ligy bez ohľadu na to, či už bol načítaný
+      fetchLeagueLeaderboard(leagueId);
+    }
   };
   
   // Handler pre odoslanie formulára úpravy
@@ -229,6 +269,74 @@ const SeasonDetail = () => {
     return season.participants.some(participant => participant.id === user.id);
   };
   
+
+      // funkcia pre načítanie rebríčka
+      const fetchLeaderboard = async () => {
+        try {
+          setLeaderboardLoading(true);
+          setLeaderboardError('');
+          
+          const leaderboardData = await getSeasonLeaderboard(id);
+          setLeaderboard(leaderboardData);
+        } catch (err) {
+          console.error('Chyba pri načítavaní rebríčka:', err);
+          setLeaderboardError('Nepodarilo sa načítať rebríček. Skúste to znova neskôr.');
+        } finally {
+          setLeaderboardLoading(false);
+        }
+      };
+
+      // Funkcia pre načítanie rebríčka sezóny
+      const fetchSeasonLeaderboard = async () => {
+        try {
+          setSeasonLeaderboardLoading(true);
+          setSeasonLeaderboardError('');
+          
+          const leaderboardData = await getSeasonLeaderboard(id);
+          setSeasonLeaderboard(leaderboardData);
+        } catch (err) {
+          console.error('Chyba pri načítavaní rebríčka sezóny:', err);
+          setSeasonLeaderboardError('Nepodarilo sa načítať rebríček sezóny. Skúste to znova neskôr.');
+        } finally {
+          setSeasonLeaderboardLoading(false);
+        }
+      };
+
+      // Funkcia pre načítanie rebríčka ligy
+      const fetchLeagueLeaderboard = async (leagueId) => {
+        try {
+          console.log(`Načítavam rebríček pre ligu ${leagueId}`);
+          setLeagueLeaderboardsLoading(prev => ({ ...prev, [leagueId]: true }));
+          setLeagueLeaderboardsErrors(prev => ({ ...prev, [leagueId]: '' }));
+          
+          // Explicitné volanie API pre rebríček konkrétnej ligy
+          const response = await fetch(`/api/leagues/${leagueId}/leaderboard`);
+          if (!response.ok) {
+            throw new Error(`API vrátilo chybu: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          
+          if (data && data.success && Array.isArray(data.data)) {
+            setLeagueLeaderboards(prev => ({
+              ...prev,
+              [leagueId]: data.data
+            }));
+          } else {
+            console.error(`Neočakávaný formát odpovede pre ligu ${leagueId}:`, data);
+            throw new Error('Neplatný formát odpovede z API');
+          }
+        } catch (err) {
+          console.error(`Chyba pri načítavaní rebríčka ligy ${leagueId}:`, err);
+          setLeagueLeaderboardsErrors(prev => ({
+            ...prev,
+            [leagueId]: `Nepodarilo sa načítať rebríček ligy. ${err.message}`
+          }));
+        } finally {
+          setLeagueLeaderboardsLoading(prev => ({ ...prev, [leagueId]: false }));
+        }
+      };
+      
   // Rendering komponenty
   if (loading) {
     return (
@@ -477,17 +585,51 @@ const SeasonDetail = () => {
           
           {/* Tab pre rebríček */}
           <TabPanel value={tabValue} index={1}>
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', my: 4 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 4 }}>
               <TrophyIcon fontSize="large" sx={{ mr: 2, color: 'primary.main' }} />
               <Typography variant="h5">
-                Rebríček sezóny
+                Rebríčky sezóny
               </Typography>
             </Box>
             
-            {/* Tu bude implementovaný rebríček sezóny */}
-            <Typography variant="body1" sx={{ textAlign: 'center', my: 4 }}>
-              Rebríček bude dostupný po prvých odohraných zápasoch.
-            </Typography>
+            {/* Vnorené záložky pre celkový rebríček a rebríčky jednotlivých líg */}
+            <Box sx={{ width: '100%' }}>
+              <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+                <Tabs 
+                  value={leaderboardTabIndex} 
+                  onChange={handleLeaderboardTabChange}
+                  variant="scrollable"
+                  scrollButtons="auto"
+                >
+                  <Tab label="Celkový rebríček" />
+                  {leagues.map(league => (
+                    <Tab key={league.id} label={league.name} />
+                  ))}
+                </Tabs>
+              </Box>
+              
+              {/* Vnorený TabPanel pre celkový rebríček */}
+              <TabPanel value={leaderboardTabIndex} index={0}>
+                <Leaderboard
+                  data={seasonLeaderboard}
+                  loading={seasonLeaderboardLoading}
+                  error={seasonLeaderboardError}
+                  title={`Celkový rebríček sezóny: ${season.name}`}
+                />
+              </TabPanel>
+              
+              {/* Vnorené TabPanely pre rebríčky jednotlivých líg */}
+              {leagues.map((league, index) => (
+                <TabPanel key={league.id} value={leaderboardTabIndex} index={index + 1}>
+                  <Leaderboard
+                    data={leagueLeaderboards[league.id] || []}
+                    loading={leagueLeaderboardsLoading[league.id] || false}
+                    error={leagueLeaderboardsErrors[league.id] || ''}
+                    title={`Rebríček ligy: ${league.name}`}
+                  />
+                </TabPanel>
+              ))}
+            </Box>
           </TabPanel>
           
           {/* Tab pre pravidlá */}

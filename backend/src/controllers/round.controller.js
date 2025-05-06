@@ -52,6 +52,99 @@ const getAllRounds = async (req, res) => {
   }
 };
 
+// Získanie rebríčka kola
+const getRoundLeaderboard = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Kontrola existencie kola
+    const roundExists = await Round.findByPk(id);
+    
+    if (!roundExists) {
+      return res.status(404).json({
+        success: false,
+        message: 'Kolo nebolo nájdené.'
+      });
+    }
+    
+    // Získanie všetkých tipov v kole
+    const tips = await Tip.findAll({
+      include: [
+        {
+          model: Match,
+          where: { roundId: id },
+          include: [
+            {
+              model: Team,
+              as: 'homeTeam',
+              attributes: ['id', 'name']
+            },
+            {
+              model: Team,
+              as: 'awayTeam',
+              attributes: ['id', 'name']
+            }
+          ]
+        },
+        {
+          model: User,
+          attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage']
+        }
+      ]
+    });
+    
+    // Spracovanie dát pre rebríček
+    const userPoints = {};
+    
+    tips.forEach(tip => {
+      const userId = tip.User.id;
+      
+      if (!userPoints[userId]) {
+        userPoints[userId] = {
+          user: {
+            id: tip.User.id,
+            username: tip.User.username,
+            firstName: tip.User.firstName,
+            lastName: tip.User.lastName,
+            profileImage: tip.User.profileImage
+          },
+          totalPoints: 0,
+          tipsCount: 0,
+          correctPredictions: 0
+        };
+      }
+      
+      userPoints[userId].totalPoints += tip.points;
+      userPoints[userId].tipsCount += 1;
+      
+      if (tip.points > 0) {
+        userPoints[userId].correctPredictions += 1;
+      }
+    });
+    
+    // Konverzia na pole a zoradenie podľa bodov
+    const leaderboard = Object.values(userPoints).sort((a, b) => b.totalPoints - a.totalPoints);
+    
+    // Pridanie poradia
+    leaderboard.forEach((entry, index) => {
+      entry.rank = index + 1;
+      entry.accuracy = Math.round((entry.correctPredictions / entry.tipsCount) * 100) || 0;
+    });
+    
+    res.status(200).json({
+      success: true,
+      data: leaderboard
+    });
+  } catch (error) {
+    console.error('Chyba pri získavaní rebríčka kola:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Chyba pri získavaní rebríčka kola.',
+      error: error.message
+    });
+  }
+};
+
 // Získanie detailu kola
 const getRoundById = async (req, res) => {
   try {
@@ -392,5 +485,6 @@ module.exports = {
   getRoundById,
   createRound,
   updateRound,
-  deleteRound
+  deleteRound,
+  getRoundLeaderboard
 };

@@ -4,7 +4,8 @@ const {
   getRoundById, 
   createRound, 
   updateRound, 
-  deleteRound 
+  deleteRound,
+  getRoundLeaderboard
 } = require('../controllers/round.controller');
 const { verifyToken } = require('../middleware/auth.middleware');
 
@@ -19,5 +20,6 @@ router.use(verifyToken);
 router.post('/', createRound);
 router.put('/:id', updateRound);
 router.delete('/:id', deleteRound);
+router.get('/:id/leaderboard', getRoundLeaderboard);
 
 module.exports = router;

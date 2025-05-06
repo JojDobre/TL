@@ -4,35 +4,67 @@ import { useParams, Link as RouterLink } from 'react-router-dom';
 import { 
   Container, Typography, Box, Paper, Button, Chip, Divider,
   CircularProgress, Alert, Dialog, DialogTitle, DialogContent,
-  DialogContentText, DialogActions, TextField,
+  DialogContentText, DialogActions, TextField, Tab, Tabs, Card, CardContent,
   Grid, MenuItem, FormControl, InputLabel, Select
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { 
-  Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon
+  Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon,
+  EmojiEvents as TrophyIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
-import { getRoundById, updateRound, deleteRound } from '../../services/roundService';
+import { getRoundById, updateRound, deleteRound, getRoundLeaderboard  } from '../../services/roundService';
 import { getAllMatches, updateMatch } from '../../services/matchService';
 import { getUserTips } from '../../services/tipService';
 import MatchCard from '../match/MatchCard';
 import EvaluateMatchDialog from '../match/EvaluateMatch';
 import HeroSection from '../layout/HeroSection';
+import Leaderboard from '../common/Leaderboard';
+import MatchResultForm from '../match/MatchResultForm';
 
 
+
+// TabPanel komponent pre zobrazenie obsahu tabu
+function TabPanel(props) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`league-tabpanel-${index}`}
+      aria-labelledby={`league-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
 
 const RoundDetail = () => {
   // Parameter z URL
   const { id } = useParams();
   
+  // State pre záložky
+  const [tabValue, setTabValue] = useState(0);
+
   // State pre detail kola
   const [round, setRound] = useState(null);
   const [matches, setMatches] = useState([]);
   const [userTips, setUserTips] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // State pre rebríček
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [leaderboardError, setLeaderboardError] = useState('');
   
   // State pre dialóg na úpravu kola
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -74,6 +106,18 @@ const [evaluateFormData, setEvaluateFormData] = useState({
 const [evaluateLoading, setEvaluateLoading] = useState(false);
 const [evaluateError, setEvaluateError] = useState('');
 
+// Vo funkcii RoundDetail potrebujeme aj funkciu na aktualizáciu match objektu v state
+const handleMatchUpdate = (updatedMatch) => {
+  setMatches(prevMatches => 
+    prevMatches.map(match => 
+      match.id === updatedMatch.id ? { ...match, ...updatedMatch } : match
+    )
+  );
+  
+  // Po úspešnej aktualizácii znovu načítame rebríček
+  fetchLeaderboard();
+};
+
 // Handler pre otvorenie dialógu pre vyhodnotenie zápasu
 const handleOpenEvaluateDialog = (match) => {
   setSelectedMatch(match);
@@ -84,6 +128,23 @@ const handleOpenEvaluateDialog = (match) => {
   });
   setEvaluateError('');
   setEvaluateDialogOpen(true);
+};
+
+
+// Funkcia pre načítanie rebríčka
+const fetchLeaderboard = async () => {
+  try {
+    setLeaderboardLoading(true);
+    setLeaderboardError('');
+    
+    const leaderboardData = await getRoundLeaderboard(id);
+    setLeaderboard(leaderboardData);
+  } catch (err) {
+    console.error('Chyba pri načítavaní rebríčka:', err);
+    setLeaderboardError('Nepodarilo sa načítať rebríček. Skúste to znova neskôr.');
+  } finally {
+    setLeaderboardLoading(false);
+  }
 };
 
 const fetchRoundDetail = async () => {
@@ -303,6 +364,17 @@ const handleEvaluateMatch = async () => {
     fetchRoundDetail();
   }, [id, isAuthenticated]);
   
+  // handler pre zmenu tabu, aby načítal rebríček pri prepnutí na záložku Výsledky
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+    
+    // Načítanie rebríčka pri prepnutí na záložku Výsledky
+    if (newValue === 1 && leaderboard.length === 0 && !leaderboardLoading) {
+      fetchLeaderboard();
+    }
+  };
+
+
   // Handler pre zmenu tipu
   const handleTipChange = (matchId, newTip) => {
     setUserTips(prevTips => ({
@@ -494,9 +566,13 @@ const handleEvaluateMatch = async () => {
       seasonType={round.League?.Season?.type || 'community'}
     />
 
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
+   <LocalizationProvider dateAdapter={AdapterDateFns}>
+
+
       <Container maxWidth="lg">
         <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
+
+
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h4" component="h1">
               {round.name}
@@ -554,6 +630,8 @@ const handleEvaluateMatch = async () => {
               {round.description}
             </Typography>
           )}
+
+      
           
           <Grid container spacing={2} sx={{ mt: 2 }}>
             <Grid item xs={12} sm={6}>
@@ -577,9 +655,25 @@ const handleEvaluateMatch = async () => {
               </Paper>
             </Grid>
           </Grid>
+
+
           
           <Divider sx={{ my: 3 }} />
+
+          <Tabs
+            value={tabValue}
+            onChange={handleTabChange}
+            indicatorColor="primary"
+            textColor="primary"
+            variant="fullWidth"
+          >
+            <Tab label="Zápasy" id="round-tab-0" />
+            <Tab label="Rebríček" id="round-tab-1" />
+            <Tab label="Admin" id="round-tab-2" />
+          </Tabs>
           
+          <TabPanel value={tabValue} index={0}>
+
           <Box sx={{ mb: 3 }}>
             {hasEditPermission() && (
               <Button
@@ -599,25 +693,141 @@ const handleEvaluateMatch = async () => {
               V tomto kole zatiaľ nie sú žiadne zápasy.
             </Typography>
           ) : (
-<Grid container spacing={3} justifyContent="center">
-  {matches.map((match) => (
-    <Grid item key={match.id}>
-      <MatchCard 
-        match={match}
-        userTip={userTips[match.id]}
-        onTipChange={handleTipChange}
-        roundClosed={roundClosed}
-        hasEditPermission={hasEditPermission()}
-        onEvaluateMatch={handleOpenEvaluateDialog}
-      />
-    </Grid>
-  ))}
-</Grid>
-          )}
+            <Grid container spacing={3} justifyContent="center">
+              {matches.map((match) => (
+                <Grid item key={match.id}>
+                  <MatchCard 
+                    match={match}
+                    userTip={userTips[match.id]}
+                    onTipChange={handleTipChange}
+                    roundClosed={roundClosed}
+                    hasEditPermission={hasEditPermission()}
+                    onEvaluateMatch={handleOpenEvaluateDialog}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+                      )}
+
+          </TabPanel>
+
+
+            {/* Tab pre rebricek */}
+            <TabPanel value={tabValue} index={1}>
+              <Box sx={{ mb: 4 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 4 }}>
+                  <TrophyIcon fontSize="large" sx={{ mr: 2, color: 'primary.main' }} />
+                  <Typography variant="h5">
+                    Rebríček kola
+                  </Typography>
+                </Box>
+                
+
+                
+                {/* Rebríček kola */}
+                <Leaderboard
+                  data={leaderboard}
+                  loading={leaderboardLoading}
+                  error={leaderboardError}
+                  title={`Rebríček pre kolo: ${round.name}`}
+                />
+              </Box>
+            </TabPanel>
+
+            {/* Tab pre výsledky */}
+            <TabPanel value={tabValue} index={2}>
+              <Box sx={{ mb: 4 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 4 }}>
+                  <TrophyIcon fontSize="large" sx={{ mr: 2, color: 'primary.main' }} />
+                  <Typography variant="h5">
+                    Výsledky a rebríček kola
+                  </Typography>
+                </Box>
+                
+                {/* Admin sekcia pre zadanie výsledkov */}
+                {hasEditPermission() && (
+                  <Paper sx={{ p: 3, mb: 4 }}>
+                    <Typography variant="h6" gutterBottom>
+                      Zadanie výsledkov zápasov
+                    </Typography>
+                    
+                    {matches.length === 0 ? (
+                      <Typography variant="body1">
+                        V tomto kole zatiaľ nie sú žiadne zápasy.
+                      </Typography>
+                    ) : (
+                      <Grid container spacing={3}>
+                        {matches.map((match) => (
+                          <Grid item xs={12} sm={6} md={4} key={match.id}>
+                            <Paper sx={{ p: 2, border: '1px solid #eee' }}>
+                              <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle1" align="center" gutterBottom>
+                                  {match.homeTeam?.name || 'Domáci'} vs {match.awayTeam?.name || 'Hostia'}
+                                </Typography>
+                                <Typography variant="caption" display="block" align="center" color="text.secondary">
+                                  {new Date(match.matchTime).toLocaleString()}
+                                </Typography>
+                              </Box>
+                              
+                              <MatchResultForm match={match} onUpdate={handleMatchUpdate} />
+                            </Paper>
+                          </Grid>
+                        ))}
+                      </Grid>
+                    )}
+                  </Paper>
+                )}
+                
+                {/* Rebríček kola */}
+                <Leaderboard
+                  data={leaderboard}
+                  loading={leaderboardLoading}
+                  error={leaderboardError}
+                  title={`Rebríček pre kolo: ${round.name}`}
+                />
+              </Box>
+            </TabPanel>
+
         </Paper>
 
 
-        // Pridaný dialóg pre vyhodnotenie zápasu
+     
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <Dialog open={evaluateDialogOpen} onClose={handleCloseEvaluateDialog} maxWidth="sm" fullWidth>
   <DialogTitle>
     {selectedMatch?.status === 'finished' ? 'Upraviť výsledok' : 'Zadať výsledok'}
