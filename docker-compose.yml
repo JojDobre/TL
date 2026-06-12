@@ -1,0 +1,37 @@
+# docker-compose.yml — PostgreSQL databáza pre Tiperliga (vývoj)
+# Spustenie:  docker compose up -d
+# Zastavenie: docker compose down
+# Zmazanie aj dát: docker compose down -v
+
+services:
+  db:
+    image: postgres:16-alpine          # Ľahký oficiálny PostgreSQL image
+    container_name: tiperliga-db        # Pevný názov kontajnera pre prehľadnosť
+    restart: unless-stopped             # Po reštarte PC sa DB sama naštartuje
+    environment:
+      POSTGRES_USER: tiperliga          # Musí sa zhodovať s DB_USER v backend/.env
+      POSTGRES_PASSWORD: tiperliga_dev  # Musí sa zhodovať s DB_PASSWORD v backend/.env
+      POSTGRES_DB: tiperliga            # Musí sa zhodovať s DB_NAME v backend/.env
+    ports:
+      - "5432:5432"                     # Mapovanie portu DB na localhost:5432
+    volumes:
+      - tiperliga_pgdata:/var/lib/postgresql/data   # Trvalé uloženie dát mimo kontajnera
+    healthcheck:                        # Overenie, či je DB pripravená prijímať spojenia
+      test: ["CMD-SHELL", "pg_isready -U tiperliga -d tiperliga"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Voliteľné: webové rozhranie na prezeranie databázy (http://localhost:8080)
+  # Ak ho nechceš, pokojne celú sekciu 'adminer' zmaž.
+  adminer:
+    image: adminer:latest
+    container_name: tiperliga-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
+volumes:
+  tiperliga_pgdata:                     # Pomenovaný volume, kde žijú dáta DB

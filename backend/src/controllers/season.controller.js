@@ -79,8 +79,24 @@ const getSeasonById = async (req, res) => {
     
     console.log(`Requesting season detail for ID: ${id}`);
     
-    // Načítanie sezóny bez akýchkoľvek asociácií
-    const season = await Season.findByPk(id);
+    // Načítanie sezóny s asociovanými dátami
+    const season = await Season.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: 'creator',
+          attributes: ['id', 'username', 'firstName', 'lastName']
+        },
+        {
+          model: User,
+          as: 'participants',
+          attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'],
+          through: { 
+            attributes: ['role', 'joinedAt'] 
+          }
+        }
+      ]
+    });
     
     if (!season) {
       console.log(`Season with ID ${id} not found`);
@@ -89,6 +105,9 @@ const getSeasonById = async (req, res) => {
         message: 'Sezóna nebola nájdená.'
       });
     }
+
+    // Získanie počtu účastníkov
+    const participantsCount = await season.countParticipants();
     
     // Načítame tvorcu sezóny samostatne
     let creator = null;
@@ -119,7 +138,9 @@ const getSeasonById = async (req, res) => {
         lastName: creator.lastName
       } : null,
       createdAt: season.createdAt,
-      updatedAt: season.updatedAt
+      updatedAt: season.updatedAt,
+      ...season.toJSON(),
+      participantsCount
     };
     
     console.log('Successfully fetched season data');
@@ -146,7 +167,7 @@ const createSeason = async (req, res) => {
 
 
   try {
-    const { name, description, image, type, rules } = req.body;
+    const { name, description, image, type, rules, participantLimit } = req.body;
     const userId = req.userId;
     
     // Kontrola, či už užívateľ nemá vytvorenú sezónu (ak nie je admin)
@@ -183,6 +204,20 @@ const createSeason = async (req, res) => {
         });
       }
     }
+
+        // Určíme hodnotu participantLimit podľa typu sezóny a role používateľa
+        let finalParticipantLimit = null; // Pre oficiálne sezóny: neobmedzené
+    
+        if (type === 'community') {
+          // Pre komunitné sezóny: základný limit 100, VIP môžu meniť
+          if (user.role === 'vip' || user.role === 'admin') {
+            // VIP a admin môžu nastaviť vlastný limit
+            finalParticipantLimit = participantLimit !== undefined ? participantLimit : 100;
+          } else {
+            // Bežní užívatelia majú fixný limit 100
+            finalParticipantLimit = 100;
+          }
+        }
     
     // Generovanie jedinečného kódu pre pozvánku
     const inviteCode = uuidv4().substring(0, 6).toUpperCase();
@@ -196,7 +231,8 @@ const createSeason = async (req, res) => {
       rules,
       inviteCode,
       creatorId: userId,
-      active: true
+      active: true,
+      participantLimit: finalParticipantLimit
     });
     
     // Označenie problémov pri vytváraní asociácie
@@ -229,7 +265,7 @@ const createSeason = async (req, res) => {
 const updateSeason = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, image, active, rules } = req.body;
+    const { name, description, image, active, rules, participantLimit } = req.body;
     const userId = req.userId;
     
     // Načítanie sezóny
@@ -258,6 +294,12 @@ const updateSeason = async (req, res) => {
     if (image !== undefined) season.image = image;
     if (active !== undefined) season.active = active;
     if (rules !== undefined) season.rules = rules;
+
+        // Aktualizácia limitu účastníkov - iba pre VIP a admin používateľov a komunitné sezóny
+        if (participantLimit !== undefined && season.type === 'community' && 
+          (user.role === 'vip' || user.role === 'admin')) {
+        season.participantLimit = participantLimit;
+      }
     
     await season.save();
     
@@ -346,18 +388,40 @@ const joinSeason = async (req, res) => {
     }
     
     // Kontrola, či užívateľ už nie je v sezóne
-    const isParticipant = await season.hasParticipant(userId);
+    const existingUserSeason = await UserSeason.findOne({
+      where: {
+        userId,
+        seasonId: season.id
+      }
+    });
     
-    if (isParticipant) {
+    if (existingUserSeason) {
       return res.status(400).json({
         success: false,
         message: 'Už ste členom tejto sezóny.'
       });
     }
     
-    // Pridanie užívateľa do sezóny
-    await season.addParticipant(userId, { 
-      through: { role: 'player' } 
+    // Kontrola limitu účastníkov pre komunitné sezóny
+    if (season.type === 'community' && season.participantLimit !== null) {
+      const participantsCount = await UserSeason.count({
+        where: { seasonId: season.id }
+      });
+      
+      if (participantsCount >= season.participantLimit) {
+        return res.status(400).json({
+          success: false,
+          message: `Táto sezóna už dosiahla maximálny počet účastníkov (${season.participantLimit}).`
+        });
+      }
+    }
+    
+    // Pridanie užívateľa do sezóny - priame vytvorenie záznamu v prepojovacej tabuľke
+    await UserSeason.create({
+      userId,
+      seasonId: season.id,
+      role: 'player',
+      joinedAt: new Date()
     });
     
     res.status(200).json({

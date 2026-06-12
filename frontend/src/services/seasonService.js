@@ -29,7 +29,17 @@ export const getSeasonById = async (id) => {
 // Vytvorenie novej sezóny
 export const createSeason = async (seasonData) => {
   try {
-    const response = await axios.post('/api/seasons', seasonData);
+    // Upravíme dáta pre backend - pre neobmedzený počet nastavíme null
+    const dataToSend = { ...seasonData };
+    
+    // Ak je participant limit prázdny, neobmedzený alebo 0, nastavíme null
+    if (dataToSend.participantLimit === '' || 
+        dataToSend.participantLimit === 0 ||
+        dataToSend.participantLimit === undefined) {
+      dataToSend.participantLimit = null;
+    }
+    
+    const response = await axios.post('/api/seasons', dataToSend);
     return response.data.data;
   } catch (error) {
     throw error;
@@ -39,7 +49,17 @@ export const createSeason = async (seasonData) => {
 // Aktualizácia sezóny
 export const updateSeason = async (id, seasonData) => {
   try {
-    const response = await axios.put(`/api/seasons/${id}`, seasonData);
+    // Upravíme dáta pre backend - pre neobmedzený počet nastavíme null
+    const dataToSend = { ...seasonData };
+    
+    // Ak je participant limit prázdny, neobmedzený alebo 0, nastavíme null
+    if (dataToSend.participantLimit === '' || 
+        dataToSend.participantLimit === 0 ||
+        dataToSend.participantLimit === undefined) {
+      dataToSend.participantLimit = null;
+    }
+    
+    const response = await axios.put(`/api/seasons/${id}`, dataToSend);
     return response.data.data;
   } catch (error) {
     throw error;

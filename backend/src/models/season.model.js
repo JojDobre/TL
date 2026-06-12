@@ -1,68 +1,110 @@
 // models/season.model.js
 module.exports = (sequelize, DataTypes) => {
-    const Season = sequelize.define('Season', {
-      id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-      },
-      name: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      description: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-      },
-      image: {
-        type: DataTypes.STRING,  // URL k obrázku sezóny
-        allowNull: true,
-      },
-      type: {
-        type: DataTypes.ENUM('official', 'community'),  // Typ sezóny: oficiálna alebo komunitná
-        defaultValue: 'community',
-      },
-      inviteCode: {
-        type: DataTypes.STRING,  // Jedinečný kód na prihlásenie do sezóny
-        allowNull: false,
-        unique: true,
-      },
-      active: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true,
-      },
-      rules: {
-        type: DataTypes.TEXT,  // Pravidlá sezóny
-        allowNull: true,
-      },
-      creatorId: {
-        type: DataTypes.INTEGER,  // Odkaz na používateľa, ktorý vytvoril sezónu
-        allowNull: false,
-      },
-    }, {
-      tableName: 'seasons',
-      timestamps: true,
+  const Season = sequelize.define('Season', {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    image: {
+      type: DataTypes.STRING,  // URL k obrázku sezóny
+      allowNull: true,
+    },
+    type: {
+      type: DataTypes.ENUM('official', 'community'),  // Typ sezóny: oficiálna alebo komunitná
+      defaultValue: 'community',
+    },
+    inviteCode: {
+      type: DataTypes.STRING,  // Jedinečný kód na prihlásenie do sezóny
+      allowNull: false,
+      unique: true,
+    },
+    active: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
+    rules: {
+      type: DataTypes.TEXT,  // Pravidlá sezóny
+      allowNull: true,
+    },
+    creatorId: {
+      type: DataTypes.INTEGER,  // Odkaz na používateľa, ktorý vytvoril sezónu
+      allowNull: false,
+    },
+    participantLimit: {
+      type: DataTypes.INTEGER,  // Limit počtu účastníkov v sezóne
+      allowNull: true,         // null znamená neobmedzený počet
+      defaultValue: 100,       // Predvolená hodnota pre komunitné sezóny
+    },
+  }, {
+    tableName: 'seasons',
+    timestamps: true,
+  });
+
+
+  const UserSeason = sequelize.define('UserSeason', {
+    userId: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      references: {
+        model: 'Users',
+        key: 'id'
+      }
+    },
+    seasonId: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      references: {
+        model: 'Seasons',
+        key: 'id'
+      }
+    },
+    role: {
+      type: DataTypes.ENUM('player', 'admin'),
+      defaultValue: 'player'
+    },
+    joinedAt: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW
+    }
+  }, {
+    tableName: 'user_seasons',
+    timestamps: true,
+    // Add this to correctly set up the composite primary key
+    uniqueKeys: {
+      user_season_unique: {
+        fields: ['userId', 'seasonId']
+      }
+    }
+  });
+  
+  Season.associate = function(models) {
+    // Sezóna patrí používateľovi, ktorý ju vytvoril
+    Season.belongsTo(models.User, {
+      foreignKey: 'creatorId',
+      as: 'creator',
     });
-  
-    Season.associate = function(models) {
-      // Sezóna patrí používateľovi, ktorý ju vytvoril
-      Season.belongsTo(models.User, {
-        foreignKey: 'creatorId',
-        as: 'creator',
-      });
-      
-      // Sezóna môže mať viacero používateľov (hráčov)
-      Season.belongsToMany(models.User, {
-        through: models.UserSeason,  // Dôležité: použite správny spojovací model
-        foreignKey: 'seasonId',
-        as: 'participants',
-      });
-      
-      // Sezóna môže mať viacero líg
-      Season.hasMany(models.League, {
-        foreignKey: 'seasonId',
-      });
-    };
-  
-    return Season;
+    
+    // Sezóna môže mať viacero používateľov (hráčov)
+    Season.belongsToMany(models.User, {
+      through: models.UserSeason,  // Dôležité: použite správny spojovací model
+      foreignKey: 'seasonId',
+      as: 'participants',
+    });
+    
+    // Sezóna môže mať viacero líg
+    Season.hasMany(models.League, {
+      foreignKey: 'seasonId',
+    });
   };
+
+  return Season;
+};

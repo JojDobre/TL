@@ -4,18 +4,29 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Container, Typography, Box, TextField, Button, 
   FormControl, InputLabel, Select, MenuItem,
-  Paper, CircularProgress, Alert, Divider
+  Paper, CircularProgress, Alert, Divider, FormHelperText
 } from '@mui/material';
 import { createSeason } from '../../services/seasonService';
+import { useAuth } from '../../contexts/AuthContext';
+import titles from '../../images/titles.png'; // uprav cestu podľa umiestnenia súboru
+
+
 
 const CreateSeason = () => {
+
+    // Hook pre autentifikáciu
+    const { user } = useAuth();
+    const isVIPorAdmin = user && (user.role === 'vip' || user.role === 'admin');
+
+    
   // State pre formulár
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    image: '',
+    image: 'https://jojdobre.eu/files/portfolio/tiperliga.png',
     type: 'community',
-    rules: ''
+    rules: '',
+    participantLimit: 100
   });
   
   // State pre chyby a načítanie
@@ -53,6 +64,13 @@ const CreateSeason = () => {
     
     if (formData.image && !/^(http|https):\/\/[^ "]+$/.test(formData.image)) {
       errors.image = 'Zadajte platnú URL adresu obrázka.';
+    }
+    
+    if (formData.type === 'community' && isVIPorAdmin) {
+      if (formData.participantLimit !== null && 
+          (isNaN(formData.participantLimit) || formData.participantLimit < 1)) {
+        errors.participantLimit = 'Limit účastníkov musí byť kladné číslo.';
+      }
     }
     
     setFormErrors(errors);
@@ -151,6 +169,23 @@ const CreateSeason = () => {
               <MenuItem value="official" disabled>Oficiálna (len pre administrátorov)</MenuItem>
             </Select>
           </FormControl>
+
+                    {/* Pole pre limit účastníkov - zobrazí sa len pre komunitné sezóny a VIP/Admin používateľov */}
+          {formData.type === 'community' && isVIPorAdmin && (
+            <TextField
+              margin="normal"
+              fullWidth
+              id="participantLimit"
+              label="Limit účastníkov"
+              name="participantLimit"
+              type="number"
+              InputProps={{ inputProps: { min: 1 } }}
+              value={formData.participantLimit}
+              onChange={handleChange}
+              error={!!formErrors.participantLimit}
+              helperText={formErrors.participantLimit || "Zadajte maximálny počet účastníkov (Pre neobmedzený počet nechajte prázdne)"}
+            />
+          )}
           
           <TextField
             margin="normal"

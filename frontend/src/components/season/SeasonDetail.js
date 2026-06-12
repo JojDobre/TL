@@ -83,7 +83,9 @@ const SeasonDetail = () => {
     description: '',
     image: '',
     rules: '',
-    active: true
+    active: true,
+    participantLimit: 100 // Add this field
+
   });
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
@@ -128,7 +130,9 @@ const SeasonDetail = () => {
               description: response.data.data.description || '',
               image: response.data.data.image || '',
               rules: response.data.data.rules || '',
-              active: response.data.data.active !== undefined ? response.data.data.active : true
+              active: response.data.data.active !== undefined ? response.data.data.active : true,
+              participantLimit: response.data.data.participantLimit // Add this line
+
             });
             
             // Načítanie líg pre sezónu
@@ -471,6 +475,27 @@ const SeasonDetail = () => {
             {season.description}
           </Typography>
         )}
+
+
+        {/* Display participant limit info */}
+        {season.type === 'community' && (
+          <Box sx={{ mt: 2, mb: 2 }}>
+            <Typography variant="body2">
+              Limit účastníkov: {
+                season.participantLimit 
+                  ? `${season.participantLimit} hráčov` 
+                  : 'Neobmedzený počet'
+              }
+            </Typography>
+            {isAuthenticated && isParticipant() && (
+              <Typography variant="body2" color="text.secondary">
+                Aktuálny počet účastníkov: {
+                  season.participants ? season.participants.length : '0'
+                }
+              </Typography>
+            )}
+          </Box>
+        )}
         
         {isAuthenticated && isParticipant() && (
           <Box sx={{ mt: 3, mb: 4, display: 'flex', alignItems: 'center' }}>
@@ -651,47 +676,52 @@ const SeasonDetail = () => {
           
           {/* Tab pre hráčov */}
           <TabPanel value={tabValue} index={3}>
-            <Typography variant="h5" gutterBottom>
-              Hráči v sezóne
-            </Typography>
-            
-            {season.participants && season.participants.length > 0 ? (
-              <List>
-                {season.participants.map((participant) => (
-                  <ListItem key={participant.id}>
-                    <ListItemAvatar>
-                      <Avatar 
-                        src={participant.profileImage}
-                        alt={participant.username}
-                      >
-                        {participant.username.charAt(0).toUpperCase()}
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <>
-                          {participant.username}
-                          {participant.UserSeason?.role === 'admin' && (
-                            <Chip 
-                              label="Admin" 
-                              size="small" 
-                              color="primary" 
-                              sx={{ ml: 1 }}
-                            />
-                          )}
-                        </>
-                      }
-                      secondary={`${participant.firstName || ''} ${participant.lastName || ''}`.trim()}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            ) : (
-              <Typography variant="body1" sx={{ textAlign: 'center', my: 4 }}>
-                V tejto sezóne zatiaľ nie sú žiadni hráči.
-              </Typography>
-            )}
-          </TabPanel>
+  <Typography variant="h5" gutterBottom>
+    Hráči v sezóne 
+    {season.participantLimit && season.type === 'community' && (
+      <Typography component="span" color="text.secondary" sx={{ ml: 1 }}>
+        (Max: {season.participantLimit})
+      </Typography>
+    )}
+  </Typography>
+  
+  {season.participants && season.participants.length > 0 ? (
+    <List>
+      {season.participants.map((participant) => (
+        <ListItem key={participant.id}>
+          <ListItemAvatar>
+            <Avatar 
+              src={participant.profileImage}
+              alt={participant.username}
+            >
+              {participant.username.charAt(0).toUpperCase()}
+            </Avatar>
+          </ListItemAvatar>
+          <ListItemText
+            primary={
+              <>
+                {participant.username}
+                {participant.UserSeason?.role === 'admin' && (
+                  <Chip 
+                    label="Admin" 
+                    size="small" 
+                    color="primary" 
+                    sx={{ ml: 1 }}
+                  />
+                )}
+              </>
+            }
+            secondary={`${participant.firstName || ''} ${participant.lastName || ''}`.trim()}
+          />
+        </ListItem>
+      ))}
+    </List>
+  ) : (
+    <Typography variant="body1" sx={{ textAlign: 'center', my: 4 }}>
+      V tejto sezóne zatiaľ nie sú žiadni hráči.
+    </Typography>
+  )}
+</TabPanel>
         </Paper>
       </Paper>
       
@@ -759,6 +789,23 @@ const SeasonDetail = () => {
             value={editFormData.image}
             onChange={handleEditFormChange}
           />
+
+              {/* Zobrazíme pole pre limit účastníkov len pre komunitné sezóny a VIP/Admin používateľov */}
+          {season && season.type === 'community' && 
+          user && (user.role === 'vip' || user.role === 'admin') && (
+            <TextField
+              margin="normal"
+              fullWidth
+              id="participantLimit"
+              label="Limit účastníkov"
+              name="participantLimit"
+              type="number"
+              InputProps={{ inputProps: { min: 1 } }}
+              value={editFormData.participantLimit}
+              onChange={handleEditFormChange}
+              helperText="Zadajte maximálny počet účastníkov (Pre neobmedzený počet nechajte prázdne)"
+            />
+          )}
           
           <TextField
             margin="normal"

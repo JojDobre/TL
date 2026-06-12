@@ -1,11 +1,14 @@
 // frontend/src/App.js
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { AuthProvider } from './contexts/AuthContext';
+
+// Nová branding téma (Fáza 0.1 / Časť A) — nahrádza pôvodnú default modrú
+import buildTheme from './theme';
 
 // Komponenty pre layout
 import Layout from './components/layout/Layout';
@@ -35,18 +38,8 @@ import RoundDetail from './components/round/RoundDetail';
 // Komponenty pre zápasy
 import CreateMatches from './components/match/CreateMatches';
 
-
-// Vytvorenie témy
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#f50057',
-    },
-  },
-});
+// Vytvorenie témy (zatiaľ dark; light variant doplníme neskôr cez prepínač)
+const theme = buildTheme('dark');
 
 function App() {
   return (
@@ -65,7 +58,7 @@ function App() {
                 <Route path="/seasons/:id" element={<SeasonDetail />} />
                 <Route path="/leagues/:id" element={<LeagueDetail />} />
                 <Route path="/rounds/:id" element={<RoundDetail />} />
-                
+
                 {/* Chránené cesty (vyžadujú autentifikáciu) */}
                 <Route element={<ProtectedRoute />}>
                   <Route path="/profile" element={<Profile />} />
@@ -74,17 +67,17 @@ function App() {
                   <Route path="/rounds/create" element={<CreateRound />} />
                   <Route path="/matches/create" element={<CreateMatches />} />
                 </Route>
-                
+
                 {/* Cesty vyžadujúce admin rolu */}
                 <Route element={<ProtectedRoute requiredRole="admin" />}>
                   <Route path="/admin" element={<div>Admin Panel</div>} />
                 </Route>
-                
+
                 {/* Ostatné cesty */}
                 <Route path="/about" element={<div>O nás</div>} />
                 <Route path="/blog" element={<div>Blog</div>} />
                 <Route path="/leaderboards" element={<div>Rebríčky</div>} />
-                
+
                 {/* Fallback cesta */}
                 <Route path="*" element={<div>Stránka nenájdená</div>} />
               </Routes>

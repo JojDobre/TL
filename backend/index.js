@@ -5,6 +5,9 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const syncDatabase = require('./src/config/db.sync');
 
+// Import error middleware (nové vo Fáze 0)
+const { notFoundHandler, errorHandler } = require('./src/middleware/error.middleware');
+
 // Importovanie routes
 const authRoutes = require('./src/routes/auth.routes');
 const userRoutes = require('./src/routes/user.routes');
@@ -36,11 +39,16 @@ app.use('/api/matches', matchRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/tips', tipRoutes);
 
-
 // Základná route pre testovanie
 app.get('/', (req, res) => {
   res.send('Tipovacia aplikácia API beží!');
 });
+
+// --- Error handling (MUSÍ byť až za všetkými routes) ---
+// 404 pre neexistujúce cesty
+app.use(notFoundHandler);
+// Centrálny error handler — odchytí všetko, čo controllery posunú cez next(err)
+app.use(errorHandler);
 
 // Synchronizácia databázy pri spustení aplikácie (len pre vývoj)
 if (process.env.NODE_ENV === 'development') {
