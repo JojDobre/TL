@@ -1,0 +1,133 @@
+/* =====================================================================
+   TIPERLIGA — Modernizačná vrstva (layout-safe)
+   Mení iba opacity / transform / farbu. Žiadny glass, žiadny backdrop-filter,
+   žiadna zmena rozloženia. Rešpektuje prefers-reduced-motion.
+   ===================================================================== */
+
+/* ---- 1 · SCROLL REVEAL ---------------------------------------------
+   Skrytie sa aplikuje LEN keď beží JS (html.has-reveal). Bez JS je
+   všetok obsah normálne viditeľný — nič nezmizne. ------------------- */
+.has-reveal .reveal { opacity: 0; transform: translateY(16px); }
+.has-reveal .reveal.in {
+  opacity: 1; transform: none;
+  transition: opacity .6s var(--ease-out), transform .6s var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .has-reveal .reveal { opacity: 1 !important; transform: none !important; }
+}
+
+/* ---- 2 · COUNT-UP --------------------------------------------------- */
+.countup { font-variant-numeric: tabular-nums; }
+
+/* ---- 3 · TEČÚCI GRADIENTOVÝ NADPIS ---------------------------------- */
+.flow-text {
+  background: linear-gradient(100deg, var(--brand-bright), var(--gold-bright) 46%, var(--brand-bright));
+  background-size: 220% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: tl-flow 7s linear infinite;
+}
+@keyframes tl-flow { to { background-position: 220% 0; } }
+@media (prefers-reduced-motion: reduce) { .flow-text { animation: none; } }
+
+/* ---- 5 · POMALY DÝCHAJÚCE POZADIE ----------------------------------
+   Pridá dva jemné posúvajúce sa „blobs" do existujúceho fixného poľa.
+   Je za obsahom (z-index:-1), na layout nemá žiadny vplyv. ----------- */
+.bg-field { overflow: hidden; }
+.bg-field::before,
+.bg-field::after {
+  content: ""; position: absolute; border-radius: 50%;
+  filter: blur(64px); pointer-events: none; will-change: transform;
+}
+.bg-field::before {
+  width: 42vw; height: 42vw; left: -6vw; top: -10vw; opacity: .42;
+  background: radial-gradient(circle at 30% 30%, rgba(124,92,255,.5), transparent 62%);
+  animation: tl-drift-a 30s var(--ease) infinite alternate;
+}
+.bg-field::after {
+  width: 38vw; height: 38vw; right: -8vw; top: 2vw; opacity: .28;
+  background: radial-gradient(circle at 60% 40%, rgba(250,204,21,.32), transparent 60%);
+  animation: tl-drift-b 36s var(--ease) infinite alternate;
+}
+[data-theme="light"] .bg-field::before { opacity: .26; }
+[data-theme="light"] .bg-field::after  { opacity: .22; }
+@keyframes tl-drift-a { to { transform: translate3d(7vw, 5vw, 0) scale(1.10); } }
+@keyframes tl-drift-b { to { transform: translate3d(-6vw, 4vw, 0) scale(1.08); } }
+@media (prefers-reduced-motion: reduce) {
+  .bg-field::before, .bg-field::after { animation: none; }
+}
+
+/* ---- 6 · JEMNÉ MIKRO-DETAILY NA HERO KARTE -------------------------- */
+.float-soft { animation: tl-floaty 6s var(--ease) infinite alternate; }
+.float-soft.delay { animation-delay: -3s; }
+@keyframes tl-floaty { to { transform: translateY(-10px); } }
+
+.breathe { animation: tl-breathe 3s var(--ease) infinite; }
+@keyframes tl-breathe {
+  0%, 100% { text-shadow: 0 0 0 transparent; }
+  50%      { text-shadow: var(--text-glow-brand); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .float-soft, .breathe { animation: none; }
+}
+
+/* ---- 7 · SCROLL-PROGRESS PRÚŽOK ------------------------------------ */
+.scroll-prog {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0; z-index: 100;
+  background: linear-gradient(90deg, var(--brand), var(--gold-bright));
+  box-shadow: 0 0 12px var(--brand-line);
+  pointer-events: none; will-change: width;
+}
+
+/* ---- 8 · SPOTLIGHT GLOW NA KARTÁCH (len desktop, hover) ------------ */
+@media (hover: hover) and (pointer: fine) {
+  .glow-follow { position: relative; }
+  .glow-follow::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%),
+                color-mix(in srgb, var(--brand) 15%, transparent), transparent 62%);
+    opacity: 0; transition: opacity .3s var(--ease); z-index: 1;
+  }
+  .glow-follow:hover::after { opacity: 1; }
+}
+
+/* ---- 9 · SHINE SWEEP NA HLAVNÝCH TLAČIDLÁCH ------------------------ */
+.btn-primary, .btn-brand { position: relative; overflow: hidden; }
+.btn-primary::after, .btn-brand::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: -130%; width: 55%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.5), transparent);
+  transform: skewX(-18deg); pointer-events: none;
+}
+.btn-primary:hover::after, .btn-brand:hover::after { animation: tl-sweep .85s var(--ease); }
+@keyframes tl-sweep { to { left: 150%; } }
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary:hover::after, .btn-brand:hover::after { animation: none; }
+}
+
+/* ---- 10 · ROTUJÚCI GRADIENTOVÝ RÁM OKOLO HERO KARTY ---------------- */
+@property --tl-ring { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.ring-anim { position: relative; isolation: isolate; }
+.ring-anim::before {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1.5px;
+  background: conic-gradient(from var(--tl-ring),
+              var(--brand) 0deg, var(--gold) 110deg, var(--success) 210deg, var(--brand) 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  opacity: .9; z-index: -1; pointer-events: none;
+  animation: tl-ringspin 8s linear infinite;
+}
+@keyframes tl-ringspin { to { --tl-ring: 360deg; } }
+@media (prefers-reduced-motion: reduce) {
+  .ring-anim::before { animation: none; }
+}
+
+/* ---- 11 · GLOBÁLNE DROBNOSTI -------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+/* moderný, konzistentný focus ring (klávesnica) */
+:where(a, button, .btn, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--brand-bright);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}

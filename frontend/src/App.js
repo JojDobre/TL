@@ -1,4 +1,8 @@
 // frontend/src/App.js
+//
+// Každá stránka prenáša CELÉ telo zo šablóny vrátane navbaru a footera
+// (generuje shell.js). Preto tu NIE JE žiadny Layout — stránky sú samostatné.
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
@@ -6,39 +10,19 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { AuthProvider } from './contexts/AuthContext';
-
-// Nová branding téma (Fáza 0.1 / Časť A) — nahrádza pôvodnú default modrú
 import buildTheme from './theme';
 
-// Komponenty pre layout
-import Layout from './components/layout/Layout';
+import {
+  Home, Seasons, SeasonDetail, LeagueDetail, RoundDetail, RoundResults,
+  CreateSeason, CreateLeague, CreateRound, CreateMatches, CreateTeam,
+  Login, Register, ForgotPassword, Profile, Settings,
+  My, TipHistory, Stats, Achievements, Notifications,
+  Discover, Join, LeaveCompetition, PlayerProfile, Compare,
+  Leaderboards, Blog, BlogPost, About, Kontakt,
+  AdminDashboard, AdminUsers, AdminLeagues, AdminCompetition, AdminEvaluate,
+  NotFound, ErrorPage,
+} from './template/pages';
 
-// Komponenty pre autentifikáciu
-import Login from './components/auth/Login';
-import Register from './components/auth/Register';
-import Profile from './components/auth/Profile';
-import ProtectedRoute from './components/auth/ProtectedRoute';
-
-// Komponenty pre domovskú stránku
-import Home from './components/home/Home';
-
-// Komponenty pre sezóny
-import SeasonsList from './components/season/SeasonsList';
-import CreateSeason from './components/season/CreateSeason';
-import SeasonDetail from './components/season/SeasonDetail';
-
-// Komponenty pre ligy
-import CreateLeague from './components/league/CreateLeague';
-import LeagueDetail from './components/league/LeagueDetail';
-
-// Komponenty pre kolá
-import CreateRound from './components/round/CreateRound';
-import RoundDetail from './components/round/RoundDetail';
-
-// Komponenty pre zápasy
-import CreateMatches from './components/match/CreateMatches';
-
-// Vytvorenie témy (zatiaľ dark; light variant doplníme neskôr cez prepínač)
 const theme = buildTheme('dark');
 
 function App() {
@@ -48,40 +32,52 @@ function App() {
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <AuthProvider>
           <Router>
-            <Layout>
-              <Routes>
-                {/* Verejné cesty */}
-                <Route path="/" element={<Home />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/seasons" element={<SeasonsList />} />
-                <Route path="/seasons/:id" element={<SeasonDetail />} />
-                <Route path="/leagues/:id" element={<LeagueDetail />} />
-                <Route path="/rounds/:id" element={<RoundDetail />} />
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
 
-                {/* Chránené cesty (vyžadujú autentifikáciu) */}
-                <Route element={<ProtectedRoute />}>
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/seasons/create" element={<CreateSeason />} />
-                  <Route path="/leagues/create" element={<CreateLeague />} />
-                  <Route path="/rounds/create" element={<CreateRound />} />
-                  <Route path="/matches/create" element={<CreateMatches />} />
-                </Route>
+              <Route path="/seasons" element={<Seasons />} />
+              <Route path="/seasons/create" element={<CreateSeason />} />
+              <Route path="/seasons/:id" element={<SeasonDetail />} />
+              <Route path="/leagues/create" element={<CreateLeague />} />
+              <Route path="/leagues/:id" element={<LeagueDetail />} />
+              <Route path="/rounds/create" element={<CreateRound />} />
+              <Route path="/rounds/:id" element={<RoundDetail />} />
+              <Route path="/rounds/:id/results" element={<RoundResults />} />
+              <Route path="/matches/create" element={<CreateMatches />} />
+              <Route path="/teams/create" element={<CreateTeam />} />
 
-                {/* Cesty vyžadujúce admin rolu */}
-                <Route element={<ProtectedRoute requiredRole="admin" />}>
-                  <Route path="/admin" element={<div>Admin Panel</div>} />
-                </Route>
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/my" element={<My />} />
+              <Route path="/tip-history" element={<TipHistory />} />
+              <Route path="/stats" element={<Stats />} />
+              <Route path="/achievements" element={<Achievements />} />
+              <Route path="/notifications" element={<Notifications />} />
 
-                {/* Ostatné cesty */}
-                <Route path="/about" element={<div>O nás</div>} />
-                <Route path="/blog" element={<div>Blog</div>} />
-                <Route path="/leaderboards" element={<div>Rebríčky</div>} />
+              <Route path="/discover" element={<Discover />} />
+              <Route path="/join" element={<Join />} />
+              <Route path="/leave" element={<LeaveCompetition />} />
+              <Route path="/player/:id" element={<PlayerProfile />} />
+              <Route path="/compare" element={<Compare />} />
 
-                {/* Fallback cesta */}
-                <Route path="*" element={<div>Stránka nenájdená</div>} />
-              </Routes>
-            </Layout>
+              <Route path="/leaderboards" element={<Leaderboards />} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:id" element={<BlogPost />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/kontakt" element={<Kontakt />} />
+
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/users" element={<AdminUsers />} />
+              <Route path="/admin/leagues" element={<AdminLeagues />} />
+              <Route path="/admin/competition" element={<AdminCompetition />} />
+              <Route path="/admin/evaluate" element={<AdminEvaluate />} />
+
+              <Route path="/error" element={<ErrorPage />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
           </Router>
         </AuthProvider>
       </LocalizationProvider>

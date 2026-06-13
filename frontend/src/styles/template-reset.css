@@ -1,0 +1,14 @@
+/* frontend/src/styles/template-reset.css
+   Zaručuje, že telo zo šablóny sedí 1:1 — bez paddingu/marginu z Reactu/MUI.
+   Importovať ako PRVÉ, pred tokens.css. */
+
+html, body, #root {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* MUI CssBaseline môže pridať padding na body — vynulujeme. */
+body { min-height: 100vh; }
+
+/* React root nech nevytvára vlastný box okolo šablónového obsahu */
+#root { display: block; width: 100%; }

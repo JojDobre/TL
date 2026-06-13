@@ -1,10 +1,16 @@
 // frontend/src/index.js
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import axios from 'axios';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import './styles/template-reset.css';   /* body/root padding 0 — tvoja pripomienka */
+import './styles/tokens.css';           /* dizajnové tokeny zo šablóny */
+import './styles/components.css';        /* komponentové štýly zo šablóny */
+import './styles/enhance.css';  /* animácie */
+import './styles/template-pages.css';    /* per-page štýly všetkých stránok 1:1 */
 
 // Nastavenie základného URL pre axios
 axios.defaults.baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
