@@ -1,0 +1,71 @@
+<%- include('partials/auth-head', { title: 'Prihlásenie', pageStyle: `
+  .auth { min-height:100vh; display:grid; grid-template-columns: 1.05fr 1fr; }
+  .auth-brand { position:relative; overflow:hidden; padding:48px; display:flex; flex-direction:column; justify-content:space-between;
+    background: linear-gradient(150deg,#140a2e,#1d1140 50%,#0a1130); border-right:1px solid var(--line); }
+  .auth-brand::before { content:""; position:absolute; inset:0; background:
+    radial-gradient(600px 400px at 20% 10%, rgba(124,92,255,.35), transparent 60%),
+    radial-gradient(500px 360px at 90% 90%, rgba(250,204,21,.14), transparent 55%); }
+  .auth-brand > * { position:relative; z-index:1; }
+  .auth-logo { display:flex; align-items:center; gap:11px; }
+  .auth-tagline { font-family:var(--font-display); font-weight:700; font-size:clamp(2rem,3vw,2.9rem); line-height:1.05; letter-spacing:-.02em; color:#fff; }
+  .auth-feat { display:flex; gap:11px; align-items:flex-start; margin-top:16px; }
+  .auth-feat .ic { width:34px; height:34px; border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.08); font-size:16px; }
+  .auth-form { display:flex; align-items:center; justify-content:center; padding:40px 24px; }
+  .auth-card { width:100%; max-width:400px; }
+  .auth-card h1 { font-size:1.9rem; }
+  .divider-or { display:flex; align-items:center; gap:14px; color:var(--text-4); font-size:var(--fs-sm); margin:20px 0; }
+  .divider-or::before, .divider-or::after { content:""; height:1px; flex:1; background:var(--line); }
+  .social-btn { width:100%; }
+  @media (max-width: 860px){ .auth { grid-template-columns:1fr; } .auth-brand { display:none; } }
+` }) %>
+
+<div class="auth">
+  <!-- BRAND PANEL -->
+  <div class="auth-brand">
+    <a class="auth-logo" href="/">
+      <svg viewBox="0 0 48 48" fill="none" style="width:38px;height:38px">
+        <defs><linearGradient id="tlg-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9d83ff"/><stop offset="1" stop-color="#5b3fd6"/></linearGradient></defs>
+        <path d="M24 4 L40 9 V23 C40 33 33 40 24 44 C15 40 8 33 8 23 V9 Z" fill="url(#tlg-a)" stroke="#9d83ff" stroke-width="1.2"/>
+        <path d="M15 28 L24 17 L33 28" fill="none" stroke="#0d1124" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M19 33 L24 27 L29 33" fill="none" stroke="#facc15" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span style="font-family:var(--font-display);font-weight:700;font-size:22px;color:#fff">Tiper<b style="color:var(--gold)">liga</b></span>
+    </a>
+    <div>
+      <div class="auth-tagline">Tipuj. Boduj.<br>Ovládni rebríček.</div>
+      <div style="max-width:380px;margin-top:24px">
+        <div class="auth-feat"><span class="ic">🏆</span><div><b style="color:#fff">Oficiálne aj komunitné ligy</b><div style="color:rgba(255,255,255,.6);font-size:var(--fs-sm)">Pridaj sa do turnaja alebo si založ vlastnú ligu pre partiu.</div></div></div>
+        <div class="auth-feat"><span class="ic">🎯</span><div><b style="color:#fff">Presný bodovací systém</b><div style="color:rgba(255,255,255,.6);font-size:var(--fs-sm)">Čím presnejší tip, tým viac bodov. Až +10 za presný výsledok.</div></div></div>
+        <div class="auth-feat"><span class="ic">📈</span><div><b style="color:#fff">Štatistiky a odznaky</b><div style="color:rgba(255,255,255,.6);font-size:var(--fs-sm)">Sleduj svoju formu a odomykaj achievementy.</div></div></div>
+      </div>
+    </div>
+    <div style="color:rgba(255,255,255,.4);font-size:var(--fs-sm)">© 2026 Tiperliga · 14 280 aktívnych tipérov</div>
+  </div>
+
+  <!-- FORM -->
+  <div class="auth-form">
+    <div class="auth-card">
+      <h1>Vitaj späť 👋</h1>
+      <p class="muted" style="margin:8px 0 26px">Prihlás sa a pokračuj v tipovaní.</p>
+      <% if (typeof error !== 'undefined' && error) { %>
+        <div class="tag tag-danger" style="display:block;padding:10px 12px;margin-bottom:16px"><%= error %></div>
+      <% } %>
+      <form action="/login" method="POST">
+        <div class="field" style="margin-bottom:16px"><label class="label">E-mail alebo prezývka</label><input class="input" type="text" name="email" placeholder="martin.novak@email.sk" value="<%= typeof oldEmail !== 'undefined' ? oldEmail : '' %>" required></div>
+        <div class="field" style="margin-bottom:10px">
+          <div class="between"><label class="label">Heslo</label><a href="/forgot-password" class="brand" style="font-size:var(--fs-sm)">Zabudol si heslo?</a></div>
+          <input class="input" type="password" name="password" placeholder="••••••••" required>
+        </div>
+        <label class="check" style="margin:6px 0 22px"><input type="checkbox" name="remember" checked> Zapamätať si ma</label>
+        <button class="btn btn-primary btn-lg btn-block" type="submit">Prihlásiť sa</button>
+      </form>
+      <div class="divider-or">alebo</div>
+      <button class="btn btn-secondary social-btn" style="margin-bottom:10px">Pokračovať s Google</button>
+      <button class="btn btn-secondary social-btn">Pokračovať s Apple</button>
+      <p class="muted center" style="margin-top:26px;font-size:var(--fs-sm)">Nemáš účet? <a href="/register" class="brand" style="font-weight:700">Zaregistruj sa</a></p>
+    </div>
+  </div>
+</div>
+<script src="/js/enhance.js"></script>
+</body>
+</html>

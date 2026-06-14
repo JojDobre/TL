@@ -1,0 +1,19 @@
+<!-- views/partials/head.ejs
+     Spoločná hlava + navbar. Parametre: title, page, active, voliteľne pageStyle. -->
+<!doctype html>
+<html lang="sk" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tiperliga — <%= title %></title>
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/components.css">
+<link rel="stylesheet" href="/css/enhance.css">
+<% if (typeof pageStyle !== 'undefined' && pageStyle) { %>
+<style><%- pageStyle %></style>
+<% } %>
+</head>
+<body data-page="<%= typeof page !== 'undefined' ? page : '' %>">
+<div class="bg-field"></div>
+<%- include('navbar', { active: typeof active !== 'undefined' ? active : '' }) %>
+<%- include('tabbar', { active: typeof active !== 'undefined' ? active : '' }) %>

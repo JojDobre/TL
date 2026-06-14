@@ -1,25 +1,25 @@
 // backend/src/config/db.config.js
 require('dotenv').config();
 
-// Konfiguracia pre pripojenie k databaze
+// Konfigurácia pripojenia k databáze (MariaDB)
 module.exports = {
   development: {
-    username: process.env.DB_USER,        // Meno uzivatela databazy definovane v .env subore
-    password: process.env.DB_PASSWORD,    // Heslo k databaze definovane v .env subore
-    database: process.env.DB_NAME,        // Nazov databazy definovany v .env subore
-    host: process.env.DB_HOST,            // Host databazy definovany v .env subore
-    port: process.env.DB_PORT,            // Port databazy definovany v .env subore
-    dialect: 'postgres',                  // Typ databazy, ktoru pouzivame (PostgreSQL)
-    logging: console.log,                 // Povolenie logovania SQL prikazov do konzoly
+    username: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    dialect: 'mariadb',                 // ZMENA: predtým 'postgres'
+    logging: false,                     // SQL logy vypnuté (zapni console.log pri ladení)
     define: {
-      timestamps: true,                   // Automaticke pridavanie stlpcov createdAt a updatedAt
-      underscored: true,                  // Pouzivanie snake_case namiesto camelCase v databaze
+      timestamps: true,
+      underscored: true,
+    },
+    dialectOptions: {
+      // MariaDB: korektné spracovanie dátumov a časových zón
+      timezone: 'Etc/GMT0',
     },
   },
-  test: {
-    // Tu budu konfiguracie pre testovanie
-  },
-  production: {
-    // Tu budu konfiguracie pre produkcne prostredie
-  },
+  test: {},
+  production: {},
 };

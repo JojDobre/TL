@@ -1,0 +1,17 @@
+<!-- views/partials/auth-head.ejs
+     Hlava pre auth stránky (login, register, forgot). Bez navbaru/footera —
+     auth stránky majú vlastný brand panel. Parametre: title, pageStyle. -->
+<!doctype html>
+<html lang="sk" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tiperliga — <%= title %></title>
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/components.css">
+<link rel="stylesheet" href="/css/enhance.css">
+<% if (typeof pageStyle !== 'undefined' && pageStyle) { %>
+<style><%- pageStyle %></style>
+<% } %>
+</head>
+<body>

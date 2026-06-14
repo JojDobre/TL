@@ -1,0 +1,73 @@
+<!-- views/partials/navbar.ejs
+     Navbar prenesený zo šablóny (shell.js buildNav) do EJS. Logiku „guest vs
+     prihlásený" a „admin link len pre admina" rieši server cez currentUserId /
+     currentUserRole (z res.locals v index.js). Žiadne generovanie cez JS.
+
+     Parametre: `active` = id aktívnej položky (home/seasons/leaderboards/...). -->
+<% const nav = typeof active !== 'undefined' ? active : ''; %>
+<div class="nav"><div class="wrap nav-inner">
+  <a class="row g-2" href="/" style="gap:10px">
+    <svg class="logo-mark" viewBox="0 0 48 48" fill="none" aria-hidden="true" style="width:34px;height:34px">
+      <defs><linearGradient id="tlg-shell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9d83ff"/><stop offset="1" stop-color="#5b3fd6"/></linearGradient></defs>
+      <path d="M24 4 L40 9 V23 C40 33 33 40 24 44 C15 40 8 33 8 23 V9 Z" fill="url(#tlg-shell)" stroke="#9d83ff" stroke-width="1.2"/>
+      <path d="M15 28 L24 17 L33 28" fill="none" stroke="#0d1124" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M19 33 L24 27 L29 33" fill="none" stroke="#facc15" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="wordmark" style="font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:-.02em;color:var(--text-1)">Tiper<b style="color:var(--gold)">liga</b></span>
+  </a>
+
+  <nav class="nav-links">
+    <a class="nav-link <%= nav==='home'?'active':'' %>" href="/">Domov</a>
+    <% if (currentUserId) { %>
+      <a class="nav-link <%= nav==='moje'?'active':'' %>" href="/my">Moje</a>
+    <% } %>
+    <a class="nav-link <%= nav==='seasons'?'active':'' %>" href="/seasons">Sezóny</a>
+    <a class="nav-link <%= nav==='leaderboards'?'active':'' %>" href="/leaderboards">Rebríčky</a>
+    <a class="nav-link <%= nav==='blog'?'active':'' %>" href="/blog">Blog</a>
+    <a class="nav-link <%= nav==='about'?'active':'' %>" href="/about">O nás</a>
+    <% if (currentUserRole === 'admin') { %>
+      <a class="nav-link admin <%= nav==='admin'?'active':'' %>" href="/admin">Admin</a>
+    <% } %>
+  </nav>
+
+  <div class="nav-actions">
+    <button class="btn btn-ghost btn-icon" data-theme-toggle aria-label="Téma">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"/></svg>
+    </button>
+
+    <% if (!currentUserId) { %>
+      <a class="btn btn-ghost btn-sm nav-guest-text" href="/login">Prihlásiť sa</a>
+      <a class="btn btn-primary btn-sm nav-guest-text" href="/register">Registrovať</a>
+      <a class="btn btn-ghost btn-icon nav-guest-icon" href="/login" aria-label="Prihlásiť sa">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+      </a>
+    <% } else { %>
+      <div style="position:relative">
+        <button class="btn btn-ghost btn-icon bell" data-bell aria-label="Notifikácie">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+        </button>
+        <div class="dropdown" data-bell-panel hidden>
+          <div class="dd-head">Notifikácie</div>
+          <a class="dd-link" href="/notifications">Zobraziť všetky</a>
+        </div>
+      </div>
+      <div style="position:relative">
+        <button class="row g-2" data-avatar style="background:none;border:none;padding:2px;border-radius:99px">
+          <span class="avatar avatar-md avatar-ring" style="background:linear-gradient(135deg,#7c5cff,#5b3fd6);color:#fff"><%= (currentUserName || 'U').substring(0,2).toUpperCase() %></span>
+        </button>
+        <div class="dropdown" data-avatar-panel hidden style="right:0">
+          <div class="dd-head"><%= currentUserName || 'Účet' %></div>
+          <a class="dd-link" href="/profile">Profil</a>
+          <a class="dd-link" href="/my">Moje súťaže</a>
+          <a class="dd-link" href="/settings">Nastavenia</a>
+          <% if (currentUserRole === 'admin') { %>
+            <div class="dd-sep"></div>
+            <a class="dd-link" href="/admin">Admin panel</a>
+          <% } %>
+          <div class="dd-sep"></div>
+          <a class="dd-link danger" href="/logout">Odhlásiť sa</a>
+        </div>
+      </div>
+    <% } %>
+  </div>
+</div></div>

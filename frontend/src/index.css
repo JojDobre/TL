@@ -1,9 +1,0 @@
-/* frontend/src/index.css
-   Globálne štýly. Importuje dizajnové tokeny + base štýly zo šablóny.
-   tokens.css obsahuje: CSS premenné (dark + light), reset, typografiu,
-   layout utility a pomocné triedy. */
-
-@import './styles/tokens.css';
-
-/* Tu môžu pribudnúť ďalšie globálne doplnky špecifické pre React appku.
-   Zatiaľ stačí to, čo prináša tokens.css. */

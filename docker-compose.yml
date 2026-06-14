@@ -1,29 +1,29 @@
-# docker-compose.yml — PostgreSQL databáza pre Tiperliga (vývoj)
+# docker-compose.yml — MariaDB databáza pre Tiperliga (vývoj)
 # Spustenie:  docker compose up -d
 # Zastavenie: docker compose down
 # Zmazanie aj dát: docker compose down -v
 
 services:
   db:
-    image: postgres:16-alpine          # Ľahký oficiálny PostgreSQL image
-    container_name: tiperliga-db        # Pevný názov kontajnera pre prehľadnosť
-    restart: unless-stopped             # Po reštarte PC sa DB sama naštartuje
+    image: mariadb:10.11               # MariaDB 10.11 (LTS)
+    container_name: tiperliga-db
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: tiperliga          # Musí sa zhodovať s DB_USER v backend/.env
-      POSTGRES_PASSWORD: tiperliga_dev  # Musí sa zhodovať s DB_PASSWORD v backend/.env
-      POSTGRES_DB: tiperliga            # Musí sa zhodovať s DB_NAME v backend/.env
+      MARIADB_USER: tiperliga          # Musí sa zhodovať s DB_USER v backend/.env
+      MARIADB_PASSWORD: tiperliga_dev  # Musí sa zhodovať s DB_PASSWORD v backend/.env
+      MARIADB_DATABASE: tiperliga      # Musí sa zhodovať s DB_NAME v backend/.env
+      MARIADB_ROOT_PASSWORD: root_dev  # Heslo pre root (len lokálny vývoj)
     ports:
-      - "5432:5432"                     # Mapovanie portu DB na localhost:5432
+      - "3306:3306"                    # Mapovanie portu DB na localhost:3306
     volumes:
-      - tiperliga_pgdata:/var/lib/postgresql/data   # Trvalé uloženie dát mimo kontajnera
-    healthcheck:                        # Overenie, či je DB pripravená prijímať spojenia
-      test: ["CMD-SHELL", "pg_isready -U tiperliga -d tiperliga"]
+      - tiperliga_mariadata:/var/lib/mysql   # Trvalé uloženie dát mimo kontajnera
+    healthcheck:                       # Overenie, či je DB pripravená
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
-  # Voliteľné: webové rozhranie na prezeranie databázy (http://localhost:8080)
-  # Ak ho nechceš, pokojne celú sekciu 'adminer' zmaž.
+  # Webové rozhranie na prezeranie databázy (http://localhost:8080)
   adminer:
     image: adminer:latest
     container_name: tiperliga-adminer
@@ -34,4 +34,4 @@ services:
       - db
 
 volumes:
-  tiperliga_pgdata:                     # Pomenovaný volume, kde žijú dáta DB
+  tiperliga_mariadata:                 # Pomenovaný volume, kde žijú dáta DB
