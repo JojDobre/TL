@@ -43,7 +43,7 @@
     ['blog', 'Blog', 'tBlog', 'blog.html', ['blog.html','blog-post.html']],
     ['login', 'Prihlásiť', 'tProfile', 'login.html', ['login.html','register.html','forgot-password.html']],
   ];
-  function currentFile() { return (location.pathname.split('/').pop() || 'index.html'); }
+  function currentFile() { return (window.location.pathname.split('/').pop() || 'index.html'); }
   function buildTabbar(state) {
     const cur = currentFile();
     const tabs = state === 'guest' ? TABS_GUEST : TABS_USER;
@@ -62,12 +62,17 @@
     ['leaderboards', 'Rebríčky', 'leaderboards.html'],
     ['blog', 'Blog', 'blog.html'],
     ['about', 'O nás', 'about.html'],
-    ['admin', 'Admin', 'admin.html', 'user'],
+    ['admin', 'Admin', 'admin.html', 'admin'],
   ];
 
   function buildNav(active) {
     const state = authState();
-    const links = NAV.filter(n => !n[3] || n[3] === state).map(([id, label, href]) =>
+    const role = localStorage.getItem('tl-role') || 'player';
+    const links = NAV.filter(function (n) {
+      if (!n[3]) return true;                  // verejný link
+      if (n[3] === 'admin') return role === 'admin'; // admin link len pre admina
+      return n[3] === state;                   // 'user' = prihlásený
+    }).map(([id, label, href]) =>
       `<a class="nav-link ${id==='admin'?'admin':''} ${id===active?'active':''}" href="${href}">${label}</a>`
     ).join('');
 
@@ -134,8 +139,7 @@
       ${item('','Štatistiky','stats.html')}
       ${item('','Odznaky','achievements.html')}
       ${item('','Nastavenia','settings.html')}
-      <div class="dd-sep"></div>
-      ${item('','Admin panel','admin.html')}
+      ${(localStorage.getItem('tl-role') === 'admin') ? '<div class="dd-sep"></div>' + item('','Admin panel','admin.html') : ''}
       <a class="dd-link danger" href="login.html">Odhlásiť sa</a>`;
   }
 
@@ -207,11 +211,9 @@
     document.querySelectorAll('[data-theme-toggle]').forEach(b => b.innerHTML = t === 'light' ? I.moon : I.sun);
   }
 
-  // ---- auth state (demo: switch logged-in / guest view) ----
+  // ---- auth state: čítame reálny stav prihlásenia (token z AuthContextu) ----
   function authState() {
-    var a = document.body.getAttribute('data-auth');
-    if (a === 'guest' || a === 'user') return a;
-    return localStorage.getItem('tl-auth') === 'guest' ? 'guest' : 'user';
+    return localStorage.getItem('token') ? 'user' : 'guest';
   }
   function applyAuthOnly(state) {
     document.documentElement.setAttribute('data-auth-state', state);
@@ -262,9 +264,17 @@
     applyAuthOnly(authState());
     applyTheme(localStorage.getItem('tl-theme') || 'dark');
 
-    initDevicePreview();
-    initAuthDemo();
+    // dev lišty (device preview + auth demo) vypnuté — auth stav je teraz reálny
 
+    bindGlobalClicks();
+  }
+
+  // Globálny click listener — pripevní sa LEN RAZ (nie pri každom init/navigácii),
+  // inak by sa listenery hromadili a dropdowny by sa otvárali a hneď zatvárali.
+  var _clickBound = false;
+  function bindGlobalClicks() {
+    if (_clickBound) return;
+    _clickBound = true;
     document.addEventListener('click', (e) => {
       const t = e.target.closest('[data-theme-toggle]');
       if (t) {
@@ -276,113 +286,13 @@
       const avatar = e.target.closest('[data-avatar]');
       const bp = document.querySelector('[data-bell-panel]');
       const ap = document.querySelector('[data-avatar-panel]');
-      if (bell) { if (bp.hasAttribute('hidden')) bp.innerHTML = buildBellPanel(); bp.toggleAttribute('hidden'); ap && ap.setAttribute('hidden',''); return; }
-      if (avatar) { if (ap.hasAttribute('hidden')) ap.innerHTML = buildAvatarPanel(); ap.toggleAttribute('hidden'); bp && bp.setAttribute('hidden',''); return; }
+      if (bell) { if (bp && bp.hasAttribute('hidden')) bp.innerHTML = buildBellPanel(); bp && bp.toggleAttribute('hidden'); ap && ap.setAttribute('hidden',''); return; }
+      if (avatar) { if (ap && ap.hasAttribute('hidden')) ap.innerHTML = buildAvatarPanel(); ap && ap.toggleAttribute('hidden'); bp && bp.setAttribute('hidden',''); return; }
       if (!e.target.closest('.dropdown')) { bp && bp.setAttribute('hidden',''); ap && ap.setAttribute('hidden',''); }
       // mobile
       const burger = e.target.closest('[data-burger]');
       const mob = document.querySelector('[data-mobile]');
       if (burger && mob) { mob.toggleAttribute('hidden'); return; }
-    });
-  }
-
-  // ---- desktop/mobile preview toggle (top-level only) ----
-  function initDevicePreview(){
-    if (window.name === 'tl-device') return; // inside the device frame: no nested toggle
-
-    const monitor = svg('<rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M9 21h6M12 17v4"/>');
-    const phone = svg('<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.4h2"/>');
-
-    const wrap = document.createElement('div');
-    wrap.className = 'vp-toggle';
-    wrap.setAttribute('aria-label', 'Prepnúť náhľad desktop / mobil');
-    wrap.innerHTML =
-      '<button data-vp="desktop" title="Desktop náhľad">' + monitor + '<span>Desktop</span></button>' +
-      '<button data-vp="mobile" title="Mobilný náhľad">' + phone + '<span>Mobil</span></button>';
-    document.body.appendChild(wrap);
-
-    const overlay = document.createElement('div');
-    overlay.className = 'device-overlay';
-    overlay.hidden = true;
-    overlay.innerHTML =
-      '<div class="device-bar">' +
-        '<span class="device-cap">Mobilný náhľad</span>' +
-        '<div class="device-sizes">' +
-          '<button data-w="375">375</button>' +
-          '<button data-w="390" class="active">390</button>' +
-          '<button data-w="414">414</button>' +
-        '</div>' +
-        '<button class="device-close" data-vp="desktop">✕ Späť na desktop</button>' +
-      '</div>' +
-      '<div class="device-frame"><iframe name="tl-device" title="Mobilný náhľad" loading="lazy"></iframe></div>';
-    document.body.appendChild(overlay);
-    const iframe = overlay.querySelector('iframe');
-    let frameLoaded = false;
-    function loadFrame(){
-      if (frameLoaded) return;
-      frameLoaded = true;
-      const dir = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
-      fetch(currentFile()).then(r => r.text()).then(html => {
-        // inject a <base> so the framed page's relative css/js/links still resolve,
-        // and route in-frame navigations to the top window (srcdoc avoids X-Frame blocking)
-        html = html.replace(/<head([^>]*)>/i, '<head$1><base href="' + dir + '" target="_parent">');
-        iframe.srcdoc = html;
-      }).catch(() => {
-        iframe.srcdoc = '<body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#9aa;background:#0c0f1a;text-align:center;padding:20px">Náhľad sa nepodarilo načítať.<br>Otvor stránku priamo na mobile.</body>';
-      });
-    }
-
-    function setMode(mode){
-      const mobile = mode === 'mobile';
-      localStorage.setItem('tl-preview', mode);
-      wrap.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.vp === mode));
-      if (mobile){
-        loadFrame();
-        overlay.hidden = false;
-        document.documentElement.style.overflow = 'hidden';
-      } else {
-        overlay.hidden = true;
-        document.documentElement.style.overflow = '';
-      }
-    }
-
-    wrap.addEventListener('click', e => {
-      const b = e.target.closest('[data-vp]');
-      if (b) setMode(b.dataset.vp);
-    });
-    overlay.addEventListener('click', e => {
-      if (e.target.closest('[data-vp="desktop"]')) { setMode('desktop'); return; }
-      const w = e.target.closest('[data-w]');
-      if (w){
-        overlay.querySelectorAll('[data-w]').forEach(x => x.classList.toggle('active', x === w));
-        iframe.style.width = w.dataset.w + 'px';
-        return;
-      }
-      if (e.target === overlay) setMode('desktop'); // click backdrop to exit
-    });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !overlay.hidden) setMode('desktop'); });
-
-    setMode((localStorage.getItem('tl-preview') === 'mobile') ? 'mobile' : 'desktop');
-  }
-
-  // ---- auth demo toggle (logged-in vs guest) ----
-  function initAuthDemo() {
-    if (window.name === 'tl-device') return;
-    if (!document.querySelector('[data-shell-nav]')) return;
-    var state = authState();
-    var box = document.createElement('div');
-    box.className = 'auth-toggle';
-    box.setAttribute('aria-label', 'N\u00e1h\u013ead: prihl\u00e1sen\u00fd / hos\u0165');
-    box.innerHTML =
-      '<span class="at-cap">N\u00e1h\u013ead</span>' +
-      '<button data-auth-set="user" class="' + (state === 'user' ? 'active' : '') + '">Prihl\u00e1sen\u00fd</button>' +
-      '<button data-auth-set="guest" class="' + (state === 'guest' ? 'active' : '') + '">Hos\u0165</button>';
-    document.body.appendChild(box);
-    box.addEventListener('click', function (e) {
-      var b = e.target.closest('[data-auth-set]');
-      if (!b) return;
-      localStorage.setItem('tl-auth', b.getAttribute('data-auth-set'));
-      location.reload();
     });
   }
 

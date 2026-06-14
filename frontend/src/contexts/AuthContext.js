@@ -26,9 +26,12 @@ export const AuthProvider = ({ children }) => {
           
           // Nastavenie používateľa do stavu
           setUser(response.data.data);
+          // ulož rolu pre shell.js (admin link v navbare)
+          localStorage.setItem('tl-role', response.data.data?.role || 'player');
         } catch (error) {
           // Ak token nie je platný, odstránime ho
           localStorage.removeItem('token');
+          localStorage.removeItem('tl-role');
           delete axios.defaults.headers.common['Authorization'];
         }
       }
@@ -53,6 +56,8 @@ export const AuthProvider = ({ children }) => {
       
       // Nastavenie používateľa do stavu
       setUser(response.data.data.user);
+      // ulož rolu pre shell.js (admin link v navbare)
+      localStorage.setItem('tl-role', response.data.data.user?.role || 'player');
       
       return { success: true };
     } catch (error) {
@@ -77,6 +82,8 @@ export const AuthProvider = ({ children }) => {
       
       // Nastavenie používateľa do stavu
       setUser(response.data.data.user);
+      // ulož rolu pre shell.js (admin link v navbare)
+      localStorage.setItem('tl-role', response.data.data.user?.role || 'player');
       
       return { success: true };
     } catch (error) {
@@ -91,6 +98,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     // Odstránenie tokenu z localStorage
     localStorage.removeItem('token');
+    localStorage.removeItem('tl-role');
     
     // Odstránenie autorizačnej hlavičky
     delete axios.defaults.headers.common['Authorization'];

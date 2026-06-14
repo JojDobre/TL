@@ -10,18 +10,27 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { AuthProvider } from './contexts/AuthContext';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 import buildTheme from './theme';
 
 import {
-  Home, Seasons, SeasonDetail, LeagueDetail, RoundDetail, RoundResults,
-  CreateSeason, CreateLeague, CreateRound, CreateMatches, CreateTeam,
-  Login, Register, ForgotPassword, Profile, Settings,
+  Home, LeagueDetail, RoundDetail, RoundResults,
+  CreateLeague, CreateRound, CreateMatches, CreateTeam,
+  ForgotPassword, Profile, Settings,
   My, TipHistory, Stats, Achievements, Notifications,
   Discover, Join, LeaveCompetition, PlayerProfile, Compare,
   Leaderboards, Blog, BlogPost, About, Kontakt,
-  AdminDashboard, AdminUsers, AdminLeagues, AdminCompetition, AdminEvaluate,
+  AdminDashboard, AdminLeagues, AdminCompetition, AdminEvaluate,
   NotFound, ErrorPage,
 } from './template/pages';
+// Login a Register sú napojené na AuthContext (samostatný súbor)
+import { Login, Register } from './template/authPages';
+// Admin — užívatelia: napojené na reálne dáta (userService)
+import AdminUsersPage from './template/adminUsersPage';
+// Sezóny — napojené na reálne dáta (seasonService)
+import SeasonsPage from './template/seasonsPage';
+import SeasonDetailPage from './template/seasonDetailPage';
+import CreateSeasonPage from './template/createSeasonPage';
 
 const theme = buildTheme('dark');
 
@@ -38,9 +47,9 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
 
-              <Route path="/seasons" element={<Seasons />} />
-              <Route path="/seasons/create" element={<CreateSeason />} />
-              <Route path="/seasons/:id" element={<SeasonDetail />} />
+              <Route path="/seasons" element={<SeasonsPage />} />
+              <Route path="/seasons/create" element={<CreateSeasonPage />} />
+              <Route path="/seasons/:id" element={<SeasonDetailPage />} />
               <Route path="/leagues/create" element={<CreateLeague />} />
               <Route path="/leagues/:id" element={<LeagueDetail />} />
               <Route path="/rounds/create" element={<CreateRound />} />
@@ -49,17 +58,21 @@ function App() {
               <Route path="/matches/create" element={<CreateMatches />} />
               <Route path="/teams/create" element={<CreateTeam />} />
 
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/my" element={<My />} />
-              <Route path="/tip-history" element={<TipHistory />} />
-              <Route path="/stats" element={<Stats />} />
-              <Route path="/achievements" element={<Achievements />} />
-              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/profile" element={<ProtectedRoute />}>
+                <Route index element={<Profile />} />
+              </Route>
+              <Route element={<ProtectedRoute />}>
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/my" element={<My />} />
+                <Route path="/tip-history" element={<TipHistory />} />
+                <Route path="/stats" element={<Stats />} />
+                <Route path="/achievements" element={<Achievements />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/join" element={<Join />} />
+                <Route path="/leave" element={<LeaveCompetition />} />
+              </Route>
 
               <Route path="/discover" element={<Discover />} />
-              <Route path="/join" element={<Join />} />
-              <Route path="/leave" element={<LeaveCompetition />} />
               <Route path="/player/:id" element={<PlayerProfile />} />
               <Route path="/compare" element={<Compare />} />
 
@@ -69,11 +82,13 @@ function App() {
               <Route path="/about" element={<About />} />
               <Route path="/kontakt" element={<Kontakt />} />
 
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/users" element={<AdminUsers />} />
-              <Route path="/admin/leagues" element={<AdminLeagues />} />
-              <Route path="/admin/competition" element={<AdminCompetition />} />
-              <Route path="/admin/evaluate" element={<AdminEvaluate />} />
+              <Route element={<ProtectedRoute requiredRole="admin" />}>
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/users" element={<AdminUsersPage />} />
+                <Route path="/admin/leagues" element={<AdminLeagues />} />
+                <Route path="/admin/competition" element={<AdminCompetition />} />
+                <Route path="/admin/evaluate" element={<AdminEvaluate />} />
+              </Route>
 
               <Route path="/error" element={<ErrorPage />} />
               <Route path="*" element={<NotFound />} />

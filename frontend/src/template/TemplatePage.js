@@ -73,8 +73,11 @@ const TemplatePage = ({ html, dataPage, inlineScript, onMount }) => {
 
       // 5. per-page inline skript (graf, rozbaľovanie atď.)
       if (inlineScript) {
-        try { /* eslint-disable-next-line no-new-func */ new Function(inlineScript)(); }
-        catch (e) { console.warn('Inline skript stránky zlyhal:', e); }
+        try {
+          // eslint-disable-next-line no-new-func
+          const run = new Function(inlineScript);
+          run();
+        } catch (e) { console.warn('Inline skript stránky zlyhal:', e); }
       }
 
       // 6. voliteľný hook na napojenie dát z backendu
@@ -85,10 +88,23 @@ const TemplatePage = ({ html, dataPage, inlineScript, onMount }) => {
     const onClick = (e) => {
       const a = e.target.closest('a');
       if (!a) return;
-      const href = a.getAttribute('href');
-      if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto')) return;
-      const clean = href.replace(/^\.?\//, '');
-      if (HREF_MAP[clean]) { e.preventDefault(); navigate(HREF_MAP[clean]); }
+      const raw = a.getAttribute('href');
+      if (!raw || raw.startsWith('#') || raw.startsWith('mailto') || raw.startsWith('tel')) return;
+      // odlúpni doménu aj prípadné /cesty, nechaj len názov súboru (napr. admin-users.html)
+      let clean = raw.replace(/^https?:\/\/[^/]+/, '').replace(/^\.?\//, '');
+      // ak je to plná cesta typu /admin-users.html, vezmi posledný segment
+      const file = clean.split('/').pop();
+      const target = HREF_MAP[clean] || HREF_MAP[file];
+      if (!target) return; // necháme prehliadač / iné odkazy tak
+      e.preventDefault();
+      e.stopPropagation();
+      if (target === window.location.pathname) {
+        // klik na stránku, na ktorej už sme → znovu spusti shell + obsah
+        if (window.TL && window.TL.setPage) window.TL.setPage(dataPage || '');
+        if (window.TLenhance) window.TLenhance();
+      } else {
+        navigate(target);
+      }
     };
     document.addEventListener('click', onClick);
 

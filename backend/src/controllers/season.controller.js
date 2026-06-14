@@ -1,537 +1,250 @@
-const { Season, User, League, Round, Match, Team, Tip, UserSeason, Sequelize } = require('../models');
-const { Op } = Sequelize;
+// backend/src/controllers/season.controller.js
+//
+// Správa sezón. Prepísané na produkčnú kvalitu:
+//  - asyncHandler + ApiError (žiadny únik chýb, centrálne spracovanie)
+//  - odstránené debug console.log a mŕtvy/duplicitný kód
+//  - vyčistený getSeasonById (žiadne zmätočné ručné skladanie objektu)
+//  - zjednodušené limity sezón podľa roly
+//  - leaderboard: presnosť počítaná z presných výsledkov (10 b), nie z akýchkoľvek bodov
+
+const { Season, User, League, Match, Round, Tip, UserSeason } = require('../models');
 const { v4: uuidv4 } = require('uuid');
+const { ApiError, asyncHandler } = require('../middleware/error.middleware');
 
-const uuid = require('uuid');
-console.log('UUID module:', uuid);
+// 6-znakový alfanumerický kód pozvánky
+const generateInviteCode = () => uuidv4().substring(0, 6).toUpperCase();
 
-// Generovanie náhodného kódu pre pozvánku
-const generateInviteCode = () => {
-  // Vytvorenie 6-znakového alfanumerického kódu
-  return uuidv4().substr(0, 6).toUpperCase();
-};
+// Limit počtu vytvorených sezón podľa roly (admin = bez limitu)
+const SEASON_LIMITS = { player: 1, vip: 2 };
 
-// Získanie všetkých sezón
-const getAllSeasons = async (req, res) => {
-  try {
-    // Ak je požadovaný typ, filtrujeme podľa neho
-    const { type } = req.query;
-    
-    let where = {};
-    if (type) {
-      where.type = type;
+const creatorSummary = (creator) => creator ? {
+  id: creator.id, username: creator.username,
+  firstName: creator.firstName, lastName: creator.lastName,
+} : null;
+
+// GET /api/seasons?type=official|community
+const getAllSeasons = asyncHandler(async (req, res) => {
+  const where = {};
+  if (req.query.type) where.type = req.query.type;
+
+  const seasons = await Season.findAll({
+    where,
+    include: [{ model: User, as: 'creator', attributes: ['id', 'username', 'firstName', 'lastName'] }],
+    order: [['createdAt', 'DESC']],
+  });
+
+  // doplníme počty líg a účastníkov
+  const data = await Promise.all(seasons.map(async (season) => {
+    const leaguesCount = await League.count({ where: { seasonId: season.id } });
+    let participantsCount = 0;
+    try { participantsCount = await season.countParticipants(); } catch { /* asociácia nemusí byť dostupná */ }
+    return { ...season.toJSON(), leaguesCount, participantsCount };
+  }));
+
+  res.status(200).json({ success: true, data });
+});
+
+// GET /api/seasons/:id
+const getSeasonById = asyncHandler(async (req, res) => {
+  const season = await Season.findByPk(req.params.id, {
+    include: [
+      { model: User, as: 'creator', attributes: ['id', 'username', 'firstName', 'lastName'] },
+      {
+        model: User, as: 'participants',
+        attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'],
+        through: { attributes: ['role', 'joinedAt'] },
+      },
+    ],
+  });
+
+  if (!season) throw new ApiError(404, 'Sezóna nebola nájdená.');
+
+  const participantsCount = await season.countParticipants();
+
+  res.status(200).json({
+    success: true,
+    data: { ...season.toJSON(), participantsCount },
+  });
+});
+
+// POST /api/seasons
+const createSeason = asyncHandler(async (req, res) => {
+  const { name, description, image, type, rules, participantLimit } = req.body;
+  const userId = req.userId;
+
+  const user = await User.findByPk(userId);
+  if (!user) throw new ApiError(404, 'Používateľ nebol nájdený.');
+
+  // Limit počtu sezón podľa roly (admin bez limitu)
+  const limit = SEASON_LIMITS[user.role];
+  if (limit !== undefined) {
+    const count = await Season.count({ where: { creatorId: userId } });
+    if (count >= limit) {
+      throw new ApiError(403, user.role === 'player'
+        ? 'Ako bežný užívateľ môžeš vytvoriť maximálne 1 sezónu. Prejdi na VIP pre viac.'
+        : `Ako VIP môžeš vytvoriť maximálne ${limit} sezóny.`);
     }
-    
-    // Načítanie sezón s ich tvorcami
-    const seasons = await Season.findAll({
-      where,
-      include: [
-        {
-          model: User,
-          as: 'creator',
-          attributes: ['id', 'username', 'firstName', 'lastName']
-        }
-      ],
-      order: [['createdAt', 'DESC']]
-    });
-    
-    // Pre každú sezónu načítame počet líg a účastníkov manuálne
-    const seasonsWithCounts = await Promise.all(
-      seasons.map(async (season) => {
-        const leaguesCount = await League.count({ where: { seasonId: season.id } });
-        
-        // Získanie počtu účastníkov - táto časť môže vyžadovať úpravu podľa vašej databázovej schémy
-        let participantsCount = 0;
-        try {
-          participantsCount = await season.countParticipants();
-        } catch (error) {
-          console.error(`Chyba pri počítaní účastníkov pre sezónu ${season.id}:`, error);
-        }
-        
-        // Vrátime sezónu s pridanými počtami
-        const seasonJson = season.toJSON();
-        return {
-          ...seasonJson,
-          leaguesCount,
-          participantsCount
-        };
-      })
-    );
-    
-    res.status(200).json({
-      success: true,
-      data: seasonsWithCounts
-    });
-  } catch (error) {
-    console.error('Chyba pri získavaní sezón:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Chyba pri získavaní sezón.',
-      error: error.message
-    });
   }
-};
 
-// Získanie detailu sezóny
-const getSeasonById = async (req, res) => {
+  // Typ sezóny: oficiálnu môže vytvoriť IBA admin. Player a VIP vždy community.
+  const seasonType = (type === 'official' && user.role === 'admin') ? 'official' : 'community';
+
+  // Limit účastníkov: oficiálne = neobmedzené (null), komunitné = 100 (VIP/admin si môžu nastaviť)
+  let finalParticipantLimit = null;
+  if (seasonType === 'community') {
+    finalParticipantLimit = (user.role === 'vip' || user.role === 'admin') && participantLimit !== undefined
+      ? participantLimit : 100;
+  }
+
+  const season = await Season.create({
+    name,
+    description,
+    image,
+    type: seasonType,
+    rules,
+    inviteCode: generateInviteCode(),
+    creatorId: userId,
+    active: true,
+    participantLimit: finalParticipantLimit,
+  });
+
+  // tvorca sa stáva účastníkom s admin rolou v sezóne
   try {
-    const { id } = req.params;
-    
-    console.log(`Requesting season detail for ID: ${id}`);
-    
-    // Načítanie sezóny s asociovanými dátami
-    const season = await Season.findByPk(id, {
-      include: [
-        {
-          model: User,
-          as: 'creator',
-          attributes: ['id', 'username', 'firstName', 'lastName']
+    await season.addParticipant(userId, { through: { role: 'admin' } });
+  } catch (e) {
+    // asociácia nie je kritická pre vytvorenie sezóny
+  }
+
+  res.status(201).json({ success: true, message: 'Sezóna bola úspešne vytvorená.', data: season });
+});
+
+// PUT /api/seasons/:id
+const updateSeason = asyncHandler(async (req, res) => {
+  const { name, description, image, active, rules, participantLimit } = req.body;
+  const userId = req.userId;
+
+  const season = await Season.findByPk(req.params.id);
+  if (!season) throw new ApiError(404, 'Sezóna nebola nájdená.');
+
+  const user = await User.findByPk(userId);
+  const isOwner = season.creatorId === userId;
+  const isAdmin = user && user.role === 'admin';
+  if (!isOwner && !isAdmin) {
+    throw new ApiError(403, 'Nemáš oprávnenie upraviť túto sezónu.');
+  }
+
+  if (name) season.name = name;
+  if (description !== undefined) season.description = description;
+  if (image !== undefined) season.image = image;
+  if (active !== undefined) season.active = active;
+  if (rules !== undefined) season.rules = rules;
+
+  // limit účastníkov môže meniť len VIP/admin a len pre komunitné sezóny
+  if (participantLimit !== undefined && season.type === 'community' && (user.role === 'vip' || user.role === 'admin')) {
+    season.participantLimit = participantLimit;
+  }
+
+  await season.save();
+  res.status(200).json({ success: true, message: 'Sezóna bola úspešne aktualizovaná.', data: season });
+});
+
+// DELETE /api/seasons/:id
+const deleteSeason = asyncHandler(async (req, res) => {
+  const userId = req.userId;
+  const season = await Season.findByPk(req.params.id);
+  if (!season) throw new ApiError(404, 'Sezóna nebola nájdená.');
+
+  const user = await User.findByPk(userId);
+  const isOwner = season.creatorId === userId;
+  const isAdmin = user && user.role === 'admin';
+  if (!isOwner && !isAdmin) {
+    throw new ApiError(403, 'Nemáš oprávnenie vymazať túto sezónu.');
+  }
+
+  await season.destroy();
+  res.status(200).json({ success: true, message: 'Sezóna bola úspešne vymazaná.' });
+});
+
+// POST /api/seasons/join
+const joinSeason = asyncHandler(async (req, res) => {
+  const { inviteCode } = req.body;
+  const userId = req.userId;
+
+  if (!inviteCode) throw new ApiError(400, 'Zadaj kód pozvánky.');
+
+  const season = await Season.findOne({ where: { inviteCode } });
+  if (!season) throw new ApiError(404, 'Sezóna s týmto kódom nebola nájdená.');
+  if (!season.active) throw new ApiError(400, 'Táto sezóna nie je aktívna.');
+
+  const existing = await UserSeason.findOne({ where: { userId, seasonId: season.id } });
+  if (existing) throw new ApiError(400, 'Už si členom tejto sezóny.');
+
+  // limit účastníkov pre komunitné sezóny
+  if (season.type === 'community' && season.participantLimit !== null) {
+    const count = await UserSeason.count({ where: { seasonId: season.id } });
+    if (count >= season.participantLimit) {
+      throw new ApiError(400, `Táto sezóna už dosiahla maximálny počet účastníkov (${season.participantLimit}).`);
+    }
+  }
+
+  await UserSeason.create({ userId, seasonId: season.id, role: 'player', joinedAt: new Date() });
+
+  res.status(200).json({
+    success: true,
+    message: 'Úspešne si sa pripojil k sezóne.',
+    data: { seasonId: season.id, seasonName: season.name },
+  });
+});
+
+// GET /api/seasons/:id/leaderboard
+const getSeasonLeaderboard = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const season = await Season.findByPk(id);
+  if (!season) throw new ApiError(404, 'Sezóna nebola nájdená.');
+
+  // všetky tipy v sezóne (cez Match → Round → League patriacej do sezóny)
+  const tips = await Tip.findAll({
+    include: [
+      {
+        model: Match,
+        include: [{ model: Round, include: [{ model: League, where: { seasonId: id } }] }],
+      },
+      { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] },
+    ],
+  });
+
+  // agregácia bodov na používateľa
+  const byUser = {};
+  tips.forEach((tip) => {
+    if (!tip.User) return;
+    const uid = tip.User.id;
+    if (!byUser[uid]) {
+      byUser[uid] = {
+        user: {
+          id: tip.User.id, username: tip.User.username,
+          firstName: tip.User.firstName, lastName: tip.User.lastName,
+          profileImage: tip.User.profileImage,
         },
-        {
-          model: User,
-          as: 'participants',
-          attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'],
-          through: { 
-            attributes: ['role', 'joinedAt'] 
-          }
-        }
-      ]
-    });
-    
-    if (!season) {
-      console.log(`Season with ID ${id} not found`);
-      return res.status(404).json({
-        success: false,
-        message: 'Sezóna nebola nájdená.'
-      });
+        totalPoints: 0, tipsCount: 0, exactPredictions: 0,
+      };
     }
+    byUser[uid].totalPoints += tip.points || 0;
+    byUser[uid].tipsCount += 1;
+    // presný výsledok = 10 bodov (podľa špecifikácie bodovania)
+    if ((tip.points || 0) >= 10) byUser[uid].exactPredictions += 1;
+  });
 
-    // Získanie počtu účastníkov
-    const participantsCount = await season.countParticipants();
-    
-    // Načítame tvorcu sezóny samostatne
-    let creator = null;
-    try {
-      creator = await User.findByPk(season.creatorId, {
-        attributes: ['id', 'username', 'firstName', 'lastName']
-      });
-    } catch (err) {
-      console.error('Error fetching creator:', err);
-      // Pokračujeme aj keď sa nepodarí načítať tvorcu
-    }
-    
-    // Vytvorenie objektu s minimálnymi potrebnými údajmi
-    const seasonData = {
-      id: season.id,
-      name: season.name,
-      description: season.description,
-      image: season.image,
-      type: season.type,
-      active: season.active,
-      inviteCode: season.inviteCode,
-      rules: season.rules,
-      creatorId: season.creatorId,
-      creator: creator ? {
-        id: creator.id,
-        username: creator.username,
-        firstName: creator.firstName,
-        lastName: creator.lastName
-      } : null,
-      createdAt: season.createdAt,
-      updatedAt: season.updatedAt,
-      ...season.toJSON(),
-      participantsCount
-    };
-    
-    console.log('Successfully fetched season data');
-    
-    res.status(200).json({
-      success: true,
-      data: seasonData
-    });
-  } catch (error) {
-    console.error('Error fetching season detail:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Chyba pri získavaní detailu sezóny.',
-      error: error.message
-    });
-  }
-};
+  const leaderboard = Object.values(byUser)
+    .sort((a, b) => b.totalPoints - a.totalPoints)
+    .map((entry, index) => ({
+      ...entry,
+      rank: index + 1,
+      accuracy: entry.tipsCount ? Math.round((entry.exactPredictions / entry.tipsCount) * 100) : 0,
+    }));
 
-// Vytvorenie novej sezóny
-const createSeason = async (req, res) => {
-
-  const inviteCode = uuidv4().substring(0, 6).toUpperCase();
-  console.log('Generated invite code:', inviteCode);
-
-
-  try {
-    const { name, description, image, type, rules, participantLimit } = req.body;
-    const userId = req.userId;
-    
-    // Kontrola, či už užívateľ nemá vytvorenú sezónu (ak nie je admin)
-    const user = await User.findByPk(userId);
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'Používateľ nebol nájdený.'
-      });
-    }
-    
-    // Kontrola limitu sezón podľa role
-    if (user.role === 'player') {
-      const userSeasonCount = await Season.count({
-        where: { creatorId: userId }
-      });
-      
-      if (userSeasonCount >= 1) {
-        return res.status(403).json({
-          success: false,
-          message: 'Ako bežný užívateľ môžete vytvoriť maximálne 1 sezónu. Upgradujte na VIP pre vytvorenie viacerých sezón.'
-        });
-      }
-    } else if (user.role === 'vip') {
-      const userSeasonCount = await Season.count({
-        where: { creatorId: userId }
-      });
-      
-      if (userSeasonCount >= 2) {
-        return res.status(403).json({
-          success: false,
-          message: 'Ako VIP užívateľ môžete vytvoriť maximálne 2 sezóny.'
-        });
-      }
-    }
-
-        // Určíme hodnotu participantLimit podľa typu sezóny a role používateľa
-        let finalParticipantLimit = null; // Pre oficiálne sezóny: neobmedzené
-    
-        if (type === 'community') {
-          // Pre komunitné sezóny: základný limit 100, VIP môžu meniť
-          if (user.role === 'vip' || user.role === 'admin') {
-            // VIP a admin môžu nastaviť vlastný limit
-            finalParticipantLimit = participantLimit !== undefined ? participantLimit : 100;
-          } else {
-            // Bežní užívatelia majú fixný limit 100
-            finalParticipantLimit = 100;
-          }
-        }
-    
-    // Generovanie jedinečného kódu pre pozvánku
-    const inviteCode = uuidv4().substring(0, 6).toUpperCase();
-    
-    // Vytvorenie novej sezóny
-    const newSeason = await Season.create({
-      name,
-      description,
-      image,
-      type: type || 'community',
-      rules,
-      inviteCode,
-      creatorId: userId,
-      active: true,
-      participantLimit: finalParticipantLimit
-    });
-    
-    // Označenie problémov pri vytváraní asociácie
-    try {
-      // Pridanie tvorcu ako účastníka sezóny s admin rolou
-      await newSeason.addParticipant(userId, { 
-        through: { role: 'admin' } 
-      });
-    } catch (assocError) {
-      console.error('Chyba pri pridávaní tvorcu k sezóne:', assocError);
-      // Pokračujeme aj napriek chybe asociácie
-    }
-    
-    res.status(201).json({
-      success: true,
-      message: 'Sezóna bola úspešne vytvorená.',
-      data: newSeason
-    });
-  } catch (error) {
-    console.error('Chyba pri vytváraní sezóny:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Chyba pri vytváraní sezóny.',
-      error: error.message
-    });
-  }
-};
-
-// Aktualizácia sezóny
-const updateSeason = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, description, image, active, rules, participantLimit } = req.body;
-    const userId = req.userId;
-    
-    // Načítanie sezóny
-    const season = await Season.findByPk(id);
-    
-    if (!season) {
-      return res.status(404).json({
-        success: false,
-        message: 'Sezóna nebola nájdená.'
-      });
-    }
-    
-    // Kontrola, či užívateľ je tvorcom sezóny alebo admin
-    const user = await User.findByPk(userId);
-    
-    if (season.creatorId !== userId && user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Nemáte oprávnenie na aktualizáciu tejto sezóny.'
-      });
-    }
-    
-    // Aktualizácia sezóny
-    if (name) season.name = name;
-    if (description !== undefined) season.description = description;
-    if (image !== undefined) season.image = image;
-    if (active !== undefined) season.active = active;
-    if (rules !== undefined) season.rules = rules;
-
-        // Aktualizácia limitu účastníkov - iba pre VIP a admin používateľov a komunitné sezóny
-        if (participantLimit !== undefined && season.type === 'community' && 
-          (user.role === 'vip' || user.role === 'admin')) {
-        season.participantLimit = participantLimit;
-      }
-    
-    await season.save();
-    
-    res.status(200).json({
-      success: true,
-      message: 'Sezóna bola úspešne aktualizovaná.',
-      data: season
-    });
-  } catch (error) {
-    console.error('Chyba pri aktualizácii sezóny:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Chyba pri aktualizácii sezóny.',
-      error: error.message
-    });
-  }
-};
-
-// Vymazanie sezóny
-const deleteSeason = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = req.userId;
-    
-    // Načítanie sezóny
-    const season = await Season.findByPk(id);
-    
-    if (!season) {
-      return res.status(404).json({
-        success: false,
-        message: 'Sezóna nebola nájdená.'
-      });
-    }
-    
-    // Kontrola, či užívateľ je tvorcom sezóny alebo admin
-    const user = await User.findByPk(userId);
-    
-    if (season.creatorId !== userId && user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Nemáte oprávnenie na vymazanie tejto sezóny.'
-      });
-    }
-    
-    // Vymazanie sezóny
-    await season.destroy();
-    
-    res.status(200).json({
-      success: true,
-      message: 'Sezóna bola úspešne vymazaná.'
-    });
-  } catch (error) {
-    console.error('Chyba pri vymazávaní sezóny:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Chyba pri vymazávaní sezóny.',
-      error: error.message
-    });
-  }
-};
-
-// Pripojenie k sezóne pomocou kódu
-const joinSeason = async (req, res) => {
-  try {
-    const { inviteCode } = req.body;
-    const userId = req.userId;
-    
-    // Nájdenie sezóny podľa kódu
-    const season = await Season.findOne({
-      where: { inviteCode }
-    });
-    
-    if (!season) {
-      return res.status(404).json({
-        success: false,
-        message: 'Sezóna s týmto kódom nebola nájdená.'
-      });
-    }
-    
-    // Kontrola, či je sezóna aktívna
-    if (!season.active) {
-      return res.status(400).json({
-        success: false,
-        message: 'Táto sezóna nie je aktívna.'
-      });
-    }
-    
-    // Kontrola, či užívateľ už nie je v sezóne
-    const existingUserSeason = await UserSeason.findOne({
-      where: {
-        userId,
-        seasonId: season.id
-      }
-    });
-    
-    if (existingUserSeason) {
-      return res.status(400).json({
-        success: false,
-        message: 'Už ste členom tejto sezóny.'
-      });
-    }
-    
-    // Kontrola limitu účastníkov pre komunitné sezóny
-    if (season.type === 'community' && season.participantLimit !== null) {
-      const participantsCount = await UserSeason.count({
-        where: { seasonId: season.id }
-      });
-      
-      if (participantsCount >= season.participantLimit) {
-        return res.status(400).json({
-          success: false,
-          message: `Táto sezóna už dosiahla maximálny počet účastníkov (${season.participantLimit}).`
-        });
-      }
-    }
-    
-    // Pridanie užívateľa do sezóny - priame vytvorenie záznamu v prepojovacej tabuľke
-    await UserSeason.create({
-      userId,
-      seasonId: season.id,
-      role: 'player',
-      joinedAt: new Date()
-    });
-    
-    res.status(200).json({
-      success: true,
-      message: 'Úspešne ste sa pripojili k sezóne.',
-      data: {
-        seasonId: season.id,
-        seasonName: season.name
-      }
-    });
-  } catch (error) {
-    console.error('Chyba pri pripájaní k sezóne:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Chyba pri pripájaní k sezóne.',
-      error: error.message
-    });
-  }
-};
-
-// Získanie rebríčka sezóny
-const getSeasonLeaderboard = async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    // Kontrola existencie sezóny
-    const seasonExists = await Season.findByPk(id);
-    
-    if (!seasonExists) {
-      return res.status(404).json({
-        success: false,
-        message: 'Sezóna nebola nájdená.'
-      });
-    }
-    
-    // Získanie všetkých tipov v sezóne
-    const tips = await Tip.findAll({
-      include: [
-        {
-          model: Match,
-          include: [
-            {
-              model: Round,
-              include: [
-                {
-                  model: League,
-                  where: { seasonId: id }
-                }
-              ]
-            }
-          ]
-        },
-        {
-          model: User,
-          attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage']
-        }
-      ]
-    });
-    
-    // Spracovanie dát pre rebríček
-    const userPoints = {};
-    
-    tips.forEach(tip => {
-      const userId = tip.User.id;
-      
-      if (!userPoints[userId]) {
-        userPoints[userId] = {
-          user: {
-            id: tip.User.id,
-            username: tip.User.username,
-            firstName: tip.User.firstName,
-            lastName: tip.User.lastName,
-            profileImage: tip.User.profileImage
-          },
-          totalPoints: 0,
-          tipsCount: 0,
-          correctPredictions: 0
-        };
-      }
-      
-      userPoints[userId].totalPoints += tip.points;
-      userPoints[userId].tipsCount += 1;
-      
-      if (tip.points > 0) {
-        userPoints[userId].correctPredictions += 1;
-      }
-    });
-    
-    // Konverzia na pole a zoradenie podľa bodov
-    const leaderboard = Object.values(userPoints).sort((a, b) => b.totalPoints - a.totalPoints);
-    
-    // Pridanie poradia
-    leaderboard.forEach((entry, index) => {
-      entry.rank = index + 1;
-      entry.accuracy = Math.round((entry.correctPredictions / entry.tipsCount) * 100) || 0;
-    });
-    
-    res.status(200).json({
-      success: true,
-      data: leaderboard
-    });
-  } catch (error) {
-    console.error('Chyba pri získavaní rebríčka sezóny:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Chyba pri získavaní rebríčka sezóny.',
-      error: error.message
-    });
-  }
-};
+  res.status(200).json({ success: true, data: leaderboard });
+});
 
 module.exports = {
   getAllSeasons,
@@ -540,5 +253,5 @@ module.exports = {
   updateSeason,
   deleteSeason,
   joinSeason,
-  getSeasonLeaderboard
+  getSeasonLeaderboard,
 };
