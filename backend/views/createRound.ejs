@@ -1,0 +1,74 @@
+<%- include('partials/head', { title: 'Vytvoriť kolo', page: 'seasons', active: 'seasons', pageStyle: `
+  .form-head { padding:28px 0 8px; }
+  .crumb { font-size:var(--fs-sm); color:var(--text-4); margin-bottom:12px; }
+  .crumb a { color:var(--text-3); } .crumb a:hover { color:var(--brand-bright); }
+  .form-layout { display:grid; grid-template-columns:1fr 340px; gap:28px; align-items:start; padding:20px 0 64px; }
+  .form-card { padding:26px; }
+  .form-card + .form-card { margin-top:18px; }
+  .form-card h3 { font-size:var(--fs-h4); margin-bottom:4px; }
+  .form-card .sub { color:var(--text-3); font-size:var(--fs-sm); margin-bottom:20px; }
+  .field-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .match-pick { display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:var(--r-sm); background:var(--surface-2); border:1px solid var(--line); margin-bottom:8px; }
+  .match-pick.sel { border-color:var(--brand-line); background:var(--brand-soft); }
+  .match-pick .teams { flex:1; font-weight:600; color:var(--text-1); font-size:var(--fs-sm); }
+  .sticky-side { position:sticky; top:92px; }
+  @media (max-width:980px){ .form-layout { grid-template-columns:1fr; } .sticky-side { position:static; } }
+  @media (max-width:560px){ .field-row { grid-template-columns:1fr; } }
+` }) %>
+
+<%- include('partials/season-subnav', { seasonId: league.seasonId, seasonName: (league.Season && league.Season.name) || 'Sezóna', active: 'leagues' }) %>
+
+<div class="wrap form-head">
+  <div class="crumb"><a href="/seasons/<%= league.seasonId %>"><%= (league.Season && league.Season.name) || 'Sezóna' %></a> › <a href="/leagues/<%= league.id %>"><%= league.name %></a> › Vytvoriť kolo</div>
+  <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Vytvoriť kolo</h1>
+  <p class="muted" style="margin-top:6px">Kolo je sada zápasov na tipovanie s jednou uzávierkou. Najprv vytvor kolo, potom doň pridáš zápasy.</p>
+</div>
+
+<% if (typeof error !== 'undefined' && error) { %>
+<div class="wrap"><div class="tag tag-danger" style="display:block;padding:12px 14px;margin-bottom:16px"><%= error %></div></div>
+<% } %>
+
+<form class="wrap form-layout" action="/rounds/create" method="POST">
+  <input type="hidden" name="leagueId" value="<%= league.id %>">
+  <main>
+    <div class="card form-card">
+      <h3>Základné údaje</h3>
+      <p class="sub">Liga, do ktorej kolo patrí, a názov kola.</p>
+      <div class="stack g-4">
+        <div class="field"><label class="label">Liga</label><input class="input" value="<%= league.name %>" disabled></div>
+        <div class="field"><label class="label">Názov kola</label><input class="input" name="name" placeholder="napr. Osemfinále" required oninput="document.getElementById('pvName').textContent=this.value||'Názov kola'"></div>
+        <div class="field"><label class="label">Popis <span class="faint">(voliteľné)</span></label><input class="input" name="description" placeholder="napr. 1. zápasy vyraďovačky"></div>
+      </div>
+    </div>
+
+    <div class="card form-card">
+      <h3>Termíny tipovania</h3>
+      <p class="sub">Od kedy do kedy môžu hráči tipovať. Po uzávierke sa tipy uzamknú.</p>
+      <div class="field-row">
+        <div class="field"><label class="label">Otvorenie tipovania</label><input class="input" type="datetime-local" name="startDate" required></div>
+        <div class="field"><label class="label">Uzávierka</label><input class="input" type="datetime-local" name="endDate" required></div>
+      </div>
+      <div class="card" style="background:var(--warning-soft);border-color:rgba(245,165,36,.3);padding:12px 14px;margin-top:14px;display:flex;gap:10px;align-items:flex-start">
+        <span style="font-size:16px">⏰</span><span style="font-size:var(--fs-sm);color:var(--text-2)">Tipovanie každého zápasu sa uzavrie pri jeho začiatku, najneskôr v čase uzávierky kola.</span>
+      </div>
+    </div>
+  </main>
+
+  <aside class="sticky-side">
+    <div class="card card-pad">
+      <div class="stat-label" style="margin-bottom:12px">Náhľad kola</div>
+      <h4 id="pvName">Názov kola</h4>
+      <p class="muted" style="font-size:var(--fs-sm);margin:4px 0 14px"><%= league.name %></p>
+    </div>
+    <div class="card card-pad" style="margin-top:18px;background:var(--surface-2)">
+      <b class="hi" style="display:block;margin-bottom:6px">💡 Ďalší krok</b>
+      <p class="muted" style="font-size:var(--fs-sm)">Po vytvorení kola ťa presmerujeme na pridávanie zápasov.</p>
+    </div>
+    <div class="card card-pad" style="margin-top:18px">
+      <button type="submit" class="btn btn-primary btn-block">Vytvoriť kolo</button>
+      <a href="/leagues/<%= league.id %>" class="btn btn-ghost btn-block" style="margin-top:8px">Zrušiť</a>
+    </div>
+  </aside>
+</form>
+
+<%- include('partials/footer') %>

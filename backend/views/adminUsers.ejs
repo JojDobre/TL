@@ -1,0 +1,162 @@
+<%- include('partials/head', { title: 'Správa užívateľov', page: 'admin', active: 'admin', pageStyle: `
+  .ad-head { padding:26px 0 18px; }
+  .filters { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:18px; }
+  .u-table { width:100%; }
+  .u-head, .u-row { display:grid; grid-template-columns: 1.6fr 110px 90px 90px 110px 44px; gap:14px; align-items:center; }
+  .u-head { padding:10px 16px; }
+  .u-head span { font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.08em; color:var(--text-4); font-weight:700; }
+  .u-row { padding:13px 16px; border-bottom:1px solid var(--line); }
+  .u-row:last-child { border:none; }
+  .u-row:hover { background:var(--surface-2); }
+  .u-user { display:flex; align-items:center; gap:12px; min-width:0; }
+  .u-name { font-weight:700; color:var(--text-1); font-size:var(--fs-sm); }
+  .u-email { font-size:var(--fs-xs); color:var(--text-4); }
+  .u-num { font-family:var(--num); font-weight:700; font-variant-numeric:tabular-nums; }
+  .status-dot { display:inline-flex; align-items:center; gap:6px; font-size:var(--fs-sm); font-weight:600; }
+  .status-dot .d { width:7px; height:7px; border-radius:50%; }
+  .row-menu { position:relative; }
+  .row-menu-btn { width:32px; height:32px; border-radius:8px; background:transparent; border:none; color:var(--text-3); font-size:18px; display:flex; align-items:center; justify-content:center; }
+  .row-menu-btn:hover { background:var(--surface-3); color:var(--text-1); }
+  .row-pop { position:absolute; right:0; top:36px; z-index:30; width:200px; background:var(--surface-1); border:1px solid var(--line-strong); border-radius:var(--r-md); box-shadow:var(--shadow-pop); overflow:hidden; }
+  .row-pop a { display:block; padding:10px 14px; font-size:var(--fs-sm); font-weight:600; color:var(--text-2); }
+  .row-pop a:hover { background:var(--surface-2); color:var(--text-1); }
+  .row-pop a.danger { color:var(--danger); }
+  .row-pop .sep { height:1px; background:var(--line); }
+  @media (max-width:860px){ .u-head { display:none; } .u-row { grid-template-columns:1fr 44px; row-gap:8px; } .u-col-hide { display:none; } }
+  @media (max-width:600px){
+    /* add-user button full width */
+    .ad-head .between { flex-direction:column; align-items:stretch; }
+    .ad-head .between > .btn { width:100%; }
+    /* filters: search full width, two selects 50/50 below */
+    .filters { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .filters .search { grid-column:1 / -1; max-width:none !important; }
+    .filters .select { width:100% !important; }
+    .filters .grow { display:none; }
+    .filters > span { grid-column:1 / -1; }
+  }
+` }) %>
+
+<%- include('partials/admin-subnav', { active: 'users' }) %>
+
+<%
+  const GRADS = ['linear-gradient(135deg,#7c5cff,#5b3fd6)','linear-gradient(135deg,#3a7bd5,#1b3f72)','linear-gradient(135deg,#16a085,#0c5f4d)','linear-gradient(135deg,#d35400,#8a3700)','linear-gradient(135deg,#8e44ad,#522963)','linear-gradient(135deg,#ff6b9a,#f0476a)'];
+  const gradFor = (s='') => { let h=0; for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))%GRADS.length; return GRADS[h]; };
+  const fullName = (u) => [u.firstName,u.lastName].filter(Boolean).join(' ') || u.username || '?';
+  const initials = (u) => fullName(u).split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
+  const roleLabel = (r) => r==='admin'?'Admin':r==='vip'?'VIP':'Hráč';
+%>
+
+<div class="wrap ad-head">
+  <div class="between wrap-gap" style="gap:16px">
+    <div><h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Správa užívateľov</h1><p class="muted" style="margin-top:6px"><%= pagination.total %> registrovaných</p></div>
+    <button class="btn btn-primary" id="addUserBtn">+ Pridať užívateľa</button>
+  </div>
+</div>
+
+<div class="wrap" style="padding-bottom:64px">
+  <div class="filters">
+    <div class="input-icon search" style="max-width:300px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4" stroke-linecap="round"/></svg><input class="input" id="searchInput" placeholder="Hľadať meno, nick, e-mail…"></div>
+    <select class="select" id="roleFilter" style="width:auto"><option>Všetky roly</option><option>Admin</option><option>VIP</option><option>Hráč</option></select>
+    <select class="select" id="statusFilter" style="width:auto"><option>Všetky stavy</option><option>Aktívny</option><option>Zablokovaný</option></select>
+    <div class="grow"></div>
+    <span class="muted" style="font-size:var(--fs-sm)" id="countLabel"><%= users.length ? '1–' + users.length + ' z ' + pagination.total : '0 z 0' %></span>
+  </div>
+
+  <div class="card" style="padding:8px">
+    <div class="u-head"><span>Užívateľ</span><span>Rola</span><span class="u-col-hide">Body</span><span class="u-col-hide">Tipov</span><span>Stav</span><span></span></div>
+    <div class="hr"></div>
+    <div class="u-table" id="uTable">
+      <% users.forEach(function (u) { var active = u.active !== false; %>
+      <div class="u-row" data-uid="<%= u.id %>"<% if(!active){ %> style="opacity:.6"<% } %>>
+        <div class="u-user"><span class="avatar avatar-md" style="background:<%= gradFor(u.username || fullName(u)) %>;color:#fff"><%= initials(u) %></span><div style="min-width:0"><div class="u-name"><%= fullName(u) %></div><div class="u-email"><%= u.email || '' %></div></div></div>
+        <span><span class="chip-role role-<%= u.role || 'player' %>"><%= roleLabel(u.role) %></span></span>
+        <span class="u-num u-col-hide">—</span>
+        <span class="u-num u-col-hide">—</span>
+        <span class="status-dot" style="color:<%= active ? 'var(--success)' : 'var(--danger)' %>"><span class="d" style="background:<%= active ? 'var(--success)' : 'var(--danger)' %>"></span><%= active ? 'Aktívny' : 'Zablokovaný' %></span>
+        <div class="row-menu"><button class="row-menu-btn" data-menu>⋯</button></div>
+      </div>
+      <% }); %>
+      <% if (users.length === 0) { %><div class="u-row"><div class="u-user"><div class="u-name">Žiadni používatelia.</div></div></div><% } %>
+    </div>
+  </div>
+
+  <div class="between" style="margin-top:18px"><span class="muted" style="font-size:var(--fs-sm)" id="pageInfo">Strana <%= pagination.page %> / <%= pagination.pages %></span><div class="row g-2"><button class="btn btn-secondary btn-sm" id="prevBtn"<% if(pagination.page<=1){ %> aria-disabled="true" style="opacity:.4;pointer-events:none"<% } %>>‹ Predošlá</button><button class="btn btn-secondary btn-sm" id="nextBtn"<% if(pagination.page>=pagination.pages){ %> aria-disabled="true" style="opacity:.4;pointer-events:none"<% } %>>Ďalšia ›</button></div></div>
+</div>
+
+<script>
+(function () {
+  var search = document.getElementById('searchInput');
+  var roleF = document.getElementById('roleFilter');
+  var statusF = document.getElementById('statusFilter');
+  var table = document.getElementById('uTable');
+  var countLabel = document.getElementById('countLabel');
+  var pageInfo = document.getElementById('pageInfo');
+  var prevBtn = document.getElementById('prevBtn');
+  var nextBtn = document.getElementById('nextBtn');
+  var addBtn = document.getElementById('addUserBtn');
+  var PER = 20, page = 1, pages = <%= pagination.pages %>, total = <%= pagination.total %>, current = [], timer = null;
+
+  function gradFor(s){s=s||'';var g=['linear-gradient(135deg,#7c5cff,#5b3fd6)','linear-gradient(135deg,#3a7bd5,#1b3f72)','linear-gradient(135deg,#16a085,#0c5f4d)','linear-gradient(135deg,#d35400,#8a3700)','linear-gradient(135deg,#8e44ad,#522963)','linear-gradient(135deg,#ff6b9a,#f0476a)'];var h=0;for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%g.length;return g[h];}
+  function fullName(u){return [u.firstName,u.lastName].filter(Boolean).join(' ')||u.username||'?';}
+  function initials(u){return fullName(u).split(' ').map(function(w){return w[0];}).filter(Boolean).slice(0,2).join('').toUpperCase();}
+  function roleLabel(r){return r==='admin'?'Admin':r==='vip'?'VIP':'Hráč';}
+  function esc(s){return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+  function rowHtml(u){var active=u.active!==false;var col=active?'var(--success)':'var(--danger)';
+    return '<div class="u-row" data-uid="'+u.id+'"'+(active?'':' style="opacity:.6"')+'>'+
+      '<div class="u-user"><span class="avatar avatar-md" style="background:'+gradFor(u.username||fullName(u))+';color:#fff">'+esc(initials(u))+'</span><div style="min-width:0"><div class="u-name">'+esc(fullName(u))+'</div><div class="u-email">'+esc(u.email)+'</div></div></div>'+
+      '<span><span class="chip-role role-'+(u.role||'player')+'">'+roleLabel(u.role)+'</span></span>'+
+      '<span class="u-num u-col-hide">—</span><span class="u-num u-col-hide">—</span>'+
+      '<span class="status-dot" style="color:'+col+'"><span class="d" style="background:'+col+'"></span>'+(active?'Aktívny':'Zablokovaný')+'</span>'+
+      '<div class="row-menu"><button class="row-menu-btn" data-menu>⋯</button></div></div>';
+  }
+
+  function params(){var p='?page='+page+'&limit='+PER;var q=(search.value||'').trim();if(q)p+='&search='+encodeURIComponent(q);
+    var r=roleF.value;if(r!=='Všetky roly')p+='&role='+(r==='Admin'?'admin':r==='VIP'?'vip':'player');
+    var s=statusF.value;if(s==='Aktívny')p+='&status=active';if(s==='Zablokovaný')p+='&status=blocked';return p;}
+
+  function load(){
+    fetch('/api/users'+params()).then(function(r){return r.json();}).then(function(res){
+      current=res.data||[]; if(res.pagination){total=res.pagination.total;pages=res.pagination.pages||1;page=res.pagination.page||page;}
+      table.innerHTML = current.length ? current.map(rowHtml).join('') : '<div class="u-row"><div class="u-user"><div class="u-name">Žiadni používatelia nevyhovujú filtru.</div></div></div>';
+      var start=(page-1)*PER;
+      countLabel.textContent = total ? (start+1)+'–'+(start+current.length)+' z '+total : '0 z 0';
+      pageInfo.textContent = 'Strana '+page+' / '+pages;
+      prevBtn.style.opacity=page<=1?'.4':'';prevBtn.style.pointerEvents=page<=1?'none':'';
+      nextBtn.style.opacity=page>=pages?'.4':'';nextBtn.style.pointerEvents=page>=pages?'none':'';
+    }).catch(function(){});
+  }
+
+  function showMenu(wrap,user){
+    document.querySelectorAll('[data-rowmenu]').forEach(function(p){p.remove();});
+    var active=user.active!==false;
+    var panel=document.createElement('div');panel.setAttribute('data-rowmenu','');panel.className='row-pop';
+    panel.style.cssText='position:absolute;right:0;top:100%;z-index:60;display:block';
+    panel.innerHTML='<a data-act="role-player">Zmeniť rolu → Hráč</a><a data-act="role-vip">Zmeniť rolu → VIP</a><a data-act="role-admin">Zmeniť rolu → Admin</a><div class="sep"></div><a class="danger" data-act="ban">'+(active?'Zablokovať':'Aktivovať')+'</a><a class="danger" data-act="del">Vymazať účet</a>';
+    wrap.style.position='relative';wrap.appendChild(panel);
+    panel.addEventListener('click',function(ev){var a=ev.target.closest('[data-act]');if(!a)return;ev.preventDefault();ev.stopPropagation();var act=a.getAttribute('data-act');
+      var opts={method:'',headers:{'Content-Type':'application/json'},body:null};
+      if(act.indexOf('role-')===0){opts.method='PUT';opts.body=JSON.stringify({role:act.replace('role-','')});}
+      else if(act==='ban'){opts.method='PUT';opts.body=JSON.stringify({active:!(user.active!==false)});}
+      else if(act==='del'){if(!confirm('Naozaj vymazať účet '+fullName(user)+'?'))return;opts.method='DELETE';opts.body=null;}
+      fetch('/api/users/'+user.id,opts).then(function(r){return r.json();}).then(function(res){if(res.success===false){alert(res.message||'Akcia zlyhala.');}panel.remove();load();}).catch(function(){alert('Akcia zlyhala.');});
+    });
+  }
+
+  table.addEventListener('click',function(e){if(e.target.closest('[data-menu]')){e.stopPropagation();var row=e.target.closest('.u-row');if(!row)return;var user=current.find(function(u){return String(u.id)===String(row.getAttribute('data-uid'));});if(user)showMenu(e.target.closest('.row-menu'),user);}});
+  document.addEventListener('click',function(){document.querySelectorAll('[data-rowmenu]').forEach(function(p){p.remove();});});
+
+  if(search)search.addEventListener('input',function(){clearTimeout(timer);timer=setTimeout(function(){page=1;load();},300);});
+  [roleF,statusF].forEach(function(el){if(el)el.addEventListener('change',function(){page=1;load();});});
+  prevBtn.addEventListener('click',function(){if(page>1){page--;load();}});
+  nextBtn.addEventListener('click',function(){if(page<pages){page++;load();}});
+  addBtn.addEventListener('click',function(){var u=prompt('Prezývka:');if(!u)return;var e=prompt('E-mail:');if(!e)return;var p=prompt('Heslo (min. 8 znakov):');if(!p)return;
+    fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,email:e,password:p})}).then(function(r){return r.json();}).then(function(){page=1;load();}).catch(function(){alert('Nepodarilo sa pridať.');});});
+
+  // prvotné dáta sú už vykreslené serverom; current naplníme až pri prvej akcii/filtri
+  // aby 3-bodky fungovali hneď, načítame current na pozadí:
+  load();
+})();
+</script>
+
+<%- include('partials/footer') %>

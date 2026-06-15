@@ -1,0 +1,150 @@
+<%- include('partials/head', { title: 'Správa tímov', page: 'admin', active: 'admin', pageStyle: `
+  .ad-head { padding:26px 0 18px; }
+  .filters { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:18px; }
+  .team-row { display:grid; grid-template-columns:auto 1fr auto auto auto; gap:14px; align-items:center; padding:12px 16px; border-radius:var(--r-md); background:var(--surface-2); margin-bottom:8px; }
+  .team-logo-sm { width:38px; height:38px; border-radius:10px; background:var(--surface-3); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; overflow:hidden; }
+  .team-logo-sm img { width:100%; height:100%; object-fit:cover; }
+  .add-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:760px){ .add-grid { grid-template-columns:1fr; } .team-row { grid-template-columns:auto 1fr auto; } .team-row .tcol-hide { display:none; } }
+` }) %>
+
+<div class="wrap ad-head">
+  <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Správa tímov</h1>
+  <p class="muted" style="margin-top:6px">Globálne tímy dostupné všetkým používateľom pri tvorbe líg. Spolu: <b class="hi" id="totalCount"><%= total %></b></p>
+</div>
+
+<div class="wrap" style="padding-bottom:64px">
+  <!-- PRIDANIE -->
+  <div class="card form-card" style="padding:22px;margin-bottom:24px">
+    <h3 style="font-size:var(--fs-h4);margin-bottom:4px">Pridať tím</h3>
+    <p class="muted" style="font-size:var(--fs-sm);margin-bottom:18px">Jeden tím, alebo viac naraz (hromadne).</p>
+
+    <div class="row g-2" style="margin-bottom:18px">
+      <button class="btn btn-secondary btn-sm" data-tab="single" id="tabSingle">Jeden tím</button>
+      <button class="btn btn-ghost btn-sm" data-tab="bulk" id="tabBulk">Hromadne</button>
+    </div>
+
+    <!-- jeden tím -->
+    <div id="paneSingle">
+      <div class="add-grid">
+        <div class="field"><label class="label">Názov tímu</label><input class="input" id="sName" placeholder="napr. Arsenal"></div>
+        <div class="field"><label class="label">Typ</label><select class="select" id="sType"><option value="club">Klub (šport + krajina)</option><option value="national">Národný tím (bez športu)</option></select></div>
+        <div class="field" data-club><label class="label">Šport</label><select class="select" id="sSport"><% sports.forEach(function(s){ %><option value="<%= s.code %>"><%= s.label %></option><% }); %></select></div>
+        <div class="field"><label class="label">Krajina</label><select class="select" id="sCountry"><% countries.forEach(function(c){ %><option value="<%= c.code %>"><%= c.label %></option><% }); %></select></div>
+        <div class="field" style="grid-column:1/-1"><label class="label">URL loga <span class="faint">(voliteľné)</span></label><input class="input" id="sLogo" type="url" placeholder="https://… odkaz na obrázok"></div>
+      </div>
+      <button class="btn btn-primary" id="addOne" style="margin-top:6px">Pridať tím</button>
+    </div>
+
+    <!-- hromadne -->
+    <div id="paneBulk" hidden>
+      <div class="add-grid">
+        <div class="field"><label class="label">Typ</label><select class="select" id="bType"><option value="club">Kluby (šport + krajina)</option><option value="national">Národné tímy (bez športu)</option></select></div>
+        <div class="field" data-bclub><label class="label">Šport</label><select class="select" id="bSport"><% sports.forEach(function(s){ %><option value="<%= s.code %>"><%= s.label %></option><% }); %></select></div>
+        <div class="field"><label class="label">Krajina</label><select class="select" id="bCountry"><% countries.forEach(function(c){ %><option value="<%= c.code %>"><%= c.label %></option><% }); %></select></div>
+      </div>
+      <div class="field" style="margin-top:4px"><label class="label">Tímy — jeden na riadok</label><textarea class="textarea" id="bNames" rows="6" placeholder="Arsenal&#10;Manchester United&#10;Liverpool"></textarea></div>
+      <button class="btn btn-primary" id="addBulk">Pridať tímy</button>
+    </div>
+  </div>
+
+  <!-- FILTER + ZOZNAM -->
+  <div class="filters">
+    <input class="input search" id="fSearch" placeholder="Hľadať tím…" style="max-width:260px">
+    <select class="select" id="fType" style="width:auto"><option value="">Všetky typy</option><option value="club">Kluby</option><option value="national">Národné</option></select>
+    <select class="select" id="fSport" style="width:auto"><option value="">Všetky športy</option><% sports.forEach(function(s){ %><option value="<%= s.code %>"><%= s.label %></option><% }); %></select>
+    <select class="select" id="fCountry" style="width:auto"><option value="">Všetky krajiny</option><% countries.forEach(function(c){ %><option value="<%= c.code %>"><%= c.label %></option><% }); %></select>
+  </div>
+
+  <div id="teamList">
+    <% teams.forEach(function(t){ %>
+    <div class="team-row" data-team-id="<%= t.id %>">
+      <span class="team-logo-sm"><% if (t.logo) { %><img src="<%= t.logo %>" alt=""><% } else { %><%= (t.name||'?').substring(0,3).toUpperCase() %><% } %></span>
+      <div><b><%= t.name %></b></div>
+      <span class="tag <%= t.teamType === 'national' ? 'tag-info' : 'tag-muted' %> tcol-hide"><%= t.teamType === 'national' ? 'Národný' : 'Klub' %></span>
+      <span class="muted tcol-hide" style="font-size:var(--fs-sm)"><%= t.sport || '—' %> <%= t.country ? '· ' + t.country : '' %></span>
+      <button class="btn btn-ghost btn-icon" style="width:34px;height:34px" data-del title="Zmazať">✕</button>
+    </div>
+    <% }); %>
+  </div>
+  <p class="muted" id="emptyList" style="<%= teams.length ? 'display:none' : '' %>;text-align:center;padding:30px">Žiadne tímy. Pridaj prvý vyššie.</p>
+</div>
+
+<div class="toast-wrap" id="toastWrap" style="position:fixed;bottom:24px;right:24px;z-index:200;display:flex;flex-direction:column;gap:10px"></div>
+
+<script>
+(function () {
+  function toast(msg, ok){ var t=document.createElement('div'); t.textContent=msg; t.style.cssText='background:'+(ok?'var(--success)':'var(--surface-2)')+';color:'+(ok?'#fff':'var(--text-1)')+';border:1px solid var(--line);padding:10px 14px;border-radius:10px'; document.getElementById('toastWrap').appendChild(t); setTimeout(function(){t.remove();},2600); }
+  var $ = function(id){ return document.getElementById(id); };
+
+  // taby pridania
+  function setTab(which){ var s=which==='single'; $('paneSingle').hidden=!s; $('paneBulk').hidden=s; $('tabSingle').className='btn btn-sm '+(s?'btn-secondary':'btn-ghost'); $('tabBulk').className='btn btn-sm '+(s?'btn-ghost':'btn-secondary'); }
+  $('tabSingle').onclick=function(){setTab('single');}; $('tabBulk').onclick=function(){setTab('bulk');};
+
+  // typ → zobraz/skry šport
+  function toggleSport(typeEl, fieldSel){ var club=typeEl.value==='club'; document.querySelector(fieldSel).style.display=club?'':'none'; }
+  $('sType').onchange=function(){toggleSport(this,'[data-club]');}; toggleSport($('sType'),'[data-club]');
+  $('bType').onchange=function(){toggleSport(this,'[data-bclub]');}; toggleSport($('bType'),'[data-bclub]');
+
+  // pridať jeden
+  $('addOne').onclick=function(){
+    var body={ name:$('sName').value, teamType:$('sType').value, sport:$('sSport').value, country:$('sCountry').value, logo:$('sLogo').value };
+    if(!body.name.trim()){toast('Zadaj názov tímu.');return;}
+    this.disabled=true;
+    fetch('/api/admin/teams',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(res){
+      $('addOne').disabled=false;
+      if(res.success===false){toast(res.message||'Nepodarilo sa pridať.');return;}
+      toast('Tím pridaný ✓',true); $('sName').value=''; $('sLogo').value=''; reload();
+    }).catch(function(){$('addOne').disabled=false;toast('Chyba.');});
+  };
+
+  // hromadne
+  $('addBulk').onclick=function(){
+    var body={ teamType:$('bType').value, sport:$('bSport').value, country:$('bCountry').value, names:$('bNames').value };
+    if(!body.names.trim()){toast('Zadaj aspoň jeden tím.');return;}
+    this.disabled=true;
+    fetch('/api/admin/teams/bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(res){
+      $('addBulk').disabled=false;
+      if(res.success===false){toast(res.message||'Nepodarilo sa pridať.');return;}
+      var msg='Pridaných '+res.added+' tímov'+(res.skipped&&res.skipped.length?' ('+res.skipped.length+' už existovalo)':'');
+      toast(msg,true); $('bNames').value=''; reload();
+    }).catch(function(){$('addBulk').disabled=false;toast('Chyba.');});
+  };
+
+  // mazanie
+  $('teamList').addEventListener('click',function(e){
+    var b=e.target.closest('[data-del]'); if(!b)return;
+    var row=b.closest('[data-team-id]'); var id=row.getAttribute('data-team-id');
+    if(!confirm('Zmazať tento tím?'))return;
+    fetch('/api/admin/teams/'+id,{method:'DELETE'}).then(function(r){return r.json();}).then(function(res){
+      if(res.success===false){toast(res.message||'Nedá sa zmazať.');return;}
+      row.remove(); toast('Tím zmazaný',true);
+    }).catch(function(){toast('Chyba.');});
+  });
+
+  // filter → načítaj zoznam
+  function reload(){
+    var qs=new URLSearchParams({ scope:'global', limit:'100' });
+    if($('fSearch').value)qs.set('search',$('fSearch').value);
+    if($('fType').value)qs.set('teamType',$('fType').value);
+    if($('fSport').value)qs.set('sport',$('fSport').value);
+    if($('fCountry').value)qs.set('country',$('fCountry').value);
+    fetch('/api/admin/teams?'+qs.toString()).then(function(r){return r.json();}).then(function(res){
+      if(!res.success)return;
+      var list=$('teamList'); list.innerHTML='';
+      (res.data||[]).forEach(function(t){
+        var row=document.createElement('div'); row.className='team-row'; row.setAttribute('data-team-id',t.id);
+        var logo=t.logo?'<img src="'+t.logo+'" alt="">':(t.name||'?').substring(0,3).toUpperCase();
+        var typeTag=t.teamType==='national'?'<span class="tag tag-info tcol-hide">Národný</span>':'<span class="tag tag-muted tcol-hide">Klub</span>';
+        row.innerHTML='<span class="team-logo-sm">'+logo+'</span><div><b>'+t.name+'</b></div>'+typeTag+'<span class="muted tcol-hide" style="font-size:var(--fs-sm)">'+(t.sport||'—')+(t.country?' · '+t.country:'')+'</span><button class="btn btn-ghost btn-icon" style="width:34px;height:34px" data-del>✕</button>';
+        list.appendChild(row);
+      });
+      $('emptyList').style.display=(res.data&&res.data.length)?'none':'';
+      if(res.pagination)$('totalCount').textContent=res.pagination.total;
+    });
+  }
+  var deb; ['fSearch','fType','fSport','fCountry'].forEach(function(id){ $(id).addEventListener('input',function(){ clearTimeout(deb); deb=setTimeout(reload,300); }); });
+})();
+</script>
+
+<%- include('partials/footer') %>

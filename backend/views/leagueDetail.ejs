@@ -1,0 +1,191 @@
+<%- include('partials/head', { title: league.name, page: 'seasons', active: 'seasons', pageStyle: `
+  .lg-head { padding:26px 0 18px; }
+  .crumb { font-size:var(--fs-sm); color:var(--text-4); margin-bottom:14px; }
+  .crumb a { color:var(--text-3); } .crumb a:hover { color:var(--brand-bright); }
+  .lg-banner { display:grid; gap:8px 20px; align-items:center;
+    grid-template-columns:auto 1fr auto;
+    grid-template-areas:"cover text actions" "cover desc actions" "info info info"; }
+  .lg-cover { width:84px; height:84px; border-radius:var(--r-lg); flex:none; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-weight:700; color:#fff; font-size:26px; grid-area:cover; align-self:start; }
+  .lg-head-text { grid-area:text; }
+  .lg-desc { grid-area:desc; margin:0; max-width:70ch; }
+  .lg-info { grid-area:info; margin-top:10px; }
+  .lg-actions { grid-area:actions; align-self:center; }
+  .lg-meta { display:flex; gap:28px; flex-wrap:wrap; align-items:center; }
+  .lg-meta > div { display:flex; align-items:baseline; gap:7px; }
+  .lg-meta > div:last-child { margin-left:auto; }
+  .lg-meta .n { font-family:var(--num); font-weight:700; font-size:1.4rem; color:var(--text-1); }
+  .lg-meta .l { font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.08em; color:var(--text-4); font-weight:700; margin-bottom:0; }
+  .id-chip { font-family:var(--num); font-weight:700; letter-spacing:.2em; background:var(--surface-3); border:1px dashed var(--line-strong); padding:6px 12px; border-radius:var(--r-sm); color:var(--text-1); cursor:pointer; }
+
+  .lg-layout { display:grid; grid-template-columns:1fr 330px; gap:26px; align-items:start; padding:26px 0 64px; }
+  .round-item { display:grid; grid-template-columns:auto 1fr auto auto; gap:16px; align-items:center; padding:15px 18px; }
+  .round-n { width:46px; height:46px; border-radius:var(--r-md); background:var(--surface-2); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-family:var(--num); font-weight:700; font-size:1.1rem; color:var(--text-1); flex:none; }
+  .round-n.active { background:var(--brand-soft); border-color:var(--brand-line); color:var(--brand-bright); }
+  /* league leaderboard rows: slimmer rank so names fit */
+  .sticky-side .lb-row { grid-template-columns:30px 1fr auto; gap:10px; }
+  .sticky-side { position:sticky; top:92px; }
+  .sticky-side > * + * { margin-top:18px; }
+  @media (max-width:980px){ .lg-layout { grid-template-columns:1fr; } .sticky-side { position:static; } }
+  @media (max-width:560px){
+    .lg-banner { grid-template-columns:auto 1fr; gap:12px 14px;
+      grid-template-areas:"cover text" "desc desc" "info info" "actions actions"; }
+    .lg-cover { width:60px; height:60px; font-size:20px; }
+    .lg-meta { display:grid; grid-template-columns:repeat(3,auto); justify-content:space-between; gap:14px 10px; }
+    .lg-meta > div { flex-direction:column; align-items:flex-start; gap:2px; }
+    .lg-meta > div:last-child { grid-column:1 / -1; flex-direction:row; align-items:center; justify-content:space-between; margin-left:0; padding-top:12px; margin-top:2px; border-top:1px solid var(--line); }
+    .lg-actions { display:flex; }
+    .lg-actions .btn-primary { flex:1; }
+    .round-item { grid-template-columns:auto 1fr; column-gap:14px; row-gap:10px; align-items:center; }
+    .round-item > div { grid-column:2; }
+    .round-item .rnd-pts { grid-column:2; justify-self:start; }
+    .round-item .rnd-btn { grid-column:1 / -1; justify-self:stretch; text-align:center; }
+  }
+` }) %>
+
+<%- include('partials/season-subnav', { seasonId: league.seasonId, seasonName: (league.Season && league.Season.name) || 'Sezóna', active: 'leagues' }) %>
+
+<%
+  const initials = (u) => { const n = [u.firstName,u.lastName].filter(Boolean).join(' ') || u.username || '?'; return n.split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('').toUpperCase(); };
+  const fmtName = (u) => u.firstName ? (u.firstName + ' ' + (u.lastName ? u.lastName[0] + '.' : '')).trim() : (u.username || 'Hráč');
+  const s = league.scoringSystem || {};
+  const lgInit = (league.name||'L').substring(0,2).toUpperCase();
+%>
+
+<div class="wrap lg-head">
+  <div class="crumb"><a href="/seasons">Sezóny</a> › <a href="/seasons/<%= league.seasonId %>"><%= (league.Season && league.Season.name) || 'Sezóna' %></a> › <%= league.name %></div>
+  <div class="lg-banner">
+    <span class="lg-cover" style="background:linear-gradient(135deg,#7c5cff,#3b1f8a)"><%= lgInit %></span>
+    <div class="lg-head-text">
+      <div class="row g-2 wrap-gap"><h1 style="font-size:clamp(1.8rem,3vw,2.4rem)"><%= league.name %></h1><span class="tag <%= league.type === 'official' ? 'tag-brand' : 'tag-gold' %>"><%= league.type === 'official' ? 'Oficiálna liga' : 'Custom liga' %></span><% if (league.hasPassword) { %><span class="tag tag-muted">🔒 Heslo</span><% } %></div>
+    </div>
+    <p class="lg-desc muted"><%= league.description || '' %></p>
+    <div class="lg-info card card-pad">
+      <div class="lg-meta">
+        <div><span class="n"><%= league.membersCount %></span><span class="l">hráčov</span></div>
+        <div><span class="n"><%= rounds.length %></span><span class="l">kôl</span></div>
+        <div><span class="n"><%= playedRounds %></span><span class="l">odohraných</span></div>
+        <div><span class="l">ID ligy</span><span class="id-chip" data-copy><%= league.joinCode %></span></div>
+      </div>
+    </div>
+    <div class="lg-actions row g-2 wrap-gap">
+      <% if (!isMember) { %>
+        <button class="btn btn-primary btn-lg" data-open-join>Pripojiť sa do ligy</button>
+      <% } %>
+      <% if (typeof canManage !== 'undefined' && canManage) { %>
+        <a href="/leagues/<%= league.id %>/edit" class="btn btn-secondary">Upraviť ligu</a>
+      <% } %>
+      <button class="btn btn-secondary btn-icon" title="Zdieľať" data-copy data-copy-val="<%= league.joinCode %>">↗</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap lg-layout">
+  <main>
+    <div class="between" style="margin-bottom:16px"><h3 style="font-size:var(--fs-h4)">Kolá ligy</h3><a href="/rounds/create?league=<%= league.id %>" class="btn btn-brand btn-sm">+ Vytvoriť kolo</a></div>
+    <div class="stack g-3">
+      <% if (rounds.length === 0) { %>
+        <p class="muted">V tejto lige zatiaľ nie sú žiadne kolá.</p>
+      <% } %>
+      <% rounds.forEach(function (r) { %>
+        <% if (r.status === 'open') { %>
+        <div class="card round-item" style="border-color:var(--brand-line)">
+          <span class="round-n active"><%= r.name %></span>
+          <div><div class="row g-2 wrap-gap"><b class="hi"><%= r.description || r.name %></b><span class="tag tag-warning"><span class="dot"></span>Otvorené</span></div><div class="muted" style="font-size:var(--fs-sm)"><%= r.matchesCount %> zápasov · uzávierka <%= new Date(r.endDate).toLocaleDateString('sk-SK') %></div></div>
+          <span class="rnd-pts muted" style="font-size:var(--fs-sm)">tipuješ <b class="hi"><%= r.myTips %>/<%= r.matchesCount %></b></span>
+          <a href="/rounds/<%= r.id %>" class="rnd-btn btn btn-primary btn-sm">Tipovať</a>
+        </div>
+        <% } else if (r.status === 'finished') { %>
+        <div class="card round-item">
+          <span class="round-n"><%= r.name %></span>
+          <div><div class="row g-2 wrap-gap"><b class="hi"><%= r.description || r.name %></b><span class="tag tag-success"><span class="dot"></span>Ukončené</span></div><div class="muted" style="font-size:var(--fs-sm)"><%= r.matchesCount %> zápasov · <%= new Date(r.endDate).toLocaleDateString('sk-SK') %></div></div>
+          <span class="rnd-pts muted" style="font-size:var(--fs-sm)"></span>
+          <a href="/rounds/<%= r.id %>" class="rnd-btn btn btn-secondary btn-sm">Výsledky</a>
+        </div>
+        <% } else { %>
+        <div class="card round-item" style="opacity:.6">
+          <span class="round-n"><%= r.name %></span>
+          <div><div class="row g-2 wrap-gap"><b class="hi"><%= r.description || r.name %></b><span class="tag tag-info">Naplánované</span></div><div class="muted" style="font-size:var(--fs-sm)">Otvorí sa <%= new Date(r.startDate).toLocaleDateString('sk-SK') %></div></div>
+          <span class="rnd-pts muted" style="font-size:var(--fs-sm)">—</span>
+          <span class="rnd-btn btn btn-ghost btn-sm" aria-disabled="true">Čaká</span>
+        </div>
+        <% } %>
+      <% }); %>
+    </div>
+  </main>
+
+  <aside class="sticky-side">
+    <div class="card card-pad">
+      <div class="between" style="margin-bottom:12px"><div class="stat-label" style="margin:0">Rebríček ligy</div><span class="tag tag-muted"><%= league.membersCount %> hráčov</span></div>
+      <div class="lb">
+        <% if (leaderboard.length === 0) { %>
+          <p class="muted" style="font-size:var(--fs-sm)">Rebríček je zatiaľ prázdny.</p>
+        <% } %>
+        <% leaderboard.slice(0,8).forEach(function (e, i) { var u = e.user; var me = currentUserId && u.id === currentUserId; %>
+        <div class="lb-row<%= me ? ' me' : '' %>"><span class="lb-rank <%= i===0?'top1':i===1?'top2':i===2?'top3':'' %>"><%= i+1 %></span><div class="lb-user"><span class="avatar avatar-sm<%= me ? ' avatar-ring' : '' %>" style="background:<%= i===0 ? 'linear-gradient(135deg,var(--gold-bright),var(--gold-dim));color:var(--gold-ink)' : me ? 'linear-gradient(135deg,#7c5cff,#5b3fd6);color:#fff' : 'var(--surface-3)' %>"><%= initials(u) %></span><span class="lb-name"><%= me ? 'Ty' : fmtName(u) %></span></div><span class="lb-pts <%= i===0?'gold':'' %>"><%= e.totalPoints %></span></div>
+        <% }); %>
+      </div>
+      <a href="/leaderboards" class="btn btn-ghost btn-block btn-sm" style="margin-top:8px">Celý rebríček →</a>
+    </div>
+
+    <div class="card card-pad">
+      <div class="stat-label" style="margin-bottom:10px">Bodovanie v lige</div>
+      <div class="stack g-2" style="font-size:var(--fs-sm)">
+        <div class="between"><span class="muted">Presný výsledok</span><span class="pts-pill max">+<%= s.exactScore != null ? s.exactScore : 10 %></span></div>
+        <div class="between"><span class="muted">Víťaz / remíza</span><span class="pts-pill">+<%= s.correctWinner != null ? s.correctWinner : 3 %></span></div>
+        <div class="between"><span class="muted">Gólový rozdiel</span><span class="pts-pill">+<%= s.goalDifference != null ? s.goalDifference : 2 %></span></div>
+        <div class="between"><span class="muted">Góly tímu</span><span class="pts-pill">+<%= s.correctGoals != null ? s.correctGoals : 1 %></span></div>
+      </div>
+    </div>
+
+    <div class="card card-pad" style="background:linear-gradient(135deg,var(--surface-1),color-mix(in srgb,var(--gold) 8%,var(--surface-1)))">
+      <b class="hi" style="display:block;margin-bottom:6px">Pozvi do ligy</b>
+      <p class="muted" style="font-size:var(--fs-sm);margin-bottom:10px">Pošli kamošom ID ligy.</p>
+      <div class="row g-2"><span class="id-chip" data-copy data-copy-val="<%= league.joinCode %>" style="flex:1;text-align:center"><%= league.joinCode %></span><button class="btn btn-primary btn-sm" data-copy data-copy-val="<%= league.joinCode %>">Kopírovať</button></div>
+    </div>
+
+    <% if (isMember) { %>
+    <div class="card card-pad">
+      <div class="stat-label" style="margin-bottom:10px">Členstvo</div>
+      <div class="between" style="margin-bottom:12px"><span class="muted" style="font-size:var(--fs-sm)">Tvoja pozícia</span><% if (myRank) { %><span class="tag tag-brand" style="padding:2px 8px">#<%= myRank %> · <%= myPoints %> b</span><% } else { %><span class="muted" style="font-size:var(--fs-sm)">—</span><% } %></div>
+    </div>
+    <% } %>
+  </aside>
+</div>
+
+<!-- JOIN DIALOG -->
+<div class="scrim" data-join hidden>
+  <form class="dialog" action="/leagues/join" method="POST">
+    <div class="between" style="margin-bottom:6px"><div class="dialog-title">Pripojiť sa do ligy</div><button type="button" class="btn btn-ghost btn-icon" data-close-join>✕</button></div>
+    <input type="hidden" name="joinCode" value="<%= league.joinCode %>">
+    <% if (league.hasPassword) { %>
+    <div class="field" style="margin-bottom:22px">
+      <label class="label">Heslo ligy</label>
+      <input class="input" type="password" name="password" placeholder="••••••" required>
+    </div>
+    <% } else { %>
+    <p class="muted" style="font-size:var(--fs-sm);margin-bottom:22px">Pripojíš sa do ligy „<%= league.name %>".</p>
+    <% } %>
+    <div class="row g-2" style="justify-content:flex-end"><button type="button" class="btn btn-secondary" data-close-join>Zrušiť</button><button type="submit" class="btn btn-primary">Pripojiť sa</button></div>
+  </form>
+</div>
+
+<div class="toast-wrap" id="toastWrap" style="position:fixed;bottom:24px;right:24px;z-index:200;display:flex;flex-direction:column;gap:10px"></div>
+
+<script>
+  // kopírovanie ID ligy
+  document.addEventListener('click', function (e) {
+    var c = e.target.closest('[data-copy]');
+    if (c) {
+      var val = c.getAttribute('data-copy-val') || c.textContent.trim();
+      navigator.clipboard && navigator.clipboard.writeText(val);
+      var t = document.createElement('div'); t.className='toast'; t.textContent='Skopírované: '+val;
+      t.style.cssText='background:var(--surface-2);border:1px solid var(--line);padding:10px 14px;border-radius:10px';
+      document.getElementById('toastWrap').appendChild(t); setTimeout(function(){t.remove();},2000);
+    }
+    var dlg = document.querySelector('[data-join]');
+    if (dlg && e.target.closest('[data-open-join]')) dlg.removeAttribute('hidden');
+    if (dlg && e.target.closest('[data-close-join]')) dlg.setAttribute('hidden','');
+  });
+</script>
+
+<%- include('partials/footer') %>

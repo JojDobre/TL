@@ -1,67 +1,66 @@
 // backend/src/seeds/teams.seed.js
-const { Team } = require('../models');
+//
+// Naplní DB základnými GLOBÁLNYMI tímami (národné + vybrané kluby).
+// Spúšťa sa idempotentne — tím sa pridá len ak rovnaké meno+scope global ešte nie je.
+// Použitie: zavolaj seedTeams() (napr. z db.sync.js alebo samostatným skriptom).
 
-const seedTeams = async () => {
-  try {
-    // Kontrola, či už existujú tímy
-    const teamsCount = await Team.count();
-    
-    if (teamsCount > 0) {
-      console.log('Tímy už existujú v databáze. Preskakujem seeding.');
-      return;
+const { Team } = require('../models');
+const { Op } = require('sequelize');
+
+// národné tímy (bez športu, teamType national); krajina = kód
+const NATIONAL = [
+  ['Slovensko', 'SK'], ['Česko', 'CZ'], ['Kanada', 'CA'], ['USA', 'US'],
+  ['Švédsko', 'SE'], ['Fínsko', 'FI'], ['Nemecko', 'DE'], ['Anglicko', 'EN'],
+  ['Španielsko', 'ES'], ['Taliansko', 'IT'], ['Francúzsko', 'FR'], ['Švajčiarsko', 'CH'],
+  ['Rakúsko', 'AT'], ['Rusko', 'RU'],
+];
+
+// kluby: [názov, šport, krajina]
+const CLUBS = [
+  // futbal Anglicko
+  ['Arsenal', 'football', 'EN'], ['Manchester United', 'football', 'EN'],
+  ['Manchester City', 'football', 'EN'], ['Liverpool', 'football', 'EN'],
+  ['Chelsea', 'football', 'EN'],
+  // futbal Španielsko
+  ['Real Madrid', 'football', 'ES'], ['FC Barcelona', 'football', 'ES'],
+  ['Atlético Madrid', 'football', 'ES'],
+  // futbal Nemecko
+  ['Bayern Mníchov', 'football', 'DE'], ['Borussia Dortmund', 'football', 'DE'],
+  // futbal Taliansko
+  ['Juventus', 'football', 'IT'], ['Inter Miláno', 'football', 'IT'], ['AC Miláno', 'football', 'IT'],
+  // hokej Slovensko
+  ['HC Košice', 'hockey', 'SK'], ['HC Slovan Bratislava', 'hockey', 'SK'],
+  ['HK Nitra', 'hockey', 'SK'], ['HKM Zvolen', 'hockey', 'SK'],
+  // hokej Česko
+  ['HC Sparta Praha', 'hockey', 'CZ'], ['HC Oceláři Třinec', 'hockey', 'CZ'],
+];
+
+async function seedTeams() {
+  let added = 0;
+  for (const [name, country] of NATIONAL) {
+    const exists = await Team.findOne({ where: { name, scope: 'global', teamType: 'national' } });
+    if (!exists) {
+      await Team.create({ name, scope: 'global', teamType: 'national', sport: null, country, creatorId: null });
+      added += 1;
     }
-    
-    // Vytvorenie základných tímov
-    const teams = [
-      { 
-        name: 'FC Barcelona', 
-        logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/1200px-FC_Barcelona_%28crest%29.svg.png', 
-        type: 'official' 
-      },
-      { 
-        name: 'Real Madrid', 
-        logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/1200px-Real_Madrid_CF.svg.png', 
-        type: 'official' 
-      },
-      { 
-        name: 'Manchester United', 
-        logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/7/7a/Manchester_United_FC_crest.svg/1200px-Manchester_United_FC_crest.svg.png', 
-        type: 'official' 
-      },
-      { 
-        name: 'Bayern Munich', 
-        logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/FC_Bayern_M%C3%BCnchen_logo_%282017%29.svg/1200px-FC_Bayern_M%C3%BCnchen_logo_%282017%29.svg.png', 
-        type: 'official' 
-      },
-      { 
-        name: 'Liverpool', 
-        logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/0/0c/Liverpool_FC.svg/1200px-Liverpool_FC.svg.png', 
-        type: 'official' 
-      },
-      { 
-        name: 'Manchester City', 
-        logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/eb/Manchester_City_FC_badge.svg/1200px-Manchester_City_FC_badge.svg.png', 
-        type: 'official' 
-      },
-      { 
-        name: 'Paris Saint-Germain', 
-        logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/a/a7/Paris_Saint-Germain_F.C..svg/1200px-Paris_Saint-Germain_F.C..svg.png', 
-        type: 'official' 
-      },
-      { 
-        name: 'Juventus', 
-        logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bc/Juventus_FC_2017_icon_%28black%29.svg/1200px-Juventus_FC_2017_icon_%28black%29.svg.png', 
-        type: 'official' 
-      }
-    ];
-    
-    // Vloženie tímov do databázy
-    await Team.bulkCreate(teams);
-    
-    console.log('Základné tímy boli úspešne vložené do databázy.');
-  } catch (error) {
-    console.error('Chyba pri vkladaní základných tímov:', error);
   }
-};
+  for (const [name, sport, country] of CLUBS) {
+    const exists = await Team.findOne({ where: { name, scope: 'global', teamType: 'club', sport } });
+    if (!exists) {
+      await Team.create({ name, scope: 'global', teamType: 'club', sport, country, creatorId: null });
+      added += 1;
+    }
+  }
+  return added;
+}
 
 module.exports = seedTeams;
+
+// ak sa spustí priamo: node src/seeds/teams.seed.js
+if (require.main === module) {
+  const db = require('../models');
+  db.sequelize.authenticate()
+    .then(() => seedTeams())
+    .then((n) => { console.log(`Pridaných ${n} globálnych tímov.`); process.exit(0); })
+    .catch((e) => { console.error('Seed zlyhal:', e.message); process.exit(1); });
+}

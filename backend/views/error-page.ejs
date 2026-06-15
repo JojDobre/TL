@@ -1,0 +1,10 @@
+<%- include('partials/head', { title: 'Chyba', page: '', active: '' }) %>
+
+<div class="wrap" style="padding:80px 0;text-align:center;min-height:50vh;display:flex;flex-direction:column;align-items:center;justify-content:center">
+  <div class="eyebrow">Ups</div>
+  <h1 style="font-size:clamp(2rem,4vw,3rem);margin:8px 0 12px"><%= typeof message !== 'undefined' && message ? message : 'Stránka nebola nájdená.' %></h1>
+  <p class="muted" style="max-width:48ch;margin-bottom:28px">Skontroluj adresu, alebo sa vráť späť na sezóny.</p>
+  <a href="/seasons" class="btn btn-primary btn-lg">← Späť na sezóny</a>
+</div>
+
+<%- include('partials/footer') %>

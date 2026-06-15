@@ -1,0 +1,149 @@
+<%- include('partials/head', { title: 'Vytvoriť zápasy', page: 'seasons', active: 'seasons', pageStyle: `
+  .form-head { padding:28px 0 8px; }
+  .crumb { font-size:var(--fs-sm); color:var(--text-4); margin-bottom:12px; }
+  .crumb a { color:var(--text-3); } .crumb a:hover { color:var(--brand-bright); }
+  .mode-tabs { margin:16px 0 0; }
+  .form-card { padding:26px; }
+  .form-card h3 { font-size:var(--fs-h4); margin-bottom:4px; }
+  .form-card .sub { color:var(--text-3); font-size:var(--fs-sm); margin-bottom:20px; }
+  .match-builder { display:grid; grid-template-columns:1fr auto 1fr auto auto; gap:12px; align-items:end; }
+  .team-select { display:flex; flex-direction:column; gap:7px; }
+  .vs-mid { font-family:var(--font-display); font-weight:700; color:var(--text-4); padding-bottom:12px; }
+  .built-match { display:grid; grid-template-columns:1fr auto 1fr auto auto; gap:12px; align-items:center; padding:13px 16px; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--r-sm); margin-bottom:8px; }
+  .built-team { display:flex; align-items:center; gap:9px; font-weight:600; color:var(--text-1); font-size:var(--fs-sm); }
+  .built-team.r { flex-direction:row-reverse; text-align:right; }
+
+  /* CSV */
+  .upload { border:1.5px dashed var(--line-strong); border-radius:var(--r-md); padding:36px; text-align:center; background:var(--surface-2); cursor:pointer; transition:all .15s; }
+  .upload:hover { border-color:var(--brand-line); background:var(--brand-soft); }
+  .csv-table { width:100%; border-collapse:collapse; font-size:var(--fs-sm); }
+  .csv-table th { text-align:left; font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.08em; color:var(--text-4); font-weight:700; padding:10px 12px; border-bottom:1px solid var(--line-strong); }
+  .csv-table td { padding:11px 12px; border-bottom:1px solid var(--line); color:var(--text-2); }
+  .csv-table tr:last-child td { border:none; }
+  .csv-ok { color:var(--success); }
+  .code { font-family:var(--num); background:var(--surface-3); padding:2px 7px; border-radius:5px; font-size:var(--fs-xs); color:var(--text-2); }
+  @media (max-width:760px){
+    .match-builder { grid-template-columns:1fr; }
+    .match-builder .vs-mid { display:none; }
+    /* footer buttons: 50/50, row spans full width */
+    .builder-foot { justify-content:stretch !important; gap:10px; }
+    .builder-foot .btn { flex:1; }
+    /* added-match cards: home / away stacked left, date below, delete pinned right */
+    .built-match {
+      grid-template-columns:1fr auto;
+      grid-template-areas:"home del" "away del" "meta meta";
+      gap:7px 10px; align-items:center; padding:14px 16px;
+    }
+    .built-match .built-team { grid-area:home; }
+    .built-match .built-team.r { grid-area:away; flex-direction:row; text-align:left; }
+    .built-match .vs-mid { display:none; }
+    .built-match > .muted { grid-area:meta; padding-top:6px; border-top:1px solid var(--line); width:100%; }
+    .built-match .btn-icon { grid-area:del; align-self:center; }
+  }
+` }) %>
+
+<%- include('partials/season-subnav', { seasonId: league.seasonId, seasonName: (league.Season && league.Season.name) || 'Sezóna', active: 'leagues' }) %>
+
+<%
+  function fmtDT(d){ if(!d) return ''; var dt=new Date(d); return dt.toLocaleDateString('sk-SK',{day:'numeric',month:'numeric'})+' · '+dt.toLocaleTimeString('sk-SK',{hour:'2-digit',minute:'2-digit'}); }
+%>
+
+<div class="wrap form-head">
+  <div class="crumb"><a href="/leagues/<%= league.id %>"><%= league.name %></a> › <a href="/rounds/<%= round.id %>"><%= round.name %></a> › Vytvoriť zápasy</div>
+  <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Vytvoriť zápasy</h1>
+  <p class="muted" style="margin-top:6px">Pridaj zápasy do kola „<%= round.name %>". Vyber tímy, čas a typ tipovania.</p>
+</div>
+
+<div class="wrap" style="padding-block:24px 64px">
+  <section>
+    <div class="card form-card" style="margin-bottom:18px">
+      <h3>Nový zápas</h3>
+      <p class="sub">Vyber tímy, čas a typ tipovania.</p>
+      <% if (teams.length < 2) { %>
+        <div class="tag tag-warning" style="display:block;padding:12px 14px">V databáze nie sú aspoň 2 tímy. Najprv vytvor tímy (zatiaľ cez Adminer alebo /api/teams).</div>
+      <% } %>
+      <div class="match-builder">
+        <div class="team-select"><label class="label">Domáci tím</label>
+          <select class="select" id="homeTeam"><% teams.forEach(function(t){ %><option value="<%= t.id %>"><%= t.name %></option><% }); %></select>
+        </div>
+        <span class="vs-mid">vs</span>
+        <div class="team-select"><label class="label">Hosťujúci tím</label>
+          <select class="select" id="awayTeam"><% teams.forEach(function(t){ %><option value="<%= t.id %>"><%= t.name %></option><% }); %></select>
+        </div>
+        <div class="team-select"><label class="label">Čas</label><input class="input" type="datetime-local" id="matchTime" style="width:auto"></div>
+        <button class="btn btn-brand" style="margin-bottom:0" id="addMatch">+ Pridať</button>
+      </div>
+      <div class="row g-4 wrap-gap" style="margin-top:16px">
+        <div class="field" style="max-width:240px"><label class="label">Typ tipovania</label><select class="select" id="tipType"><option value="exact_score">Presný výsledok</option><option value="winner">Iba víťaz</option></select></div>
+      </div>
+    </div>
+
+    <div class="between" style="margin-bottom:14px"><h3 style="font-size:var(--fs-h4)">Pridané zápasy <span class="muted num" id="matchCount">(<%= matches.length %>)</span></h3></div>
+    <div id="builtList">
+      <% if (matches.length === 0) { %><p class="muted" id="emptyMsg">Zatiaľ žiadne zápasy. Pridaj prvý vyššie.</p><% } %>
+      <% matches.forEach(function(m){ %>
+      <div class="built-match" data-match-id="<%= m.id %>">
+        <span class="built-team"><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)"><%= m.homeAbbr %></span><%= m.homeTeam ? m.homeTeam.name : '—' %></span>
+        <span class="vs-mid">:</span>
+        <span class="built-team r"><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)"><%= m.awayAbbr %></span><%= m.awayTeam ? m.awayTeam.name : '—' %></span>
+        <span class="muted" style="font-size:var(--fs-xs)"><%= fmtDT(m.matchTime) %></span>
+        <button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-del>✕</button>
+      </div>
+      <% }); %>
+    </div>
+
+    <div class="row g-2 builder-foot" style="justify-content:flex-end;margin-top:20px"><a href="/rounds/<%= round.id %>" class="btn btn-secondary">Hotovo — späť na kolo</a></div>
+  </section>
+</div>
+
+<div class="toast-wrap" id="toastWrap" style="position:fixed;bottom:24px;right:24px;z-index:200;display:flex;flex-direction:column;gap:10px"></div>
+
+<script>
+(function () {
+  var roundId = <%= round.id %>;
+  function toast(msg, ok){ var t=document.createElement('div'); t.textContent=msg; t.style.cssText='background:'+(ok?'var(--success)':'var(--surface-2)')+';color:'+(ok?'#fff':'var(--text-1)')+';border:1px solid var(--line);padding:10px 14px;border-radius:10px'; document.getElementById('toastWrap').appendChild(t); setTimeout(function(){t.remove();},2500); }
+  function abbr(n){ return (n||'?').split(' ').map(function(w){return w[0];}).filter(Boolean).slice(0,3).join('').toUpperCase(); }
+  function fmtDT(d){ var dt=new Date(d); return dt.toLocaleDateString('sk-SK',{day:'numeric',month:'numeric'})+' · '+dt.toLocaleTimeString('sk-SK',{hour:'2-digit',minute:'2-digit'}); }
+
+  var add = document.getElementById('addMatch');
+  if (add) add.addEventListener('click', function () {
+    var home = document.getElementById('homeTeam'), away = document.getElementById('awayTeam');
+    var homeId = home.value, awayId = away.value;
+    var matchTime = document.getElementById('matchTime').value;
+    var tipType = document.getElementById('tipType').value;
+    if (!homeId || !awayId) { toast('Vyber oba tímy.'); return; }
+    if (homeId === awayId) { toast('Tímy musia byť rozdielne.'); return; }
+    if (!matchTime) { toast('Zadaj čas zápasu.'); return; }
+    add.disabled = true; add.textContent = '…';
+    fetch('/api/matches', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ roundId: roundId, homeTeamId: Number(homeId), awayTeamId: Number(awayId), matchTime: matchTime, tipType: tipType }) })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        add.disabled = false; add.textContent = '+ Pridať';
+        if (res.success === false) { toast(res.message || 'Nepodarilo sa pridať.'); return; }
+        var m = res.data;
+        var empty = document.getElementById('emptyMsg'); if (empty) empty.remove();
+        var row = document.createElement('div'); row.className='built-match'; row.setAttribute('data-match-id', m.id);
+        row.innerHTML = '<span class="built-team"><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)">'+abbr(home.options[home.selectedIndex].text)+'</span>'+home.options[home.selectedIndex].text+'</span><span class="vs-mid">:</span><span class="built-team r"><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)">'+abbr(away.options[away.selectedIndex].text)+'</span>'+away.options[away.selectedIndex].text+'</span><span class="muted" style="font-size:var(--fs-xs)">'+fmtDT(matchTime)+'</span><button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-del>✕</button>';
+        document.getElementById('builtList').appendChild(row);
+        updateCount();
+        toast('Zápas pridaný ✓', true);
+      })
+      .catch(function(){ add.disabled=false; add.textContent='+ Pridať'; toast('Chyba pri pridávaní.'); });
+  });
+
+  // mazanie zápasu
+  document.getElementById('builtList').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-del]'); if (!b) return;
+    var row = b.closest('[data-match-id]'); var id = row.getAttribute('data-match-id');
+    if (!confirm('Odstrániť tento zápas?')) return;
+    fetch('/api/matches/'+id, { method:'DELETE' }).then(function(r){ return r.json(); }).then(function(res){
+      if (res.success === false) { toast(res.message || 'Nedá sa zmazať.'); return; }
+      row.remove(); updateCount(); toast('Zápas odstránený', true);
+    }).catch(function(){ toast('Chyba pri mazaní.'); });
+  });
+
+  function updateCount(){ var n = document.querySelectorAll('#builtList .built-match').length; document.getElementById('matchCount').textContent = '('+n+')'; if(n===0){ var l=document.getElementById('builtList'); if(!document.getElementById('emptyMsg')){ var p=document.createElement('p'); p.className='muted'; p.id='emptyMsg'; p.textContent='Zatiaľ žiadne zápasy. Pridaj prvý vyššie.'; l.appendChild(p);} } }
+})();
+</script>
+
+<%- include('partials/footer') %>

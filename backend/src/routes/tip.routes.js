@@ -1,16 +1,18 @@
 // backend/src/routes/tip.routes.js
+//
+// Tipy. Všetko vyžaduje prihlásenie (tipuješ za seba) — cez session.
+
 const express = require('express');
-const { 
+const {
   getUserTipForMatch,
   getUserTips,
-  createOrUpdateTip
+  createOrUpdateTip,
 } = require('../controllers/tip.controller');
-const { verifyToken } = require('../middleware/auth.middleware');
+const { apiRequireLogin } = require('../middleware/page-auth.middleware');
 
 const router = express.Router();
 
-// Všetky routes vyžadujú autentifikáciu
-router.use(verifyToken);
+router.use(apiRequireLogin);
 
 router.get('/match/:matchId', getUserTipForMatch);
 router.get('/user', getUserTips);

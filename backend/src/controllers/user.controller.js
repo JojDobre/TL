@@ -1,52 +1,50 @@
 // backend/src/controllers/user.controller.js
 //
-// Správa užívateľov (admin). Prepísané na produkčnú kvalitu:
-//  - asyncHandler + ApiError (žiadny únik interných chýb, centrálne spracovanie)
-//  - stránkovanie + vyhľadávanie + filter podľa roly/stavu (škáluje pri tisícoch)
-//  - ochrana: admin nemôže sám seba degradovať, zablokovať ani vymazať
-//  - validácia roly a kontrola duplicít username/email pri úprave
-//  - voliteľná zmena hesla adminom
+// Správa užívateľov pre admina. Plná verzia:
+//  - serverové stránkovanie + hľadanie + filter roly/stavu (?page&limit&search&role&status)
+//  - ochrana seba samého (admin nemôže si zmeniť rolu / zablokovať / zmazať vlastný účet)
+//  - validácia roly, kontrola duplicít
+//  - asyncHandler + ApiError (žiadny únik chýb)
+//
+// Pozn.: používame Op.like (MariaDB ho vyhodnocuje case-insensitive pri bežnom
+// collation utf8mb4_general_ci), takže netreba PostgreSQL-ovský Op.iLike.
 
+const { User, Sequelize } = require('../models');
+const Op = Sequelize.Op;
 const bcrypt = require('bcrypt');
-const { Op } = require('sequelize');
-const { User } = require('../models');
 const { ApiError, asyncHandler } = require('../middleware/error.middleware');
 
-const SAFE_ATTRS = { exclude: ['password'] };
 const VALID_ROLES = ['admin', 'vip', 'player'];
+const publicAttrs = { exclude: ['password'] };
 
-// GET /api/users?page=1&limit=20&search=&role=&status=
-// Zoznam užívateľov so stránkovaním, vyhľadávaním a filtrom.
+// id prihláseného admina (zo session pri stránkach, alebo z req.userId pri JWT API)
+const currentId = (req) => Number(req.session?.userId || req.userId);
+
+// GET /api/users?page&limit&search&role&status
 const getAllUsers = asyncHandler(async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
   const offset = (page - 1) * limit;
 
   const where = {};
-
-  // vyhľadávanie v mene/prezývke/e-maile (case-insensitive)
   if (req.query.search) {
-    const q = `%${req.query.search.trim()}%`;
+    const q = `%${req.query.search}%`;
     where[Op.or] = [
-      { username: { [Op.iLike]: q } },
-      { email: { [Op.iLike]: q } },
-      { firstName: { [Op.iLike]: q } },
-      { lastName: { [Op.iLike]: q } },
+      { username: { [Op.like]: q } },
+      { email: { [Op.like]: q } },
+      { firstName: { [Op.like]: q } },
+      { lastName: { [Op.like]: q } },
     ];
   }
-
-  // filter podľa roly
   if (req.query.role && VALID_ROLES.includes(req.query.role)) {
     where.role = req.query.role;
   }
-
-  // filter podľa stavu (active/blocked)
   if (req.query.status === 'active') where.active = true;
   if (req.query.status === 'blocked') where.active = false;
 
   const { count, rows } = await User.findAndCountAll({
     where,
-    attributes: SAFE_ATTRS,
+    attributes: publicAttrs,
     order: [['createdAt', 'DESC']],
     limit,
     offset,
@@ -55,57 +53,52 @@ const getAllUsers = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     data: rows,
-    pagination: {
-      total: count,
-      page,
-      limit,
-      pages: Math.ceil(count / limit) || 1,
-    },
+    pagination: { total: count, page, limit, pages: Math.ceil(count / limit) || 1 },
   });
 });
 
 // GET /api/users/:id
 const getUserById = asyncHandler(async (req, res) => {
-  const user = await User.findByPk(req.params.id, { attributes: SAFE_ATTRS });
+  const user = await User.findByPk(req.params.id, { attributes: publicAttrs });
   if (!user) throw new ApiError(404, 'Používateľ nenájdený.');
   res.status(200).json({ success: true, data: user });
 });
 
 // PUT /api/users/:id
-// Aktualizácia užívateľa adminom (username, email, meno, rola, stav).
 const updateUser = asyncHandler(async (req, res) => {
   const { username, email, firstName, lastName, role, active } = req.body;
-  const targetId = parseInt(req.params.id, 10);
+  const targetId = Number(req.params.id);
+  const meId = currentId(req);
 
   const user = await User.findByPk(targetId);
   if (!user) throw new ApiError(404, 'Používateľ nenájdený.');
 
-  // Ochrana: admin nemôže sám sebe zmeniť rolu ani sa zablokovať
-  const isSelf = Number(req.userId) === targetId;
-  if (isSelf && role && role !== user.role) {
-    throw new ApiError(400, 'Nemôžeš zmeniť rolu vlastného účtu.');
+  const editingSelf = meId === targetId;
+
+  // ochrana seba samého: admin si nesmie zmeniť rolu ani sa zablokovať
+  if (editingSelf && role !== undefined && role !== user.role) {
+    throw new ApiError(400, 'Nemôžeš zmeniť rolu vlastnému účtu.');
   }
-  if (isSelf && active === false) {
+  if (editingSelf && active === false) {
     throw new ApiError(400, 'Nemôžeš zablokovať vlastný účet.');
   }
 
-  // Validácia roly
+  // validácia roly
   if (role !== undefined && !VALID_ROLES.includes(role)) {
     throw new ApiError(400, 'Neplatná rola. Povolené: admin, vip, player.');
   }
 
-  // Kontrola duplicít pri zmene username/e-mailu (pekná hláška namiesto SQL chyby)
+  // kontrola duplicít pri zmene username/email
   if (username && username !== user.username) {
-    const exists = await User.findOne({ where: { username, id: { [Op.ne]: targetId } } });
-    if (exists) throw new ApiError(409, 'Prezývka už je obsadená.');
+    const dup = await User.findOne({ where: { username } });
+    if (dup) throw new ApiError(409, 'Túto prezývku už používa iný účet.');
     user.username = username;
   }
   if (email && email !== user.email) {
-    const exists = await User.findOne({ where: { email, id: { [Op.ne]: targetId } } });
-    if (exists) throw new ApiError(409, 'E-mail už je registrovaný.');
+    const dup = await User.findOne({ where: { email } });
+    if (dup) throw new ApiError(409, 'Tento e-mail už používa iný účet.');
     user.email = email;
   }
-
   if (firstName !== undefined) user.firstName = firstName;
   if (lastName !== undefined) user.lastName = lastName;
   if (role !== undefined) user.role = role;
@@ -125,11 +118,10 @@ const updateUser = asyncHandler(async (req, res) => {
 });
 
 // PUT /api/users/:id/password
-// Reset hesla adminom.
 const changeUserPassword = asyncHandler(async (req, res) => {
   const { password } = req.body;
-  if (!password || password.length < 6) {
-    throw new ApiError(400, 'Heslo musí mať aspoň 6 znakov.');
+  if (!password || password.length < 8) {
+    throw new ApiError(400, 'Heslo musí mať aspoň 8 znakov.');
   }
   const user = await User.findByPk(req.params.id);
   if (!user) throw new ApiError(404, 'Používateľ nenájdený.');
@@ -137,15 +129,15 @@ const changeUserPassword = asyncHandler(async (req, res) => {
   user.password = await bcrypt.hash(password, 10);
   await user.save();
 
-  res.status(200).json({ success: true, message: 'Heslo bolo zmenené.' });
+  res.status(200).json({ success: true, message: 'Heslo bolo úspešne zmenené.' });
 });
 
 // DELETE /api/users/:id
 const deleteUser = asyncHandler(async (req, res) => {
-  const targetId = parseInt(req.params.id, 10);
+  const targetId = Number(req.params.id);
+  const meId = currentId(req);
 
-  // Ochrana: admin nemôže vymazať sám seba
-  if (Number(req.userId) === targetId) {
+  if (meId === targetId) {
     throw new ApiError(400, 'Nemôžeš vymazať vlastný účet.');
   }
 

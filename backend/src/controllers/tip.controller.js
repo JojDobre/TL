@@ -1,208 +1,111 @@
 // backend/src/controllers/tip.controller.js
+//
+// Zadávanie a načítanie tipov hráča. Prepísané na produkčnú kvalitu:
+//  - UZÁVIERKA tipu = začiatok zápasu (matchTime), najneskôr koniec kola (endDate).
+//    Tip sa dá zadať/zmeniť len kým now < matchTime AJ now < round.endDate.
+//  - kontrola stavu zápasu (dokončený/zrušený/prebiehajúci sa netipuje)
+//  - validácia skóre (celé nezáporné čísla) a víťaza
+//  - asyncHandler + ApiError, žiadne debug logy, žiadny únik chýb
+
 const { Tip, Match, User, Round, League, Team, Sequelize } = require('../models');
 const { Op } = Sequelize;
+const { ApiError, asyncHandler } = require('../middleware/error.middleware');
 
-// Získanie tipu používateľa pre konkrétny zápas
-const getUserTipForMatch = async (req, res) => {
-  try {
-    const { matchId } = req.params;
-    const userId = req.userId;
-    
-    // Načítanie tipu
-    const tip = await Tip.findOne({
-      where: {
-        userId,
-        matchId
-      }
-    });
-    
-    res.status(200).json({
-      success: true,
-      data: tip
-    });
-  } catch (error) {
-    console.error('Chyba pri získavaní tipu:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Chyba pri získavaní tipu.',
-      error: error.message
-    });
-  }
-};
+const validScore = (v) => Number.isInteger(v) && v >= 0;
 
-// Získanie všetkých tipov používateľa
-const getUserTips = async (req, res) => {
-  try {
-    const { roundId } = req.query;
-    const userId = req.userId;
-    
-    // Vytvorenie podmienky pre filtrovanie
-    let where = { userId };
-    
-    // Ak je zadané kolo, filtrujeme tipy pre zápasy v tomto kole
-    if (roundId) {
-      // Získame ID zápasov v danom kole
-      const matchIds = await Match.findAll({
-        where: { roundId },
-        attributes: ['id']
-      }).then(matches => matches.map(match => match.id));
-      
-      // Pridáme podmienku pre filtrovanie
-      where.matchId = {
-        [Op.in]: matchIds
-      };
-    }
-    
-    // Načítanie tipov
-    const tips = await Tip.findAll({
-      where,
-      include: [
-        {
-          model: Match,
-          include: [
-            {
-              model: Team,
-              as: 'homeTeam'
-            },
-            {
-              model: Team,
-              as: 'awayTeam'
-            },
-            {
-              model: Round
-            }
-          ]
-        }
-      ]
-    });
-    
-    res.status(200).json({
-      success: true,
-      data: tips
-    });
-  } catch (error) {
-    console.error('Chyba pri získavaní tipov:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Chyba pri získavaní tipov.',
-      error: error.message
-    });
-  }
-};
+// GET /api/tips/match/:matchId — vlastný tip pre zápas
+const getUserTipForMatch = asyncHandler(async (req, res) => {
+  const tip = await Tip.findOne({ where: { userId: req.userId, matchId: req.params.matchId } });
+  res.status(200).json({ success: true, data: tip });
+});
 
-// Vytvorenie alebo aktualizácia tipu
-const createOrUpdateTip = async (req, res) => {
-  try {
-    const { matchId, homeScore, awayScore, winner } = req.body;
-    const userId = req.userId;
-    
-    // Načítanie zápasu
-    const match = await Match.findByPk(matchId, {
-      include: [
-        {
-          model: Round,
-          attributes: ['id', 'startDate', 'endDate']
-        }
-      ]
-    });
-    
-    if (!match) {
-      return res.status(404).json({
-        success: false,
-        message: 'Zápas nebol nájdený.'
-      });
-    }
-    
-    // Kontrola, či nie je po uzávierke tipovania
-    const now = new Date();
-    const endDate = new Date(match.Round.endDate);
-    
-    if (now > endDate) {
-      return res.status(403).json({
-        success: false,
-        message: 'Tipovanie pre toto kolo je už uzavreté.'
-      });
-    }
-    
-    // Kontrola, či je tip platný
-    if (match.tipType === 'exact_score') {
-      if (homeScore === undefined || awayScore === undefined) {
-        return res.status(400).json({
-          success: false,
-          message: 'Pre tento typ zápasu je potrebné zadať presný výsledok.'
-        });
-      }
-    } else if (match.tipType === 'winner') {
-      if (!winner) {
-        return res.status(400).json({
-          success: false,
-          message: 'Pre tento typ zápasu je potrebné zadať víťaza.'
-        });
-      }
-    }
-    
-    // Hľadáme existujúci tip používateľa pre tento zápas
-    let tip = await Tip.findOne({
-      where: {
-        userId,
-        matchId
-      }
-    });
-    
-    // Ak tip existuje, aktualizujeme ho, inak vytvoríme nový
-    if (tip) {
-      // Aktualizácia údajov tipu
-      if (match.tipType === 'exact_score') {
-        tip.homeScore = homeScore;
-        tip.awayScore = awayScore;
-        tip.winner = homeScore > awayScore ? 'home' : homeScore < awayScore ? 'away' : 'draw';
-      } else {
-        tip.winner = winner;
-      }
-      
-      tip.submitted = true;
-      
-      await tip.save();
-    } else {
-      // Vytvorenie nového tipu
-      if (match.tipType === 'exact_score') {
-        tip = await Tip.create({
-          userId,
-          matchId,
-          homeScore,
-          awayScore,
-          winner: homeScore > awayScore ? 'home' : homeScore < awayScore ? 'away' : 'draw',
-          submitted: true,
-          points: 0
-        });
-      } else {
-        tip = await Tip.create({
-          userId,
-          matchId,
-          winner,
-          submitted: true,
-          points: 0
-        });
-      }
-    }
-    
-    res.status(200).json({
-      success: true,
-      message: 'Tip bol úspešne uložený.',
-      data: tip
-    });
-  } catch (error) {
-    console.error('Chyba pri vytváraní tipu:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Chyba pri vytváraní tipu.',
-      error: error.message
-    });
+// GET /api/tips/user?roundId= — vlastné tipy (voliteľne filtrované kolom)
+const getUserTips = asyncHandler(async (req, res) => {
+  const { roundId } = req.query;
+
+  const matchInclude = {
+    model: Match,
+    required: true,
+    include: [
+      { model: Team, as: 'homeTeam' },
+      { model: Team, as: 'awayTeam' },
+      { model: Round },
+    ],
+  };
+  // filter kolom priamo cez asociáciu (čistejšie než dva dotazy)
+  if (roundId) matchInclude.where = { roundId };
+
+  const tips = await Tip.findAll({
+    where: { userId: req.userId },
+    include: [matchInclude],
+  });
+
+  res.status(200).json({ success: true, data: tips });
+});
+
+// POST /api/tips — vytvor alebo uprav vlastný tip
+const createOrUpdateTip = asyncHandler(async (req, res) => {
+  const { matchId, homeScore, awayScore, winner } = req.body;
+  const userId = req.userId;
+
+  if (!matchId) throw new ApiError(400, 'Chýba zápas.');
+
+  const match = await Match.findByPk(matchId, {
+    include: [{ model: Round, attributes: ['id', 'startDate', 'endDate'] }],
+  });
+  if (!match) throw new ApiError(404, 'Zápas nebol nájdený.');
+
+  // stav zápasu: po štarte / dokončený / zrušený sa netipuje
+  if (match.status && match.status !== 'scheduled') {
+    throw new ApiError(403, 'Tipovať možno len zápasy, ktoré sa ešte nezačali.');
   }
-};
+
+  // UZÁVIERKA: tip sa uzavrie pri začiatku zápasu, najneskôr na konci kola
+  const now = new Date();
+  const matchStart = new Date(match.matchTime);
+  const roundEnd = match.Round ? new Date(match.Round.endDate) : null;
+  const deadline = roundEnd && roundEnd < matchStart ? roundEnd : matchStart;
+  if (now >= deadline) {
+    throw new ApiError(403, 'Tipovanie pre tento zápas je už uzavreté.');
+  }
+
+  // validácia podľa typu tipu
+  if (match.tipType === 'exact_score') {
+    if (!validScore(homeScore) || !validScore(awayScore)) {
+      throw new ApiError(400, 'Zadaj platný presný výsledok (celé nezáporné čísla).');
+    }
+  } else if (match.tipType === 'winner') {
+    if (!['home', 'away', 'draw'].includes(winner)) {
+      throw new ApiError(400, 'Zadaj platného víťaza (home/away/draw).');
+    }
+  }
+
+  // priprav hodnoty
+  const values = { userId, matchId, submitted: true };
+  if (match.tipType === 'exact_score') {
+    values.homeScore = homeScore;
+    values.awayScore = awayScore;
+    values.winner = homeScore > awayScore ? 'home' : homeScore < awayScore ? 'away' : 'draw';
+  } else {
+    values.winner = winner;
+    values.homeScore = null;
+    values.awayScore = null;
+  }
+
+  // vytvor alebo aktualizuj
+  let tip = await Tip.findOne({ where: { userId, matchId } });
+  if (tip) {
+    Object.assign(tip, values);
+    await tip.save();
+  } else {
+    tip = await Tip.create({ ...values, points: 0 });
+  }
+
+  res.status(200).json({ success: true, message: 'Tip bol úspešne uložený.', data: tip });
+});
 
 module.exports = {
   getUserTipForMatch,
   getUserTips,
-  createOrUpdateTip
+  createOrUpdateTip,
 };

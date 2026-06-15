@@ -1,0 +1,150 @@
+<%- include('partials/head', { title: 'Vytvoriť ligu', page: 'seasons', active: 'seasons', pageStyle: `
+  .form-head { padding:28px 0 8px; }
+  .crumb { font-size:var(--fs-sm); color:var(--text-4); margin-bottom:12px; }
+  .crumb a { color:var(--text-3); } .crumb a:hover { color:var(--brand-bright); }
+  .form-layout { display:grid; grid-template-columns:1fr 340px; gap:28px; align-items:start; padding:20px 0 64px; }
+  .form-card { padding:26px; }
+  .form-card + .form-card { margin-top:18px; }
+  .form-card h3 { font-size:var(--fs-h4); margin-bottom:4px; }
+  .form-card .sub { color:var(--text-3); font-size:var(--fs-sm); margin-bottom:20px; }
+  .field-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .type-pick { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .type-opt { padding:18px; border-radius:var(--r-md); border:1.5px solid var(--line); background:var(--surface-2); cursor:pointer; transition:all .15s; }
+  .type-opt.sel { border-color:var(--brand); background:var(--brand-soft); }
+  .type-opt .t-ic { font-size:22px; margin-bottom:8px; }
+  .type-opt b { color:var(--text-1); display:block; margin-bottom:3px; }
+  .id-box { display:flex; align-items:center; gap:12px; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--r-md); padding:16px 18px; }
+  .id-val { font-family:var(--num); font-weight:700; font-size:1.8rem; letter-spacing:.28em; color:var(--brand-bright); text-shadow:var(--text-glow-brand); }
+  .score-row { display:flex; align-items:center; gap:14px; padding:12px 0; border-bottom:1px solid var(--line); }
+  .score-row:last-child { border:none; }
+  .score-row .desc { flex:1; }
+  .score-input { width:72px; }
+  .score-input input { text-align:center; font-family:var(--num); font-weight:700; }
+  .sticky-side { position:sticky; top:92px; }
+  .form-layout > main, .form-layout > .sticky-side { min-width:0; }
+  @media (max-width:980px){ .form-layout { grid-template-columns:1fr; } .sticky-side { position:static; } }
+  @media (max-width:560px){
+    .field-row, .type-pick { grid-template-columns:1fr; }
+    .form-card { padding:20px; }
+    .id-box { flex-wrap:wrap; }
+    .id-val { font-size:1.4rem; letter-spacing:.2em; word-break:break-all; }
+    .id-box .btn { width:100%; }
+  }
+` }) %>
+
+<div class="wrap form-head">
+  <div class="crumb"><a href="/seasons/<%= season.id %>"><%= season.name %></a> › Vytvoriť ligu</div>
+  <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Vytvoriť ligu v sezóne</h1>
+  <p class="muted" style="margin-top:6px">Liga zoskupuje hráčov a kolá. Hráči sa do nej pripoja cez automaticky generované ID.</p>
+</div>
+
+<% if (typeof error !== 'undefined' && error) { %>
+<div class="wrap"><div class="tag tag-danger" style="display:block;padding:12px 14px;margin-bottom:16px"><%= error %></div></div>
+<% } %>
+
+<form class="wrap form-layout" action="/leagues/create" method="POST">
+  <input type="hidden" name="seasonId" value="<%= season.id %>">
+  <main>
+    <div class="card form-card">
+      <h3>ID ligy</h3>
+      <p class="sub">ID sa vygeneruje automaticky po vytvorení. Pošleš ho hráčom, aby sa pripojili.</p>
+      <div class="id-box">
+        <span class="id-val" id="leagueId">vygeneruje sa…</span>
+      </div>
+    </div>
+
+    <% if (typeof templates !== 'undefined' && templates.length > 0) { %>
+    <div class="card form-card">
+      <h3>Šablóna ligy <span class="faint">(voliteľné)</span></h3>
+      <p class="sub">Vyber oficiálnu šablónu — skopírujú sa jej tímy, kolá, dátumy aj zápasy. Výsledky spravuje admin v oficiálnej lige a prejavia sa automaticky. Bez šablóny si vytvoríš vlastné kolá a zápasy.</p>
+      <div class="field">
+        <label class="label">Šablóna</label>
+        <select class="select" name="templateId">
+          <option value="">— Bez šablóny (vlastná liga) —</option>
+          <% templates.forEach(function(t){ %><option value="<%= t.id %>"><%= t.name %></option><% }); %>
+        </select>
+      </div>
+      <div class="card" style="background:var(--surface-2);padding:11px 14px;margin-top:12px;display:flex;gap:9px;align-items:flex-start">
+        <span style="font-size:15px">ℹ️</span><span style="font-size:var(--fs-sm);color:var(--text-2)">Pri lige zo šablóny nemôžeš meniť výsledky zápasov — riadi ich admin. Bodovanie a názov si nastavíš vlastné.</span>
+      </div>
+    </div>
+    <% } %>
+
+    <div class="card form-card">
+      <h3>Základné údaje</h3>
+      <p class="sub">Názov a popis, ktoré uvidia hráči.</p>
+      <div class="stack g-4">
+        <div class="field"><label class="label">Názov ligy</label><input class="input" name="name" placeholder="napr. Tipovačka s kolegami" required oninput="document.getElementById('pvName').textContent=this.value||'Názov ligy'"></div>
+        <div class="field"><label class="label">Popis <span class="faint">(voliteľné)</span></label><textarea class="textarea" name="description" placeholder="O čo v lige ide, prípadné pravidlá navyše…"></textarea></div>
+      </div>
+    </div>
+
+    <div class="card form-card">
+      <h3>Prístup a typ</h3>
+      <p class="sub">Kto sa môže pripojiť a aký typ ligy zakladáš.</p>
+      <% if (currentUserRole === 'admin') { %>
+      <div class="type-pick" style="margin-bottom:18px">
+        <label class="type-opt sel" data-type="custom"><input type="radio" name="type" value="custom" hidden checked><div class="t-ic">⚙️</div><b>Custom</b><span class="muted" style="font-size:var(--fs-sm)">Vlastné bodovanie a kolá, ktoré si spravuješ sám.</span></label>
+        <label class="type-opt" data-type="official"><input type="radio" name="type" value="official" hidden><div class="t-ic">🏆</div><b>Oficiálna</b><span class="muted" style="font-size:var(--fs-sm)">Preberá kolá a bodovanie celej sezóny. Iba admin.</span></label>
+      </div>
+      <label class="check" id="tplWrap" style="margin-bottom:14px;display:none"><input type="checkbox" name="isTemplate"> Označiť ako šablónu (používatelia si ju budú môcť naklonovať)</label>
+      <% } else { %>
+      <input type="hidden" name="type" value="custom">
+      <% } %>
+      <label class="check" style="margin-bottom:14px"><input type="checkbox" id="pwToggle"> Chrániť ligu heslom</label>
+      <div class="field" id="pwField" hidden><label class="label">Heslo ligy</label><input class="input" type="text" name="password" placeholder="napr. kava2026"><span class="hint">Hráči ho budú musieť zadať pri pripojení cez ID.</span></div>
+    </div>
+
+    <div class="card form-card">
+      <h3>Bodovanie</h3>
+      <p class="sub">Nastav, koľko bodov sa prideľuje za jednotlivé presnosti tipu.</p>
+      <div class="score-row"><div class="desc"><b class="hi">Presný výsledok</b><div class="muted" style="font-size:var(--fs-sm)">Trafený presný počet gólov oboch tímov</div></div><div class="field score-input"><input class="input" type="number" min="0" name="exactScore" value="10"></div></div>
+      <div class="score-row"><div class="desc"><b class="hi">Víťaz / remíza</b><div class="muted" style="font-size:var(--fs-sm)">Správne určený víťaz alebo remíza</div></div><div class="field score-input"><input class="input" type="number" min="0" name="correctWinner" value="3"></div></div>
+      <div class="score-row"><div class="desc"><b class="hi">Gólový rozdiel</b><div class="muted" style="font-size:var(--fs-sm)">Trafený rozdiel skóre (napr. +2)</div></div><div class="field score-input"><input class="input" type="number" min="0" name="goalDifference" value="2"></div></div>
+      <div class="score-row"><div class="desc"><b class="hi">Presný počet gólov tímu</b><div class="muted" style="font-size:var(--fs-sm)">Za každý správne tipnutý tím</div></div><div class="field score-input"><input class="input" type="number" min="0" name="correctGoals" value="1"></div></div>
+    </div>
+  </main>
+
+  <aside class="sticky-side">
+    <div class="card card-pad">
+      <div class="stat-label" style="margin-bottom:12px">Náhľad ligy</div>
+      <div class="row g-3" style="margin-bottom:12px"><span class="team-logo" style="width:48px;height:48px;font-size:16px;background:linear-gradient(135deg,#7c5cff,#3b1f8a)">TK</span><div><b class="hi" id="pvName">Názov ligy</b><div class="muted" style="font-size:var(--fs-xs)">v sezóne <%= season.name %></div></div></div>
+      <div class="row g-2 wrap-gap" style="margin-bottom:10px"><span class="tag tag-gold">Custom</span><span class="tag tag-muted" id="pvLock" hidden>🔒 Heslo</span></div>
+    </div>
+    <div class="card card-pad" style="margin-top:18px;background:var(--surface-2)">
+      <b class="hi" style="display:block;margin-bottom:6px">💡 Tip</b>
+      <p class="muted" style="font-size:var(--fs-sm)">Po vytvorení ligy pridaj kolá a do nich zápasy. Až potom budú hráči môcť tipovať.</p>
+    </div>
+    <div class="card card-pad" style="margin-top:18px">
+      <button type="submit" class="btn btn-primary btn-block">Vytvoriť ligu</button>
+      <a href="/seasons/<%= season.id %>" class="btn btn-ghost btn-block" style="margin-top:8px">Zrušiť</a>
+    </div>
+  </aside>
+</form>
+
+<script>
+  // heslo toggle
+  var pwToggle = document.getElementById('pwToggle');
+  var pwField = document.getElementById('pwField');
+  var pvLock = document.getElementById('pvLock');
+  if (pwToggle) pwToggle.addEventListener('change', function () {
+    pwField.toggleAttribute('hidden', !this.checked);
+    pvLock.toggleAttribute('hidden', !this.checked);
+    if (!this.checked) pwField.querySelector('input').value = '';
+  });
+  // typ → náhľad tag (len ak je výber, t.j. admin)
+  document.querySelectorAll('.type-opt[data-type]').forEach(function (opt) {
+    opt.addEventListener('click', function (e) {
+      e.preventDefault();
+      document.querySelectorAll('.type-opt[data-type]').forEach(function (o) { o.classList.remove('sel'); });
+      opt.classList.add('sel');
+      var r = opt.querySelector('input[type=radio]'); if (r) r.checked = true;
+      var tag = document.querySelector('.sticky-side .tag-gold, .sticky-side .tag-brand');
+      if (tag) { if (opt.getAttribute('data-type')==='official'){tag.textContent='Oficiálna';tag.className='tag tag-brand';} else {tag.textContent='Custom';tag.className='tag tag-gold';} }
+      var tpl = document.getElementById('tplWrap');
+      if (tpl) tpl.style.display = opt.getAttribute('data-type')==='official' ? 'flex' : 'none';
+    });
+  });
+</script>
+
+<%- include('partials/footer') %>

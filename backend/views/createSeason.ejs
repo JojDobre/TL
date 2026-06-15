@@ -1,0 +1,131 @@
+<%- include('partials/head', { title: 'Vytvoriť sezónu', page: 'seasons', active: 'seasons', pageStyle: `
+  .form-head { padding:28px 0 8px; }
+  .crumb { font-size:var(--fs-sm); color:var(--text-4); margin-bottom:12px; }
+  .crumb a { color:var(--text-3); } .crumb a:hover { color:var(--brand-bright); }
+  .form-layout { display:grid; grid-template-columns:1fr 340px; gap:28px; align-items:start; padding:20px 0 64px; }
+  .form-card { padding:26px; }
+  .form-card + .form-card { margin-top:18px; }
+  .form-card h3 { font-size:var(--fs-h4); margin-bottom:4px; }
+  .form-card .sub { color:var(--text-3); font-size:var(--fs-sm); margin-bottom:20px; }
+  .field-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .type-pick { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .type-opt { padding:18px; border-radius:var(--r-md); border:1.5px solid var(--line); background:var(--surface-2); cursor:pointer; transition:all .15s; }
+  .type-opt:hover { border-color:var(--line-strong); }
+  .type-opt.sel { border-color:var(--brand); background:var(--brand-soft); }
+  .type-opt .t-ic { font-size:22px; margin-bottom:8px; }
+  .type-opt b { color:var(--text-1); display:block; margin-bottom:3px; }
+  .upload { border:1.5px dashed var(--line-strong); border-radius:var(--r-md); padding:30px; text-align:center; background:var(--surface-2); cursor:pointer; transition:all .15s; }
+  .upload:hover { border-color:var(--brand-line); background:var(--brand-soft); }
+  .league-pick { display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:var(--r-sm); background:var(--surface-2); border:1px solid var(--line); margin-bottom:8px; }
+  .preview-cover { height:120px; border-radius:var(--r-md); display:flex; align-items:flex-end; padding:14px; margin-bottom:14px; }
+  .sticky-side { position:sticky; top:92px; }
+  @media (max-width:980px){ .form-layout { grid-template-columns:1fr; } .sticky-side { position:static; } }
+  @media (max-width:560px){ .field-row, .type-pick { grid-template-columns:1fr; } }
+` }) %>
+
+<div class="wrap form-head">
+  <div class="crumb"><a href="/seasons">Sezóny</a> › Vytvoriť sezónu</div>
+  <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Vytvoriť novú sezónu</h1>
+  <p class="muted" style="margin-top:6px">Sezóna je zastrešujúca súťaž, ktorá obsahuje ligy a kolá. Po vytvorení do nej môžeš pridávať ligy.</p>
+</div>
+
+<% if (typeof error !== 'undefined' && error) { %>
+<div class="wrap"><div class="tag tag-danger" style="display:block;padding:12px 14px;margin-bottom:16px"><%= error %></div></div>
+<% } %>
+
+<form class="wrap form-layout" action="/seasons/create" method="POST">
+  <main>
+    <div class="card form-card">
+      <h3>Základné údaje</h3>
+      <p class="sub">Ako sa sezóna volá a o čo v nej ide.</p>
+      <div class="stack g-4">
+        <div class="field"><label class="label">Názov sezóny</label><input class="input" id="nm" name="name" placeholder="napr. MS v hokeji 2026" required oninput="document.getElementById('pvName').textContent=this.value||'Názov sezóny'"></div>
+        <div class="field"><label class="label">Popis</label><textarea class="textarea" name="description" placeholder="Krátky popis sezóny, ktorý uvidia hráči…"></textarea></div>
+      </div>
+    </div>
+
+    <% if (currentUserRole === 'admin') { %>
+    <div class="card form-card">
+      <h3>Typ sezóny</h3>
+      <p class="sub">Oficiálne sezóny sú verejné s globálnym rebríčkom. Community sezóny vytvárajú a spravujú používatelia.</p>
+      <div class="type-pick">
+        <label class="type-opt sel" data-type="official"><input type="radio" name="type" value="official" hidden checked><div class="t-ic">🏆</div><b>Oficiálna</b><span class="muted" style="font-size:var(--fs-sm)">Verejná, globálny rebríček, overené turnaje. Iba pre adminov.</span></label>
+        <label class="type-opt" data-type="community"><input type="radio" name="type" value="community" hidden><div class="t-ic">👥</div><b>Community</b><span class="muted" style="font-size:var(--fs-sm)">Vlastná sezóna pre tvoju partiu. Verejná alebo súkromná cez ID.</span></label>
+      </div>
+    </div>
+    <% } else { %>
+      <input type="hidden" name="type" value="community">
+    <% } %>
+
+    <div class="card form-card">
+      <h3>Trvanie sezóny</h3>
+      <p class="sub">Dátumy určujú, či je sezóna aktívna. Voliteľné — nechaj prázdne pre neobmedzené trvanie.</p>
+      <div class="field-row" style="display:flex;gap:14px;flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:180px"><label class="label">Začiatok <span class="faint">(voliteľné)</span></label><input class="input" type="datetime-local" name="startDate"></div>
+        <div class="field" style="flex:1;min-width:180px"><label class="label">Koniec <span class="faint">(voliteľné)</span></label><input class="input" type="datetime-local" name="endDate"></div>
+      </div>
+    </div>
+
+    <div class="card form-card">
+      <h3>Obrázok sezóny</h3>
+      <p class="sub">Odkaz na cover obrázok zobrazený na kartách sezóny (voliteľné).</p>
+      <div class="field"><label class="label">URL obrázka</label><input class="input" type="url" name="image" placeholder="https://… odkaz na obrázok" oninput="var p=document.querySelector('.preview-cover'); if(p){ if(this.value){p.style.backgroundImage='url(\''+this.value+'\')';p.style.backgroundSize='cover';p.style.backgroundPosition='center';}else{p.style.backgroundImage='';} }"></div>
+    </div>
+
+    <% if (currentUserRole !== 'admin') { %>
+    <div class="card form-card">
+      <h3>Súkromie</h3>
+      <p class="sub">Súkromná sezóna je chránená heslom. Ľudia mimo sezónu nevidia jej ligy ani rebríčky — pripoja sa len cez ID a heslo.</p>
+      <label class="check" style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><input type="checkbox" id="privToggle" name="isPrivate"> <span>Súkromná sezóna (chránená heslom)</span></label>
+      <div id="privFields" hidden>
+        <div class="field" style="margin-bottom:14px"><label class="label">Heslo sezóny</label><input class="input" type="text" name="password" placeholder="napr. kamarati2026"></div>
+        <label class="check" style="display:flex;align-items:center;gap:10px"><input type="checkbox" name="hidden"> <span>Skryť zo zoznamu sezón (pripojiť sa dá len cez ID + heslo)</span></label>
+      </div>
+    </div>
+    <% } %>
+  </main>
+
+  <aside class="sticky-side">
+    <div class="card card-pad">
+      <div class="stat-label" style="margin-bottom:12px">Náhľad</div>
+      <div class="preview-cover" style="background:linear-gradient(135deg,#0b4ea2,#1a1340)"><span class="tag <%= currentUserRole === 'admin' ? 'tag-brand' : 'tag-gold' %>"><%= currentUserRole === 'admin' ? 'Oficiálna' : 'Community' %></span></div>
+      <h4 id="pvName">Názov sezóny</h4>
+      <div class="row g-3" style="font-size:var(--fs-sm);color:var(--text-3);margin-top:8px"><span><b class="hi num">0</b> hráčov</span><span><b class="hi num">0</b> kôl</span><span><b class="hi num">1</b> liga</span></div>
+    </div>
+    <div class="card card-pad" style="margin-top:18px;background:var(--surface-2)">
+      <b class="hi" style="display:block;margin-bottom:6px">💡 Tip</b>
+      <p class="muted" style="font-size:var(--fs-sm)">Po vytvorení sezóny pridaj ligy a v nich kolá so zápasmi. Hráči sa pripoja cez 6-miestne ID ligy.</p>
+    </div>
+    <div class="card card-pad" style="margin-top:18px">
+      <button type="submit" class="btn btn-primary btn-block">Vytvoriť sezónu</button>
+      <a href="/seasons" class="btn btn-ghost btn-block" style="margin-top:8px">Zrušiť</a>
+    </div>
+  </aside>
+</form>
+
+<% if (currentUserRole === 'admin') { %>
+<script>
+  // výber typu sezóny + náhľadový tag
+  document.querySelectorAll('.type-opt[data-type]').forEach(function (opt) {
+    opt.addEventListener('click', function (e) {
+      e.preventDefault();
+      document.querySelectorAll('.type-opt[data-type]').forEach(function (o) { o.classList.remove('sel'); });
+      opt.classList.add('sel');
+      var radio = opt.querySelector('input[type=radio]'); if (radio) radio.checked = true;
+      var tag = document.querySelector('.preview-cover .tag');
+      if (opt.getAttribute('data-type') === 'community') { tag.textContent = 'Community'; tag.className = 'tag tag-gold'; }
+      else { tag.textContent = 'Oficiálna'; tag.className = 'tag tag-brand'; }
+    });
+  });
+</script>
+<% } %>
+
+<script>
+  // toggle súkromie (len pre neadminov, kde existuje)
+  var pt = document.getElementById('privToggle');
+  if (pt) pt.addEventListener('change', function () {
+    document.getElementById('privFields').toggleAttribute('hidden', !this.checked);
+  });
+</script>
+
+<%- include('partials/footer') %>

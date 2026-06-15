@@ -1,484 +1,236 @@
+// backend/src/controllers/round.controller.js
+//
+// Správa kôl (kolo patrí do ligy, obsahuje zápasy). Prepísané na produkčnú kvalitu:
+//  - asyncHandler + ApiError (žiadne debug logy, žiadny únik chýb)
+//  - getRoundById: cudzie tipy sú SKRYTÉ do uzávierky kola (endDate); po uzávierke
+//    alebo pre správcu ligy sú viditeľné. Vlastné tipy vidí hráč vždy.
+//  - leaderboard: presnosť z PRESNÝCH výsledkov (exactScore z bodovacieho systému ligy),
+//    ošetrené null body (|| 0)
+//  - zjednodušená validácia dátumov, validácia povinných polí
+//  - oprávnenia cez prehľadnú funkciu
+
 const { Round, League, Match, User, UserSeason, Season, Team, Tip, Sequelize } = require('../models');
 const { Op } = Sequelize;
+const { ApiError, asyncHandler } = require('../middleware/error.middleware');
 
-// Získanie všetkých kôl
-const getAllRounds = async (req, res) => {
-  try {
-    // Možnosť filtrovania podľa parametrov
-    const { leagueId } = req.query;
-    
-    let where = {};
-    if (leagueId) where.leagueId = leagueId;
-    
-    // Načítanie kôl bez pokročilých agregácií
-    const rounds = await Round.findAll({
-      where,
-      include: [
-        {
-          model: League,
-          attributes: ['id', 'name', 'seasonId']
-        }
-      ],
-      order: [['startDate', 'ASC']]
-    });
-    
-    // Manuálne načítame počty zápasov pre každé kolo
-    const roundsWithCounts = await Promise.all(
-      rounds.map(async (round) => {
-        const matchesCount = await Match.count({
-          where: { roundId: round.id }
-        });
-        
-        // Vrátime kolo s pridaným počtom zápasov
-        const roundJson = round.toJSON();
-        return {
-          ...roundJson,
-          matchesCount
-        };
-      })
-    );
-    
-    res.status(200).json({
-      success: true,
-      data: roundsWithCounts
-    });
-  } catch (error) {
-    console.error('Chyba pri získavaní kôl:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Chyba pri získavaní kôl.',
-      error: error.message
-    });
-  }
+const DEFAULT_EXACT = 10;
+
+// oprávnenie spravovať kolo (tvorca sezóny, admin sezóny, tvorca ligy, globálny admin)
+const canManageRound = async (round, userId) => {
+  if (!userId) return false;
+  const user = await User.findByPk(userId);
+  if (user && user.role === 'admin') return true;
+  const league = round.League || await League.findByPk(round.leagueId, { include: [{ model: Season, attributes: ['id', 'creatorId'] }] });
+  if (!league) return false;
+  if (league.creatorId === userId) return true;
+  const season = league.Season || await Season.findByPk(league.seasonId);
+  if (season && season.creatorId === userId) return true;
+  const seasonRole = await UserSeason.findOne({ where: { userId, seasonId: league.seasonId } });
+  if (seasonRole && seasonRole.role === 'admin') return true;
+  return false;
 };
 
-// Získanie rebríčka kola
-const getRoundLeaderboard = async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    // Kontrola existencie kola
-    const roundExists = await Round.findByPk(id);
-    
-    if (!roundExists) {
-      return res.status(404).json({
-        success: false,
-        message: 'Kolo nebolo nájdené.'
-      });
-    }
-    
-    // Získanie všetkých tipov v kole
-    const tips = await Tip.findAll({
-      include: [
-        {
-          model: Match,
-          where: { roundId: id },
-          include: [
-            {
-              model: Team,
-              as: 'homeTeam',
-              attributes: ['id', 'name']
-            },
-            {
-              model: Team,
-              as: 'awayTeam',
-              attributes: ['id', 'name']
-            }
-          ]
+// GET /api/rounds?leagueId=
+const getAllRounds = asyncHandler(async (req, res) => {
+  const where = {};
+  if (req.query.leagueId) where.leagueId = req.query.leagueId;
+
+  const rounds = await Round.findAll({
+    where,
+    include: [{ model: League, attributes: ['id', 'name', 'seasonId'] }],
+    order: [['startDate', 'ASC']],
+  });
+
+  const data = await Promise.all(rounds.map(async (round) => {
+    const matchesCount = await Match.count({ where: { roundId: round.id } });
+    return { ...round.toJSON(), matchesCount };
+  }));
+
+  res.status(200).json({ success: true, data });
+});
+
+// GET /api/rounds/:id  — detail kola; cudzie tipy skryté do uzávierky
+const getRoundById = asyncHandler(async (req, res) => {
+  const round = await Round.findByPk(req.params.id, {
+    include: [
+      {
+        model: League,
+        attributes: ['id', 'name', 'seasonId', 'scoringSystem', 'creatorId'],
+        include: [{ model: Season, attributes: ['id', 'name', 'creatorId'] }],
+      },
+      {
+        model: Match,
+        include: [
+          { model: Team, as: 'homeTeam' },
+          { model: Team, as: 'awayTeam' },
+          { model: Tip, include: [{ model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] }] },
+        ],
+      },
+    ],
+  });
+
+  if (!round) throw new ApiError(404, 'Kolo nebolo nájdené.');
+
+  const meId = Number(req.userId) || null;
+  const afterDeadline = new Date(round.endDate) <= new Date();
+  const isManager = await canManageRound(round, meId);
+  const revealAll = afterDeadline || isManager;
+
+  const result = round.toJSON();
+
+  // skryť cudzie tipy do uzávierky: ponechaj len vlastné, ostatné odstráň
+  if (!revealAll && Array.isArray(result.Matches)) {
+    result.Matches = result.Matches.map((m) => ({
+      ...m,
+      Tips: (m.Tips || []).filter((t) => meId && t.userId === meId),
+    }));
+  }
+  result.tipsRevealed = revealAll;
+
+  res.status(200).json({ success: true, data: result });
+});
+
+// GET /api/rounds/:id/leaderboard  — verejné
+const getRoundLeaderboard = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const round = await Round.findByPk(id, { include: [{ model: League, attributes: ['scoringSystem'] }] });
+  if (!round) throw new ApiError(404, 'Kolo nebolo nájdené.');
+
+  const exactScore = (round.League && round.League.scoringSystem && round.League.scoringSystem.exactScore) || DEFAULT_EXACT;
+
+  const tips = await Tip.findAll({
+    include: [
+      {
+        model: Match,
+        where: { roundId: id },
+        required: true,
+        include: [
+          { model: Team, as: 'homeTeam', attributes: ['id', 'name'] },
+          { model: Team, as: 'awayTeam', attributes: ['id', 'name'] },
+        ],
+      },
+      { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] },
+    ],
+  });
+
+  const byUser = {};
+  tips.forEach((tip) => {
+    if (!tip.User) return;
+    const uid = tip.User.id;
+    if (!byUser[uid]) {
+      byUser[uid] = {
+        user: {
+          id: tip.User.id, username: tip.User.username,
+          firstName: tip.User.firstName, lastName: tip.User.lastName,
+          profileImage: tip.User.profileImage,
         },
-        {
-          model: User,
-          attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage']
-        }
-      ]
-    });
-    
-    // Spracovanie dát pre rebríček
-    const userPoints = {};
-    
-    tips.forEach(tip => {
-      const userId = tip.User.id;
-      
-      if (!userPoints[userId]) {
-        userPoints[userId] = {
-          user: {
-            id: tip.User.id,
-            username: tip.User.username,
-            firstName: tip.User.firstName,
-            lastName: tip.User.lastName,
-            profileImage: tip.User.profileImage
-          },
-          totalPoints: 0,
-          tipsCount: 0,
-          correctPredictions: 0
-        };
-      }
-      
-      userPoints[userId].totalPoints += tip.points;
-      userPoints[userId].tipsCount += 1;
-      
-      if (tip.points > 0) {
-        userPoints[userId].correctPredictions += 1;
-      }
-    });
-    
-    // Konverzia na pole a zoradenie podľa bodov
-    const leaderboard = Object.values(userPoints).sort((a, b) => b.totalPoints - a.totalPoints);
-    
-    // Pridanie poradia
-    leaderboard.forEach((entry, index) => {
-      entry.rank = index + 1;
-      entry.accuracy = Math.round((entry.correctPredictions / entry.tipsCount) * 100) || 0;
-    });
-    
-    res.status(200).json({
-      success: true,
-      data: leaderboard
-    });
-  } catch (error) {
-    console.error('Chyba pri získavaní rebríčka kola:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Chyba pri získavaní rebríčka kola.',
-      error: error.message
-    });
-  }
-};
+        totalPoints: 0, tipsCount: 0, exactPredictions: 0,
+      };
+    }
+    byUser[uid].totalPoints += tip.points || 0;
+    byUser[uid].tipsCount += 1;
+    if ((tip.points || 0) >= exactScore) byUser[uid].exactPredictions += 1;
+  });
 
-// Získanie detailu kola
-const getRoundById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    // Načítanie kola s ligou a zápasmi
-    const round = await Round.findByPk(id, {
-      include: [
-        {
-          model: League,
-          attributes: ['id', 'name', 'seasonId', 'scoringSystem'],
-          include: [
-            {
-              model: Season,
-              attributes: ['id', 'name', 'creatorId']
-            }
-          ]
-        },
-        {
-          model: Match,
-          include: [
-            { model: Team, as: 'homeTeam' },
-            { model: Team, as: 'awayTeam' },
-            { model: Tip, include: [{ model: User }] }
-          ]
-        }
-      ]
-    });
-    
-    if (!round) {
-      return res.status(404).json({
-        success: false,
-        message: 'Kolo nebolo nájdené.'
-      });
-    }
-    
-    res.status(200).json({
-      success: true,
-      data: round
-    });
-  } catch (error) {
-    console.error('Chyba pri získavaní detailu kola:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Chyba pri získavaní detailu kola.',
-      error: error.message
-    });
-  }
-};
+  const leaderboard = Object.values(byUser)
+    .sort((a, b) => b.totalPoints - a.totalPoints)
+    .map((entry, index) => ({
+      ...entry,
+      rank: index + 1,
+      accuracy: entry.tipsCount ? Math.round((entry.exactPredictions / entry.tipsCount) * 100) : 0,
+    }));
 
-// Vytvorenie nového kola
-const createRound = async (req, res) => {
-  try {
-    const { 
-      name, 
-      description, 
-      leagueId, 
-      startDate, 
-      endDate 
-    } = req.body;
-    const userId = req.userId;
-    
-    // Kontrola existencie ligy
-    const league = await League.findByPk(leagueId, {
-      include: [
-        {
-          model: Season,
-          attributes: ['id', 'creatorId']
-        }
-      ]
-    });
-    
-    if (!league) {
-      return res.status(404).json({
-        success: false,
-        message: 'Liga nebola nájdená.'
-      });
-    }
-    
-    // Kontrola, či má užívateľ oprávnenie vytvoriť kolo v tejto lige
-    const user = await User.findByPk(userId);
-    const userSeasonRole = await UserSeason.findOne({
-      where: { 
-        userId, 
-        seasonId: league.Season.id 
-      }
-    });
-    
-    if (
-      league.Season.creatorId !== userId && 
-      (!userSeasonRole || userSeasonRole.role !== 'admin') && 
-      user.role !== 'admin'
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: 'Nemáte oprávnenie na vytvorenie kola v tejto lige.'
-      });
-    }
-    
-    // Validácia dátumov
-    const startDateObj = new Date(startDate);
-    const endDateObj = new Date(endDate);
-    
-    if (endDateObj <= startDateObj) {
-      return res.status(400).json({
-        success: false,
-        message: 'Dátum konca musí byť po dátume začiatku.'
-      });
-    }
-    
-    // Vytvorenie nového kola
-    const newRound = await Round.create({
-      name,
-      description,
-      leagueId,
-      startDate: startDateObj,
-      endDate: endDateObj,
-      active: true
-    });
-    
-    res.status(201).json({
-      success: true,
-      message: 'Kolo bolo úspešne vytvorené.',
-      data: newRound
-    });
-  } catch (error) {
-    console.error('Chyba pri vytváraní kola:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Chyba pri vytváraní kola.',
-      error: error.message
-    });
-  }
-};
+  res.status(200).json({ success: true, data: leaderboard });
+});
 
-// Aktualizácia kola
-const updateRound = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { 
-      name, 
-      description, 
-      startDate, 
-      endDate,
-      active
-    } = req.body;
-    const userId = req.userId;
-    
-    // Načítanie kola
-    const round = await Round.findByPk(id, {
-      include: [
-        {
-          model: League,
-          include: [
-            {
-              model: Season,
-              attributes: ['id', 'creatorId']
-            }
-          ]
-        }
-      ]
-    });
-    
-    if (!round) {
-      return res.status(404).json({
-        success: false,
-        message: 'Kolo nebolo nájdené.'
-      });
-    }
-    
-    // Kontrola, či má užívateľ oprávnenie aktualizovať kolo
-    const user = await User.findByPk(userId);
-    const userSeasonRole = await UserSeason.findOne({
-      where: { 
-        userId, 
-        seasonId: round.League.Season.id 
-      }
-    });
-    
-    if (
-      round.League.Season.creatorId !== userId && 
-      (!userSeasonRole || userSeasonRole.role !== 'admin') && 
-      user.role !== 'admin'
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: 'Nemáte oprávnenie na aktualizáciu tohto kola.'
-      });
-    }
-    
-    // Validácia dátumov, ak sú poskytnuté
-    if (startDate && endDate) {
-      const startDateObj = new Date(startDate);
-      const endDateObj = new Date(endDate);
-      
-      if (endDateObj <= startDateObj) {
-        return res.status(400).json({
-          success: false,
-          message: 'Dátum konca musí byť po dátume začiatku.'
-        });
-      }
-      
-      round.startDate = startDateObj;
-      round.endDate = endDateObj;
-    } else if (startDate) {
-      const startDateObj = new Date(startDate);
-      const currentEndDate = new Date(round.endDate);
-      
-      if (currentEndDate <= startDateObj) {
-        return res.status(400).json({
-          success: false,
-          message: 'Dátum konca musí byť po dátume začiatku.'
-        });
-      }
-      
-      round.startDate = startDateObj;
-    } else if (endDate) {
-      const endDateObj = new Date(endDate);
-      const currentStartDate = new Date(round.startDate);
-      
-      if (endDateObj <= currentStartDate) {
-        return res.status(400).json({
-          success: false,
-          message: 'Dátum konca musí byť po dátume začiatku.'
-        });
-      }
-      
-      round.endDate = endDateObj;
-    }
-    
-    // Aktualizácia ostatných údajov
-    if (name) round.name = name;
-    if (description !== undefined) round.description = description;
-    if (active !== undefined) round.active = active;
-    
-    await round.save();
-    
-    res.status(200).json({
-      success: true,
-      message: 'Kolo bolo úspešne aktualizované.',
-      data: round
-    });
-  } catch (error) {
-    console.error('Chyba pri aktualizácii kola:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Chyba pri aktualizácii kola.',
-      error: error.message
-    });
-  }
-};
+// POST /api/rounds
+const createRound = asyncHandler(async (req, res) => {
+  const { name, description, leagueId, startDate, endDate } = req.body;
+  const userId = req.userId;
 
-// Vymazanie kola
-const deleteRound = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = req.userId;
-    
-    // Načítanie kola
-    const round = await Round.findByPk(id, {
-      include: [
-        {
-          model: League,
-          include: [
-            {
-              model: Season,
-              attributes: ['id', 'creatorId']
-            }
-          ]
-        }
-      ]
-    });
-    
-    if (!round) {
-      return res.status(404).json({
-        success: false,
-        message: 'Kolo nebolo nájdené.'
-      });
-    }
-    
-    // Kontrola, či má užívateľ oprávnenie vymazať kolo
-    const user = await User.findByPk(userId);
-    const userSeasonRole = await UserSeason.findOne({
-      where: { 
-        userId, 
-        seasonId: round.League.Season.id 
-      }
-    });
-    
-    if (
-      round.League.Season.creatorId !== userId && 
-      (!userSeasonRole || userSeasonRole.role !== 'admin') && 
-      user.role !== 'admin'
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: 'Nemáte oprávnenie na vymazanie tohto kola.'
-      });
-    }
-    
-    // Kontrola, či kolo nemá už tipy
-    const hasTips = await Tip.findOne({
-      include: [
-        {
-          model: Match,
-          where: { roundId: id }
-        }
-      ]
-    });
-    
-    if (hasTips) {
-      return res.status(400).json({
-        success: false,
-        message: 'Kolo nemôže byť vymazané, pretože už obsahuje tipy.'
-      });
-    }
-    
-    // Vymazanie kola a všetkých jeho zápasov
-    await Match.destroy({ where: { roundId: id } });
-    await round.destroy();
-    
-    res.status(200).json({
-      success: true,
-      message: 'Kolo bolo úspešne vymazané.'
-    });
-  } catch (error) {
-    console.error('Chyba pri vymazávaní kola:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Chyba pri vymazávaní kola.',
-      error: error.message
-    });
+  if (!name || !name.trim()) throw new ApiError(400, 'Názov kola je povinný.');
+  if (!leagueId) throw new ApiError(400, 'Chýba liga, do ktorej kolo patrí.');
+  if (!startDate || !endDate) throw new ApiError(400, 'Zadaj začiatok aj koniec tipovania.');
+
+  const league = await League.findByPk(leagueId, { include: [{ model: Season, attributes: ['id', 'creatorId'] }] });
+  if (!league) throw new ApiError(404, 'Liga nebola nájdená.');
+
+  const fakeRound = { League: league, leagueId: league.id };
+  if (!(await canManageRound(fakeRound, userId))) {
+    throw new ApiError(403, 'Nemáš oprávnenie vytvoriť kolo v tejto lige.');
   }
-};
+
+  const startObj = new Date(startDate);
+  const endObj = new Date(endDate);
+  if (isNaN(startObj) || isNaN(endObj)) throw new ApiError(400, 'Neplatný formát dátumu.');
+  if (endObj <= startObj) throw new ApiError(400, 'Koniec tipovania musí byť po začiatku.');
+
+  const newRound = await Round.create({
+    name: name.trim(), description, leagueId,
+    startDate: startObj, endDate: endObj, active: true,
+  });
+
+  res.status(201).json({ success: true, message: 'Kolo bolo úspešne vytvorené.', data: newRound });
+});
+
+// PUT /api/rounds/:id
+const updateRound = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { name, description, startDate, endDate, active } = req.body;
+  const userId = req.userId;
+
+  const round = await Round.findByPk(id, {
+    include: [{ model: League, include: [{ model: Season, attributes: ['id', 'creatorId'] }] }],
+  });
+  if (!round) throw new ApiError(404, 'Kolo nebolo nájdené.');
+
+  if (!(await canManageRound(round, userId))) {
+    throw new ApiError(403, 'Nemáš oprávnenie upraviť toto kolo.');
+  }
+
+  // výsledné dátumy (nové alebo pôvodné) a validácia, že koniec je po začiatku
+  const newStart = startDate ? new Date(startDate) : new Date(round.startDate);
+  const newEnd = endDate ? new Date(endDate) : new Date(round.endDate);
+  if (isNaN(newStart) || isNaN(newEnd)) throw new ApiError(400, 'Neplatný formát dátumu.');
+  if (newEnd <= newStart) throw new ApiError(400, 'Koniec tipovania musí byť po začiatku.');
+  round.startDate = newStart;
+  round.endDate = newEnd;
+
+  if (name) round.name = name.trim();
+  if (description !== undefined) round.description = description;
+  if (active !== undefined) round.active = active;
+
+  await round.save();
+  res.status(200).json({ success: true, message: 'Kolo bolo úspešne aktualizované.', data: round });
+});
+
+// DELETE /api/rounds/:id
+const deleteRound = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const userId = req.userId;
+
+  const round = await Round.findByPk(id, {
+    include: [{ model: League, include: [{ model: Season, attributes: ['id', 'creatorId'] }] }],
+  });
+  if (!round) throw new ApiError(404, 'Kolo nebolo nájdené.');
+
+  if (!(await canManageRound(round, userId))) {
+    throw new ApiError(403, 'Nemáš oprávnenie vymazať toto kolo.');
+  }
+
+  // kolo s tipmi sa nedá zmazať (ochrana dát)
+  const hasTips = await Tip.findOne({ include: [{ model: Match, where: { roundId: id }, required: true }] });
+  if (hasTips) {
+    throw new ApiError(400, 'Kolo nemožno vymazať, pretože už obsahuje tipy.');
+  }
+
+  // zmaž zápasy kola a potom kolo
+  await Match.destroy({ where: { roundId: id } });
+  await round.destroy();
+
+  res.status(200).json({ success: true, message: 'Kolo bolo úspešne vymazané.' });
+});
 
 module.exports = {
   getAllRounds,
@@ -486,5 +238,5 @@ module.exports = {
   createRound,
   updateRound,
   deleteRound,
-  getRoundLeaderboard
+  getRoundLeaderboard,
 };

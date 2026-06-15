@@ -38,6 +38,12 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM('winner', 'exact_score'),  // Typ tipovania: víťaz alebo presný výsledok
         defaultValue: 'exact_score',
       },
+      // Ak je tento zápas v KLONOVANEJ lige, odkaz na zdrojový zápas v oficiálnej
+      // lige-šablóne. Výsledok sa potom číta z originálu (jeden zdroj pravdy).
+      sourceMatchId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
     }, {
       tableName: 'matches',
       timestamps: true,

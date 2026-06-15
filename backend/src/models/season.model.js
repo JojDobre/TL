@@ -31,6 +31,34 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
+    // Dátumy trvania sezóny (určujú, či je aktívna)
+    startDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    endDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    // Ručné ukončenie — po ňom je sezóna uzamknutá (nedá sa nič meniť)
+    ended: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    // Heslo (hash) pre súkromnú custom sezónu — NIKDY plaintext
+    password: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    hasPassword: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    // Skryť zo zoznamu sezón (pripojiť sa dá len cez ID + heslo)
+    hidden: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
     rules: {
       type: DataTypes.TEXT,  // Pravidlá sezóny
       allowNull: true,
@@ -95,8 +123,9 @@ module.exports = (sequelize, DataTypes) => {
     
     // Sezóna môže mať viacero používateľov (hráčov)
     Season.belongsToMany(models.User, {
-      through: models.UserSeason,  // Dôležité: použite správny spojovací model
+      through: models.UserSeason,
       foreignKey: 'seasonId',
+      otherKey: 'userId',          // OBA kľúče zloženého vzťahu (inak zlý PK)
       as: 'participants',
     });
     

@@ -1,0 +1,97 @@
+<%- include('partials/head', { title: 'Spravovať sezónu', page: 'seasons', active: 'seasons', pageStyle: `
+  .form-card { padding:26px; }
+  .form-card + .form-card { margin-top:18px; }
+  .form-card h3 { font-size:var(--fs-h4); margin-bottom:4px; }
+  .form-card .sub { color:var(--text-3); font-size:var(--fs-sm); margin-bottom:20px; }
+  .form-layout { display:grid; grid-template-columns:1fr 320px; gap:24px; align-items:start; padding-block:24px 64px; }
+  .sticky-side { position:sticky; top:92px; }
+  @media (max-width:980px){ .form-layout { grid-template-columns:1fr; } .sticky-side { position:static; } }
+` }) %>
+
+<%- include('partials/season-subnav', { seasonId: season.id, seasonName: season.name, active: 'overview' }) %>
+
+<div class="wrap form-head" style="padding-top:24px">
+  <div class="crumb"><a href="/seasons/<%= season.id %>"><%= season.name %></a> › Spravovať</div>
+  <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Spravovať sezónu</h1>
+  <p class="muted" style="margin-top:6px">Uprav údaje sezóny, trvanie a súkromie. Ukončenie sezónu uzamkne.</p>
+</div>
+
+<% if (typeof error !== 'undefined' && error) { %>
+<div class="wrap"><div class="tag tag-danger" style="display:block;padding:12px 14px;margin-bottom:16px"><%= error %></div></div>
+<% } %>
+
+<% if (season.status === 'ended') { %>
+<div class="wrap"><div class="card card-pad" style="text-align:center;padding:40px">
+  <span class="tag tag-muted" style="margin-bottom:10px;display:inline-block">Sezóna je ukončená</span>
+  <p class="muted">Táto sezóna je ukončená a uzamknutá. Údaje sa už nedajú meniť.</p>
+  <a href="/seasons/<%= season.id %>" class="btn btn-secondary" style="margin-top:14px">Späť na sezónu</a>
+</div></div>
+<% } else { %>
+
+<form class="wrap form-layout" action="/seasons/<%= season.id %>/manage" method="POST">
+  <main>
+    <div class="card form-card">
+      <h3>Základné údaje</h3>
+      <div class="stack g-4">
+        <div class="field"><label class="label">Názov sezóny</label><input class="input" name="name" value="<%= season.name %>" required></div>
+        <div class="field"><label class="label">Popis</label><textarea class="textarea" name="description"><%= season.description || '' %></textarea></div>
+        <div class="field"><label class="label">URL obrázka</label><input class="input" type="url" name="image" value="<%= season.image || '' %>" placeholder="https://…"></div>
+      </div>
+    </div>
+
+    <div class="card form-card">
+      <h3>Trvanie sezóny</h3>
+      <p class="sub">Dátumy určujú, či je sezóna aktívna.</p>
+      <div class="field-row" style="display:flex;gap:14px;flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:180px"><label class="label">Začiatok</label><input class="input" type="datetime-local" name="startDate" value="<%= season.startDate ? new Date(season.startDate).toISOString().slice(0,16) : '' %>"></div>
+        <div class="field" style="flex:1;min-width:180px"><label class="label">Koniec</label><input class="input" type="datetime-local" name="endDate" value="<%= season.endDate ? new Date(season.endDate).toISOString().slice(0,16) : '' %>"></div>
+      </div>
+    </div>
+
+    <% if (season.type === 'community') { %>
+    <div class="card form-card">
+      <h3>Súkromie</h3>
+      <p class="sub">Súkromná sezóna je chránená heslom — ľudia mimo nej nevidia ligy ani rebríčky.</p>
+      <% if (season.hasPassword) { %>
+        <label class="check" style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><input type="checkbox" name="removePassword"> <span>Zrušiť súkromie (sprístupniť verejne)</span></label>
+        <div class="field" style="margin-bottom:12px"><label class="label">Zmeniť heslo <span class="faint">(nechaj prázdne ak nemeníš)</span></label><input class="input" type="text" name="password" placeholder="••••••"></div>
+        <input type="hidden" name="isPrivate" value="on">
+        <label class="check" style="display:flex;align-items:center;gap:10px"><input type="checkbox" name="hidden" <%= season.hidden ? 'checked' : '' %>> <span>Skryť zo zoznamu sezón</span></label>
+      <% } else { %>
+        <label class="check" style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><input type="checkbox" id="privToggle" name="isPrivate"> <span>Spraviť sezónu súkromnou (chrániť heslom)</span></label>
+        <div id="privFields" hidden>
+          <div class="field" style="margin-bottom:12px"><label class="label">Heslo sezóny</label><input class="input" type="text" name="password" placeholder="napr. kamarati2026"></div>
+          <label class="check" style="display:flex;align-items:center;gap:10px"><input type="checkbox" name="hidden"> <span>Skryť zo zoznamu sezón</span></label>
+        </div>
+      <% } %>
+    </div>
+    <% } %>
+  </main>
+
+  <aside class="sticky-side">
+    <div class="card card-pad">
+      <button type="submit" class="btn btn-primary btn-block">Uložiť zmeny</button>
+      <a href="/seasons/<%= season.id %>" class="btn btn-ghost btn-block" style="margin-top:8px">Zrušiť</a>
+    </div>
+  </aside>
+</form>
+
+<!-- blok ukončenia: vlastný formulár mimo hlavného (form sa nesmie vnárať) -->
+<div class="wrap" style="padding-bottom:48px">
+  <div class="card card-pad" style="border-color:var(--danger-line,rgba(220,80,80,.3));max-width:340px;margin-left:auto">
+    <b class="hi" style="display:block;margin-bottom:6px">Ukončiť sezónu</b>
+    <p class="muted" style="font-size:var(--fs-sm);margin-bottom:12px">Po ukončení sa sezóna uzamkne — nedá sa v nej už nič meniť ani tipovať. Toto je nevratné.</p>
+    <form action="/seasons/<%= season.id %>/end" method="POST" onsubmit="return confirm('Naozaj ukončiť sezónu? Toto je nevratné — sezóna sa uzamkne.');">
+      <button type="submit" class="btn btn-block" style="background:var(--danger,#dc5050);color:#fff">Ukončiť sezónu</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  var pt = document.getElementById('privToggle');
+  if (pt) pt.addEventListener('change', function () { document.getElementById('privFields').toggleAttribute('hidden', !this.checked); });
+</script>
+
+<% } %>
+
+<%- include('partials/footer') %>

@@ -22,13 +22,29 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM('official', 'custom'),  // Typ ligy: oficiálna alebo vlastná
         defaultValue: 'custom',
       },
+      // 6-miestny kód na pripojenie do ligy (zobrazuje sa hráčom ako "ID ligy")
+      joinCode: {
+        type: DataTypes.STRING(6),
+        allowNull: false,
+        unique: true,
+      },
       password: {
-        type: DataTypes.STRING,  // Heslo pre ligu (voliteľné)
+        type: DataTypes.STRING,  // Hash hesla pre ligu (voliteľné) — NIKDY plaintext
         allowNull: true,
+      },
+      // Príznak, či je liga chránená heslom (aby sme klientovi nemuseli posielať hash)
+      hasPassword: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
       },
       seasonId: {
         type: DataTypes.INTEGER,  // Odkaz na sezónu, do ktorej liga patrí
         allowNull: false,
+      },
+      // Kto ligu vytvoril (pre limity a oprávnenia)
+      creatorId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
       },
       active: {
         type: DataTypes.BOOLEAN,
@@ -48,22 +64,47 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.BOOLEAN,  // Či je bodovací systém uzamknutý (po začiatku prvého kola)
         defaultValue: false,
       },
+      // Šablóna: oficiálna liga, ktorú si používatelia môžu naklonovať
+      isTemplate: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
+      // Ak je táto liga KLON šablóny, odkaz na zdrojovú (oficiálnu) ligu
+      templateId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
     }, {
       tableName: 'leagues',
       timestamps: true,
     });
-  
+
     League.associate = function(models) {
       // Liga patrí do sezóny
       League.belongsTo(models.Season, {
         foreignKey: 'seasonId',
       });
-      
+
       // Liga môže mať viacero kôl
       League.hasMany(models.Round, {
         foreignKey: 'leagueId',
       });
+
+      // Tvorca ligy
+      League.belongsTo(models.User, {
+        foreignKey: 'creatorId',
+        as: 'creator',
+      });
+
+      // Členovia ligy (cez UserLeague). otherKey + foreignKey: aby Sequelize
+      // poznal OBA kľúče zloženého vzťahu a nevytvoril PK len z jedného.
+      League.belongsToMany(models.User, {
+        through: models.UserLeague,
+        foreignKey: 'leagueId',
+        otherKey: 'userId',
+        as: 'members',
+      });
     };
-  
+
     return League;
   };
