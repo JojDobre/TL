@@ -7,6 +7,8 @@ const { League, Season, Round, Match, Tip, User, UserLeague, UserSeason, Sequeli
 const bcrypt = require('bcrypt');
 const { seasonStatus, isSeasonLocked } = require('../utils/season.utils');
 const { cloneTemplateInto } = require('../utils/league-clone.util');
+const { deleteLeague } = require('../utils/delete.util');
+const { SPORTS, COUNTRIES } = require('../utils/team.constants');
 const { asyncHandler } = require('../middleware/error.middleware');
 
 const DEFAULT_SCORING = { exactScore: 10, correctGoals: 1, correctWinner: 3, goalDifference: 2 };
@@ -89,6 +91,7 @@ const leagueDetailPage = asyncHandler(async (req, res) => {
     rounds,
     leaderboard,
     isMember: !!myMembership,
+    isCreator: league.creatorId === meId,
     myRank,
     myPoints,
     playedRounds,
@@ -232,9 +235,12 @@ const createLeagueSubmit = asyncHandler(async (req, res) => {
   if (template) {
     try { await cloneTemplateInto(template, league); }
     catch (e) { /* ak klon zlyhá, liga ostane prázdna — používateľ dostane info v detaile */ }
+    // klon má tímy/zápasy zo šablóny → rovno na detail
+    return res.redirect('/leagues/' + league.id);
   }
 
-  res.redirect('/leagues/' + league.id);
+  // klasická liga: presmeruj na úpravu, nech si používateľ hneď pridá tímy do súpisky
+  res.redirect('/leagues/' + league.id + '/edit');
 });
 
 // GET /leagues/:id/edit — formulár na úpravu ligy
@@ -254,7 +260,13 @@ const editLeaguePage = asyncHandler(async (req, res) => {
     || (user && user.role === 'admin');
   if (!allowed) return res.status(403).render('error-page', { message: 'Nemáš oprávnenie upraviť túto ligu.' });
 
-  res.render('editLeague', { league: { ...league.toJSON(), scoringSystem: league.scoringSystem || {} }, error: null });
+  res.render('editLeague', {
+    league: { ...league.toJSON(), scoringSystem: league.scoringSystem || {} },
+    sports: SPORTS,
+    countries: COUNTRIES,
+    isClone: !!league.templateId,
+    error: null,
+  });
 });
 
 // POST /leagues/:id/edit — uloženie úprav
@@ -308,4 +320,90 @@ const editLeagueSubmit = asyncHandler(async (req, res) => {
   res.redirect('/leagues/' + league.id);
 });
 
-module.exports = { leagueDetailPage, joinLeagueSubmit, createLeaguePage, createLeagueSubmit, editLeaguePage, editLeagueSubmit };
+// helper: je tvorca/admin ligy?
+async function isLeagueManager(league, userId) {
+  if (!userId) return false;
+  if (league.creatorId === userId) return true;
+  const u = await User.findByPk(userId);
+  if (u && u.role === 'admin') return true;
+  if (league.Season && league.Season.creatorId === userId) return true;
+  const sRole = await UserSeason.findOne({ where: { userId, seasonId: league.seasonId } });
+  if (sRole && sRole.role === 'admin') return true;
+  const lRole = await UserLeague.findOne({ where: { userId, leagueId: league.id } });
+  return !!(lRole && lRole.role === 'admin');
+}
+
+// POST /leagues/:id/delete
+const deleteLeagueSubmit = asyncHandler(async (req, res) => {
+  const userId = Number(req.session.userId);
+  const league = await League.findByPk(req.params.id, { include: [{ model: Season, attributes: ['id', 'creatorId'] }] });
+  if (!league) return res.redirect('/seasons');
+  if (!(await isLeagueManager(league, userId))) {
+    return res.status(403).render('error-page', { message: 'Nemáš oprávnenie zmazať túto ligu.' });
+  }
+  // šablónu s existujúcimi klonmi nemažeme (klony by stratili zdroj výsledkov)
+  if (league.isTemplate) {
+    const clones = await League.count({ where: { templateId: league.id } });
+    if (clones > 0) {
+      return res.status(400).render('error-page', { message: 'Túto šablónu nemožno zmazať — existujú ligy, ktoré z nej vznikli.' });
+    }
+  }
+  const seasonId = league.seasonId;
+  await deleteLeague(league.id);
+  res.redirect('/seasons/' + seasonId);
+});
+
+// POST /leagues/:id/leave
+const leaveLeagueSubmit = asyncHandler(async (req, res) => {
+  const userId = Number(req.session.userId);
+  const league = await League.findByPk(req.params.id);
+  if (!league) return res.redirect('/seasons');
+  if (league.creatorId === userId) {
+    return res.status(400).render('error-page', { message: 'Zakladateľ nemôže opustiť ligu — môžeš ju zmazať.' });
+  }
+  await UserLeague.destroy({ where: { userId, leagueId: league.id } });
+  res.redirect('/leagues/' + league.id);
+});
+
+// GET /leagues/:id/members
+const leagueMembersPage = asyncHandler(async (req, res) => {
+  const userId = Number(req.session.userId);
+  const league = await League.findByPk(req.params.id, { include: [{ model: Season, attributes: ['id', 'name', 'creatorId'] }] });
+  if (!league) return res.status(404).render('error-page', { message: 'Liga nebola nájdená.' });
+  if (!(await isLeagueManager(league, userId))) {
+    return res.status(403).render('error-page', { message: 'Nemáš oprávnenie spravovať členov.' });
+  }
+  const memberships = await UserLeague.findAll({ where: { leagueId: league.id } });
+  const members = [];
+  for (const m of memberships) {
+    const u = await User.findByPk(m.userId, { attributes: ['id', 'username', 'firstName', 'lastName'] });
+    if (u) members.push({ ...u.toJSON(), role: m.role, isCreator: u.id === league.creatorId });
+  }
+  members.sort((a, b) => (b.isCreator - a.isCreator) || (a.username || '').localeCompare(b.username || ''));
+  res.render('leagueMembers', { league: league.toJSON(), members });
+});
+
+// POST /leagues/:id/members/:userId
+const leagueMemberAction = asyncHandler(async (req, res) => {
+  const userId = Number(req.session.userId);
+  const targetId = Number(req.params.userId);
+  const action = req.body.action;
+  const league = await League.findByPk(req.params.id, { include: [{ model: Season, attributes: ['id', 'creatorId'] }] });
+  if (!league) return res.redirect('/seasons');
+  if (!(await isLeagueManager(league, userId))) {
+    return res.status(403).render('error-page', { message: 'Nemáš oprávnenie spravovať členov.' });
+  }
+  if (targetId === league.creatorId) {
+    return res.redirect('/leagues/' + league.id + '/members');
+  }
+  if (action === 'remove') {
+    await UserLeague.destroy({ where: { userId: targetId, leagueId: league.id } });
+  } else if (action === 'promote') {
+    await UserLeague.update({ role: 'admin' }, { where: { userId: targetId, leagueId: league.id } });
+  } else if (action === 'demote') {
+    await UserLeague.update({ role: 'player' }, { where: { userId: targetId, leagueId: league.id } });
+  }
+  res.redirect('/leagues/' + league.id + '/members');
+});
+
+module.exports = { leagueDetailPage, joinLeagueSubmit, createLeaguePage, createLeagueSubmit, editLeaguePage, editLeagueSubmit, deleteLeagueSubmit, leaveLeagueSubmit, leagueMembersPage, leagueMemberAction };

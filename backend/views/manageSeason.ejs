@@ -84,6 +84,9 @@
     <form action="/seasons/<%= season.id %>/end" method="POST" onsubmit="return confirm('Naozaj ukončiť sezónu? Toto je nevratné — sezóna sa uzamkne.');">
       <button type="submit" class="btn btn-block" style="background:var(--danger,#dc5050);color:#fff">Ukončiť sezónu</button>
     </form>
+    <form action="/seasons/<%= season.id %>/delete" method="POST" onsubmit="return confirm('NAOZAJ ZMAZAŤ sezónu? Vymažú sa všetky jej ligy, kolá, zápasy aj tipy. Toto je nevratné!');" style="margin-top:10px">
+      <button type="submit" class="btn btn-ghost btn-block" style="color:var(--danger)">Zmazať sezónu (nevratné)</button>
+    </form>
   </div>
 </div>
 

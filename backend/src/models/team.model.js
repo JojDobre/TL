@@ -50,6 +50,13 @@ module.exports = (sequelize, DataTypes) => {
     Team.belongsTo(models.User, { foreignKey: 'creatorId', as: 'creator' });
     Team.hasMany(models.Match, { foreignKey: 'homeTeamId', as: 'homeMatches' });
     Team.hasMany(models.Match, { foreignKey: 'awayTeamId', as: 'awayMatches' });
+    // Tím môže byť v súpiske viacerých líg
+    Team.belongsToMany(models.League, {
+      through: models.LeagueTeam,
+      foreignKey: 'teamId',
+      otherKey: 'leagueId',
+      as: 'leagues',
+    });
   };
 
   return Team;

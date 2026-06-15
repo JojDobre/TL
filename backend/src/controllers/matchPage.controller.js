@@ -36,8 +36,8 @@ const createMatchesPage = asyncHandler(async (req, res) => {
     return res.status(403).render('error-page', { message: 'Táto liga je vytvorená zo šablóny — zápasy sú prevzaté z oficiálnej ligy a nedajú sa upravovať.' });
   }
 
-  // tímy pre výber
-  const teams = await Team.findAll({ attributes: ['id', 'name'], order: [['name', 'ASC']] });
+  // tímy pre výber — LEN zo súpisky ligy (definovanej pri lige)
+  const teams = await league.getTeams({ attributes: ['id', 'name'], order: [['name', 'ASC']] });
 
   // už pridané zápasy v kole
   const matches = await Match.findAll({

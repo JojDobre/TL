@@ -1,0 +1,44 @@
+<%- include('partials/head', { title: 'Členovia sezóny', page: 'seasons', active: 'seasons', pageStyle: `
+  .mem-head { padding:26px 0 18px; }
+  .mem-row { display:flex; align-items:center; gap:14px; padding:14px 18px; border-radius:var(--r-md); background:var(--surface-2); margin-bottom:8px; }
+  .mem-av { width:42px; height:42px; border-radius:50%; background:var(--surface-3); display:flex; align-items:center; justify-content:center; font-weight:700; }
+  .mem-name { flex:1; min-width:0; }
+` }) %>
+
+<%- include('partials/season-subnav', { seasonId: season.id, seasonName: season.name, active: 'overview' }) %>
+
+<% function initials(m){ var n=[m.firstName,m.lastName].filter(Boolean).join(' ')||m.username||'?'; return n.split(' ').map(function(w){return w[0];}).filter(Boolean).slice(0,2).join('').toUpperCase(); } %>
+
+<div class="wrap mem-head">
+  <div class="crumb"><a href="/seasons/<%= season.id %>"><%= season.name %></a> › Členovia</div>
+  <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Členovia sezóny</h1>
+  <p class="muted" style="margin-top:6px"><%= members.length %> členov. Môžeš povýšiť na správcu, prípadne odobrať.</p>
+</div>
+
+<div class="wrap" style="padding-bottom:56px;max-width:720px">
+  <% members.forEach(function(m){ %>
+  <div class="mem-row">
+    <span class="mem-av"><%= initials(m) %></span>
+    <div class="mem-name">
+      <b><%= [m.firstName, m.lastName].filter(Boolean).join(' ') || m.username %></b>
+      <div class="muted" style="font-size:var(--fs-xs)">@<%= m.username %></div>
+    </div>
+    <% if (m.isCreator) { %>
+      <span class="tag tag-gold">Zakladateľ</span>
+    <% } else { %>
+      <span class="tag <%= m.role === 'admin' ? 'tag-brand' : 'tag-muted' %>"><%= m.role === 'admin' ? 'Správca' : 'Hráč' %></span>
+      <form action="/seasons/<%= season.id %>/members/<%= m.id %>" method="POST" style="display:flex;gap:6px">
+        <% if (m.role === 'admin') { %>
+          <button name="action" value="demote" class="btn btn-ghost btn-sm">Odobrať správu</button>
+        <% } else { %>
+          <button name="action" value="promote" class="btn btn-secondary btn-sm">Povýšiť</button>
+        <% } %>
+        <button name="action" value="remove" class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="return confirm('Odobrať tohto člena zo sezóny?')">Odobrať</button>
+      </form>
+    <% } %>
+  </div>
+  <% }); %>
+  <a href="/seasons/<%= season.id %>" class="btn btn-ghost" style="margin-top:14px">← Späť na sezónu</a>
+</div>
+
+<%- include('partials/footer') %>

@@ -106,6 +106,131 @@
   </aside>
 </form>
 
+<% if (!isClone) { %>
+<!-- ===== SÚPISKA TÍMOV LIGY (mimo hlavného formulára, cez API) ===== -->
+<div class="wrap" style="padding-bottom:56px">
+  <div class="card form-card" style="padding:24px">
+    <div class="between" style="margin-bottom:6px"><h3 style="font-size:var(--fs-h4)">Tímy ligy</h3><span class="muted" style="font-size:var(--fs-sm)"><b class="hi" id="rosterCount">0</b> v súpiske</span></div>
+    <p class="sub" style="margin-bottom:18px">Tímy v súpiske sa ponúkajú pri tvorbe zápasov. Pridaj ich zo zoznamu alebo vytvor vlastný.</p>
+
+    <!-- súpiska -->
+    <div id="roster" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px"></div>
+
+    <div class="row g-2" style="margin-bottom:16px">
+      <button type="button" class="btn btn-secondary btn-sm" id="btnPick">+ Pridať tímy zo zoznamu</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnCustom">+ Vytvoriť vlastný tím</button>
+    </div>
+
+    <!-- panel: výber zo zoznamu -->
+    <div id="pickPanel" hidden style="border-top:1px solid var(--line);padding-top:16px">
+      <div class="row g-2 wrap-gap" style="margin-bottom:12px">
+        <input class="input" id="tSearch" placeholder="Hľadať…" style="max-width:200px">
+        <select class="select" id="tType" style="width:auto"><option value="">Typ</option><option value="club">Kluby</option><option value="national">Národné</option></select>
+        <select class="select" id="tSport" style="width:auto"><option value="">Šport</option><% sports.forEach(function(s){ %><option value="<%= s.code %>"><%= s.label %></option><% }); %></select>
+        <select class="select" id="tCountry" style="width:auto"><option value="">Krajina</option><% countries.forEach(function(c){ %><option value="<%= c.code %>"><%= c.label %></option><% }); %></select>
+      </div>
+      <div id="availList" style="display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto"></div>
+    </div>
+
+    <!-- panel: vlastný tím -->
+    <div id="customPanel" hidden style="border-top:1px solid var(--line);padding-top:16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field"><label class="label">Názov</label><input class="input" id="cName" placeholder="napr. Náš tím"></div>
+        <div class="field"><label class="label">Typ</label><select class="select" id="cType"><option value="club">Klub</option><option value="national">Národný</option></select></div>
+        <div class="field" data-cclub><label class="label">Šport</label><select class="select" id="cSport"><% sports.forEach(function(s){ %><option value="<%= s.code %>"><%= s.label %></option><% }); %></select></div>
+        <div class="field"><label class="label">Krajina</label><select class="select" id="cCountry"><% countries.forEach(function(c){ %><option value="<%= c.code %>"><%= c.label %></option><% }); %></select></div>
+        <div class="field" style="grid-column:1/-1"><label class="label">URL loga <span class="faint">(voliteľné)</span></label><input class="input" id="cLogo" type="url" placeholder="https://…"></div>
+      </div>
+      <button type="button" class="btn btn-primary btn-sm" id="cCreate" style="margin-top:6px">Vytvoriť a pridať</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap" style="position:fixed;bottom:24px;right:24px;z-index:200;display:flex;flex-direction:column;gap:10px"></div>
+
+<script>
+(function () {
+  var leagueId = <%= league.id %>;
+  var $ = function(id){ return document.getElementById(id); };
+  function toast(msg, ok){ var t=document.createElement('div'); t.textContent=msg; t.style.cssText='background:'+(ok?'var(--success)':'var(--surface-2)')+';color:'+(ok?'#fff':'var(--text-1)')+';border:1px solid var(--line);padding:10px 14px;border-radius:10px'; $('toastWrap').appendChild(t); setTimeout(function(){t.remove();},2400); }
+  function abbr(n){ return (n||'?').substring(0,3).toUpperCase(); }
+
+  // načítaj súpisku
+  function loadRoster(){
+    fetch('/api/leagues/'+leagueId+'/teams').then(function(r){return r.json();}).then(function(res){
+      var box=$('roster'); box.innerHTML='';
+      var data=res.data||[];
+      $('rosterCount').textContent=data.length;
+      if(!data.length){ box.innerHTML='<span class="muted" style="font-size:var(--fs-sm)">Zatiaľ žiadne tímy v súpiske.</span>'; return; }
+      data.forEach(function(t){
+        var chip=document.createElement('span');
+        chip.style.cssText='display:inline-flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface-2);border:1px solid var(--line);border-radius:20px;font-size:var(--fs-sm)';
+        chip.innerHTML='<b>'+t.name+'</b><button type="button" data-rm="'+t.id+'" style="background:none;border:none;color:var(--text-4);cursor:pointer;font-size:14px">✕</button>';
+        box.appendChild(chip);
+      });
+    });
+  }
+  loadRoster();
+
+  // odobrať
+  $('roster').addEventListener('click', function(e){
+    var b=e.target.closest('[data-rm]'); if(!b)return;
+    fetch('/api/leagues/'+leagueId+'/teams/'+b.getAttribute('data-rm'),{method:'DELETE'}).then(function(r){return r.json();}).then(function(res){
+      if(res.success===false){toast(res.message||'Nedá sa odobrať.');return;}
+      toast('Odobraté',true); loadRoster();
+    });
+  });
+
+  // prepínanie panelov
+  $('btnPick').onclick=function(){ $('pickPanel').hidden=!$('pickPanel').hidden; $('customPanel').hidden=true; if(!$('pickPanel').hidden)loadAvail(); };
+  $('btnCustom').onclick=function(){ $('customPanel').hidden=!$('customPanel').hidden; $('pickPanel').hidden=true; };
+  $('cType').onchange=function(){ document.querySelector('[data-cclub]').style.display=this.value==='club'?'':'none'; };
+
+  // dostupné tímy (filter)
+  function loadAvail(){
+    var qs=new URLSearchParams();
+    if($('tSearch').value)qs.set('search',$('tSearch').value);
+    if($('tType').value)qs.set('teamType',$('tType').value);
+    if($('tSport').value)qs.set('sport',$('tSport').value);
+    if($('tCountry').value)qs.set('country',$('tCountry').value);
+    fetch('/api/leagues/'+leagueId+'/teams/available?'+qs.toString()).then(function(r){return r.json();}).then(function(res){
+      var list=$('availList'); list.innerHTML=''; var sel=res.selectedIds||[];
+      (res.data||[]).forEach(function(t){
+        var inRoster=sel.indexOf(t.id)>=0;
+        var row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface-2);border-radius:8px';
+        row.innerHTML='<span style="width:30px;height:30px;border-radius:8px;background:var(--surface-3);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px">'+abbr(t.name)+'</span><b style="flex:1">'+t.name+'</b><span class="muted" style="font-size:var(--fs-xs)">'+(t.sport||t.teamType||'')+(t.country?' · '+t.country:'')+'</span>'+(inRoster?'<span class="tag tag-success" style="font-size:var(--fs-xs)">v súpiske</span>':'<button type="button" class="btn btn-secondary btn-sm" data-add="'+t.id+'">Pridať</button>');
+        list.appendChild(row);
+      });
+      if(!(res.data||[]).length)list.innerHTML='<span class="muted" style="font-size:var(--fs-sm)">Žiadne tímy. Skús iný filter alebo vytvor vlastný.</span>';
+    });
+  }
+  var deb; ['tSearch','tType','tSport','tCountry'].forEach(function(id){ $(id).addEventListener('input',function(){ clearTimeout(deb); deb=setTimeout(loadAvail,300); }); });
+
+  // pridať zo zoznamu
+  $('availList').addEventListener('click', function(e){
+    var b=e.target.closest('[data-add]'); if(!b)return;
+    fetch('/api/leagues/'+leagueId+'/teams',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({teamId:Number(b.getAttribute('data-add'))})}).then(function(r){return r.json();}).then(function(res){
+      if(res.success===false){toast(res.message||'Nepodarilo sa.');return;}
+      toast('Pridané ✓',true); loadRoster(); loadAvail();
+    });
+  });
+
+  // vytvoriť custom tím
+  $('cCreate').onclick=function(){
+    var body={ name:$('cName').value, teamType:$('cType').value, sport:$('cSport').value, country:$('cCountry').value, logo:$('cLogo').value };
+    if(!body.name.trim()){toast('Zadaj názov.');return;}
+    this.disabled=true;
+    fetch('/api/leagues/'+leagueId+'/teams/custom',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(res){
+      $('cCreate').disabled=false;
+      if(res.success===false){toast(res.message||'Nepodarilo sa.');return;}
+      toast('Tím vytvorený a pridaný ✓',true); $('cName').value=''; $('cLogo').value=''; loadRoster();
+    }).catch(function(){$('cCreate').disabled=false;toast('Chyba.');});
+  };
+})();
+</script>
+<% } %>
+
 <script>
   document.querySelectorAll('.type-opt[data-type]').forEach(function (opt) {
     opt.addEventListener('click', function (e) {
@@ -116,5 +241,16 @@
     });
   });
 </script>
+
+<!-- zmazanie ligy (vlastný formulár) -->
+<div class="wrap" style="padding-bottom:48px">
+  <div class="card card-pad" style="border-color:var(--danger-line,rgba(220,80,80,.3));max-width:340px;margin-left:auto">
+    <b class="hi" style="display:block;margin-bottom:6px">Zmazať ligu</b>
+    <p class="muted" style="font-size:var(--fs-sm);margin-bottom:12px">Vymaže ligu vrátane kôl, zápasov a tipov. Nevratné.</p>
+    <form action="/leagues/<%= league.id %>/delete" method="POST" onsubmit="return confirm('NAOZAJ ZMAZAŤ ligu? Vymažú sa kolá, zápasy aj tipy. Nevratné!');">
+      <button type="submit" class="btn btn-ghost btn-block" style="color:var(--danger)">Zmazať ligu (nevratné)</button>
+    </form>
+  </div>
+</div>
 
 <%- include('partials/footer') %>

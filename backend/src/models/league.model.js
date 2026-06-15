@@ -104,6 +104,14 @@ module.exports = (sequelize, DataTypes) => {
         otherKey: 'userId',
         as: 'members',
       });
+
+      // Súpiska tímov ligy (z nich sa tvoria zápasy)
+      League.belongsToMany(models.Team, {
+        through: models.LeagueTeam,
+        foreignKey: 'leagueId',
+        otherKey: 'teamId',
+        as: 'teams',
+      });
     };
 
     return League;

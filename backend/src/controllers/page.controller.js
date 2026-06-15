@@ -8,6 +8,7 @@ const { Season, User, League, Round, Match, Tip, UserSeason } = require('../mode
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcrypt');
 const { seasonStatus, isSeasonLocked, canViewSeasonContent } = require('../utils/season.utils');
+const { deleteSeason } = require('../utils/delete.util');
 const { asyncHandler } = require('../middleware/error.middleware');
 
 const generateInviteCode = () => uuidv4().substring(0, 6).toUpperCase();
@@ -106,6 +107,8 @@ const seasonDetailPage = asyncHandler(async (req, res) => {
     joinError: null,
     restricted: false,
     canManage,
+    isMember,
+    isCreator,
     status,
   });
 });
@@ -287,6 +290,84 @@ const endSeasonSubmit = asyncHandler(async (req, res) => {
   res.redirect('/seasons/' + season.id);
 });
 
+// helper: je tvorca/admin sezóny?
+async function isSeasonManager(season, userId) {
+  if (!userId) return false;
+  if (season.creatorId === userId) return true;
+  const u = await User.findByPk(userId);
+  if (u && u.role === 'admin') return true;
+  const role = await UserSeason.findOne({ where: { userId, seasonId: season.id } });
+  return !!(role && role.role === 'admin');
+}
+
+// POST /seasons/:id/delete — zmazať sezónu (len tvorca/globálny admin)
+const deleteSeasonSubmit = asyncHandler(async (req, res) => {
+  const userId = Number(req.session.userId);
+  const season = await Season.findByPk(req.params.id);
+  if (!season) return res.redirect('/seasons');
+
+  const u = await User.findByPk(userId);
+  const allowed = season.creatorId === userId || (u && u.role === 'admin');
+  if (!allowed) return res.status(403).render('error-page', { message: 'Nemáš oprávnenie zmazať túto sezónu.' });
+
+  await deleteSeason(season.id);
+  res.redirect('/seasons');
+});
+
+// POST /seasons/:id/leave — opustiť sezónu (člen). Tvorca nemôže opustiť.
+const leaveSeasonSubmit = asyncHandler(async (req, res) => {
+  const userId = Number(req.session.userId);
+  const season = await Season.findByPk(req.params.id);
+  if (!season) return res.redirect('/seasons');
+  if (season.creatorId === userId) {
+    return res.status(400).render('error-page', { message: 'Zakladateľ nemôže opustiť sezónu — môžeš ju ukončiť alebo zmazať.' });
+  }
+  await UserSeason.destroy({ where: { userId, seasonId: season.id } });
+  res.redirect('/seasons');
+});
+
+// GET /seasons/:id/members — správa členov (tvorca/admin)
+const seasonMembersPage = asyncHandler(async (req, res) => {
+  const userId = Number(req.session.userId);
+  const season = await Season.findByPk(req.params.id);
+  if (!season) return res.status(404).render('error-page', { message: 'Sezóna nebola nájdená.' });
+  if (!(await isSeasonManager(season, userId))) {
+    return res.status(403).render('error-page', { message: 'Nemáš oprávnenie spravovať členov.' });
+  }
+  const memberships = await UserSeason.findAll({ where: { seasonId: season.id } });
+  const members = [];
+  for (const m of memberships) {
+    const u = await User.findByPk(m.userId, { attributes: ['id', 'username', 'firstName', 'lastName'] });
+    if (u) members.push({ ...u.toJSON(), role: m.role, isCreator: u.id === season.creatorId });
+  }
+  members.sort((a, b) => (b.isCreator - a.isCreator) || (a.username || '').localeCompare(b.username || ''));
+  res.render('seasonMembers', { season: season.toJSON(), members });
+});
+
+// POST /seasons/:id/members/:userId — akcia s členom (promote/demote/remove)
+const seasonMemberAction = asyncHandler(async (req, res) => {
+  const userId = Number(req.session.userId);
+  const targetId = Number(req.params.userId);
+  const action = req.body.action;
+  const season = await Season.findByPk(req.params.id);
+  if (!season) return res.redirect('/seasons');
+  if (!(await isSeasonManager(season, userId))) {
+    return res.status(403).render('error-page', { message: 'Nemáš oprávnenie spravovať členov.' });
+  }
+  // tvorcu sa nedotýkame
+  if (targetId === season.creatorId) {
+    return res.redirect('/seasons/' + season.id + '/members');
+  }
+  if (action === 'remove') {
+    await UserSeason.destroy({ where: { userId: targetId, seasonId: season.id } });
+  } else if (action === 'promote') {
+    await UserSeason.update({ role: 'admin' }, { where: { userId: targetId, seasonId: season.id } });
+  } else if (action === 'demote') {
+    await UserSeason.update({ role: 'player' }, { where: { userId: targetId, seasonId: season.id } });
+  }
+  res.redirect('/seasons/' + season.id + '/members');
+});
+
 module.exports = {
   seasonsPage,
   seasonDetailPage,
@@ -296,4 +377,8 @@ module.exports = {
   manageSeasonPage,
   manageSeasonSubmit,
   endSeasonSubmit,
+  deleteSeasonSubmit,
+  leaveSeasonSubmit,
+  seasonMembersPage,
+  seasonMemberAction,
 };

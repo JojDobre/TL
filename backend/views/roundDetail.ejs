@@ -91,6 +91,8 @@
       <div class="row g-2 wrap-gap" style="margin-top:12px">
         <a href="/rounds/<%= round.id %>/matches/create" class="btn btn-secondary btn-sm">+ Pridať zápasy</a>
         <a href="/rounds/<%= round.id %>/evaluate" class="btn btn-brand btn-sm">Vyhodnotiť zápasy</a>
+        <a href="/rounds/<%= round.id %>/edit" class="btn btn-secondary btn-sm">Upraviť kolo</a>
+        <button class="btn btn-ghost btn-sm" style="color:var(--danger)" id="delRoundBtn" data-round-id="<%= round.id %>" data-league-id="<%= league.id %>">Zmazať kolo</button>
       </div>
       <% } %>
     </div>
@@ -324,6 +326,21 @@
   // počiatočný stav tlačidla: ak má hráč aspoň jeden uložený tip → "Uložené",
   // inak nech môže uložiť
   (function(){ var any=false; document.querySelectorAll('[data-match]').forEach(function(row){ if(row.classList.contains('tipped')) any=true; }); if(any){ setSaved(); } else if(save){ save.disabled=false; save.textContent='Uložiť tipy'; } })();
+})();
+
+// zmazanie kola
+(function(){
+  var btn = document.getElementById('delRoundBtn');
+  if (!btn) return;
+  btn.addEventListener('click', function(){
+    if(!confirm('Naozaj zmazať toto kolo aj s jeho zápasmi? (Kolo s tipmi sa nedá zmazať.)')) return;
+    var rid = btn.getAttribute('data-round-id'), lid = btn.getAttribute('data-league-id');
+    btn.disabled = true;
+    fetch('/api/rounds/'+rid, { method:'DELETE' }).then(function(r){return r.json();}).then(function(res){
+      if(res.success===false){ btn.disabled=false; alert(res.message||'Nedá sa zmazať.'); return; }
+      window.location='/leagues/'+lid;
+    }).catch(function(){ btn.disabled=false; alert('Chyba pri mazaní.'); });
+  });
 })();
 </script>
 

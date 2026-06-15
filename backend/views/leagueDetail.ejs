@@ -73,6 +73,12 @@
       <% } %>
       <% if (typeof canManage !== 'undefined' && canManage) { %>
         <a href="/leagues/<%= league.id %>/edit" class="btn btn-secondary">Upraviť ligu</a>
+        <a href="/leagues/<%= league.id %>/members" class="btn btn-secondary">Členovia</a>
+      <% } %>
+      <% if (typeof isMember !== 'undefined' && isMember && !isCreator) { %>
+        <form action="/leagues/<%= league.id %>/leave" method="POST" onsubmit="return confirm('Naozaj opustiť túto ligu?')" style="display:inline">
+          <button type="submit" class="btn btn-ghost">Opustiť ligu</button>
+        </form>
       <% } %>
       <button class="btn btn-secondary btn-icon" title="Zdieľať" data-copy data-copy-val="<%= league.joinCode %>">↗</button>
     </div>

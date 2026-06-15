@@ -60,7 +60,7 @@
       <h3>Nový zápas</h3>
       <p class="sub">Vyber tímy, čas a typ tipovania.</p>
       <% if (teams.length < 2) { %>
-        <div class="tag tag-warning" style="display:block;padding:12px 14px">V databáze nie sú aspoň 2 tímy. Najprv vytvor tímy (zatiaľ cez Adminer alebo /api/teams).</div>
+        <div class="tag tag-warning" style="display:block;padding:12px 14px">Súpiska tímov ligy má menej ako 2 tímy. Najprv pridaj tímy do ligy v <a href="/leagues/<%= league.id %>/edit" style="text-decoration:underline">úprave ligy</a>.</div>
       <% } %>
       <div class="match-builder">
         <div class="team-select"><label class="label">Domáci tím</label>
@@ -86,7 +86,8 @@
         <span class="built-team"><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)"><%= m.homeAbbr %></span><%= m.homeTeam ? m.homeTeam.name : '—' %></span>
         <span class="vs-mid">:</span>
         <span class="built-team r"><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)"><%= m.awayAbbr %></span><%= m.awayTeam ? m.awayTeam.name : '—' %></span>
-        <span class="muted" style="font-size:var(--fs-xs)"><%= fmtDT(m.matchTime) %></span>
+        <span class="muted" style="font-size:var(--fs-xs)" data-time="<%= m.matchTime %>"><%= fmtDT(m.matchTime) %></span>
+        <button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-edit-time title="Upraviť čas">✎</button>
         <button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-del>✕</button>
       </div>
       <% }); %>
@@ -140,6 +141,25 @@
       if (res.success === false) { toast(res.message || 'Nedá sa zmazať.'); return; }
       row.remove(); updateCount(); toast('Zápas odstránený', true);
     }).catch(function(){ toast('Chyba pri mazaní.'); });
+  });
+
+  // úprava času zápasu
+  document.getElementById('builtList').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-edit-time]'); if (!b) return;
+    var row = b.closest('[data-match-id]'); var id = row.getAttribute('data-match-id');
+    var span = row.querySelector('[data-time]');
+    var cur = span ? span.getAttribute('data-time') : '';
+    // predvyplň do formátu datetime-local
+    var def = '';
+    if (cur) { var d=new Date(cur); var off=d.getTimezoneOffset(); def=new Date(d.getTime()-off*60000).toISOString().slice(0,16); }
+    var val = prompt('Nový čas zápasu (formát RRRR-MM-DDTHH:MM):', def);
+    if (!val) return;
+    fetch('/api/matches/'+id, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ matchTime: val }) })
+      .then(function(r){ return r.json(); }).then(function(res){
+        if (res.success === false) { toast(res.message || 'Nepodarilo sa.'); return; }
+        if (span) { span.setAttribute('data-time', val); span.textContent = fmtDT(val); }
+        toast('Čas upravený ✓', true);
+      }).catch(function(){ toast('Chyba pri úprave.'); });
   });
 
   function updateCount(){ var n = document.querySelectorAll('#builtList .built-match').length; document.getElementById('matchCount').textContent = '('+n+')'; if(n===0){ var l=document.getElementById('builtList'); if(!document.getElementById('emptyMsg')){ var p=document.createElement('p'); p.className='muted'; p.id='emptyMsg'; p.textContent='Zatiaľ žiadne zápasy. Pridaj prvý vyššie.'; l.appendChild(p);} } }

@@ -72,4 +72,21 @@ const createRoundSubmit = asyncHandler(async (req, res) => {
   res.redirect('/rounds/' + round.id + '/matches/create');
 });
 
-module.exports = { createRoundPage, createRoundSubmit };
+// GET /rounds/:id/edit — formulár na úpravu kola (len správca, nie klon)
+async function editRoundPageFn(req, res) {
+  const round = await Round.findByPk(req.params.id, {
+    include: [{ model: League, include: [{ model: Season, attributes: ['id', 'name', 'creatorId'] }] }],
+  });
+  if (!round) return res.status(404).render('error-page', { message: 'Kolo nebolo nájdené.' });
+  const league = round.League;
+  if (!(await canManageLeague(league, Number(req.session.userId)))) {
+    return res.status(403).render('error-page', { message: 'Nemáš oprávnenie upraviť toto kolo.' });
+  }
+  if (league.templateId) {
+    return res.status(403).render('error-page', { message: 'Liga zo šablóny — kolá sa nedajú upravovať.' });
+  }
+  res.render('editRound', { round: round.toJSON(), league: league.toJSON(), error: null });
+}
+const editRoundPage = asyncHandler(editRoundPageFn);
+
+module.exports = { createRoundPage, createRoundSubmit, editRoundPage };

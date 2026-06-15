@@ -1,0 +1,62 @@
+<%- include('partials/head', { title: 'Upraviť kolo', page: 'seasons', active: 'seasons', pageStyle: `
+  .form-card { padding:26px; }
+  .form-card h3 { font-size:var(--fs-h4); margin-bottom:4px; }
+  .form-card .sub { color:var(--text-3); font-size:var(--fs-sm); margin-bottom:20px; }
+  .field-row { display:flex; gap:14px; flex-wrap:wrap; }
+  .field-row .field { flex:1; min-width:180px; }
+` }) %>
+
+<%- include('partials/season-subnav', { seasonId: league.seasonId, seasonName: (league.Season && league.Season.name) || 'Sezóna', active: 'leagues' }) %>
+
+<%
+  function dtLocal(d){ if(!d) return ''; var x=new Date(d); var off=x.getTimezoneOffset(); var l=new Date(x.getTime()-off*60000); return l.toISOString().slice(0,16); }
+%>
+
+<div class="wrap form-head" style="padding-top:24px">
+  <div class="crumb"><a href="/leagues/<%= league.id %>"><%= league.name %></a> › <a href="/rounds/<%= round.id %>"><%= round.name %></a> › Upraviť</div>
+  <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Upraviť kolo</h1>
+</div>
+
+<div class="wrap" style="padding-bottom:56px;max-width:720px">
+  <div id="errBox" class="tag tag-danger" style="display:none;padding:12px 14px;margin-bottom:16px"></div>
+
+  <div class="card form-card">
+    <h3>Údaje kola</h3>
+    <div class="stack g-4">
+      <div class="field"><label class="label">Názov kola</label><input class="input" id="rName" value="<%= round.name %>"></div>
+      <div class="field"><label class="label">Popis <span class="faint">(voliteľné)</span></label><input class="input" id="rDesc" value="<%= round.description || '' %>"></div>
+    </div>
+  </div>
+
+  <div class="card form-card" style="margin-top:18px">
+    <h3>Termíny tipovania</h3>
+    <p class="sub">Od kedy do kedy môžu hráči tipovať.</p>
+    <div class="field-row">
+      <div class="field"><label class="label">Otvorenie</label><input class="input" type="datetime-local" id="rStart" value="<%= dtLocal(round.startDate) %>"></div>
+      <div class="field"><label class="label">Uzávierka</label><input class="input" type="datetime-local" id="rEnd" value="<%= dtLocal(round.endDate) %>"></div>
+    </div>
+  </div>
+
+  <div class="row g-2" style="margin-top:20px">
+    <button class="btn btn-primary" id="saveBtn">Uložiť zmeny</button>
+    <a href="/rounds/<%= round.id %>" class="btn btn-ghost">Zrušiť</a>
+  </div>
+</div>
+
+<script>
+(function(){
+  var roundId = <%= round.id %>;
+  function err(m){ var b=document.getElementById('errBox'); b.textContent=m; b.style.display='block'; }
+  document.getElementById('saveBtn').onclick=function(){
+    var body={ name:document.getElementById('rName').value, description:document.getElementById('rDesc').value, startDate:document.getElementById('rStart').value, endDate:document.getElementById('rEnd').value };
+    if(!body.name.trim()){err('Názov je povinný.');return;}
+    this.disabled=true;
+    fetch('/api/rounds/'+roundId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(res){
+      if(res.success===false){ document.getElementById('saveBtn').disabled=false; err(res.message||'Nepodarilo sa uložiť.'); return; }
+      window.location='/rounds/'+roundId;
+    }).catch(function(){ document.getElementById('saveBtn').disabled=false; err('Chyba pri ukladaní.'); });
+  };
+})();
+</script>
+
+<%- include('partials/footer') %>

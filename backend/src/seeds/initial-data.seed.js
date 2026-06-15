@@ -1,17 +1,28 @@
 // backend/src/seeds/initial-data.seed.js
+//
+// PORIADNY testovací seed balíček. Pokrýva rôzne stavy:
+//  - sezóny: prebiehajúca / pripravovaná / ukončená, oficiálna / komunitná, súkromná
+//  - ligy: prebiehajúca / ukončená (cez ended sezónu), oficiálna / custom, šablóna + klon
+//  - kolá: otvorené / naplánované / ukončené (podľa dátumov)
+//  - zápasy: vyhodnotené / čakajúce / neodohrané, aj zrušený, aj typ 1x2
+//  - tipy s rôznymi bodmi (presný / čiastočný / mimo)
+//
+// Píše sa pre AKTUÁLNY model (joinCode ligy, scope/teamType tímov, dátumy/heslo
+// sezóny, isTemplate/templateId, sourceMatchId). Idempotenciu nerieši — určené
+// na spustenie s DB_SYNC=force (čistá DB).
 
 const db = require('../models');
 const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
 
-const seedInitialData = async () => {
-  try {
+// pomocné: dátum posunutý o N dní od teraz
+const daysFromNow = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d; };
+const code6 = () => uuidv4().substring(0, 6).toUpperCase();
+
+async function seedInitialData() {
+
     console.log('Začínam seedovanie základných dát...');
-    
-    // Vytvorenie testovacích používateľov
     console.log('Vytváram používateľov...');
-    
-    // Hashovanie hesla
     const hashedPassword = await bcrypt.hash('password123', 10);
     
     const adminUser = await db.User.create({
@@ -43,429 +54,347 @@ const seedInitialData = async () => {
       role: 'player',
       active: true
     });
-    
-    // Vytvorenie oficiálnej sezóny
-    console.log('Vytváram oficiálnu sezónu...');
-    const officialSeason = await db.Season.create({
-      name: 'Sezóna 2024/2025',
-      description: 'Oficiálna tipovacia súťaž pre sezónu 2024/2025 vrátane Premier League, La Liga a Bundesliga.',
-      image: 'https://images.unsplash.com/photo-1508098682722-e99c643e7f0b?q=80&w=1000',
-      type: 'official',
-      inviteCode: uuidv4().substring(0, 6).toUpperCase(),
-      active: true,
-      rules: 'Všetci hráči musia zadať svoje tipy pred začiatkom zápasu. Za presný výsledok získavate 10 bodov, za správny počet gólov jedného tímu +1 bod, za správneho víťaza +3 body a za správny gólový rozdiel +2 body.',
-      creatorId: adminUser.id
-    });
-    
-    // Vytvorenie komunitnej sezóny
-    console.log('Vytváram komunitnú sezónu...');
-    const communitySeason = await db.Season.create({
-      name: 'Futbal medzi kamarátmi',
-      description: 'Tipovacia súťaž medzi priateľmi, sledujeme veľké futbalové zápasy a bavíme sa tipovaním.',
-      image: 'https://images.unsplash.com/photo-1610201417828-29dd1173d62f?q=80&w=1000',
-      type: 'community',
-      inviteCode: uuidv4().substring(0, 6).toUpperCase(),
-      active: true,
-      rules: 'Neformálna súťaž medzi kamarátmi. Váš tip musí byť zadaný najneskôr 5 minút pred začiatkom zápasu.',
-      creatorId: vipUser.id
-    });
-    
-    // Priradenie používateľov do sezón
-    console.log('Priraďujem používateľov do sezón...');
-    
-    // Admin do oficiálnej sezóny
-    await db.UserSeason.create({
-      userId: adminUser.id,
-      seasonId: officialSeason.id,
-      role: 'admin'
-    });
-    
-    // VIP user do oficiálnej sezóny
-    await db.UserSeason.create({
-      userId: vipUser.id,
-      seasonId: officialSeason.id,
-      role: 'player'
-    });
-    
-    // Regular user do oficiálnej sezóny
-    await db.UserSeason.create({
-      userId: regularUser.id,
-      seasonId: officialSeason.id,
-      role: 'player'
-    });
-    
-    // VIP user do komunitnej sezóny
-    await db.UserSeason.create({
-      userId: vipUser.id,
-      seasonId: communitySeason.id,
-      role: 'admin'
-    });
-    
-    // Regular user do komunitnej sezóny
-    await db.UserSeason.create({
-      userId: regularUser.id,
-      seasonId: communitySeason.id,
-      role: 'player'
-    });
-    
-    // Vytvorenie oficiálnych tímov (ak ešte neexistujú)
-    console.log('Kontrolujem existujúce tímy a vytvaram nové...');
-    const teamsCount = await db.Team.count();
-    
-    let teams = [];
-    if (teamsCount === 0) {
-      teams = await db.Team.bulkCreate([
-        {
-          name: 'FC Barcelona',
-          logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/1200px-FC_Barcelona_%28crest%29.svg.png',
-          type: 'official'
-        },
-        {
-          name: 'Real Madrid',
-          logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/1200px-Real_Madrid_CF.svg.png',
-          type: 'official'
-        },
-        {
-          name: 'Manchester United',
-          logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/7/7a/Manchester_United_FC_crest.svg/1200px-Manchester_United_FC_crest.svg.png',
-          type: 'official'
-        },
-        {
-          name: 'Manchester City',
-          logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/eb/Manchester_City_FC_badge.svg/1200px-Manchester_City_FC_badge.svg.png',
-          type: 'official'
-        },
-        {
-          name: 'Liverpool FC',
-          logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/0/0c/Liverpool_FC.svg/1200px-Liverpool_FC.svg.png',
-          type: 'official'
-        },
-        {
-          name: 'Bayern Mníchov',
-          logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/FC_Bayern_M%C3%BCnchen_logo_%282017%29.svg/1200px-FC_Bayern_M%C3%BCnchen_logo_%282017%29.svg.png',
-          type: 'official'
-        },
-        {
-          name: 'Borussia Dortmund',
-          logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Borussia_Dortmund_logo.svg/1200px-Borussia_Dortmund_logo.svg.png',
-          type: 'official'
-        },
-        {
-          name: 'PSG',
-          logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/a/a7/Paris_Saint-Germain_F.C..svg/1200px-Paris_Saint-Germain_F.C..svg.png',
-          type: 'official'
-        }
-      ]);
-    } else {
-      teams = await db.Team.findAll();
-    }
-    
-    // Vytvorenie líg
-    console.log('Vytváram ligy...');
-    
-    // Liga v oficiálnej sezóne
-    const premierLeague = await db.League.create({
-      name: 'Premier League 2024/2025',
-      description: 'Anglická Premier League, najvyššia anglická futbalová súťaž.',
-      image: 'https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Premier_League_Logo.svg/1200px-Premier_League_Logo.svg.png',
-      type: 'official',
-      seasonId: officialSeason.id,
-      active: true,
-      scoringSystem: {
-        exactScore: 10,
-        correctGoals: 1,
-        correctWinner: 3,
-        goalDifference: 2
-      },
-      scoringLocked: false
-    });
-    
-    const laLiga = await db.League.create({
-      name: 'La Liga 2024/2025',
-      description: 'Španielska LaLiga, najvyššia španielska futbalová súťaž.',
-      image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/13/LaLiga.svg/1200px-LaLiga.svg.png',
-      type: 'official',
-      seasonId: officialSeason.id,
-      active: true,
-      scoringSystem: {
-        exactScore: 10,
-        correctGoals: 1,
-        correctWinner: 3,
-        goalDifference: 2
-      },
-      scoringLocked: false
-    });
-    
-    // Liga v komunitnej sezóne
-    const friendsLeague = await db.League.create({
-      name: 'Liga kamarátov',
-      description: 'Naša vlastná liga na tipovanie zápasov podľa výberu.',
-      image: 'https://images.unsplash.com/photo-1577466879723-a2a32823eaee?q=80&w=1000',
-      type: 'custom',
-      seasonId: communitySeason.id,
-      active: true,
-      scoringSystem: {
-        exactScore: 15,  // Vlastný bodovací systém s vyššími bodmi za presný výsledok
-        correctGoals: 2,
-        correctWinner: 5,
-        goalDifference: 3
-      },
-      scoringLocked: false
-    });
-    
-    // Vytvorenie kôl
-    console.log('Vytváram kolá...');
-    
-    // Aktuálny dátum
-    const now = new Date();
-    
-    // Kolá pre Premier League
-    const premierLeagueRound1 = await db.Round.create({
-      name: '1. kolo',
-      description: 'Úvodné kolo Premier League 2024/2025',
-      leagueId: premierLeague.id,
-      startDate: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),  // 7 dní dozadu
-      endDate: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000),    // 6 dní dozadu
-      active: true
-    });
-    
-    const premierLeagueRound2 = await db.Round.create({
-      name: '2. kolo',
-      description: 'Druhé kolo Premier League 2024/2025',
-      leagueId: premierLeague.id,
-      startDate: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),  // 1 deň dozadu
-      endDate: new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000),    // 1 deň dopredu
-      active: true
-    });
-    
-    const premierLeagueRound3 = await db.Round.create({
-      name: '3. kolo',
-      description: 'Tretie kolo Premier League 2024/2025',
-      leagueId: premierLeague.id,
-      startDate: new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000),  // 6 dní dopredu
-      endDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),    // 7 dní dopredu
-      active: true
-    });
-    
-    // Kolá pre La Liga
-    const laLigaRound1 = await db.Round.create({
-      name: '1. kolo',
-      description: 'Úvodné kolo La Liga 2024/2025',
-      leagueId: laLiga.id,
-      startDate: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000),  // 8 dní dozadu
-      endDate: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),    // 7 dní dozadu
-      active: true
-    });
-    
-    const laLigaRound2 = await db.Round.create({
-      name: '2. kolo',
-      description: 'Druhé kolo La Liga 2024/2025',
-      leagueId: laLiga.id,
-      startDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),  // 2 dni dozadu
-      endDate: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),    // 1 deň dozadu
-      active: true
-    });
-    
-    // Kolo pre Ligu kamarátov
-    const friendsLeagueRound = await db.Round.create({
-      name: 'Víkendové zápasy',
-      description: 'Zápasy tohto víkendu, ktoré nás zaujali',
-      leagueId: friendsLeague.id,
-      startDate: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000),  // 3 dni dozadu
-      endDate: new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000),    // 1 deň dopredu
-      active: true
-    });
-    
-    // Vytvorenie zápasov
-    console.log('Vytváram zápasy...');
-    
-    // Zápasy pre Premier League - 1. kolo (už odohraté)
-    const plRound1Match1 = await db.Match.create({
-      roundId: premierLeagueRound1.id,
-      homeTeamId: teams[2].id,  // Manchester United
-      awayTeamId: teams[4].id,  // Liverpool
-      matchTime: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000),
-      homeScore: 2,
-      awayScore: 1,
-      status: 'finished',
-      tipType: 'exact_score'
-    });
-    
-    const plRound1Match2 = await db.Match.create({
-      roundId: premierLeagueRound1.id,
-      homeTeamId: teams[3].id,  // Manchester City
-      awayTeamId: teams[5].id,  // Bayern Mníchov
-      matchTime: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000),
-      homeScore: 3,
-      awayScore: 3,
-      status: 'finished',
-      tipType: 'exact_score'
-    });
-    
-    // Zápasy pre Premier League - 2. kolo (prebiehajúce)
-    const plRound2Match1 = await db.Match.create({
-      roundId: premierLeagueRound2.id,
-      homeTeamId: teams[4].id,  // Liverpool
-      awayTeamId: teams[3].id,  // Manchester City
-      matchTime: new Date(now.getTime() + 12 * 60 * 60 * 1000),
-      status: 'scheduled',
-      tipType: 'exact_score'
-    });
-    
-    const plRound2Match2 = await db.Match.create({
-      roundId: premierLeagueRound2.id,
-      homeTeamId: teams[5].id,  // Bayern Mníchov
-      awayTeamId: teams[2].id,  // Manchester United
-      matchTime: new Date(now.getTime() + 18 * 60 * 60 * 1000),
-      status: 'scheduled',
-      tipType: 'exact_score'
-    });
-    
-    // Zápasy pre Premier League - 3. kolo (budúce)
-    const plRound3Match1 = await db.Match.create({
-      roundId: premierLeagueRound3.id,
-      homeTeamId: teams[2].id,  // Manchester United
-      awayTeamId: teams[3].id,  // Manchester City
-      matchTime: new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000 + 12 * 60 * 60 * 1000),
-      status: 'scheduled',
-      tipType: 'exact_score'
-    });
-    
-    // Zápasy pre La Liga - 1. kolo (už odohraté)
-    const laLigaRound1Match1 = await db.Match.create({
-      roundId: laLigaRound1.id,
-      homeTeamId: teams[0].id,  // FC Barcelona
-      awayTeamId: teams[1].id,  // Real Madrid
-      matchTime: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000),
-      homeScore: 2,
-      awayScore: 2,
-      status: 'finished',
-      tipType: 'exact_score'
-    });
-    
-    // Zápasy pre La Liga - 2. kolo (už odohraté)
-    const laLigaRound2Match1 = await db.Match.create({
-      roundId: laLigaRound2.id,
-      homeTeamId: teams[1].id,  // Real Madrid
-      awayTeamId: teams[7].id,  // PSG
-      matchTime: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000),
-      homeScore: 3,
-      awayScore: 1,
-      status: 'finished',
-      tipType: 'exact_score'
-    });
-    
-    // Zápasy pre Ligu kamarátov
-    const friendsLeagueMatch1 = await db.Match.create({
-      roundId: friendsLeagueRound.id,
-      homeTeamId: teams[0].id,  // FC Barcelona
-      awayTeamId: teams[5].id,  // Bayern Mníchov
-      matchTime: new Date(now.getTime() + 8 * 60 * 60 * 1000),
-      status: 'scheduled',
-      tipType: 'exact_score'
-    });
-    
-    const friendsLeagueMatch2 = await db.Match.create({
-      roundId: friendsLeagueRound.id,
-      homeTeamId: teams[6].id,  // Borussia Dortmund
-      awayTeamId: teams[7].id,  // PSG
-      matchTime: new Date(now.getTime() + 10 * 60 * 60 * 1000),
-      status: 'scheduled',
-      tipType: 'exact_score'
-    });
-    
-    // Vytvorenie tipov pre používateľov
-    console.log('Vytváram tipy...');
-    
-    // Tipy pre prvý zápas Premier League - 1. kolo (už vyhodnotené)
-    await db.Tip.create({
-      userId: vipUser.id,
-      matchId: plRound1Match1.id,
-      homeScore: 2,
-      awayScore: 1,
-      winner: 'home',
-      points: 10,  // Presný výsledok
-      submitted: true
-    });
-    
-    await db.Tip.create({
-      userId: regularUser.id,
-      matchId: plRound1Match1.id,
-      homeScore: 1,
-      awayScore: 0,
-      winner: 'home',
-      points: 4,  // Správny víťaz (3) + Správny gólový rozdiel (1)
-      submitted: true
-    });
-    
-    // Tipy pre druhý zápas Premier League - 1. kolo (už vyhodnotené)
-    await db.Tip.create({
-      userId: vipUser.id,
-      matchId: plRound1Match2.id,
-      homeScore: 2,
-      awayScore: 2,
-      winner: 'draw',
-      points: 3,  // Správny víťaz - remíza
-      submitted: true
-    });
-    
-    await db.Tip.create({
-      userId: regularUser.id,
-      matchId: plRound1Match2.id,
-      homeScore: 3,
-      awayScore: 3,
-      winner: 'draw',
-      points: 10,  // Presný výsledok
-      submitted: true
-    });
-    
-    // Tipy pre zápasy Premier League - 2. kolo (ešte neodohraté)
-    await db.Tip.create({
-      userId: vipUser.id,
-      matchId: plRound2Match1.id,
-      homeScore: 2,
-      awayScore: 1,
-      winner: 'home',
-      points: 0,
-      submitted: true
-    });
-    
-    await db.Tip.create({
-      userId: regularUser.id,
-      matchId: plRound2Match1.id,
-      homeScore: 1,
-      awayScore: 2,
-      winner: 'away',
-      points: 0,
-      submitted: true
-    });
-    
-    // Tipy pre zápasy Liga kamarátov
-    await db.Tip.create({
-      userId: vipUser.id,
-      matchId: friendsLeagueMatch1.id,
-      homeScore: 3,
-      awayScore: 2,
-      winner: 'home',
-      points: 0,
-      submitted: true
-    });
-    
-    await db.Tip.create({
-      userId: regularUser.id,
-      matchId: friendsLeagueMatch1.id,
-      homeScore: 2,
-      awayScore: 2,
-      winner: 'draw',
-      points: 0,
-      submitted: true
-    });
-    
-    console.log('Základné dáta boli úspešne vytvorené!');
-    
-  } catch (error) {
-    console.error('Chyba pri seedovaní základných dát:', error);
-  }
-};
 
+  const PW = await bcrypt.hash('password123', 10);
+
+  // ---------- POUŽÍVATELIA ----------
+  console.log('  → používatelia');
+  const admin = await db.User.create({ username: 'admin', email: 'admin@tiperliga.sk', password: PW, firstName: 'Admin', lastName: 'Tiperliga', role: 'admin' });
+  const vip = await db.User.create({ username: 'vip', email: 'vip@tiperliga.sk', password: PW, firstName: 'Viktor', lastName: 'Important', role: 'vip' });
+  const peter = await db.User.create({ username: 'peter', email: 'peter@tiperliga.sk', password: PW, firstName: 'Peter', lastName: 'Novák', role: 'player' });
+  const jana = await db.User.create({ username: 'jana', email: 'jana@tiperliga.sk', password: PW, firstName: 'Jana', lastName: 'Kováčová', role: 'player' });
+  const marek = await db.User.create({ username: 'marek', email: 'marek@tiperliga.sk', password: PW, firstName: 'Marek', lastName: 'Horák', role: 'player' });
+  const lucia = await db.User.create({ username: 'lucia', email: 'lucia@tiperliga.sk', password: PW, firstName: 'Lucia', lastName: 'Tóthová', role: 'player' });
+  const players = [peter, jana, marek, lucia];
+ 
+  // ---------- TÍMY (globálne) ----------
+  console.log('  → tímy');
+  const mkTeam = (name, teamType, sport, country) => db.Team.create({ name, scope: 'global', teamType, sport, country, creatorId: null });
+  // národné (futbal aj hokej ich zdieľa)
+  const svk = await mkTeam('Slovensko', 'national', null, 'SK');
+  const cze = await mkTeam('Česko', 'national', null, 'CZ');
+  const can = await mkTeam('Kanada', 'national', null, 'CA');
+  const fin = await mkTeam('Fínsko', 'national', null, 'FI');
+  const swe = await mkTeam('Švédsko', 'national', null, 'SE');
+  const ger = await mkTeam('Nemecko', 'national', null, 'DE');
+  // futbalové kluby (EN/ES)
+  const ars = await mkTeam('Arsenal', 'club', 'football', 'EN');
+  const mci = await mkTeam('Manchester City', 'club', 'football', 'EN');
+  const liv = await mkTeam('Liverpool', 'club', 'football', 'EN');
+  const che = await mkTeam('Chelsea', 'club', 'football', 'EN');
+  const rma = await mkTeam('Real Madrid', 'club', 'football', 'ES');
+  const fcb = await mkTeam('FC Barcelona', 'club', 'football', 'ES');
+  // hokejové kluby (SK)
+  const kos = await mkTeam('HC Košice', 'club', 'hockey', 'SK');
+  const slo = await mkTeam('HC Slovan Bratislava', 'club', 'hockey', 'SK');
+  const nit = await mkTeam('HK Nitra', 'club', 'hockey', 'SK');
+  const zvo = await mkTeam('HKM Zvolen', 'club', 'hockey', 'SK');
+ 
+  // helper: vytvor kolo + zápasy + tipy
+  // matchDefs: [{home, away, time, tipType, result?}]  result = {h,a} alebo 'canceled' alebo null
+  async function makeRound(league, name, startOffset, endOffset, matchDefs, tipPlan) {
+    const round = await db.Round.create({
+      name, description: null, leagueId: league.id,
+      startDate: daysFromNow(startOffset), endDate: daysFromNow(endOffset), active: true,
+    });
+    const createdMatches = [];
+    for (const md of matchDefs) {
+      const m = await db.Match.create({
+        roundId: round.id, homeTeamId: md.home.id, awayTeamId: md.away.id,
+        matchTime: daysFromNow(md.time), tipType: md.tipType || 'exact_score',
+        homeScore: (md.result && md.result !== 'canceled') ? md.result.h : null,
+        awayScore: (md.result && md.result !== 'canceled') ? md.result.a : null,
+        status: md.result === 'canceled' ? 'canceled' : (md.result ? 'finished' : 'scheduled'),
+      });
+      createdMatches.push(m);
+      // tímy zápasu zaraď do súpisky ligy (idempotentne)
+      await db.LeagueTeam.findOrCreate({ where: { leagueId: league.id, teamId: md.home.id }, defaults: { leagueId: league.id, teamId: md.home.id } });
+      await db.LeagueTeam.findOrCreate({ where: { leagueId: league.id, teamId: md.away.id }, defaults: { leagueId: league.id, teamId: md.away.id } });
+    }
+    // tipy: tipPlan(matchIndex, user) → {h,a} alebo {winner} alebo null
+    if (tipPlan) {
+      for (let i = 0; i < createdMatches.length; i++) {
+        const m = createdMatches[i];
+        for (const u of players) {
+          const t = tipPlan(i, u, m);
+          if (!t) continue;
+          const tip = await db.Tip.create({
+            userId: u.id, matchId: m.id,
+            homeScore: t.h != null ? t.h : null,
+            awayScore: t.a != null ? t.a : null,
+            winner: t.winner || (t.h != null ? (t.h > t.a ? 'home' : t.h < t.a ? 'away' : 'draw') : null),
+            points: 0, submitted: true,
+          });
+          // ak je zápas vyhodnotený, doráta body
+          if (m.status === 'finished') {
+            tip.points = scorePoints(tip, m, league.scoringSystem);
+            await tip.save();
+          }
+        }
+      }
+    }
+    return { round, matches: createdMatches };
+  }
+ 
+  // bodovanie (rovnaké ako calculatePoints v match.controller)
+  function outcome(h, a) { return h > a ? 'home' : h < a ? 'away' : 'draw'; }
+  function scorePoints(tip, match, scoring) {
+    const s = scoring || { exactScore: 10, correctGoals: 1, correctWinner: 3, goalDifference: 2 };
+    const { homeScore, awayScore, tipType } = match;
+    if (homeScore == null || awayScore == null) return 0;
+    const actual = outcome(homeScore, awayScore);
+    if (tipType === 'winner') return tip.winner && tip.winner === actual ? s.correctWinner : 0;
+    if (tip.homeScore == null || tip.awayScore == null) return tip.winner && tip.winner === actual ? s.correctWinner : 0;
+    if (tip.homeScore === homeScore && tip.awayScore === awayScore) return s.exactScore;
+    let p = 0;
+    if (tip.homeScore === homeScore) p += s.correctGoals;
+    if (tip.awayScore === awayScore) p += s.correctGoals;
+    if (outcome(tip.homeScore, tip.awayScore) === actual) p += s.correctWinner;
+    if ((tip.homeScore - tip.awayScore) === (homeScore - awayScore)) p += s.goalDifference;
+    return p;
+  }
+ 
+  const DEF_SCORING = { exactScore: 10, correctGoals: 1, correctWinner: 3, goalDifference: 2 };
+ 
+  // pomocné členstvá
+  const joinSeason = (season, user, role = 'player') => db.UserSeason.create({ userId: user.id, seasonId: season.id, role, joinedAt: new Date() });
+  const joinLeague = (league, user, role = 'player') => db.UserLeague.create({ userId: user.id, leagueId: league.id, role, joinedAt: new Date() });
+ 
+  // ============================================================
+  // SEZÓNA 1 — Oficiálna, PREBIEHAJÚCA: "MS vo futbale 2026"
+  // ============================================================
+  console.log('  → sezóna: MS vo futbale 2026 (oficiálna, prebieha)');
+  const sMS = await db.Season.create({
+    name: 'MS vo futbale 2026', description: 'Oficiálne tipovanie majstrovstiev sveta.',
+    type: 'official', inviteCode: code6(), creatorId: admin.id, active: true,
+    startDate: daysFromNow(-30), endDate: daysFromNow(40), ended: false,
+    password: null, hasPassword: false, hidden: false, participantLimit: null,
+  });
+  await joinSeason(sMS, admin, 'admin');
+  for (const u of players) await joinSeason(sMS, u);
+  await joinSeason(sMS, vip);
+ 
+  // Liga 1A — oficiálna ŠABLÓNA (prebieha), s ukončeným + otvoreným + naplánovaným kolom
+  const lMSmain = await db.League.create({
+    name: 'MS 2026 — hlavná', description: 'Hlavná oficiálna liga MS.',
+    type: 'official', joinCode: code6(), password: null, hasPassword: false,
+    seasonId: sMS.id, creatorId: admin.id, scoringSystem: DEF_SCORING, scoringLocked: true,
+    active: true, isTemplate: true, templateId: null,
+  });
+  await joinLeague(lMSmain, admin, 'admin');
+  for (const u of players) await joinLeague(lMSmain, u);
+ 
+  // ukončené kolo (v minulosti) — vyhodnotené zápasy + zrušený
+  const msR1 = await makeRound(lMSmain, 'Skupina A — 1. kolo', -20, -14, [
+    { home: svk, away: ger, time: -18, result: { h: 1, a: 2 } },
+    { home: fcb, away: rma, time: -17, result: { h: 3, a: 3 } },
+    { home: ars, away: liv, time: -16, result: 'canceled' },
+    { home: cze, away: swe, time: -15, tipType: 'winner', result: { h: 2, a: 0 } },
+  ], (i, u) => {
+    // rôzne tipy podľa hráča → rôzne body
+    const plans = [
+      [{ h: 1, a: 2 }, { h: 2, a: 1 }, { h: 0, a: 0 }, { winner: 'home' }],   // peter
+      [{ h: 0, a: 2 }, { h: 3, a: 3 }, { h: 1, a: 1 }, { winner: 'away' }],   // jana
+      [{ h: 1, a: 1 }, { h: 2, a: 2 }, { h: 2, a: 0 }, { winner: 'home' }],   // marek
+      [{ h: 2, a: 2 }, { h: 1, a: 0 }, { h: 1, a: 1 }, { winner: 'draw' }],   // lucia
+    ];
+    const idx = players.indexOf(u);
+    return plans[idx] ? plans[idx][i] : null;
+  });
+ 
+  // otvorené kolo (prebieha — tipuje sa): start v minulosti, koniec v budúcnosti
+  await makeRound(lMSmain, 'Skupina A — 2. kolo', -2, 6, [
+    { home: svk, away: cze, time: 3 },
+    { home: ger, away: swe, time: 4 },
+    { home: rma, away: ars, time: 5, tipType: 'winner' },
+  ], (i, u) => {
+    // niektorí už tipli, niektorí nie
+    if (u === lucia) return null; // Lucia ešte netipovala
+    const plans = [
+      [{ h: 2, a: 1 }, { h: 1, a: 1 }, { winner: 'home' }],
+      [{ h: 1, a: 0 }, { h: 2, a: 2 }, { winner: 'away' }],
+      [{ h: 0, a: 0 }, { h: 3, a: 1 }, { winner: 'draw' }],
+    ];
+    const idx = players.indexOf(u);
+    return plans[idx] ? plans[idx][i] : null;
+  });
+ 
+  // naplánované kolo (ešte sa neotvorilo): start aj koniec v budúcnosti
+  await makeRound(lMSmain, 'Štvrťfinále', 10, 16, [
+    { home: svk, away: fcb, time: 12 },
+    { home: liv, away: rma, time: 13 },
+  ], null);
+ 
+  // Liga 1B — custom liga v tej istej oficiálnej sezóne (vytvoril vip)
+  const lMSfun = await db.League.create({
+    name: 'MS — partia z práce', description: 'Súkromná tipovačka kolegov.',
+    type: 'custom', joinCode: code6(), password: null, hasPassword: false,
+    seasonId: sMS.id, creatorId: vip.id, scoringSystem: { exactScore: 15, correctGoals: 2, correctWinner: 5, goalDifference: 3 },
+    scoringLocked: false, active: true, isTemplate: false, templateId: null,
+  });
+  await joinLeague(lMSfun, vip, 'admin');
+  await joinLeague(lMSfun, peter);
+  await joinLeague(lMSfun, jana);
+  await makeRound(lMSfun, '1. kolo', -10, -4, [
+    { home: ars, away: che, time: -8, result: { h: 2, a: 0 } },
+    { home: rma, away: fcb, time: -7, result: { h: 1, a: 4 } },
+  ], (i, u) => {
+    if (u !== peter && u !== jana) return null;
+    const plans = { peter: [{ h: 2, a: 0 }, { h: 2, a: 2 }], jana: [{ h: 1, a: 0 }, { h: 1, a: 4 }] };
+    return plans[u.username] ? plans[u.username][i] : null;
+  });
+ 
+  // ============================================================
+  // SEZÓNA 2 — Oficiálna, PREBIEHAJÚCA: "NHL 2025/26" (hokej)
+  // ============================================================
+  console.log('  → sezóna: NHL 2025/26 (oficiálna, prebieha)');
+  const sNHL = await db.Season.create({
+    name: 'NHL 2025/26', description: 'Tipovanie zápasov NHL.',
+    type: 'official', inviteCode: code6(), creatorId: admin.id, active: true,
+    startDate: daysFromNow(-15), endDate: daysFromNow(60), ended: false,
+    password: null, hasPassword: false, hidden: false, participantLimit: null,
+  });
+  await joinSeason(sNHL, admin, 'admin');
+  await joinSeason(sNHL, marek);
+  await joinSeason(sNHL, lucia);
+ 
+  const lNHL = await db.League.create({
+    name: 'NHL — základná časť', description: 'Oficiálna NHL liga.',
+    type: 'official', joinCode: code6(), password: null, hasPassword: false,
+    seasonId: sNHL.id, creatorId: admin.id, scoringSystem: DEF_SCORING, scoringLocked: false,
+    active: true, isTemplate: false, templateId: null,
+  });
+  await joinLeague(lNHL, admin, 'admin');
+  await joinLeague(lNHL, marek);
+  await joinLeague(lNHL, lucia);
+  await makeRound(lNHL, '1. hrací deň', -5, -1, [
+    { home: kos, away: slo, time: -4, result: { h: 4, a: 2 } },
+    { home: nit, away: zvo, time: -3, result: { h: 1, a: 1 } },
+  ], (i, u) => {
+    if (u !== marek && u !== lucia) return null;
+    const plans = { marek: [{ h: 4, a: 2 }, { h: 2, a: 1 }], lucia: [{ h: 3, a: 2 }, { h: 1, a: 1 }] };
+    return plans[u.username] ? plans[u.username][i] : null;
+  });
+  await makeRound(lNHL, '2. hrací deň', -1, 5, [
+    { home: slo, away: nit, time: 2 },
+    { home: zvo, away: kos, time: 3 },
+  ], (i, u) => {
+    if (u !== marek) return null;
+    return [{ h: 2, a: 3 }, { h: 0, a: 2 }][i];
+  });
+ 
+  // ============================================================
+  // SEZÓNA 3 — Komunitná, SÚKROMNÁ, PREBIEHAJÚCA: "Kamaráti"
+  // ============================================================
+  console.log('  → sezóna: Kamaráti (komunitná, súkromná, prebieha)');
+  const sKam = await db.Season.create({
+    name: 'Kamaráti — futbal', description: 'Súkromná tipovačka partie. Heslo: kamarati',
+    type: 'community', inviteCode: code6(), creatorId: vip.id, active: true,
+    startDate: daysFromNow(-7), endDate: daysFromNow(30), ended: false,
+    password: await bcrypt.hash('kamarati', 10), hasPassword: true, hidden: false, participantLimit: 100,
+  });
+  await joinSeason(sKam, vip, 'admin');
+  await joinSeason(sKam, peter);
+  await joinSeason(sKam, jana);
+ 
+  // KLON ligy zo šablóny lMSmain (živé prepojenie výsledkov)
+  const lKamClone = await db.League.create({
+    name: 'Naše MS 2026', description: 'Klon oficiálneho MS, súťažíme len my.',
+    type: 'custom', joinCode: code6(), password: null, hasPassword: false,
+    seasonId: sKam.id, creatorId: vip.id, scoringSystem: { exactScore: 12, correctGoals: 1, correctWinner: 4, goalDifference: 2 },
+    scoringLocked: false, active: true, isTemplate: false, templateId: lMSmain.id,
+  });
+  await joinLeague(lKamClone, vip, 'admin');
+  await joinLeague(lKamClone, peter);
+  await joinLeague(lKamClone, jana);
+  // naklonuj kolá+zápasy zo šablóny (rovnaká logika ako league-clone.util)
+  const tplRounds = await db.Round.findAll({ where: { leagueId: lMSmain.id }, include: [{ model: db.Match }], order: [['startDate', 'ASC']] });
+  for (const r of tplRounds) {
+    const nr = await db.Round.create({ name: r.name, description: r.description, leagueId: lKamClone.id, startDate: r.startDate, endDate: r.endDate, active: r.active });
+    for (const m of (r.Matches || [])) {
+      // klon dedí výsledok z originálu (kvôli zobrazeniu zapíšeme aktuálny stav)
+      await db.Match.create({
+        roundId: nr.id, homeTeamId: m.homeTeamId, awayTeamId: m.awayTeamId, matchTime: m.matchTime,
+        tipType: m.tipType, homeScore: m.homeScore, awayScore: m.awayScore, status: m.status, sourceMatchId: m.id,
+      });
+      await db.LeagueTeam.findOrCreate({ where: { leagueId: lKamClone.id, teamId: m.homeTeamId }, defaults: { leagueId: lKamClone.id, teamId: m.homeTeamId } });
+      await db.LeagueTeam.findOrCreate({ where: { leagueId: lKamClone.id, teamId: m.awayTeamId }, defaults: { leagueId: lKamClone.id, teamId: m.awayTeamId } });
+    }
+  }
+  // pár tipov v klone na vyhodnotené zápasy (prvé kolo klonu)
+  const cloneFirstRound = await db.Round.findOne({ where: { leagueId: lKamClone.id }, order: [['startDate', 'ASC']], include: [{ model: db.Match }] });
+  if (cloneFirstRound) {
+    const cms = cloneFirstRound.Matches || [];
+    const tipPlans = { peter: [{ h: 1, a: 2 }, { h: 2, a: 3 }, null, { winner: 'home' }], jana: [{ h: 0, a: 1 }, { h: 3, a: 3 }, null, { winner: 'home' }] };
+    for (let i = 0; i < cms.length; i++) {
+      for (const u of [peter, jana]) {
+        const plan = tipPlans[u.username][i]; if (!plan) continue;
+        const m = cms[i];
+        const tip = await db.Tip.create({ userId: u.id, matchId: m.id, homeScore: plan.h != null ? plan.h : null, awayScore: plan.a != null ? plan.a : null, winner: plan.winner || (plan.h != null ? outcome(plan.h, plan.a) : null), points: 0, submitted: true });
+        if (m.status === 'finished') { tip.points = scorePoints(tip, m, lKamClone.scoringSystem); await tip.save(); }
+      }
+    }
+  }
+ 
+  // ============================================================
+  // SEZÓNA 4 — Komunitná, UKONČENÁ: "Stará liga 2024"
+  // ============================================================
+  console.log('  → sezóna: Stará liga 2024 (ukončená)');
+  const sOld = await db.Season.create({
+    name: 'Stará liga 2024', description: 'Minuloročná súťaž, už ukončená.',
+    type: 'community', inviteCode: code6(), creatorId: vip.id, active: false,
+    startDate: daysFromNow(-200), endDate: daysFromNow(-60), ended: true,
+    password: null, hasPassword: false, hidden: false, participantLimit: 100,
+  });
+  await joinSeason(sOld, vip, 'admin');
+  for (const u of players) await joinSeason(sOld, u);
+  const lOld = await db.League.create({
+    name: 'Liga 2024 — final', description: 'Ukončená liga.',
+    type: 'custom', joinCode: code6(), password: null, hasPassword: false,
+    seasonId: sOld.id, creatorId: vip.id, scoringSystem: DEF_SCORING, scoringLocked: true,
+    active: false, isTemplate: false, templateId: null,
+  });
+  await joinLeague(lOld, vip, 'admin');
+  for (const u of players) await joinLeague(lOld, u);
+  await makeRound(lOld, 'Posledné kolo', -90, -70, [
+    { home: ars, away: che, time: -85, result: { h: 2, a: 1 } },
+    { home: liv, away: mci, time: -84, result: { h: 0, a: 3 } },
+    { home: rma, away: fcb, time: -83, result: { h: 2, a: 2 } },
+  ], (i, u) => {
+    const plans = [
+      [{ h: 2, a: 1 }, { h: 1, a: 2 }, { h: 2, a: 2 }],
+      [{ h: 1, a: 1 }, { h: 0, a: 3 }, { h: 1, a: 1 }],
+      [{ h: 3, a: 0 }, { h: 0, a: 2 }, { h: 2, a: 2 }],
+      [{ h: 2, a: 1 }, { h: 1, a: 1 }, { h: 3, a: 3 }],
+    ];
+    const idx = players.indexOf(u);
+    return plans[idx] ? plans[idx][i] : null;
+  });
+ 
+  // ============================================================
+  // SEZÓNA 5 — Komunitná, PRIPRAVOVANÁ (upcoming): "Budúca sezóna"
+  // ============================================================
+  console.log('  → sezóna: Budúca sezóna (pripravovaná)');
+  const sFuture = await db.Season.create({
+    name: 'Letná liga 2026', description: 'Štartuje čoskoro.',
+    type: 'community', inviteCode: code6(), creatorId: peter.id, active: true,
+    startDate: daysFromNow(20), endDate: daysFromNow(120), ended: false,
+    password: null, hasPassword: false, hidden: false, participantLimit: 100,
+  });
+  await joinSeason(sFuture, peter, 'admin');
+  const lFuture = await db.League.create({
+    name: 'Letná liga — hlavná', description: 'Pripravovaná liga.',
+    type: 'custom', joinCode: code6(), password: null, hasPassword: false,
+    seasonId: sFuture.id, creatorId: peter.id, scoringSystem: DEF_SCORING, scoringLocked: false,
+    active: true, isTemplate: false, templateId: null,
+  });
+  await joinLeague(lFuture, peter, 'admin');
+  await makeRound(lFuture, '1. kolo', 22, 28, [
+    { home: svk, away: cze, time: 24 },
+    { home: fin, away: swe, time: 25 },
+  ], null);
+ 
+  console.log('  ✓ testovací seed dokončený');
+}
+ 
 module.exports = seedInitialData;
