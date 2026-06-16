@@ -46,6 +46,8 @@
 
 <%
   const initials = (u) => { const n = [u.firstName,u.lastName].filter(Boolean).join(' ') || u.username || '?'; return n.split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('').toUpperCase(); };
+  // skratka názvu kola: ak má viac slov → iniciály slov; inak prvé 3 písmená
+  const roundAbbr = (name) => { const t = (name || '').trim(); if (!t) return '?'; const w = t.split(/\s+/); if (w.length > 1) return w.map(x=>x[0]).filter(Boolean).slice(0,3).join('').toUpperCase(); return t.substring(0,3).toUpperCase(); };
   const fmtName = (u) => u.firstName ? (u.firstName + ' ' + (u.lastName ? u.lastName[0] + '.' : '')).trim() : (u.username || 'Hráč');
   const s = league.scoringSystem || {};
   const lgInit = (league.name||'L').substring(0,2).toUpperCase();
@@ -56,7 +58,7 @@
   <div class="lg-banner">
     <span class="lg-cover" style="background:linear-gradient(135deg,#7c5cff,#3b1f8a)"><%= lgInit %></span>
     <div class="lg-head-text">
-      <div class="row g-2 wrap-gap"><h1 style="font-size:clamp(1.8rem,3vw,2.4rem)"><%= league.name %></h1><span class="tag <%= league.type === 'official' ? 'tag-brand' : 'tag-gold' %>"><%= league.type === 'official' ? 'Oficiálna liga' : 'Custom liga' %></span><% if (league.hasPassword) { %><span class="tag tag-muted">🔒 Heslo</span><% } %></div>
+      <div class="row g-2 wrap-gap"><h1 style="font-size:clamp(1.8rem,3vw,2.4rem)"><%= league.name %></h1><span class="tag <%= league.type === 'official' ? 'tag-brand' : 'tag-gold' %>"><%= league.type === 'official' ? 'Oficiálna liga' : 'Custom liga' %></span><% if (league.hasPassword) { %><span class="tag tag-muted">🔒 Heslo</span><% } %><% if (league.ended) { %><span class="tag tag-muted">Ukončená</span><% } %></div>
     </div>
     <p class="lg-desc muted"><%= league.description || '' %></p>
     <div class="lg-info card card-pad">
@@ -77,7 +79,7 @@
       <% } %>
       <% if (typeof isMember !== 'undefined' && isMember && !isCreator) { %>
         <form action="/leagues/<%= league.id %>/leave" method="POST" onsubmit="return confirm('Naozaj opustiť túto ligu?')" style="display:inline">
-          <button type="submit" class="btn btn-ghost">Opustiť ligu</button>
+          <button type="submit" class="btn btn-secondary">Opustiť ligu</button>
         </form>
       <% } %>
       <button class="btn btn-secondary btn-icon" title="Zdieľať" data-copy data-copy-val="<%= league.joinCode %>">↗</button>
@@ -87,7 +89,16 @@
 
 <div class="wrap lg-layout">
   <main>
-    <div class="between" style="margin-bottom:16px"><h3 style="font-size:var(--fs-h4)">Kolá ligy</h3><a href="/rounds/create?league=<%= league.id %>" class="btn btn-brand btn-sm">+ Vytvoriť kolo</a></div>
+    <% if (typeof canManage !== 'undefined' && canManage && !league.templateId && typeof teamsCount !== 'undefined' && teamsCount === 0) { %>
+    <div class="card card-pad" style="border-color:var(--warning-line,rgba(245,180,80,.4));margin-bottom:16px;display:flex;gap:12px;align-items:flex-start">
+      <span style="font-size:18px">⚠️</span>
+      <div>
+        <b class="hi">Liga nemá žiadne tímy</b>
+        <p class="muted" style="font-size:var(--fs-sm);margin-top:4px">Bez tímov nevieš vytvárať zápasy. Prirad ich v <a href="/leagues/<%= league.id %>/edit" style="text-decoration:underline">úprave ligy</a>.</p>
+      </div>
+    </div>
+    <% } %>
+    <div class="between" style="margin-bottom:16px"><h3 style="font-size:var(--fs-h4)">Kolá ligy</h3><% if (typeof canManage !== 'undefined' && canManage && !league.templateId && !league.ended) { %><a href="/rounds/create?league=<%= league.id %>" class="btn btn-brand btn-sm">+ Vytvoriť kolo</a><% } %></div>
     <div class="stack g-3">
       <% if (rounds.length === 0) { %>
         <p class="muted">V tejto lige zatiaľ nie sú žiadne kolá.</p>
@@ -95,21 +106,21 @@
       <% rounds.forEach(function (r) { %>
         <% if (r.status === 'open') { %>
         <div class="card round-item" style="border-color:var(--brand-line)">
-          <span class="round-n active"><%= r.name %></span>
+          <span class="round-n active"><%= roundAbbr(r.name) %></span>
           <div><div class="row g-2 wrap-gap"><b class="hi"><%= r.description || r.name %></b><span class="tag tag-warning"><span class="dot"></span>Otvorené</span></div><div class="muted" style="font-size:var(--fs-sm)"><%= r.matchesCount %> zápasov · uzávierka <%= new Date(r.endDate).toLocaleDateString('sk-SK') %></div></div>
           <span class="rnd-pts muted" style="font-size:var(--fs-sm)">tipuješ <b class="hi"><%= r.myTips %>/<%= r.matchesCount %></b></span>
           <a href="/rounds/<%= r.id %>" class="rnd-btn btn btn-primary btn-sm">Tipovať</a>
         </div>
         <% } else if (r.status === 'finished') { %>
         <div class="card round-item">
-          <span class="round-n"><%= r.name %></span>
+          <span class="round-n"><%= roundAbbr(r.name) %></span>
           <div><div class="row g-2 wrap-gap"><b class="hi"><%= r.description || r.name %></b><span class="tag tag-success"><span class="dot"></span>Ukončené</span></div><div class="muted" style="font-size:var(--fs-sm)"><%= r.matchesCount %> zápasov · <%= new Date(r.endDate).toLocaleDateString('sk-SK') %></div></div>
           <span class="rnd-pts muted" style="font-size:var(--fs-sm)"></span>
           <a href="/rounds/<%= r.id %>" class="rnd-btn btn btn-secondary btn-sm">Výsledky</a>
         </div>
         <% } else { %>
         <div class="card round-item" style="opacity:.6">
-          <span class="round-n"><%= r.name %></span>
+          <span class="round-n"><%= roundAbbr(r.name) %></span>
           <div><div class="row g-2 wrap-gap"><b class="hi"><%= r.description || r.name %></b><span class="tag tag-info">Naplánované</span></div><div class="muted" style="font-size:var(--fs-sm)">Otvorí sa <%= new Date(r.startDate).toLocaleDateString('sk-SK') %></div></div>
           <span class="rnd-pts muted" style="font-size:var(--fs-sm)">—</span>
           <span class="rnd-btn btn btn-ghost btn-sm" aria-disabled="true">Čaká</span>

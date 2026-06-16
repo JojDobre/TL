@@ -12,6 +12,7 @@
 const { Match, Round, Team, League, Season, User, UserSeason, Sequelize, Tip } = require('../models');
 const { Op } = Sequelize;
 const { ApiError, asyncHandler } = require('../middleware/error.middleware');
+const { isLeagueLocked } = require('../utils/league.utils');
 
 const DEFAULT_SCORING = { exactScore: 10, correctGoals: 1, correctWinner: 3, goalDifference: 2 };
 
@@ -302,10 +303,60 @@ const deleteMatch = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: 'Zápas bol úspešne vymazaný.' });
 });
 
+// POST /api/rounds/:id/matches/bulk  { rows: "Domáci;Hosť;2026-06-10 20:00;typ\n..." }
+// Hromadné pridanie zápasov z CSV/textu. Tímy sa hľadajú podľa názvu v súpiske
+// ligy (case-insensitive). Typ (4. stĺpec) je voliteľný: "winner"/"vitaz" → víťaz.
+const bulkCreateMatches = asyncHandler(async (req, res) => {
+  const roundId = req.params.id;
+  const userId = req.userId;
+  const text = (req.body.rows || '').trim();
+  if (!text) throw new ApiError(400, 'Zadaj aspoň jeden riadok.');
+
+  const round = await Round.findByPk(roundId, {
+    include: [{ model: League, include: [{ model: Season, attributes: ['id', 'creatorId', 'endDate', 'ended'] }] }],
+  });
+  if (!round) throw new ApiError(404, 'Kolo nebolo nájdené.');
+  if (!(await canManageMatch({ Round: round }, userId))) {
+    throw new ApiError(403, 'Nemáš oprávnenie pridávať zápasy do tohto kola.');
+  }
+  const league = round.League;
+  if (league.templateId) throw new ApiError(400, 'Liga zo šablóny — zápasy sa nedajú pridávať.');
+  if (isLeagueLocked(league)) throw new ApiError(400, 'Liga je ukončená — zápasy sa nedajú pridávať.');
+
+  // súpiska ligy → mapa názov(lowercase) → tím
+  const teams = await league.getTeams();
+  const byName = {};
+  teams.forEach((t) => { byName[t.name.trim().toLowerCase()] = t; });
+
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+  let added = 0;
+  const errors = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    // oddeľovač ; alebo tab alebo viac medzier (čas obsahuje medzeru, preto ;)
+    const parts = lines[i].split(/[;\t]/).map((p) => p.trim());
+    if (parts.length < 3) { errors.push(`Riadok ${i + 1}: čakám aspoň „domáci; hosť; čas".`); continue; }
+    const [homeName, awayName, timeStr, typeStr] = parts;
+    const home = byName[(homeName || '').toLowerCase()];
+    const away = byName[(awayName || '').toLowerCase()];
+    if (!home) { errors.push(`Riadok ${i + 1}: tím „${homeName}" nie je v súpiske ligy.`); continue; }
+    if (!away) { errors.push(`Riadok ${i + 1}: tím „${awayName}" nie je v súpiske ligy.`); continue; }
+    if (home.id === away.id) { errors.push(`Riadok ${i + 1}: tímy sú rovnaké.`); continue; }
+    const when = new Date(timeStr.replace(' ', 'T'));
+    if (isNaN(when)) { errors.push(`Riadok ${i + 1}: neplatný čas „${timeStr}".`); continue; }
+    const tipType = /^(winner|víťaz|vitaz|1x2)$/i.test(typeStr || '') ? 'winner' : 'exact_score';
+    await Match.create({ roundId: round.id, homeTeamId: home.id, awayTeamId: away.id, matchTime: when, tipType, status: 'scheduled' });
+    added += 1;
+  }
+
+  res.status(201).json({ success: true, message: `Pridaných ${added} zápasov.`, added, errors });
+});
+
 module.exports = {
   getAllMatches,
   getMatchById,
   createMatch,
+  bulkCreateMatches,
   updateMatch,
   evaluateMatch,
   deleteMatch,

@@ -99,12 +99,34 @@
       <div class="row g-3" style="margin-bottom:12px"><span class="team-logo" style="width:48px;height:48px;font-size:16px;background:linear-gradient(135deg,#7c5cff,#3b1f8a)"><%= lgInit %></span><div><b class="hi"><%= league.name %></b></div></div>
       <div class="row g-2 wrap-gap"><span class="tag <%= league.type === 'official' ? 'tag-brand' : 'tag-gold' %>"><%= league.type === 'official' ? 'Oficiálna' : 'Custom' %></span><% if (league.hasPassword) { %><span class="tag tag-muted">🔒 Heslo</span><% } %></div>
     </div>
+
     <div class="card card-pad" style="margin-top:18px">
       <button type="submit" class="btn btn-primary btn-block">Uložiť zmeny</button>
       <a href="/leagues/<%= league.id %>" class="btn btn-ghost btn-block" style="margin-top:8px">Zrušiť</a>
     </div>
+
+      <div class="card card-pad" style="border-color:var(--danger-line,rgba(220,80,80,.3));margin-top:18px">
+    <% if (league.ended) { %>
+    <b class="hi" style="display:block;margin-bottom:6px">Liga je ukončená</b>
+    <p class="muted" style="font-size:var(--fs-sm);margin-bottom:12px">Liga je uzamknutá. Môžeš ju znovu otvoriť, alebo natrvalo zmazať.</p>
+    <form action="/leagues/<%= league.id %>/end" method="POST" style="margin-bottom:10px">
+      <button type="submit" class="btn btn-secondary btn-block">Znovu otvoriť ligu</button>
+    </form>
+    <% } else { %>
+    <b class="hi" style="display:block;margin-bottom:6px">Ukončiť ligu</b>
+    <p class="muted" style="font-size:var(--fs-sm);margin-bottom:12px">Uzamkne ligu — žiadne nové kolá, zápasy ani tipy. Dá sa znovu otvoriť.</p>
+    <form action="/leagues/<%= league.id %>/end" method="POST" onsubmit="return confirm('Ukončiť ligu? Uzamkne sa (dá sa znovu otvoriť).');" style="margin-bottom:10px">
+      <button type="submit" class="btn btn-block" style="background:var(--danger,#dc5050);color:#fff">Ukončiť ligu</button>
+    </form>
+    <% } %>
+    <form action="/leagues/<%= league.id %>/delete" method="POST" onsubmit="return confirm('NAOZAJ ZMAZAŤ ligu? Vymažú sa kolá, zápasy aj tipy. Nevratné!');">
+      <button type="submit" class="btn btn-ghost btn-block" style="color:var(--danger);margin-top:8px">Zmazať ligu (nevratné)</button>
+    </form>
+  </div>
   </aside>
 </form>
+
+
 
 <% if (!isClone) { %>
 <!-- ===== SÚPISKA TÍMOV LIGY (mimo hlavného formulára, cez API) ===== -->
@@ -151,6 +173,7 @@
 <script>
 (function () {
   var leagueId = <%= league.id %>;
+  var CURRENT_USER_ID = <%= currentUserId || 'null' %>;
   var $ = function(id){ return document.getElementById(id); };
   function toast(msg, ok){ var t=document.createElement('div'); t.textContent=msg; t.style.cssText='background:'+(ok?'var(--success)':'var(--surface-2)')+';color:'+(ok?'#fff':'var(--text-1)')+';border:1px solid var(--line);padding:10px 14px;border-radius:10px'; $('toastWrap').appendChild(t); setTimeout(function(){t.remove();},2400); }
   function abbr(n){ return (n||'?').substring(0,3).toUpperCase(); }
@@ -165,15 +188,29 @@
       data.forEach(function(t){
         var chip=document.createElement('span');
         chip.style.cssText='display:inline-flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface-2);border:1px solid var(--line);border-radius:20px;font-size:var(--fs-sm)';
-        chip.innerHTML='<b>'+t.name+'</b><button type="button" data-rm="'+t.id+'" style="background:none;border:none;color:var(--text-4);cursor:pointer;font-size:14px">✕</button>';
+        var isMine = t.scope==='custom' && t.creatorId===CURRENT_USER_ID;
+        var editBtn = isMine ? '<button type="button" data-edit-custom="'+t.id+'" title="Upraviť vlastný tím" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:13px">✎</button>' : '';
+        chip.innerHTML='<b>'+t.name+'</b>'+(isMine?'<span class="tag tag-gold" style="padding:0 5px;font-size:10px">vlastný</span>':'')+editBtn+'<button type="button" data-rm="'+t.id+'" title="Odobrať zo súpisky" style="background:none;border:none;color:var(--text-4);cursor:pointer;font-size:14px">✕</button>';
         box.appendChild(chip);
       });
     });
   }
   loadRoster();
 
-  // odobrať
+  // odobrať / upraviť vlastný custom tím
   $('roster').addEventListener('click', function(e){
+    var ed=e.target.closest('[data-edit-custom]');
+    if(ed){
+      var tid=ed.getAttribute('data-edit-custom');
+      var newName=prompt('Nový názov vlastného tímu:'); if(newName===null)return;
+      if(!newName.trim()){toast('Názov nemôže byť prázdny.');return;}
+      var newLogo=prompt('URL loga (nechaj prázdne ak žiadne):','')||'';
+      fetch('/api/teams/custom/'+tid,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:newName,teamType:'club',logo:newLogo})}).then(function(r){return r.json();}).then(function(res){
+        if(res.success===false){toast(res.message||'Nepodarilo sa.');return;}
+        toast('Tím upravený ✓',true); loadRoster();
+      }).catch(function(){toast('Chyba.');});
+      return;
+    }
     var b=e.target.closest('[data-rm]'); if(!b)return;
     fetch('/api/leagues/'+leagueId+'/teams/'+b.getAttribute('data-rm'),{method:'DELETE'}).then(function(r){return r.json();}).then(function(res){
       if(res.success===false){toast(res.message||'Nedá sa odobrať.');return;}
@@ -241,16 +278,5 @@
     });
   });
 </script>
-
-<!-- zmazanie ligy (vlastný formulár) -->
-<div class="wrap" style="padding-bottom:48px">
-  <div class="card card-pad" style="border-color:var(--danger-line,rgba(220,80,80,.3));max-width:340px;margin-left:auto">
-    <b class="hi" style="display:block;margin-bottom:6px">Zmazať ligu</b>
-    <p class="muted" style="font-size:var(--fs-sm);margin-bottom:12px">Vymaže ligu vrátane kôl, zápasov a tipov. Nevratné.</p>
-    <form action="/leagues/<%= league.id %>/delete" method="POST" onsubmit="return confirm('NAOZAJ ZMAZAŤ ligu? Vymažú sa kolá, zápasy aj tipy. Nevratné!');">
-      <button type="submit" class="btn btn-ghost btn-block" style="color:var(--danger)">Zmazať ligu (nevratné)</button>
-    </form>
-  </div>
-</div>
 
 <%- include('partials/footer') %>

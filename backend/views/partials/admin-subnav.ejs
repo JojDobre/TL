@@ -1,15 +1,12 @@
-<!-- views/partials/admin-subnav.ejs
-     Admin subnav (červený pruh). Prenesené zo šablóny (shell.js buildAdminNav).
-     Parameter: active (dashboard/users/leagues/competition/evaluate). -->
-<% const aa = typeof active !== 'undefined' ? active : ''; %>
+<!-- views/partials/admin-subnav.ejs — admin navigačný pruh. Parameter: active -->
+<% const aa = typeof active !== 'undefined' ? active : 'dashboard'; %>
 <div class="subnav admin-bar"><div class="wrap subnav-inner">
   <span class="row g-2" style="font-weight:700;color:var(--text-1);white-space:nowrap;padding-right:6px">
     <span class="admin-badge">ADMIN</span> Administrácia
   </span>
   <span style="width:1px;height:22px;background:var(--line)"></span>
   <a class="subnav-link <%= aa==='dashboard'?'active':'' %>" href="/admin">Prehľad</a>
+  <a class="subnav-link <%= aa==='leagues'?'active':'' %>" href="/admin/competitions">Sezóny &amp; ligy</a>
   <a class="subnav-link <%= aa==='users'?'active':'' %>" href="/admin/users">Užívatelia</a>
-  <a class="subnav-link <%= aa==='leagues'?'active':'' %>" href="/admin/leagues">Ligy &amp; sezóny</a>
-  <a class="subnav-link <%= aa==='competition'?'active':'' %>" href="/admin/competition">Správa súťaže</a>
-  <a class="subnav-link <%= aa==='evaluate'?'active':'' %>" href="/admin/evaluate">Vyhodnotenie</a>
+  <a class="subnav-link <%= aa==='teams'?'active':'' %>" href="/admin/teams">Tímy</a>
 </div></div>

@@ -5,6 +5,7 @@
 
 const { Round, League, Season, Match, Team, User, UserSeason } = require('../models');
 const { asyncHandler } = require('../middleware/error.middleware');
+const { isLeagueLocked } = require('../utils/league.utils');
 
 async function canManageLeague(league, userId) {
   if (!userId) return false;
@@ -22,7 +23,7 @@ const teamAbbr = (name) => (name || '?').replace(/[^A-Za-zÀ-ž0-9 ]/g, '').spli
 // GET /rounds/:id/matches/create
 const createMatchesPage = asyncHandler(async (req, res) => {
   const round = await Round.findByPk(req.params.id, {
-    include: [{ model: League, include: [{ model: Season, attributes: ['id', 'name', 'creatorId'] }] }],
+    include: [{ model: League, include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'startDate', 'endDate', 'ended'] }] }],
   });
   if (!round) return res.status(404).render('error-page', { message: 'Kolo nebolo nájdené.' });
 
@@ -34,6 +35,9 @@ const createMatchesPage = asyncHandler(async (req, res) => {
   // liga zo šablóny — kolá a zápasy sú prevzaté zo šablóny, nedajú sa tu meniť
   if (league.templateId) {
     return res.status(403).render('error-page', { message: 'Táto liga je vytvorená zo šablóny — zápasy sú prevzaté z oficiálnej ligy a nedajú sa upravovať.' });
+  }
+  if (isLeagueLocked(league)) {
+    return res.status(403).render('error-page', { message: 'Liga je ukončená — nedajú sa pridávať zápasy.' });
   }
 
   // tímy pre výber — LEN zo súpisky ligy (definovanej pri lige)

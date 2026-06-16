@@ -1,0 +1,55 @@
+<%- include('partials/head', { title: 'Admin — sezóny a ligy', page: 'admin', active: 'admin', pageStyle: `
+  .comp-season { margin-bottom:14px; }
+  .comp-head { display:flex; align-items:center; gap:12px; padding:14px 18px; }
+  .comp-leagues { padding:0 18px 14px; display:flex; flex-direction:column; gap:6px; }
+  .comp-lg { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:var(--r-sm); background:var(--surface-2); }
+  .comp-lg .nm { flex:1; min-width:0; font-weight:600; color:var(--text-1); font-size:var(--fs-sm); }
+` }) %>
+
+<%- include('partials/admin-subnav', { active: 'leagues' }) %>
+
+<div class="wrap" style="padding:26px 0 8px">
+  <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Sezóny &amp; ligy</h1>
+  <p class="muted" style="margin-top:6px">Globálny prehľad všetkých súťaží. <b class="hi"><%= seasons.length %></b> sezón.</p>
+</div>
+
+<div class="wrap" style="padding-bottom:64px">
+  <% if (seasons.length === 0) { %>
+    <p class="muted">Žiadne sezóny.</p>
+  <% } %>
+  <% seasons.forEach(function(s){ %>
+  <div class="card comp-season">
+    <div class="comp-head">
+      <span class="team-logo" style="width:38px;height:38px;font-size:13px;background:linear-gradient(135deg,#0b4ea2,#06306a)"><%= (s.name||'S').substring(0,2).toUpperCase() %></span>
+      <div style="flex:1;min-width:0">
+        <div class="row g-2 wrap-gap" style="align-items:center">
+          <b class="hi"><%= s.name %></b>
+          <span class="tag <%= s.type === 'official' ? 'tag-brand' : 'tag-gold' %>"><%= s.type === 'official' ? 'Oficiálna' : 'Community' %></span>
+          <% if (s.status === 'ended') { %><span class="tag tag-muted">Ukončená</span><% } else if (s.status === 'upcoming') { %><span class="tag tag-info">Pripravovaná</span><% } else { %><span class="tag tag-live"><span class="dot"></span>Live</span><% } %>
+          <% if (s.hasPassword) { %><span class="tag tag-muted">🔒</span><% } %>
+        </div>
+        <div class="muted" style="font-size:var(--fs-xs);margin-top:2px"><%= s.leagues.length %> líg · ID <%= s.inviteCode %></div>
+      </div>
+      <a href="/seasons/<%= s.id %>" class="btn btn-ghost btn-sm">Otvoriť</a>
+      <a href="/seasons/<%= s.id %>/manage" class="btn btn-secondary btn-sm">Spravovať</a>
+    </div>
+    <% if (s.leagues.length > 0) { %>
+    <div class="comp-leagues">
+      <% s.leagues.forEach(function(l){ %>
+      <div class="comp-lg">
+        <span class="nm"><%= l.name %></span>
+        <% if (l.type === 'official') { %><span class="tag tag-brand" style="padding:1px 7px">Oficiálna</span><% } else { %><span class="tag tag-gold" style="padding:1px 7px">Custom</span><% } %>
+        <% if (l.isTemplate) { %><span class="tag tag-info" style="padding:1px 7px">Šablóna</span><% } %>
+        <% if (l.templateId) { %><span class="tag tag-muted" style="padding:1px 7px">Klon</span><% } %>
+        <% if (l.ended) { %><span class="tag tag-muted" style="padding:1px 7px">Ukončená</span><% } %>
+        <a href="/leagues/<%= l.id %>" class="btn btn-ghost btn-sm" style="padding:3px 10px">Otvoriť</a>
+        <a href="/leagues/<%= l.id %>/edit" class="btn btn-ghost btn-sm" style="padding:3px 10px">Upraviť</a>
+      </div>
+      <% }); %>
+    </div>
+    <% } %>
+  </div>
+  <% }); %>
+</div>
+
+<%- include('partials/footer') %>

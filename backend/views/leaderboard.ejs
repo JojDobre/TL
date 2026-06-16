@@ -1,0 +1,149 @@
+<%- include('partials/head', { title: 'Rebríček — ' + season.name, page: 'seasons', active: 'seasons', pageStyle: `
+  .lb-head { padding:32px 0 8px; }
+  .podium { display:grid; grid-template-columns: 1fr 1.15fr 1fr; gap:16px; align-items:end; margin:24px 0 30px; }
+  .pod { text-align:center; border-radius: var(--r-xl); padding:24px 16px 22px; position:relative; overflow:hidden; }
+  .pod .avatar { margin:0 auto 12px; }
+  .pod-name { font-weight:800; color:var(--text-1); font-size:var(--fs-lg); }
+  .pod-sub { font-size:var(--fs-xs); color:var(--text-4); margin-bottom:12px; }
+  .pod-pts { font-family:var(--num); font-weight:700; font-size:2rem; line-height:1; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .pod-rank { position:absolute; top:14px; left:14px; font-family:var(--num); font-weight:800; font-size:1.4rem; opacity:.5; }
+  .pod1 { background: linear-gradient(180deg, color-mix(in srgb,var(--gold) 18%, var(--surface-1)), var(--surface-1)); border:1px solid rgba(250,204,21,.4); box-shadow: var(--glow-gold); }
+  .pod1 .pod-pts { color:var(--gold); text-shadow:var(--text-glow-gold); }
+  .pod2 { background: linear-gradient(180deg, color-mix(in srgb,#cdd6e6 14%, var(--surface-1)), var(--surface-1)); border:1px solid var(--line-strong); }
+  .pod3 { background: linear-gradient(180deg, color-mix(in srgb,#e0935a 16%, var(--surface-1)), var(--surface-1)); border:1px solid rgba(224,147,90,.35); }
+  .pod-crown { position:absolute; top:-2px; right:14px; font-size:22px; }
+  .lb-layout { display:grid; grid-template-columns: 1fr 320px; gap:26px; align-items:start; padding-bottom:64px; }
+  .filters { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:18px; }
+  .lb-table .lb-row { grid-template-columns: 52px 1fr auto 96px; display:grid; gap:14px; align-items:center; border-bottom:1px solid var(--line); padding:13px 14px; }
+  .lb-table .lb-row:last-child { border-bottom:none; }
+  .lb-table .lb-row.me { background:color-mix(in srgb,var(--brand) 8%, transparent); border-radius:var(--r-sm); }
+  .lb-head-row { grid-template-columns: 52px 1fr auto 96px; display:grid; gap:14px; padding:10px 14px; align-items:center; }
+  .lb-head-row span { font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.1em; color:var(--text-4); font-weight:700; }
+  .lb-rank { font-family:var(--num); font-weight:800; font-variant-numeric:tabular-nums; }
+  .lb-rank.top1 { color:var(--gold); } .lb-rank.top2 { color:#cdd6e6; } .lb-rank.top3 { color:#e0935a; }
+  .lb-user { display:flex; align-items:center; gap:11px; min-width:0; }
+  .lb-name { font-weight:700; color:var(--text-1); }
+  .lb-sub { font-size:var(--fs-xs); color:var(--text-4); }
+  .lb-pts { font-family:var(--num); font-weight:700; font-variant-numeric:tabular-nums; }
+  .lb-pts.gold { color:var(--gold); }
+  .ta-r { text-align:right; }
+  .sticky-side { position:sticky; top:92px; }
+  .sticky-side > * + * { margin-top:18px; }
+  .avatar { border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; }
+  .avatar-xl { width:74px; height:74px; font-size:1.4rem; }
+  .avatar-md { width:40px; height:40px; font-size:13px; }
+  @media (max-width: 980px){ .lb-layout { grid-template-columns:1fr; } .sticky-side { position:static; } }
+  @media (max-width: 720px){ .podium { grid-template-columns:1fr; gap:12px; } .lb-table .lb-row, .lb-head-row { grid-template-columns:28px 1fr auto 56px; gap:9px; } }
+` }) %>
+
+<%- include('partials/season-subnav', { seasonId: season.id, seasonName: season.name, active: 'leaderboard' }) %>
+
+<%
+  function initials(u){ var n=[u.firstName,u.lastName].filter(Boolean).join(' ')||u.username||'?'; return n.split(' ').map(function(w){return w[0];}).filter(Boolean).slice(0,2).join('').toUpperCase(); }
+  function fullName(u){ return [u.firstName,u.lastName].filter(Boolean).join(' ') || u.username; }
+  var grads = ['linear-gradient(135deg,#3a7bd5,#1b3f72)','linear-gradient(135deg,#16a085,#0c5f4d)','linear-gradient(135deg,#c0392b,#7d2018)','linear-gradient(135deg,#8e44ad,#522963)','linear-gradient(135deg,#d35400,#8a3700)','linear-gradient(135deg,#27ae60,#155d33)','linear-gradient(135deg,#2c3e50,#1a252f)'];
+  function gradFor(i){ return grads[i % grads.length]; }
+  var top = leaderboard.slice(0,3);
+%>
+
+<div class="wrap lb-head">
+  <div class="between wrap-gap" style="gap:16px">
+    <div>
+      <div class="eyebrow">Rebríček sezóny</div>
+      <h1 style="font-size:clamp(2rem,3.4vw,2.8rem)"><%= season.name %></h1>
+      <p class="muted" style="margin-top:6px">Súčet bodov naprieč všetkými ligami sezóny · aktualizované po vyhodnotení</p>
+    </div>
+    <a href="/seasons/<%= season.id %>" class="btn btn-ghost">← Späť na sezónu</a>
+  </div>
+
+  <% if (leaderboard.length === 0) { %>
+    <div class="card card-pad" style="text-align:center;margin-top:24px"><p class="muted">Zatiaľ žiadne body. Rebríček sa naplní po vyhodnotení prvých zápasov.</p></div>
+  <% } else { %>
+
+  <!-- PODIUM (top 3) -->
+  <div class="podium">
+    <% if (top[1]) { %>
+    <div class="pod pod2">
+      <span class="pod-rank top2">2</span>
+      <span class="avatar avatar-xl" style="background:<%= gradFor(1) %>"><%= initials(top[1].user) %></span>
+      <div class="pod-name"><%= fullName(top[1].user) %></div>
+      <div class="pod-sub">@<%= top[1].user.username %><%= top[1].accuracy != null ? ' · ' + top[1].accuracy + ' % presnosť' : '' %></div>
+      <div class="pod-pts" style="color:#cdd6e6"><%= top[1].totalPoints %></div>
+    </div>
+    <% } else { %><div></div><% } %>
+
+    <% if (top[0]) { %>
+    <div class="pod pod1">
+      <span class="pod-crown">👑</span>
+      <span class="pod-rank top1">1</span>
+      <span class="avatar avatar-xl" style="background:linear-gradient(135deg,var(--gold-bright,#facc15),var(--gold-dim,#a88207));color:var(--gold-ink,#3a2e00)"><%= initials(top[0].user) %></span>
+      <div class="pod-name"><%= fullName(top[0].user) %></div>
+      <div class="pod-sub">@<%= top[0].user.username %><%= top[0].accuracy != null ? ' · ' + top[0].accuracy + ' % presnosť' : '' %></div>
+      <div class="pod-pts"><%= top[0].totalPoints %></div>
+    </div>
+    <% } %>
+
+    <% if (top[2]) { %>
+    <div class="pod pod3">
+      <span class="pod-rank top3">3</span>
+      <span class="avatar avatar-xl" style="background:<%= gradFor(2) %>"><%= initials(top[2].user) %></span>
+      <div class="pod-name"><%= fullName(top[2].user) %></div>
+      <div class="pod-sub">@<%= top[2].user.username %><%= top[2].accuracy != null ? ' · ' + top[2].accuracy + ' % presnosť' : '' %></div>
+      <div class="pod-pts" style="color:#e0935a"><%= top[2].totalPoints %></div>
+    </div>
+    <% } else { %><div></div><% } %>
+  </div>
+  <% } %>
+</div>
+
+<% if (leaderboard.length > 0) { %>
+<div class="wrap lb-layout">
+  <main>
+    <div class="card" style="padding:8px">
+      <div class="lb-head-row"><span>#</span><span>Hráč</span><span class="col-hide">Presnosť</span><span class="ta-r">Body</span></div>
+      <div class="hr" style="height:1px;background:var(--line);margin:0 6px"></div>
+      <div class="lb-table">
+        <% leaderboard.forEach(function(row, i){ var rank=i+1; var me = meId && row.user.id === meId; %>
+        <div class="lb-row <%= me ? 'me' : '' %>">
+          <span class="lb-rank <%= rank<=3 ? 'top'+rank : '' %>"><%= rank %></span>
+          <div class="lb-user">
+            <span class="avatar avatar-md" style="background:<%= rank===1 ? 'linear-gradient(135deg,var(--gold-bright,#facc15),var(--gold-dim,#a88207))' : gradFor(i) %><%= rank===1 ? ';color:var(--gold-ink,#3a2e00)' : '' %>"><%= initials(row.user) %></span>
+            <div style="min-width:0">
+              <div class="lb-name"><%= fullName(row.user) %><% if (row.user.role === 'vip') { %> <span class="chip-role role-vip" style="vertical-align:middle">VIP</span><% } %><% if (me) { %> <span class="tag tag-brand" style="vertical-align:middle;padding:1px 6px">Ty</span><% } %></div>
+              <div class="lb-sub">@<%= row.user.username %></div>
+            </div>
+          </div>
+          <span class="col-hide num" style="font-weight:700;color:<%= row.accuracy != null && row.accuracy >= 60 ? 'var(--success)' : 'var(--text-2)' %>"><%= row.accuracy != null ? row.accuracy + ' %' : '—' %></span>
+          <span class="lb-pts ta-r <%= rank===1 ? 'gold' : '' %>"><%= row.totalPoints %></span>
+        </div>
+        <% }); %>
+      </div>
+    </div>
+  </main>
+
+  <aside class="sticky-side">
+    <% if (myRank) { %>
+    <div class="card card-pad card-glow">
+      <div class="stat-label">Tvoja pozícia</div>
+      <div class="row g-3" style="margin:12px 0 6px"><span class="stat-value brand" style="font-size:2.6rem">#<%= myRank %></span></div>
+      <p class="muted" style="font-size:var(--fs-sm)">Z <b class="hi num"><%= leaderboard.length %></b> hráčov v sezóne.</p>
+    </div>
+    <% } %>
+
+    <div class="card card-pad">
+      <div class="stat-label" style="margin-bottom:10px">Ligy v sezóne</div>
+      <div class="stack g-2">
+        <% leagues.forEach(function(l){ %>
+        <a href="/leagues/<%= l.id %>" class="row between" style="padding:9px 11px;border-radius:var(--r-sm);background:var(--surface-2)">
+          <span class="row g-2"><span class="team-logo" style="width:24px;height:24px;font-size:10px;background:linear-gradient(135deg,#5b3fd6,#2b0a4a)"><%= (l.name||'L').substring(0,2).toUpperCase() %></span><span style="font-weight:600;color:var(--text-1);font-size:var(--fs-sm)"><%= l.name %></span></span>
+          <span class="faint">›</span>
+        </a>
+        <% }); %>
+        <% if (leagues.length === 0) { %><p class="muted" style="font-size:var(--fs-sm)">Žiadne ligy.</p><% } %>
+      </div>
+    </div>
+  </aside>
+</div>
+<% } %>
+
+<%- include('partials/footer') %>

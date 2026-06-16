@@ -1,0 +1,111 @@
+<%- include('partials/head', { title: 'Štatistiky', page: 'stats', active: '', pageStyle: `
+  .st-head { padding:30px 0 20px; }
+  .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:26px; }
+  .kpi { padding:20px 22px; position:relative; overflow:hidden; }
+  .kpi .stat-delta { display:inline-flex; align-items:center; gap:4px; }
+  .chart-grid { display:grid; grid-template-columns:1.5fr 1fr; gap:18px; margin-bottom:18px; }
+  .chart-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  .bars { display:flex; align-items:flex-end; gap:8px; height:200px; padding-top:10px; }
+  .bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; height:100%; justify-content:flex-end; }
+  .bar { width:100%; max-width:30px; border-radius:6px 6px 3px 3px; background:linear-gradient(180deg,var(--brand-bright),var(--brand)); transition:height .6s var(--ease-out); position:relative; }
+  .bar.peak { background:linear-gradient(180deg,var(--gold-bright),var(--gold)); box-shadow:var(--glow-gold); }
+  .bar-val { font-family:var(--num); font-size:11px; font-weight:700; color:var(--text-2); }
+  .bar-lbl { font-size:10px; color:var(--text-4); font-weight:700; max-width:42px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .donut-wrap { display:flex; align-items:center; gap:22px; }
+  .legend-row { display:flex; align-items:center; gap:9px; padding:5px 0; font-size:var(--fs-sm); }
+  .legend-dot { width:11px; height:11px; border-radius:3px; flex:none; }
+  .team-row { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--line); }
+  .team-row:last-child { border:none; }
+  .team-row .bar-track { flex:1; height:7px; background:var(--surface-3); border-radius:99px; overflow:hidden; }
+  .team-row .bar-track i { display:block; height:100%; background:linear-gradient(90deg,var(--success),#0fa376); border-radius:99px; }
+  @media (max-width:900px){ .kpi-grid { grid-template-columns:repeat(2,1fr); } .chart-grid,.chart-grid-2 { grid-template-columns:1fr; } }
+` }) %>
+
+<div class="wrap st-head">
+  <div class="between wrap-gap" style="gap:16px">
+    <div>
+      <div class="eyebrow">Štatistiky hráča</div>
+      <h1 style="font-size:clamp(2rem,3.2vw,2.6rem)">Tvoja forma &amp; čísla</h1>
+      <p class="muted" style="margin-top:6px"><%= displayName %><%= username ? ' · @' + username : '' %> · súhrn zo všetkých líg</p>
+    </div>
+    <div class="row g-2">
+      <a href="/my" class="btn btn-secondary btn-sm">Moje súťaže</a>
+    </div>
+  </div>
+</div>
+
+<div class="wrap" style="padding-bottom:64px">
+  <% if (stats.evaluated === 0) { %>
+    <div class="card card-pad" style="text-align:center;padding:48px"><p class="muted">Zatiaľ nemáš žiadne vyhodnotené tipy. Štatistiky sa naplnia, keď sa vyhodnotia zápasy, ktoré si tipoval.</p></div>
+  <% } else { %>
+
+  <!-- KPI -->
+  <div class="kpi-grid">
+    <div class="card kpi"><div class="stat-label">Presnosť tipov</div><div class="stat-value ok"><%= stats.accuracy != null ? stats.accuracy + ' %' : '—' %></div><div class="stat-delta muted" style="color:var(--text-4)"><%= stats.evaluated %> vyhodnotených</div></div>
+    <div class="card kpi"><div class="stat-label">Priemer bodov / kolo</div><div class="stat-value gold"><%= stats.avgPerRound %></div><div class="stat-delta muted" style="color:var(--text-4)"><%= stats.playedRoundsCount %> kôl</div></div>
+    <div class="card kpi"><div class="stat-label">Presných výsledkov</div><div class="stat-value brand"><%= stats.exact %></div><div class="stat-delta muted" style="color:var(--text-4)">z <%= stats.tipsCount %> tipov</div></div>
+    <div class="card kpi"><div class="stat-label">Celkové body</div><div class="stat-value"><%= stats.totalPoints %></div><div class="stat-delta muted" style="color:var(--text-4)">najlepšie kolo: <%= stats.bestRound %></div></div>
+  </div>
+
+  <!-- charts row 1 -->
+  <div class="chart-grid">
+    <div class="card card-pad">
+      <div class="between" style="margin-bottom:6px"><div><div class="stat-label">Body za kolo</div><div class="muted" style="font-size:var(--fs-sm)">posledných <%= roundBars.length %> kôl · priemer <%= stats.avgPerRound %></div></div><% if (stats.bestRound > 0) { %><span class="tag tag-gold">Najlepšie: <%= stats.bestRound %></span><% } %></div>
+      <% if (roundBars.length === 0) { %>
+        <p class="muted" style="font-size:var(--fs-sm);padding:30px 0">Žiadne vyhodnotené kolá.</p>
+      <% } else { %>
+      <div class="bars" id="bars"></div>
+      <% } %>
+    </div>
+    <div class="card card-pad">
+      <div class="stat-label" style="margin-bottom:18px">Rozloženie tipov</div>
+      <div class="donut-wrap">
+        <% var ev = stats.evaluated || 1; var pE = Math.round(stats.exact/ev*100); var pP = Math.round(stats.partial/ev*100); %>
+        <svg width="132" height="132" viewBox="0 0 42 42" style="flex:none">
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--surface-3)" stroke-width="6"/>
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--success)" stroke-width="6" stroke-dasharray="<%= pE %> <%= 100-pE %>" stroke-dashoffset="25" stroke-linecap="round"/>
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--brand)" stroke-width="6" stroke-dasharray="<%= pP %> <%= 100-pP %>" stroke-dashoffset="<%= 25 - pE %>" stroke-linecap="round"/>
+          <text x="21" y="20" text-anchor="middle" style="font:700 7px var(--num);fill:var(--text-1)"><%= stats.evaluated %></text>
+          <text x="21" y="26" text-anchor="middle" style="font:600 3px var(--font-body);fill:var(--text-4)">tipov</text>
+        </svg>
+        <div style="flex:1">
+          <div class="legend-row"><span class="legend-dot" style="background:var(--success)"></span><span class="grow muted" style="flex:1">Presný výsledok</span><b class="hi num"><%= stats.exact %></b></div>
+          <div class="legend-row"><span class="legend-dot" style="background:var(--brand)"></span><span class="grow muted" style="flex:1">Čiastočné body</span><b class="hi num"><%= stats.partial %></b></div>
+          <div class="legend-row"><span class="legend-dot" style="background:var(--danger)"></span><span class="grow muted" style="flex:1">Bez bodov</span><b class="hi num"><%= stats.zero %></b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- charts row 2 (vizuál — tieto metriky zatiaľ netrackujeme) -->
+  <div class="chart-grid-2">
+    <div class="card card-pad">
+      <div class="stat-label" style="margin-bottom:6px">Vývoj pozície v rebríčku</div>
+      <div class="muted" style="font-size:var(--fs-sm);margin-bottom:14px">Sledovanie vývoja pozície — čoskoro</div>
+      <div style="display:flex;align-items:center;justify-content:center;height:140px;color:var(--text-4)">—</div>
+    </div>
+    <div class="card card-pad">
+      <div class="stat-label" style="margin-bottom:16px">Tímy, ktoré tipuješ najpresnejšie</div>
+      <div style="display:flex;align-items:center;justify-content:center;height:140px;color:var(--text-4)">—</div>
+    </div>
+  </div>
+  <% } %>
+</div>
+
+<% if (stats.evaluated > 0 && roundBars.length > 0) { %>
+<script>
+  var data = <%- JSON.stringify(roundBars) %>;
+  var max = Math.max.apply(null, data.map(function(d){return d.points;}).concat([1]));
+  var bars = document.getElementById('bars');
+  if (bars) {
+    bars.innerHTML = data.map(function(d){
+      var h = Math.round((d.points / max) * 170);
+      var peak = d.points === max && max > 0;
+      return '<div class="bar-col"><span class="bar-val">'+d.points+'</span><div class="bar '+(peak?'peak':'')+'" data-h="'+h+'" style="height:0"></div><span class="bar-lbl" title="'+d.name+'">'+d.name+'</span></div>';
+    }).join('');
+    requestAnimationFrame(function(){ setTimeout(function(){ bars.querySelectorAll('.bar').forEach(function(b){ b.style.height=b.dataset.h+'px'; }); }, 80); });
+  }
+</script>
+<% } %>
+
+<%- include('partials/footer') %>

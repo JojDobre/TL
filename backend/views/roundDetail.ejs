@@ -214,10 +214,22 @@
           </div>
           <% if (m.others && m.others.length > 0) { %>
           <button class="toggle-others" data-others>Zobraziť tipy ostatných (<%= m.others.length %>) ▾</button>
-          <div class="others">
+          <div class="others" data-others-box>
+            <% if (m.others.length > 5) { %>
+            <div class="others-search" style="margin-bottom:10px">
+              <input class="input" placeholder="Hľadať hráča…" data-others-search style="font-size:var(--fs-sm);padding:7px 11px">
+            </div>
+            <% } %>
+            <div data-others-list>
             <% m.others.forEach(function (o) { %>
-            <div class="other-tip"><span class="avatar avatar-sm" style="background:var(--surface-3)"><%= initials(o.name) %></span><span class="nm"><%= o.name %></span><b class="<%= o.points >= (m.tipType === 'winner' ? (s.correctWinner||3) : (s.exactScore||10)) ? 'tip-correct' : 'hi' %>"><%= m.tipType === 'winner' ? (o.winner==='home'?'1':o.winner==='draw'?'X':o.winner==='away'?'2':'–') : ((o.homeScore != null ? o.homeScore : '–') + ' : ' + (o.awayScore != null ? o.awayScore : '–')) %></b><span class="pts-pill<%= o.points >= (m.tipType === 'winner' ? (s.correctWinner||3) : (s.exactScore||10)) ? ' max' : (o.points ? '' : ' zero') %>">+<%= o.points || 0 %></span></div>
+            <div class="other-tip" data-name="<%= (o.name||'').toLowerCase() %>"><span class="avatar avatar-sm" style="background:var(--surface-3)"><%= initials(o.name) %></span><span class="nm"><%= o.name %></span><b class="<%= o.points >= (m.tipType === 'winner' ? (s.correctWinner||3) : (s.exactScore||10)) ? 'tip-correct' : 'hi' %>"><%= m.tipType === 'winner' ? (o.winner==='home'?'1':o.winner==='draw'?'X':o.winner==='away'?'2':'–') : ((o.homeScore != null ? o.homeScore : '–') + ' : ' + (o.awayScore != null ? o.awayScore : '–')) %></b><span class="pts-pill<%= o.points >= (m.tipType === 'winner' ? (s.correctWinner||3) : (s.exactScore||10)) ? ' max' : (o.points ? '' : ' zero') %>">+<%= o.points || 0 %></span></div>
             <% }); %>
+            </div>
+            <div class="others-pager" data-others-pager style="display:none;align-items:center;justify-content:center;gap:14px;margin-top:10px">
+              <button type="button" class="btn btn-ghost btn-sm" data-others-prev>‹</button>
+              <span class="muted" style="font-size:var(--fs-xs)" data-others-info></span>
+              <button type="button" class="btn btn-ghost btn-sm" data-others-next>›</button>
+            </div>
           </div>
           <% } %>
         </div>
@@ -316,10 +328,47 @@
     Promise.all(ops).then(function(res){ var fail=res.filter(function(r){return r&&r.success===false;}); if(fail.length){ toast(fail[0].message||'Niektoré tipy sa neuložili.'); save.disabled=false; save.textContent='Uložiť tipy'; } else { toast('Tipy uložené ✓', true); setSaved(); } }).catch(function(){ toast('Chyba pri ukladaní.'); save.disabled=false; save.textContent='Uložiť tipy'; });
   });
 
-  // tipy ostatných toggle
+  // tipy ostatných: toggle + stránkovanie (5/strana) + search
+  var PAGE_SIZE = 5;
+  function renderOthers(box){
+    var list = box.querySelector('[data-others-list]');
+    var pager = box.querySelector('[data-others-pager]');
+    var info = box.querySelector('[data-others-info]');
+    var q = (box._q || '').toLowerCase();
+    var all = Array.prototype.slice.call(list.querySelectorAll('.other-tip'));
+    var matched = all.filter(function(r){ return !q || (r.getAttribute('data-name')||'').indexOf(q) >= 0; });
+    var page = box._page || 0;
+    var pages = Math.max(1, Math.ceil(matched.length / PAGE_SIZE));
+    if (page >= pages) { page = pages - 1; box._page = page; }
+    all.forEach(function(r){ r.style.display = 'none'; });
+    matched.slice(page*PAGE_SIZE, page*PAGE_SIZE + PAGE_SIZE).forEach(function(r){ r.style.display = ''; });
+    if (pager) {
+      if (matched.length > PAGE_SIZE) {
+        pager.style.display = 'flex';
+        if (info) info.textContent = (page+1) + ' / ' + pages + ' · ' + matched.length + ' hráčov';
+      } else {
+        pager.style.display = 'none';
+      }
+    }
+    if (matched.length === 0 && info) { /* nič */ }
+  }
   document.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-others]'); if(!b) return;
-    var others = b.nextElementSibling; if(others){ var open=others.style.display==='block'; others.style.display=open?'none':'block'; b.textContent = b.textContent.replace(/[▾▴]/, open?'▾':'▴'); }
+    var b = e.target.closest('[data-others]');
+    if (b) {
+      var box = b.nextElementSibling;
+      if (box) { var open = box.style.display === 'block'; box.style.display = open ? 'none' : 'block'; b.textContent = b.textContent.replace(/[▾▴]/, open ? '▾' : '▴'); if(!open){ box._page = box._page||0; renderOthers(box); } }
+      return;
+    }
+    var prev = e.target.closest('[data-others-prev]');
+    var next = e.target.closest('[data-others-next]');
+    if (prev || next) {
+      var bx = (prev||next).closest('[data-others-box]'); if(!bx) return;
+      bx._page = (bx._page||0) + (next ? 1 : -1); if (bx._page < 0) bx._page = 0;
+      renderOthers(bx);
+    }
+  });
+  document.querySelectorAll('[data-others-search]').forEach(function(inp){
+    inp.addEventListener('input', function(){ var bx = inp.closest('[data-others-box]'); if(!bx) return; bx._q = inp.value.trim(); bx._page = 0; renderOthers(bx); });
   });
 
   recount();

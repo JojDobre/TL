@@ -1,0 +1,228 @@
+<%- include('partials/head', { title: 'Nastavenia účtu', page: 'settings', active: '', pageStyle: `
+  .set-head { padding:30px 0 10px; }
+  .set-layout { display:grid; grid-template-columns:230px 1fr; gap:30px; align-items:start; padding:14px 0 72px; }
+  .set-nav { position:sticky; top:92px; display:flex; flex-direction:column; gap:2px; }
+  .set-nav a { display:flex; align-items:center; gap:10px; padding:10px 13px; border-radius:var(--r-sm); color:var(--text-3); font-weight:600; font-size:var(--fs-sm); transition:all .14s; }
+  .set-nav a:hover { background:var(--surface-2); color:var(--text-1); }
+  .set-nav a.active { background:var(--brand-soft); color:var(--brand-bright); }
+  .set-nav a.danger { color:var(--danger); }
+  .set-nav a.danger:hover { background:var(--danger-soft); }
+  .set-card { scroll-margin-top:96px; }
+  .set-card + .set-card { margin-top:20px; }
+  .sc-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:18px; }
+  .sc-head h3 { font-size:var(--fs-h4); }
+  .sc-head p { font-size:var(--fs-sm); color:var(--text-3); margin-top:3px; }
+  .field-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .notif-row { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 0; border-bottom:1px solid var(--line); }
+  .notif-row:last-child { border-bottom:none; }
+  .notif-row .nr-tx b { color:var(--text-1); font-size:var(--fs-base); }
+  .notif-row .nr-tx span { display:block; font-size:var(--fs-xs); color:var(--text-3); margin-top:2px; }
+  .danger-card { border-color:rgba(240,71,106,.3); background:linear-gradient(135deg,var(--surface-1),color-mix(in srgb,var(--danger) 6%,var(--surface-1))); }
+  .danger-row { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 0; border-bottom:1px solid var(--line); }
+  .danger-row:last-child { border-bottom:none; }
+  @media (max-width:840px){ .set-layout { grid-template-columns:1fr; } .set-nav { position:static; flex-direction:row; overflow-x:auto; gap:4px; padding-bottom:6px; } .set-nav a { white-space:nowrap; } .field-row { grid-template-columns:1fr; } }
+` }) %>
+
+<div class="wrap set-head">
+  <div class="crumb" style="font-size:var(--fs-sm);color:var(--text-4);margin-bottom:8px"><a href="/profile" style="color:var(--text-3)">Profil</a> › Nastavenia</div>
+  <div class="eyebrow">Nastavenia</div>
+  <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Nastavenia účtu</h1>
+  <p class="muted" style="margin-top:6px">Spravuj prihlasovacie údaje, notifikácie, súkromie a svoj účet.</p>
+</div>
+
+<div class="wrap set-layout">
+  <nav class="set-nav">
+    <a href="#account" class="active">Účet</a>
+    <a href="#password">Heslo</a>
+    <a href="#notifications">Notifikácie</a>
+    <a href="#privacy">Súkromie</a>
+    <a href="#appearance">Vzhľad</a>
+    <a href="#danger" class="danger">Nebezpečná zóna</a>
+  </nav>
+
+  <main>
+    <!-- ACCOUNT -->
+    <div class="card card-pad set-card" id="account">
+      <div class="sc-head"><div><h3>Účet</h3><p>Tvoje základné prihlasovacie a kontaktné údaje.</p></div></div>
+      <div class="stack g-4">
+        <div class="field-row">
+          <div class="field"><label class="label">Prezývka (nick)</label><input class="input" id="acc-username" value="<%= account.username %>"></div>
+          <div class="field"><label class="label">Zobrazované meno</label><input class="input" id="acc-name" value="<%= account.name %>"></div>
+        </div>
+        <div class="field"><label class="label">E-mailová adresa</label><input class="input" id="acc-email" type="email" value="<%= account.email %>"><span class="hint">Na túto adresu chodia notifikácie a obnova hesla.</span></div>
+        <div class="field-row">
+          <div class="field"><label class="label">Jazyk</label><select class="select"><option>Slovenčina</option><option>Čeština</option><option>English</option></select></div>
+          <div class="field"><label class="label">Časové pásmo</label><select class="select"><option>Bratislava (GMT+1)</option><option>Praha (GMT+1)</option><option>Londýn (GMT+0)</option></select></div>
+        </div>
+        <div><button class="btn btn-primary btn-sm" id="saveAccount">Uložiť zmeny</button></div>
+      </div>
+    </div>
+
+    <!-- PASSWORD -->
+    <div class="card card-pad set-card" id="password">
+      <div class="sc-head"><div><h3>Zmena hesla</h3><p>Odporúčame silné heslo, ktoré nepoužívaš inde.</p></div></div>
+      <div class="stack g-4">
+        <div class="field" style="max-width:420px"><label class="label">Súčasné heslo</label><input class="input" id="pw-current" type="password" placeholder="••••••••"></div>
+        <div class="field-row">
+          <div class="field"><label class="label">Nové heslo</label><input class="input" id="pw-new" type="password" placeholder="••••••••"></div>
+          <div class="field"><label class="label">Potvrdiť nové heslo</label><input class="input" id="pw-confirm" type="password" placeholder="••••••••"></div>
+        </div>
+        <div><button class="btn btn-secondary btn-sm" id="savePassword">Aktualizovať heslo</button></div>
+      </div>
+    </div>
+
+    <!-- NOTIFICATIONS (vizuál — zatiaľ netrackujeme) -->
+    <div class="card card-pad set-card" id="notifications">
+      <div class="sc-head"><div><h3>Notifikácie</h3><p>Vyber si, o čom chceš dostávať upozornenia.</p></div></div>
+      <div class="notif-row"><div class="nr-tx"><b>Otvorenie nového kola</b><span>Keď sa otvorí kolo na tipovanie v tvojej súťaži.</span></div><label class="switch"><input type="checkbox" checked><span class="track"></span></label></div>
+      <div class="notif-row"><div class="nr-tx"><b>Blížiaca sa uzávierka</b><span>2 hodiny pred koncom tipovania, ak máš nevyplnené tipy.</span></div><label class="switch"><input type="checkbox" checked><span class="track"></span></label></div>
+      <div class="notif-row"><div class="nr-tx"><b>Pridelené výsledky a body</b><span>Keď sa vyhodnotí kolo a získaš body.</span></div><label class="switch"><input type="checkbox" checked><span class="track"></span></label></div>
+      <div class="notif-row"><div class="nr-tx"><b>Posun v rebríčku</b><span>Keď sa zmení tvoja pozícia v lige alebo sezóne.</span></div><label class="switch"><input type="checkbox"><span class="track"></span></label></div>
+      <div class="notif-row"><div class="nr-tx"><b>Pozvánky do líg</b><span>Keď ťa niekto pozve do súkromnej ligy.</span></div><label class="switch"><input type="checkbox" checked><span class="track"></span></label></div>
+      <div class="notif-row"><div class="nr-tx"><b>Novinky a tipy z Tiperligy</b><span>Občasný e-mail s novinkami (max. 1× mesačne).</span></div><label class="switch"><input type="checkbox"><span class="track"></span></label></div>
+      <div class="row g-3 wrap-gap" style="margin-top:16px">
+        <span class="stat-label" style="margin:0;align-self:center">Doručovať cez:</span>
+        <label class="check" style="font-size:var(--fs-sm)"><input type="checkbox" checked> E-mail</label>
+        <label class="check" style="font-size:var(--fs-sm)"><input type="checkbox" checked> Push v aplikácii</label>
+      </div>
+      <div style="margin-top:16px"><button class="btn btn-primary btn-sm" data-soon>Uložiť</button></div>
+    </div>
+
+    <!-- PRIVACY (vizuál — zatiaľ netrackujeme) -->
+    <div class="card card-pad set-card" id="privacy">
+      <div class="sc-head"><div><h3>Súkromie</h3><p>Ovládaj, čo o tebe vidia ostatní hráči.</p></div></div>
+      <div class="notif-row"><div class="nr-tx"><b>Verejný profil</b><span>Ostatní môžu vidieť tvoje štatistiky a odznaky cez rebríček.</span></div><label class="switch"><input type="checkbox" checked><span class="track"></span></label></div>
+      <div class="notif-row"><div class="nr-tx"><b>Zobrazovať mesto</b><span>Tvoje mesto sa zobrazí na verejnom profile.</span></div><label class="switch"><input type="checkbox" checked><span class="track"></span></label></div>
+      <div class="notif-row"><div class="nr-tx"><b>Povoliť porovnávanie</b><span>Hráči ťa môžu porovnať so svojimi výsledkami.</span></div><label class="switch"><input type="checkbox" checked><span class="track"></span></label></div>
+      <div style="margin-top:16px"><button class="btn btn-primary btn-sm" data-soon>Uložiť</button></div>
+    </div>
+
+    <!-- APPEARANCE -->
+    <div class="card card-pad set-card" id="appearance">
+      <div class="sc-head"><div><h3>Vzhľad</h3><p>Téma rozhrania. Prepínač je aj v hlavičke.</p></div></div>
+      <div class="row g-3 wrap-gap">
+        <button class="btn btn-secondary btn-sm" data-theme-set="dark">🌙 Tmavá</button>
+        <button class="btn btn-secondary btn-sm" data-theme-set="light">☀️ Svetlá</button>
+      </div>
+    </div>
+
+    <!-- DANGER ZONE (vizuál — akcie zatiaľ neaktívne) -->
+    <div class="card card-pad set-card danger-card" id="danger">
+      <div class="sc-head"><div><h3 style="color:var(--danger)">Nebezpečná zóna</h3><p>Tieto akcie sú nezvratné. Postupuj opatrne.</p></div></div>
+      <div class="danger-row">
+        <div class="nr-tx"><b>Resetovať štatistiky</b><span style="color:var(--text-3);display:block;font-size:var(--fs-xs);margin-top:2px">Vynuluje body, presnosť a série. História tipov ostane.</span></div>
+        <button class="btn btn-danger btn-sm" data-confirm="reset">Resetovať</button>
+      </div>
+      <div class="danger-row">
+        <div class="nr-tx"><b>Opustiť všetky súťaže</b><span style="color:var(--text-3);display:block;font-size:var(--fs-xs);margin-top:2px">Odhlásiš sa zo všetkých líg a sezón naraz.</span></div>
+        <button class="btn btn-danger btn-sm" data-confirm="leave-all">Opustiť všetky</button>
+      </div>
+      <div class="danger-row">
+        <div class="nr-tx"><b>Vymazať účet</b><span style="color:var(--text-3);display:block;font-size:var(--fs-xs);margin-top:2px">Natrvalo odstráni tvoj účet, históriu tipov a štatistiky.</span></div>
+        <button class="btn btn-danger btn-sm" data-confirm="delete">Vymazať účet</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- CONFIRM DIALOG -->
+<div class="scrim" id="confirmScrim" hidden>
+  <div class="dialog" role="dialog" aria-modal="true">
+    <div class="row g-3" style="margin-bottom:14px">
+      <span style="width:44px;height:44px;border-radius:var(--r-md);flex:none;display:flex;align-items:center;justify-content:center;background:var(--danger-soft);color:var(--danger)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:22px;height:22px"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01" stroke-linecap="round"/></svg>
+      </span>
+      <div><div class="dialog-title" id="confTitle">Naozaj?</div><p class="muted" style="font-size:var(--fs-sm)" id="confMsg">Túto akciu nie je možné vrátiť späť.</p></div>
+    </div>
+    <div class="field" id="confConfirmField" style="margin:8px 0 18px" hidden>
+      <label class="label">Pre potvrdenie napíš <b class="hi">VYMAZAŤ</b></label>
+      <input class="input" id="confInput" placeholder="VYMAZAŤ" autocomplete="off">
+    </div>
+    <div class="row g-2" style="justify-content:flex-end">
+      <button class="btn btn-ghost" id="confCancel">Zrušiť</button>
+      <button class="btn btn-danger" id="confOk">Potvrdiť</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap" style="position:fixed;bottom:24px;right:24px;z-index:200;display:flex;flex-direction:column;gap:10px"></div>
+
+<script>
+(function(){
+  function toast(title,msg,danger){
+    var t=document.createElement('div'); t.className='toast '+(danger?'danger':'success');
+    var col=danger?'var(--danger)':'var(--success)';
+    var ic=danger?'<path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/>':'<path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>';
+    t.innerHTML='<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="'+col+'" stroke-width="2.5">'+ic+'</svg><div><div class="toast-title">'+title+'</div><div class="toast-msg">'+msg+'</div></div>';
+    document.getElementById('toastWrap').appendChild(t);
+    setTimeout(function(){ t.style.transition='opacity .3s,transform .3s'; t.style.opacity='0'; t.style.transform='translateX(20px)'; setTimeout(function(){t.remove();},300); },2800);
+  }
+
+  // Účet — reálne uloženie
+  var sa=document.getElementById('saveAccount');
+  if(sa) sa.addEventListener('click', function(){
+    sa.disabled=true;
+    fetch('/api/profile',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      username:document.getElementById('acc-username').value,
+      name:document.getElementById('acc-name').value,
+      email:document.getElementById('acc-email').value
+    })}).then(function(r){return r.json();}).then(function(res){
+      sa.disabled=false;
+      if(res.success===false){ toast('Nepodarilo sa',res.message||'Skús znova.',true); return; }
+      toast('Účet uložený','Tvoje údaje boli aktualizované.');
+    }).catch(function(){ sa.disabled=false; toast('Chyba','Skús znova.',true); });
+  });
+
+  // Heslo — reálna zmena
+  var sp=document.getElementById('savePassword');
+  if(sp) sp.addEventListener('click', function(){
+    sp.disabled=true;
+    fetch('/api/profile/password',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      currentPassword:document.getElementById('pw-current').value,
+      newPassword:document.getElementById('pw-new').value,
+      confirmPassword:document.getElementById('pw-confirm').value
+    })}).then(function(r){return r.json();}).then(function(res){
+      sp.disabled=false;
+      if(res.success===false){ toast('Nepodarilo sa',res.message||'Skús znova.',true); return; }
+      toast('Heslo zmenené','Nabudúce sa prihlás novým heslom.');
+      document.getElementById('pw-current').value=''; document.getElementById('pw-new').value=''; document.getElementById('pw-confirm').value='';
+    }).catch(function(){ sp.disabled=false; toast('Chyba','Skús znova.',true); });
+  });
+
+  // zatiaľ neaktívne sekcie
+  document.querySelectorAll('[data-soon]').forEach(function(b){ b.addEventListener('click',function(){ toast('Zatiaľ neaktívne','Táto sekcia bude čoskoro funkčná.'); }); });
+
+  // theme buttons
+  document.querySelectorAll('[data-theme-set]').forEach(function(b){ b.addEventListener('click',function(){ var t=b.dataset.themeSet; document.documentElement.setAttribute('data-theme',t); }); });
+
+  // section nav active on scroll
+  var navLinks=[].slice.call(document.querySelectorAll('.set-nav a'));
+  var secs=navLinks.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+  window.addEventListener('scroll',function(){
+    var cur=secs[0];
+    for(var i=0;i<secs.length;i++){ if(secs[i] && secs[i].getBoundingClientRect().top<140) cur=secs[i]; }
+    navLinks.forEach(function(a){ a.classList.toggle('active', a.getAttribute('href')==='#'+(cur&&cur.id)); });
+  },{passive:true});
+
+  // confirm dialog (akcie zatiaľ informačné)
+  var scrim=document.getElementById('confirmScrim');
+  var confTitle=document.getElementById('confTitle'), confMsg=document.getElementById('confMsg');
+  var confField=document.getElementById('confConfirmField'), confInput=document.getElementById('confInput'), confOk=document.getElementById('confOk');
+  var action=null;
+  var CONF={
+    'delete':{ t:'Vymazať účet natrvalo?', m:'Tým sa nezvratne odstráni tvoj profil, história tipov, body a odznaky.', typed:true, ok:'Vymazať účet', done:function(){ toast('Zatiaľ neaktívne','Mazanie účtu bude čoskoro dostupné.',true); } },
+    'reset':{ t:'Resetovať štatistiky?', m:'Vynuluje sa tvoje skóre, presnosť a pozície. História tipov ostane.', typed:false, ok:'Resetovať štatistiky', done:function(){ toast('Zatiaľ neaktívne','Reset štatistík bude čoskoro dostupný.',true); } },
+    'leave-all':{ t:'Opustiť všetky súťaže?', m:'Odhlásiš sa zo všetkých líg a sezón.', typed:false, ok:'Opustiť všetky', done:function(){ toast('Zatiaľ neaktívne','Hromadné opustenie bude čoskoro dostupné.',true); } }
+  };
+  function openD(key){ action=CONF[key]; if(!action) return; confTitle.textContent=action.t; confMsg.textContent=action.m; confOk.textContent=action.ok; confField.hidden=!action.typed; confInput.value=''; confOk.disabled=!!action.typed; scrim.hidden=false; }
+  function closeD(){ scrim.hidden=true; action=null; }
+  document.querySelectorAll('[data-confirm]').forEach(function(b){ b.addEventListener('click',function(){ openD(b.dataset.confirm); }); });
+  if(confInput) confInput.addEventListener('input',function(){ confOk.disabled = confInput.value.trim().toUpperCase()!=='VYMAZAŤ'; });
+  document.getElementById('confCancel').addEventListener('click',closeD);
+  scrim.addEventListener('click',function(e){ if(e.target===scrim) closeD(); });
+  confOk.addEventListener('click',function(){ var a=action; closeD(); a&&a.done&&a.done(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&!scrim.hidden) closeD(); });
+})();
+</script>
+
+<%- include('partials/footer') %>

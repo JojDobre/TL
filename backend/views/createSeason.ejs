@@ -54,7 +54,7 @@
       </div>
     </div>
     <% } else { %>
-      <input type="hidden" name="type" value="community">
+      <input type="hidden" class="card form-card" name="type" value="community">
     <% } %>
 
     <div class="card form-card">
@@ -72,8 +72,7 @@
       <div class="field"><label class="label">URL obrázka</label><input class="input" type="url" name="image" placeholder="https://… odkaz na obrázok" oninput="var p=document.querySelector('.preview-cover'); if(p){ if(this.value){p.style.backgroundImage='url(\''+this.value+'\')';p.style.backgroundSize='cover';p.style.backgroundPosition='center';}else{p.style.backgroundImage='';} }"></div>
     </div>
 
-    <% if (currentUserRole !== 'admin') { %>
-    <div class="card form-card">
+    <div class="card form-card" id="privacyCard"<%= currentUserRole === 'admin' ? ' hidden' : '' %>>
       <h3>Súkromie</h3>
       <p class="sub">Súkromná sezóna je chránená heslom. Ľudia mimo sezónu nevidia jej ligy ani rebríčky — pripoja sa len cez ID a heslo.</p>
       <label class="check" style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><input type="checkbox" id="privToggle" name="isPrivate"> <span>Súkromná sezóna (chránená heslom)</span></label>
@@ -82,7 +81,6 @@
         <label class="check" style="display:flex;align-items:center;gap:10px"><input type="checkbox" name="hidden"> <span>Skryť zo zoznamu sezón (pripojiť sa dá len cez ID + heslo)</span></label>
       </div>
     </div>
-    <% } %>
   </main>
 
   <aside class="sticky-side">
@@ -113,8 +111,15 @@
       opt.classList.add('sel');
       var radio = opt.querySelector('input[type=radio]'); if (radio) radio.checked = true;
       var tag = document.querySelector('.preview-cover .tag');
-      if (opt.getAttribute('data-type') === 'community') { tag.textContent = 'Community'; tag.className = 'tag tag-gold'; }
+      var isCommunity = opt.getAttribute('data-type') === 'community';
+      if (isCommunity) { tag.textContent = 'Community'; tag.className = 'tag tag-gold'; }
       else { tag.textContent = 'Oficiálna'; tag.className = 'tag tag-brand'; }
+      // súkromie má zmysel len pre community (oficiálne sú vždy verejné)
+      var pc = document.getElementById('privacyCard');
+      if (pc) {
+        pc.toggleAttribute('hidden', !isCommunity);
+        if (!isCommunity) { var t = document.getElementById('privToggle'); if (t) { t.checked = false; document.getElementById('privFields').setAttribute('hidden',''); } }
+      }
     });
   });
 </script>

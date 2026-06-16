@@ -57,7 +57,7 @@ async function seedInitialData() {
 
   const PW = await bcrypt.hash('password123', 10);
 
-  // ---------- POUŽÍVATELIA ----------
+// ---------- POUŽÍVATELIA ----------
   console.log('  → používatelia');
   const admin = await db.User.create({ username: 'admin', email: 'admin@tiperliga.sk', password: PW, firstName: 'Admin', lastName: 'Tiperliga', role: 'admin' });
   const vip = await db.User.create({ username: 'vip', email: 'vip@tiperliga.sk', password: PW, firstName: 'Viktor', lastName: 'Important', role: 'vip' });
@@ -352,7 +352,7 @@ async function seedInitialData() {
     name: 'Liga 2024 — final', description: 'Ukončená liga.',
     type: 'custom', joinCode: code6(), password: null, hasPassword: false,
     seasonId: sOld.id, creatorId: vip.id, scoringSystem: DEF_SCORING, scoringLocked: true,
-    active: false, isTemplate: false, templateId: null,
+    active: false, ended: true, isTemplate: false, templateId: null,
   });
   await joinLeague(lOld, vip, 'admin');
   for (const u of players) await joinLeague(lOld, u);

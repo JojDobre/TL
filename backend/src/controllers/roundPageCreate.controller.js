@@ -6,6 +6,7 @@
 
 const { League, Season, Round, User, UserSeason } = require('../models');
 const { asyncHandler } = require('../middleware/error.middleware');
+const { isLeagueLocked } = require('../utils/league.utils');
 
 async function canManageLeague(league, userId) {
   if (!userId) return false;
@@ -23,7 +24,7 @@ const createRoundPage = asyncHandler(async (req, res) => {
   const leagueId = req.query.league;
   if (!leagueId) return res.redirect('/seasons');
   const league = await League.findByPk(leagueId, {
-    include: [{ model: Season, attributes: ['id', 'name', 'creatorId'] }],
+    include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'startDate', 'endDate', 'ended'] }],
   });
   if (!league) return res.status(404).render('error-page', { message: 'Liga nebola nájdená.' });
 
@@ -32,6 +33,9 @@ const createRoundPage = asyncHandler(async (req, res) => {
   }
   if (league.templateId) {
     return res.status(403).render('error-page', { message: 'Liga zo šablóny — kolá sú prevzaté z oficiálnej ligy a nedajú sa pridávať.' });
+  }
+  if (isLeagueLocked(league)) {
+    return res.status(403).render('error-page', { message: 'Liga je ukončená — nedajú sa pridávať nové kolá.' });
   }
 
   res.render('createRound', { league: league.toJSON(), error: null });
@@ -43,7 +47,7 @@ const createRoundSubmit = asyncHandler(async (req, res) => {
   const userId = Number(req.session.userId);
 
   const league = await League.findByPk(leagueId, {
-    include: [{ model: Season, attributes: ['id', 'name', 'creatorId'] }],
+    include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'startDate', 'endDate', 'ended'] }],
   });
   if (!league) return res.redirect('/seasons');
 
@@ -54,6 +58,9 @@ const createRoundSubmit = asyncHandler(async (req, res) => {
   }
   if (league.templateId) {
     return res.status(403).render('error-page', { message: 'Liga zo šablóny — kolá sa nedajú pridávať.' });
+  }
+  if (isLeagueLocked(league)) {
+    return res.status(403).render('error-page', { message: 'Liga je ukončená — nedajú sa pridávať nové kolá.' });
   }
   if (!name || !name.trim()) return renderErr('Názov kola je povinný.');
   if (!startDate || !endDate) return renderErr('Zadaj otvorenie aj uzávierku tipovania.');

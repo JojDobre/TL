@@ -7,6 +7,7 @@
 
 const { Round, League, Season, Match, Team, Tip, User, UserSeason } = require('../models');
 const { asyncHandler } = require('../middleware/error.middleware');
+const { isLeagueLocked } = require('../utils/league.utils');
 
 async function canManageLeague(league, userId) {
   if (!userId) return false;
@@ -24,7 +25,7 @@ const teamAbbr = (name) => (name || '?').replace(/[^A-Za-zÀ-ž0-9 ]/g, '').spli
 // GET /rounds/:id/evaluate
 const evaluatePage = asyncHandler(async (req, res) => {
   const round = await Round.findByPk(req.params.id, {
-    include: [{ model: League, include: [{ model: Season, attributes: ['id', 'name', 'creatorId'] }] }],
+    include: [{ model: League, include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'startDate', 'endDate', 'ended'] }] }],
   });
   if (!round) return res.status(404).render('error-page', { message: 'Kolo nebolo nájdené.' });
 
@@ -36,6 +37,9 @@ const evaluatePage = asyncHandler(async (req, res) => {
   // liga zo šablóny — výsledky riadi admin v oficiálnej lige, tu sa nevyhodnocuje
   if (league.templateId) {
     return res.status(403).render('error-page', { message: 'Táto liga je vytvorená zo šablóny — výsledky zápasov spravuje administrátor v oficiálnej lige a prejavia sa automaticky.' });
+  }
+  if (isLeagueLocked(league)) {
+    return res.status(403).render('error-page', { message: 'Liga je ukončená — vyhodnocovanie nie je možné.' });
   }
 
   const matches = await Match.findAll({

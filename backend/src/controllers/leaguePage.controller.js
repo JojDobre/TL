@@ -92,6 +92,7 @@ const leagueDetailPage = asyncHandler(async (req, res) => {
     leaderboard,
     isMember: !!myMembership,
     isCreator: league.creatorId === meId,
+    teamsCount: await league.countTeams(),
     myRank,
     myPoints,
     playedRounds,
@@ -239,8 +240,8 @@ const createLeagueSubmit = asyncHandler(async (req, res) => {
     return res.redirect('/leagues/' + league.id);
   }
 
-  // klasická liga: presmeruj na úpravu, nech si používateľ hneď pridá tímy do súpisky
-  res.redirect('/leagues/' + league.id + '/edit');
+  // klasická liga: na detail (upozornenie na chýbajúce tímy je v detaile)
+  res.redirect('/leagues/' + league.id);
 });
 
 // GET /leagues/:id/edit — formulár na úpravu ligy
@@ -260,8 +261,18 @@ const editLeaguePage = asyncHandler(async (req, res) => {
     || (user && user.role === 'admin');
   if (!allowed) return res.status(403).render('error-page', { message: 'Nemáš oprávnenie upraviť túto ligu.' });
 
+  // bodovanie je zamknuté, ak liga už má vyhodnotený zápas (alebo bolo zamknuté skôr)
+  let scoringLocked = !!league.scoringLocked;
+  if (!scoringLocked) {
+    const rs = await Round.findAll({ where: { leagueId: league.id }, attributes: ['id'] });
+    const ids = rs.map((r) => r.id);
+    if (ids.length) {
+      scoringLocked = (await Match.count({ where: { roundId: { [Sequelize.Op.in]: ids }, status: 'finished' } })) > 0;
+    }
+  }
+
   res.render('editLeague', {
-    league: { ...league.toJSON(), scoringSystem: league.scoringSystem || {} },
+    league: { ...league.toJSON(), scoringSystem: league.scoringSystem || {}, scoringLocked },
     sports: SPORTS,
     countries: COUNTRIES,
     isClone: !!league.templateId,
@@ -295,7 +306,18 @@ const editLeagueSubmit = asyncHandler(async (req, res) => {
   if (type === 'official' && user.role === 'admin') league.type = 'official';
   else if (type === 'custom') league.type = 'custom';
 
-  // bodovanie len ak nie je uzamknuté (nezačalo prvé kolo)
+  // bodovanie sa nedá meniť, ak liga už má vyhodnotený zápas (inak by sa
+  // spätne menili už pridelené body). Kontrolujeme to dynamicky.
+  const roundsOfLeague = await Round.findAll({ where: { leagueId: league.id }, attributes: ['id'] });
+  const roundIdList = roundsOfLeague.map((r) => r.id);
+  let hasEvaluated = false;
+  if (roundIdList.length) {
+    hasEvaluated = (await Match.count({ where: { roundId: { [Sequelize.Op.in]: roundIdList }, status: 'finished' } })) > 0;
+  }
+  if (hasEvaluated && !league.scoringLocked) {
+    league.scoringLocked = true; // zamkni natrvalo
+  }
+
   if (!league.scoringLocked) {
     const num = (v, d) => { const n = parseInt(v, 10); return Number.isInteger(n) && n >= 0 ? n : d; };
     const s = league.scoringSystem || {};
@@ -406,4 +428,18 @@ const leagueMemberAction = asyncHandler(async (req, res) => {
   res.redirect('/leagues/' + league.id + '/members');
 });
 
-module.exports = { leagueDetailPage, joinLeagueSubmit, createLeaguePage, createLeagueSubmit, editLeaguePage, editLeagueSubmit, deleteLeagueSubmit, leaveLeagueSubmit, leagueMembersPage, leagueMemberAction };
+// POST /leagues/:id/end — ukončiť alebo znovuotvoriť ligu (toggle, len správca)
+const endLeagueSubmit = asyncHandler(async (req, res) => {
+  const userId = Number(req.session.userId);
+  const league = await League.findByPk(req.params.id, { include: [{ model: Season, attributes: ['id', 'creatorId'] }] });
+  if (!league) return res.redirect('/seasons');
+  if (!(await isLeagueManager(league, userId))) {
+    return res.status(403).render('error-page', { message: 'Nemáš oprávnenie ukončiť túto ligu.' });
+  }
+  // klon nemá zmysel ukončovať samostatne (riadi sa originálom), ale povolíme
+  league.ended = !league.ended;
+  await league.save();
+  res.redirect('/leagues/' + league.id);
+});
+
+module.exports = { leagueDetailPage, joinLeagueSubmit, createLeaguePage, createLeagueSubmit, editLeaguePage, editLeagueSubmit, deleteLeagueSubmit, leaveLeagueSubmit, leagueMembersPage, leagueMemberAction, endLeagueSubmit };

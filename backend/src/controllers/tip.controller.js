@@ -7,9 +7,10 @@
 //  - validácia skóre (celé nezáporné čísla) a víťaza
 //  - asyncHandler + ApiError, žiadne debug logy, žiadny únik chýb
 
-const { Tip, Match, User, Round, League, Team, Sequelize } = require('../models');
+const { Tip, Match, User, Round, League, Team, UserLeague, Season, Sequelize } = require('../models');
 const { Op } = Sequelize;
 const { ApiError, asyncHandler } = require('../middleware/error.middleware');
+const { isLeagueLocked } = require('../utils/league.utils');
 
 const validScore = (v) => Number.isInteger(v) && v >= 0;
 
@@ -51,9 +52,23 @@ const createOrUpdateTip = asyncHandler(async (req, res) => {
   if (!matchId) throw new ApiError(400, 'Chýba zápas.');
 
   const match = await Match.findByPk(matchId, {
-    include: [{ model: Round, attributes: ['id', 'startDate', 'endDate'] }],
+    include: [{ model: Round, attributes: ['id', 'startDate', 'endDate', 'leagueId'] }],
   });
   if (!match) throw new ApiError(404, 'Zápas nebol nájdený.');
+
+  // musíš byť členom ligy, do ktorej zápas patrí
+  const leagueId = match.Round ? match.Round.leagueId : null;
+  if (!leagueId) throw new ApiError(400, 'Zápas nemá platné kolo/ligu.');
+  const membership = await UserLeague.findOne({ where: { userId, leagueId } });
+  if (!membership) {
+    throw new ApiError(403, 'Tipovať môžeš len v lige, ktorej si členom. Najprv sa pripoj do ligy.');
+  }
+
+  // liga (alebo jej sezóna) ukončená → netipuje sa
+  const league = await League.findByPk(leagueId, { include: [{ model: Season, attributes: ['id', 'endDate', 'ended'] }] });
+  if (isLeagueLocked(league)) {
+    throw new ApiError(403, 'Liga je ukončená — tipovanie nie je možné.');
+  }
 
   // stav zápasu: po štarte / dokončený / zrušený sa netipuje
   if (match.status && match.status !== 'scheduled') {

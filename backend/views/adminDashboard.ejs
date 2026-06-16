@@ -1,0 +1,68 @@
+<%- include('partials/head', { title: 'Admin — prehľad', page: 'admin', active: 'admin', pageStyle: `
+  .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:22px 0; }
+  .kpi { padding:18px 20px; }
+  .ad-grid { display:grid; grid-template-columns:1.4fr 1fr; gap:18px; align-items:start; }
+  .task-row { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:var(--r-sm); background:var(--surface-2); margin-bottom:8px; }
+  .quick { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  .quick a { display:flex; flex-direction:column; gap:6px; padding:16px; border-radius:var(--r-md); background:var(--surface-2); border:1px solid var(--line); transition:all .15s; }
+  .quick a:hover { border-color:var(--brand-line); background:var(--brand-soft); }
+  .quick .qi { font-size:20px; }
+  @media (max-width:980px){ .ad-grid { grid-template-columns:1fr; } }
+  @media (max-width:760px){ .kpi-grid { grid-template-columns:1fr 1fr; } }
+` }) %>
+
+<%- include('partials/admin-subnav', { active: 'dashboard' }) %>
+
+<div class="wrap" style="padding:26px 0 8px">
+  <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Prehľad platformy</h1>
+  <p class="muted" style="margin-top:6px">Súhrn a rýchle akcie pre správu Tiperligy.</p>
+</div>
+
+<div class="wrap">
+  <div class="kpi-grid">
+    <div class="card kpi"><div class="stat-label">Užívatelia</div><div class="stat-value brand"><%= stats.usersCount %></div></div>
+    <div class="card kpi"><div class="stat-label">Aktívne sezóny</div><div class="stat-value"><%= stats.activeSeasons %> <span class="muted" style="font-size:var(--fs-sm)">z <%= stats.seasonsCount %></span></div></div>
+    <div class="card kpi"><div class="stat-label">Ligy</div><div class="stat-value"><%= stats.leaguesCount %></div></div>
+    <div class="card kpi"><div class="stat-label">Čakajú vyhodnotenie</div><div class="stat-value" style="color:<%= stats.pendingCount ? 'var(--warning)' : 'var(--text-1)' %>"><%= stats.pendingCount %></div></div>
+  </div>
+</div>
+
+<div class="wrap" style="padding-bottom:64px">
+  <div class="ad-grid">
+    <div class="card card-pad">
+      <div class="stat-label" style="margin-bottom:14px">Vyžaduje pozornosť — zápasy po termíne bez výsledku</div>
+      <% if (pending.length === 0) { %>
+        <p class="muted" style="font-size:var(--fs-sm)">Žiadne čakajúce zápasy. Všetko vyhodnotené ✓</p>
+      <% } %>
+      <% pending.forEach(function(p){ %>
+      <div class="task-row">
+        <span style="width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--warning-soft,rgba(245,180,80,.15));color:var(--warning);flex:none">⚠</span>
+        <div class="grow" style="min-width:0;flex:1">
+          <b class="hi" style="font-size:var(--fs-sm)"><%= p.leagueName %> · <%= p.roundName %></b>
+          <div class="muted" style="font-size:var(--fs-xs)">zápas #<%= p.id %> · <%= new Date(p.matchTime).toLocaleString('sk-SK') %></div>
+        </div>
+        <% if (p.roundId) { %><a href="/rounds/<%= p.roundId %>/evaluate" class="btn btn-primary btn-sm">Vyhodnotiť</a><% } %>
+      </div>
+      <% }); %>
+    </div>
+
+    <div class="card card-pad">
+      <div class="stat-label" style="margin-bottom:14px">Rýchle akcie</div>
+      <div class="quick">
+        <a href="/seasons/create"><span class="qi">🏆</span><b class="hi" style="font-size:var(--fs-sm)">Nová sezóna</b></a>
+        <a href="/admin/competitions"><span class="qi">📋</span><b class="hi" style="font-size:var(--fs-sm)">Sezóny &amp; ligy</b></a>
+        <a href="/admin/users"><span class="qi">👥</span><b class="hi" style="font-size:var(--fs-sm)">Užívatelia</b></a>
+        <a href="/admin/teams"><span class="qi">🛡️</span><b class="hi" style="font-size:var(--fs-sm)">Tímy</b></a>
+      </div>
+      <div class="hr" style="height:1px;background:var(--line);margin:18px 0"></div>
+      <div class="stat-label" style="margin-bottom:8px">Súhrn</div>
+      <div class="stack g-2" style="font-size:var(--fs-sm)">
+        <div class="between"><span class="muted">Tímy v DB</span><b class="hi num"><%= stats.teamsCount %></b></div>
+        <div class="between"><span class="muted">Tipy celkovo</span><b class="hi num"><%= stats.tipsCount %></b></div>
+        <div class="between"><span class="muted">Sezóny celkovo</span><b class="hi num"><%= stats.seasonsCount %></b></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

@@ -121,4 +121,41 @@ const createCustomTeam = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, message: 'Custom tím vytvorený a pridaný.', data: team });
 });
 
-module.exports = { availableTeams, leagueTeams, addTeam, removeTeam, createCustomTeam };
+// PUT /api/teams/custom/:id — používateľ upraví svoj custom tím
+const updateCustomTeam = asyncHandler(async (req, res) => {
+  const userId = Number(req.session.userId);
+  const team = await Team.findByPk(req.params.id);
+  if (!team) throw new ApiError(404, 'Tím nenájdený.');
+  if (team.scope !== 'custom' || team.creatorId !== userId) {
+    throw new ApiError(403, 'Upraviť môžeš len svoj vlastný tím.');
+  }
+  const name = (req.body.name || '').trim();
+  if (!name) throw new ApiError(400, 'Názov tímu je povinný.');
+  const teamType = req.body.teamType === 'national' ? 'national' : 'club';
+  let sport = null;
+  const country = req.body.country && COUNTRY_CODES.includes(req.body.country) ? req.body.country : null;
+  if (teamType === 'club') sport = req.body.sport && SPORT_CODES.includes(req.body.sport) ? req.body.sport : null;
+  const logo = (req.body.logo || '').trim() || null;
+
+  team.name = name; team.teamType = teamType; team.sport = sport; team.country = country; team.logo = logo;
+  await team.save();
+  res.status(200).json({ success: true, message: 'Tím upravený.', data: team });
+});
+
+// DELETE /api/teams/custom/:id — používateľ zmaže svoj custom tím
+// (len ak nie je v žiadnom zápase; odoberie sa aj zo súpisiek líg)
+const deleteCustomTeam = asyncHandler(async (req, res) => {
+  const userId = Number(req.session.userId);
+  const team = await Team.findByPk(req.params.id);
+  if (!team) throw new ApiError(404, 'Tím nenájdený.');
+  if (team.scope !== 'custom' || team.creatorId !== userId) {
+    throw new ApiError(403, 'Zmazať môžeš len svoj vlastný tím.');
+  }
+  const used = await Match.count({ where: { [Op.or]: [{ homeTeamId: team.id }, { awayTeamId: team.id }] } });
+  if (used > 0) throw new ApiError(400, 'Tím nemožno zmazať — je použitý v zápasoch.');
+  await LeagueTeam.destroy({ where: { teamId: team.id } });
+  await team.destroy();
+  res.status(200).json({ success: true, message: 'Tím zmazaný.' });
+});
+
+module.exports = { availableTeams, leagueTeams, addTeam, removeTeam, createCustomTeam, updateCustomTeam, deleteCustomTeam };

@@ -10,6 +10,7 @@
   .team-select { display:flex; flex-direction:column; gap:7px; }
   .vs-mid { font-family:var(--font-display); font-weight:700; color:var(--text-4); padding-bottom:12px; }
   .built-match { display:grid; grid-template-columns:1fr auto 1fr auto auto; gap:12px; align-items:center; padding:13px 16px; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--r-sm); margin-bottom:8px; }
+  .built-acts { display:flex; gap:4px; align-items:center; }
   .built-team { display:flex; align-items:center; gap:9px; font-weight:600; color:var(--text-1); font-size:var(--fs-sm); }
   .built-team.r { flex-direction:row-reverse; text-align:right; }
 
@@ -60,7 +61,7 @@
       <h3>Nový zápas</h3>
       <p class="sub">Vyber tímy, čas a typ tipovania.</p>
       <% if (teams.length < 2) { %>
-        <div class="tag tag-warning" style="display:block;padding:12px 14px">Súpiska tímov ligy má menej ako 2 tímy. Najprv pridaj tímy do ligy v <a href="/leagues/<%= league.id %>/edit" style="text-decoration:underline">úprave ligy</a>.</div>
+        <div class="tag tag-warning" style="display:block;padding:12px 14px;margin-bottom:16px">Súpiska tímov ligy má menej ako 2 tímy. Najprv pridaj tímy do ligy v <a href="/leagues/<%= league.id %>/edit" style="text-decoration:underline">úprave ligy</a>.</div>
       <% } %>
       <div class="match-builder">
         <div class="team-select"><label class="label">Domáci tím</label>
@@ -78,6 +79,22 @@
       </div>
     </div>
 
+    <!-- HROMADNÝ IMPORT (CSV) -->
+    <% if (teams.length >= 2) { %>
+    <div class="card form-card" style="margin-bottom:18px">
+      <button type="button" class="row between" id="csvToggle" style="width:100%;background:none;border:none;cursor:pointer;padding:0">
+        <span><b class="hi">Hromadný import zápasov</b> <span class="muted" style="font-size:var(--fs-sm)">— viac zápasov naraz</span></span>
+        <span class="faint" id="csvChevron">▾</span>
+      </button>
+      <div id="csvPanel" hidden style="margin-top:16px">
+        <p class="sub" style="margin-bottom:10px">Jeden zápas na riadok vo formáte: <code>Domáci tím; Hosťujúci tím; RRRR-MM-DD HH:MM; typ</code><br>Typ je voliteľný (<code>winner</code> = iba víťaz, inak presný výsledok). Názvy tímov musia byť zo súpisky ligy.</p>
+        <textarea class="textarea" id="csvText" rows="6" placeholder="Slovensko; Nemecko; 2026-06-20 18:00&#10;Česko; Švédsko; 2026-06-20 21:00; winner"></textarea>
+        <div class="row g-2" style="margin-top:10px"><button type="button" class="btn btn-secondary" id="csvImport">Importovať zápasy</button></div>
+        <div id="csvResult" style="margin-top:12px"></div>
+      </div>
+    </div>
+    <% } %>
+
     <div class="between" style="margin-bottom:14px"><h3 style="font-size:var(--fs-h4)">Pridané zápasy <span class="muted num" id="matchCount">(<%= matches.length %>)</span></h3></div>
     <div id="builtList">
       <% if (matches.length === 0) { %><p class="muted" id="emptyMsg">Zatiaľ žiadne zápasy. Pridaj prvý vyššie.</p><% } %>
@@ -87,8 +104,10 @@
         <span class="vs-mid">:</span>
         <span class="built-team r"><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)"><%= m.awayAbbr %></span><%= m.awayTeam ? m.awayTeam.name : '—' %></span>
         <span class="muted" style="font-size:var(--fs-xs)" data-time="<%= m.matchTime %>"><%= fmtDT(m.matchTime) %></span>
-        <button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-edit-time title="Upraviť čas">✎</button>
-        <button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-del>✕</button>
+        <span class="built-acts">
+          <button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-edit-time title="Upraviť čas">✎</button>
+          <button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-del title="Odstrániť">✕</button>
+        </span>
       </div>
       <% }); %>
     </div>
@@ -124,7 +143,7 @@
         var m = res.data;
         var empty = document.getElementById('emptyMsg'); if (empty) empty.remove();
         var row = document.createElement('div'); row.className='built-match'; row.setAttribute('data-match-id', m.id);
-        row.innerHTML = '<span class="built-team"><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)">'+abbr(home.options[home.selectedIndex].text)+'</span>'+home.options[home.selectedIndex].text+'</span><span class="vs-mid">:</span><span class="built-team r"><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)">'+abbr(away.options[away.selectedIndex].text)+'</span>'+away.options[away.selectedIndex].text+'</span><span class="muted" style="font-size:var(--fs-xs)">'+fmtDT(matchTime)+'</span><button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-del>✕</button>';
+        row.innerHTML = '<span class="built-team"><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)">'+abbr(home.options[home.selectedIndex].text)+'</span>'+home.options[home.selectedIndex].text+'</span><span class="vs-mid">:</span><span class="built-team r"><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)">'+abbr(away.options[away.selectedIndex].text)+'</span>'+away.options[away.selectedIndex].text+'</span><span class="muted" style="font-size:var(--fs-xs)" data-time="'+matchTime+'">'+fmtDT(matchTime)+'</span><span class="built-acts"><button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-edit-time title="Upraviť čas">✎</button><button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-del title="Odstrániť">✕</button></span>';
         document.getElementById('builtList').appendChild(row);
         updateCount();
         toast('Zápas pridaný ✓', true);
@@ -163,6 +182,27 @@
   });
 
   function updateCount(){ var n = document.querySelectorAll('#builtList .built-match').length; document.getElementById('matchCount').textContent = '('+n+')'; if(n===0){ var l=document.getElementById('builtList'); if(!document.getElementById('emptyMsg')){ var p=document.createElement('p'); p.className='muted'; p.id='emptyMsg'; p.textContent='Zatiaľ žiadne zápasy. Pridaj prvý vyššie.'; l.appendChild(p);} } }
+
+  // CSV import
+  var csvT = document.getElementById('csvToggle');
+  if (csvT) {
+    csvT.addEventListener('click', function(){ var p=document.getElementById('csvPanel'); var open=!p.hidden; p.hidden=open; document.getElementById('csvChevron').textContent = open?'▾':'▴'; });
+    document.getElementById('csvImport').addEventListener('click', function(){
+      var text = document.getElementById('csvText').value.trim();
+      if(!text){ toast('Zadaj aspoň jeden riadok.'); return; }
+      var btn=this; btn.disabled=true;
+      fetch('/api/rounds/'+roundId+'/matches/bulk', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ rows: text }) })
+        .then(function(r){ return r.json(); }).then(function(res){
+          btn.disabled=false;
+          if(res.success===false){ toast(res.message||'Import zlyhal.'); return; }
+          var box=document.getElementById('csvResult');
+          var html='<div class="tag tag-success" style="display:block;padding:10px 12px;margin-bottom:8px">Pridaných '+res.added+' zápasov ✓</div>';
+          if(res.errors && res.errors.length){ html+='<div class="tag tag-warning" style="display:block;padding:10px 12px"><b>Preskočené riadky:</b><br>'+res.errors.join('<br>')+'</div>'; }
+          box.innerHTML=html;
+          if(res.added>0){ toast('Importované ✓', true); document.getElementById('csvText').value=''; setTimeout(function(){ window.location.reload(); }, 900); }
+        }).catch(function(){ btn.disabled=false; toast('Chyba pri importe.'); });
+    });
+  }
 })();
 </script>
 

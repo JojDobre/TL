@@ -33,7 +33,22 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // ---- bezpečnosť a logovanie ----
 // helmet s vypnutým CSP (inline štýly v šablónach); pri produkcii doladiť
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      // povoliť obrázky (logá tímov, covery) z hocijakej https domény + data: + blob:
+      'img-src': ["'self'", 'https:', 'data:', 'blob:'],
+      // pre prípadné inline štýly v šablónach
+      'style-src': ["'self'", "'unsafe-inline'", 'https:'],
+      'script-src': ["'self'", "'unsafe-inline'"],
+      // formuláre/akcie len na náš pôvod
+      'connect-src': ["'self'"],
+    },
+  },
+}));
 app.use(morgan('dev'));
 
 // ---- parsovanie tiel požiadaviek ----

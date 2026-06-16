@@ -122,11 +122,12 @@
         <% } %>
         <% if (typeof isMember !== 'undefined' && isMember && !isCreator) { %>
           <form action="/seasons/<%= season.id %>/leave" method="POST" onsubmit="return confirm('Naozaj opustiť túto sezónu?')" style="display:inline">
-            <button type="submit" class="btn btn-ghost">Opustiť sezónu</button>
+            <button type="submit" class="btn btn-secondary">Opustiť sezónu</button>
           </form>
         <% } %>
-        <button class="btn btn-secondary" data-open-join>Pripojiť sa cez ID</button>
-        <a href="/seasons/<%= season.id %>" class="btn btn-primary btn-lg">Tipovať →</a>
+        <% if (status !== 'ended') { %>
+        <a href="/seasons/<%= season.id %>/zapasy" class="btn btn-primary btn-lg">Tipovať zápasy →</a>
+        <% } %>
       </div>
     </div>
   </div>
@@ -138,7 +139,7 @@
     <section class="blk" id="leagues">
       <div class="blk-head">
         <div><div class="eyebrow">Ligy v sezóne</div><h2><%= leagues.length %> líg · vyber si kde súťažiť</h2></div>
-        <a href="/leagues/create?season=<%= season.id %>" class="btn btn-brand btn-sm">+ Vytvoriť ligu</a>
+        <% if (typeof canCreateLeague !== 'undefined' && canCreateLeague) { %><a href="/leagues/create?season=<%= season.id %>" class="btn btn-brand btn-sm">+ Vytvoriť ligu</a><% } %>
       </div>
       <div class="stack g-3">
         <% if (leagues.length === 0) { %>
@@ -181,7 +182,7 @@
   <!-- ===== SIDE ===== -->
   <aside class="sticky-side">
     <div class="card card-pad">
-      <div class="between" style="margin-bottom:12px"><div class="stat-label" style="margin:0">Súhrnný rebríček</div><a href="/leaderboards" class="faint" style="font-size:var(--fs-xs)">Celý →</a></div>
+      <div class="between" style="margin-bottom:12px"><div class="stat-label" style="margin:0">Súhrnný rebríček</div><a href="/seasons/<%= season.id %>/leaderboard" class="faint" style="font-size:var(--fs-xs)">Celý →</a></div>
       <div class="lb">
         <% if (leaderboard.length === 0) { %>
           <p class="muted" style="font-size:var(--fs-sm)">Rebríček je zatiaľ prázdny.</p>
@@ -195,7 +196,7 @@
     <div class="card card-pad" style="background:linear-gradient(135deg,var(--surface-1),color-mix(in srgb,var(--brand) 9%,var(--surface-1)))">
       <b class="hi" style="display:block;margin-bottom:6px">Pozvi kamošov</b>
       <p class="muted" style="font-size:var(--fs-sm);margin-bottom:12px">Vytvor si vlastnú ligu v tejto sezóne a súťaž v partii.</p>
-      <a href="/leagues/create?season=<%= season.id %>" class="btn btn-brand btn-block btn-sm">Vytvoriť vlastnú ligu</a>
+      <% if (typeof canCreateLeague !== 'undefined' && canCreateLeague) { %><a href="/leagues/create?season=<%= season.id %>" class="btn btn-brand btn-block btn-sm">Vytvoriť vlastnú ligu</a><% } %>
     </div>
   </aside>
 </div>
@@ -221,6 +222,12 @@
     if (copy) {
       var val = copy.getAttribute('data-copy-val') || copy.textContent.trim();
       if (navigator.clipboard) navigator.clipboard.writeText(val);
+      // malý feedback
+      var t = document.createElement('div');
+      t.textContent = 'Skopírované ✓';
+      t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--success,#2e9e5b);color:#fff;padding:9px 16px;border-radius:10px;z-index:300;font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,.3)';
+      document.body.appendChild(t);
+      setTimeout(function(){ t.remove(); }, 1600);
     }
     var dlg = document.querySelector('[data-join]');
     if (!dlg) return;

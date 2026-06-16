@@ -64,6 +64,9 @@ const seasonDetailPage = asyncHandler(async (req, res) => {
   }
   const isCreator = meId && season.creatorId === meId;
   const canManage = isCreator || isGlobalAdmin || false;
+  // tvorba ligy: v oficiálnej len správca/admin; v community ktorýkoľvek člen; nikdy ak ended
+  const ended = seasonStatus(season) === 'ended';
+  const canCreateLeague = !ended && (canManage || (season.type === 'community' && isMember));
 
   const status = seasonStatus(season);
 
@@ -109,6 +112,7 @@ const seasonDetailPage = asyncHandler(async (req, res) => {
     canManage,
     isMember,
     isCreator,
+    canCreateLeague,
     status,
   });
 });
@@ -151,6 +155,7 @@ const createSeasonSubmit = asyncHandler(async (req, res) => {
   if (start && isNaN(start)) start = null;
   if (end && isNaN(end)) end = null;
   if (start && end && end <= start) return back('Koniec sezóny musí byť po jej začiatku.');
+  if (end && end <= new Date()) return back('Dátum ukončenia musí byť v budúcnosti (alebo nechaj prázdne pre sezónu bez konca).');
 
   // heslo + súkromie — len pre community (oficiálne sú vždy verejné)
   let passwordHash = null;
@@ -245,6 +250,7 @@ const manageSeasonSubmit = asyncHandler(async (req, res) => {
   if (start && isNaN(start)) start = null;
   if (end && isNaN(end)) end = null;
   if (start && end && end <= start) return back('Koniec sezóny musí byť po jej začiatku.');
+  if (end && end <= new Date()) return back('Dátum ukončenia musí byť v budúcnosti (alebo nechaj prázdne pre sezónu bez konca).');
 
   season.name = name.trim();
   season.description = description || null;

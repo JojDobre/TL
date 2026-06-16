@@ -91,4 +91,22 @@ const deleteTeam = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: 'Tím zmazaný.' });
 });
 
-module.exports = { listTeams, createTeam, bulkCreateTeams, deleteTeam };
+// PUT /api/admin/teams/:id  (úprava globálneho tímu)
+const updateTeam = asyncHandler(async (req, res) => {
+  const team = await Team.findByPk(req.params.id);
+  if (!team) throw new ApiError(404, 'Tím nenájdený.');
+  if (team.scope !== 'global') throw new ApiError(400, 'Cez admin správu sa upravujú len globálne tímy.');
+  const t = normalizeTeam(req.body);
+  // duplikát (iný tím s rovnakým menom/typom/športom)
+  const dup = await Team.findOne({ where: { name: t.name, scope: 'global', teamType: t.teamType, sport: t.sport, id: { [Op.ne]: team.id } } });
+  if (dup) throw new ApiError(409, 'Iný globálny tím s rovnakým názvom už existuje.');
+  team.name = t.name;
+  team.teamType = t.teamType;
+  team.sport = t.sport;
+  team.country = t.country;
+  team.logo = t.logo;
+  await team.save();
+  res.status(200).json({ success: true, message: 'Tím upravený.', data: team });
+});
+
+module.exports = { listTeams, createTeam, bulkCreateTeams, deleteTeam, updateTeam };

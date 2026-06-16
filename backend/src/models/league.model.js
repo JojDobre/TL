@@ -50,6 +50,12 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
       },
+      // Liga ukončená vlastným rozhodnutím správcu (nezávisle od stavu sezóny).
+      // Ukončená liga = uzamknutá: žiadne nové kolá/zápasy/tipy/vyhodnotenia.
+      ended: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
       scoringSystem: {
         type: DataTypes.JSON,  // JSON s pravidlami bodovania
         allowNull: true,

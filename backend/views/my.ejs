@@ -1,0 +1,204 @@
+<%- include('partials/head', { title: 'Moje súťaže a ligy', page: 'moje', active: 'moje', pageStyle: `
+  .my-head { padding:32px 0 6px; }
+  .my-greet { font-family:var(--font-display); font-weight:700; font-size:clamp(1.9rem,3.2vw,2.6rem); letter-spacing:-.02em; }
+  .alert-banner { margin:22px 0 8px; display:grid; grid-template-columns:auto 1fr auto; gap:18px 22px; align-items:center; padding:20px 24px; border-radius:var(--r-xl); position:relative; overflow:hidden; background:linear-gradient(120deg, color-mix(in srgb,var(--warning) 16%,var(--surface-1)), var(--surface-1) 70%); border:1px solid rgba(245,165,36,.32); }
+  .alert-banner::after { content:""; position:absolute; inset:0; pointer-events:none; background:radial-gradient(420px 160px at 92% -20%, rgba(245,165,36,.22), transparent 70%); }
+  .alert-ic { width:54px; height:54px; border-radius:var(--r-md); flex:none; display:flex; align-items:center; justify-content:center; background:var(--warning-soft); color:var(--warning); font-size:26px; position:relative; z-index:1; }
+  .alert-tx { position:relative; z-index:1; min-width:0; }
+  .alert-tx h3 { font-size:var(--fs-h4); }
+  .alert-act { position:relative; z-index:1; display:flex; flex-direction:column; align-items:flex-end; gap:10px; }
+  .my-layout { display:grid; grid-template-columns:1fr 340px; gap:26px; align-items:start; padding:18px 0 64px; }
+  .blk-head { display:flex; align-items:flex-end; justify-content:space-between; gap:14px; margin:30px 0 16px; flex-wrap:wrap; }
+  .blk-head:first-child { margin-top:6px; }
+  .blk-head h2 { font-size:var(--fs-h3); }
+  .ms-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:18px; }
+  .ms-card { overflow:hidden; display:flex; flex-direction:column; }
+  .ms-cover { height:74px; position:relative; display:flex; align-items:flex-start; justify-content:space-between; padding:12px 14px; }
+  .ms-cover .tag { position:relative; z-index:1; }
+  .ms-body { padding:16px 18px 18px; display:flex; flex-direction:column; flex:1; }
+  .ms-title { font-size:var(--fs-h4); margin-bottom:2px; }
+  .ms-sub { font-size:var(--fs-xs); color:var(--text-3); margin-bottom:14px; }
+  .ms-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px; }
+  .ms-stat { background:var(--surface-2); border:1px solid var(--line); border-radius:var(--r-sm); padding:9px 10px; text-align:center; }
+  .ms-stat .v { font-family:var(--num); font-weight:700; font-size:1.15rem; color:var(--text-1); line-height:1.1; font-variant-numeric:tabular-nums; }
+  .ms-stat .l { font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-4); font-weight:700; margin-top:3px; }
+  .ms-prog-row { display:flex; align-items:center; justify-content:space-between; font-size:var(--fs-xs); color:var(--text-3); margin-bottom:6px; }
+  .ms-foot { margin-top:auto; padding-top:14px; display:flex; gap:8px; }
+  .ms-foot .btn { flex:1; }
+  .ml-list { display:flex; flex-direction:column; gap:10px; }
+  .ml-row { display:grid; grid-template-columns:auto 1fr auto auto; gap:14px; align-items:center; padding:13px 16px; }
+  .ml-logo { width:44px; height:44px; border-radius:var(--r-md); flex:none; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-weight:700; font-size:14px; color:#fff; }
+  .ml-pos { font-family:var(--num); font-weight:700; font-size:1.3rem; line-height:1; font-variant-numeric:tabular-nums; }
+  .ml-pos .l { font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-4); font-weight:700; }
+  .my-aside { position:sticky; top:92px; display:flex; flex-direction:column; gap:18px; }
+  .nm { display:grid; grid-template-columns:1fr auto auto; gap:8px 12px; align-items:center; padding:11px 0; border-bottom:1px solid var(--line); }
+  .nm:last-of-type { border-bottom:none; }
+  .nm-team { display:flex; align-items:center; gap:8px; min-width:0; }
+  .nm-team .team-logo { width:26px; height:26px; font-size:10px; border-radius:8px; }
+  .nm-vs { font-size:var(--fs-xs); color:var(--text-4); white-space:nowrap; }
+  .nm-when { font-size:var(--fs-xs); color:var(--text-3); white-space:nowrap; font-family:var(--num); }
+  .quick-link { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 13px; border-radius:var(--r-sm); background:var(--surface-2); transition:background .15s; }
+  .quick-link:hover { background:var(--surface-3); }
+  .quick-link b { color:var(--text-1); font-size:var(--fs-sm); }
+  .quick-link .ar { color:var(--text-4); }
+  @media (max-width:980px){ .my-layout { grid-template-columns:1fr; } .my-aside { position:static; } }
+  @media (max-width:680px){ .alert-banner { grid-template-columns:auto 1fr; } .my-cta { flex-wrap:nowrap; width:100%; } .my-cta .btn { flex:1 1 50%; } .alert-act { grid-column:1 / -1; flex-direction:row; align-items:center; justify-content:space-between; } .ms-grid { grid-template-columns:1fr; } .ml-row { grid-template-columns:auto 1fr auto; } .ml-row .ml-status { display:none; } }
+` }) %>
+
+<%
+  function grad(id){ var g=['135deg,#0b4ea2,#1a1340','135deg,#16a085,#0c5f4d','135deg,#7c5cff,#3b1f8a','135deg,#c0392b,#7d2018','135deg,#d35400,#8a3700']; return g[(id||0)%g.length]; }
+  function abbr(n){ return (n||'?').substring(0,2).toUpperCase(); }
+  function fmtTime(d){ if(!d) return ''; var x=new Date(d); return x.toLocaleString('sk-SK',{hour:'2-digit',minute:'2-digit'}); }
+%>
+
+<div class="wrap my-head">
+  <div class="between wrap-gap" style="gap:16px">
+    <div>
+      <div class="eyebrow">Môj prehľad</div>
+      <div class="my-greet">Vitaj späť, <%= greetName %> 👋</div>
+      <p class="muted" style="margin-top:6px">Všetky sezóny a ligy, do ktorých si prihlásený, na jednom mieste.</p>
+    </div>
+    <div class="row g-2 wrap-gap my-cta">
+      <a href="/seasons" class="btn btn-secondary btn-sm">Pripojiť sa cez ID</a>
+      <a href="/seasons" class="btn btn-primary btn-sm">Objaviť súťaže</a>
+    </div>
+  </div>
+</div>
+
+<% if (hasAnything) { %>
+<div id="stateFull">
+  <!-- ALERT: najbližšia uzávierka + nevyplnené tipy -->
+  <% if (unfilledCount > 0 && upcoming.length > 0) { %>
+  <div class="wrap">
+    <div class="alert-banner">
+      <span class="alert-ic">⏳</span>
+      <div class="alert-tx">
+        <div class="row g-2 wrap-gap" style="margin-bottom:5px"><h3>Máš <%= unfilledCount %> nevyplnených tipov</h3><span class="tag tag-warning"><span class="dot"></span>Uzávierka čoskoro</span></div>
+        <p class="muted" style="font-size:var(--fs-sm)">Najbližší zápas <%= upcoming[0].home %> – <%= upcoming[0].away %> o <%= fmtTime(upcoming[0].time) %>. Nezabudni natipovať.</p>
+      </div>
+      <div class="alert-act">
+        <a href="/seasons" class="btn btn-primary btn-sm">Vyplniť tipy →</a>
+      </div>
+    </div>
+  </div>
+  <% } %>
+
+  <div class="wrap my-layout">
+    <main>
+      <!-- MOJE SEZÓNY -->
+      <div class="blk-head" style="margin-top:8px">
+        <div><div class="eyebrow">Moje sezóny</div><h2>Sezóny, do ktorých patríš</h2></div>
+        <span class="tag tag-muted"><%= mySeasons.length %> <%= mySeasons.length === 1 ? 'sezóna' : (mySeasons.length < 5 ? 'sezóny' : 'sezón') %></span>
+      </div>
+      <% if (mySeasons.length === 0) { %>
+        <div class="card card-pad" style="text-align:center;padding:34px"><p class="muted">Zatiaľ nie si v žiadnej sezóne.</p></div>
+      <% } else { %>
+      <div class="ms-grid">
+        <% mySeasons.forEach(function(s){ %>
+        <div class="card card-hover ms-card">
+          <div class="ms-cover" style="background:linear-gradient(<%= grad(s.id) %>)">
+            <span class="tag <%= s.type === 'official' ? 'tag-brand' : 'tag-gold' %>"><%= s.type === 'official' ? 'Oficiálna' : 'Community' %></span>
+            <% if (s.status === 'ended') { %><span class="tag tag-muted">Ukončená</span><% } else if (s.status === 'upcoming') { %><span class="tag tag-info"><span class="dot"></span>Pripravovaná</span><% } else { %><span class="tag tag-live"><span class="dot"></span>Live</span><% } %>
+          </div>
+          <div class="ms-body">
+            <a href="/seasons/<%= s.id %>" class="ms-title hi"><%= s.name %></a>
+            <div class="ms-sub"><%= s.hasPassword ? '🔒 Súkromná' : 'Verejná' %></div>
+            <div class="ms-stats">
+              <div class="ms-stat"><div class="v brand"><%= s.rank ? '#' + s.rank : '—' %></div><div class="l"><%= s.status === 'ended' ? 'konečné' : 'pozícia' %></div></div>
+              <div class="ms-stat"><div class="v gold"><%= s.myPoints %></div><div class="l">body</div></div>
+              <div class="ms-stat"><div class="v"><%= s.accuracy != null ? s.accuracy + ' %' : '—' %></div><div class="l">presnosť</div></div>
+            </div>
+            <div class="ms-prog-row"><span><%= s.status === 'ended' ? 'Sezóna ukončená' : 'Odohraných kôl' %></span><b class="hi num"><%= s.playedRounds %> / <%= s.totalRounds %></b></div>
+            <div class="progress<%= s.status === 'ended' ? ' success' : '' %>"><i style="width:<%= s.progressPct %>%"></i></div>
+            <div class="ms-foot">
+              <a href="/seasons/<%= s.id %>" class="btn btn-secondary btn-sm">Detail</a>
+              <a href="/seasons/<%= s.id %>/leaderboard" class="btn btn-primary btn-sm">Rebríček</a>
+            </div>
+          </div>
+        </div>
+        <% }); %>
+      </div>
+      <% } %>
+
+      <!-- MOJE LIGY -->
+      <div class="blk-head">
+        <div><div class="eyebrow">Moje ligy</div><h2>Ligy, kde súťažíš</h2></div>
+        <a href="/seasons" class="btn btn-ghost btn-sm">Nájsť ďalšie →</a>
+      </div>
+      <% if (myLeagues.length === 0) { %>
+        <div class="card card-pad" style="text-align:center;padding:34px"><p class="muted">Zatiaľ nie si v žiadnej lige.</p></div>
+      <% } else { %>
+      <div class="ml-list">
+        <% myLeagues.forEach(function(l){ %>
+        <a href="/leagues/<%= l.id %>" class="card card-hover ml-row"<%= l.ended ? ' style="opacity:.72"' : '' %>>
+          <span class="ml-logo" style="background:linear-gradient(<%= grad(l.id) %>)"><%= abbr(l.name) %></span>
+          <div style="min-width:0">
+            <div class="row g-2 wrap-gap"><b class="hi"><%= l.name %></b><span class="tag <%= l.type === 'official' ? 'tag-brand' : 'tag-gold' %>"><%= l.type === 'official' ? 'Oficiálna' : 'Custom' %></span><% if (l.hasPassword) { %><span class="tag tag-muted">🔒 Heslo</span><% } %></div>
+            <div class="muted" style="font-size:var(--fs-sm)"><%= l.seasonName || '—' %></div>
+          </div>
+          <div class="ml-status"><% if (l.ended) { %><span class="tag tag-muted">Ukončená</span><% } else { %><span class="tag tag-live"><span class="dot"></span>Prebieha</span><% } %></div>
+          <div style="text-align:right"><div class="ml-pos <%= l.rank === 1 ? 'gold' : 'brand' %>"><%= l.rank ? '#' + l.rank : '—' %></div><div class="l" style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-4);font-weight:700"><%= l.myPoints %> b</div></div>
+        </a>
+        <% }); %>
+      </div>
+      <% } %>
+    </main>
+
+    <!-- ASIDE -->
+    <aside class="my-aside">
+      <div class="card card-pad card-glow">
+        <div class="between" style="margin-bottom:12px"><div class="stat-label" style="margin:0">Najbližšie na tip</div><span class="tag tag-warning" style="padding:2px 7px">Tipuj</span></div>
+        <% if (upcoming.length === 0) { %>
+          <p class="muted" style="font-size:var(--fs-sm)">Žiadne čakajúce zápasy na tip.</p>
+        <% } else { %>
+        <% upcoming.forEach(function(u){ %>
+        <div class="nm">
+          <div class="nm-team"><span class="team-logo" style="background:linear-gradient(135deg,#0b4ea2,#06306a)"><%= u.homeAbbr %></span><span class="nm-vs"><%= u.home %></span></div>
+          <span class="nm-vs">vs <%= u.away %></span>
+          <span class="nm-when"><%= fmtTime(u.time) %></span>
+        </div>
+        <% }); %>
+        <a href="/seasons" class="btn btn-brand btn-block btn-sm" style="margin-top:14px">Tipovať teraz →</a>
+        <% } %>
+      </div>
+
+      <div class="card card-pad">
+        <div class="stat-label" style="margin-bottom:12px">Rýchle skratky</div>
+        <div class="stack g-2">
+          <a href="/profile" class="quick-link"><b>Môj profil</b><span class="ar">›</span></a>
+          <a href="/stats" class="quick-link"><b>Štatistiky</b><span class="ar">›</span></a>
+          <a href="/seasons" class="quick-link"><b>Objaviť súťaže</b><span class="ar">›</span></a>
+        </div>
+      </div>
+
+      <div class="card card-pad" style="background:linear-gradient(135deg,var(--surface-1),color-mix(in srgb,var(--gold) 8%,var(--surface-1)))">
+        <b class="hi" style="display:block;margin-bottom:6px">Máš pozvánku?</b>
+        <p class="muted" style="font-size:var(--fs-sm);margin-bottom:12px">Pripoj sa do sezóny cez 6-miestne ID alebo objav verejné súťaže.</p>
+        <div class="stack g-2">
+          <a href="/seasons" class="btn btn-primary btn-sm btn-block">Pripojiť sa cez ID</a>
+          <a href="/seasons" class="btn btn-secondary btn-sm btn-block">Objaviť verejné súťaže</a>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+<% } else { %>
+<!-- ============ EMPTY STATE ============ -->
+<div class="wrap" style="padding:8px 0 80px">
+  <div class="card" style="padding:18px">
+    <div class="empty" style="padding:64px 24px">
+      <div class="empty-icon" style="width:80px;height:80px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="width:38px;height:38px"><rect x="3" y="3" width="7.5" height="7.5" rx="1.8"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.8"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.8"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.8"/></svg>
+      </div>
+      <h4 style="font-size:var(--fs-h3)">Zatiaľ nie si v žiadnej súťaži</h4>
+      <p style="max-width:420px">Pridaj sa do oficiálnej sezóny, objav verejnú komunitnú ligu alebo sa pripoj k partii cez ID. Tvoje sezóny a ligy sa potom zobrazia tu.</p>
+      <div class="row g-3 center wrap-gap" style="margin-top:6px">
+        <a href="/seasons" class="btn btn-primary">Objaviť súťaže</a>
+        <a href="/seasons" class="btn btn-secondary">Pripojiť sa cez ID</a>
+      </div>
+    </div>
+  </div>
+</div>
+<% } %>
+
+<%- include('partials/footer') %>
