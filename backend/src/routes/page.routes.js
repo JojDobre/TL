@@ -59,7 +59,7 @@ router.post('/seasons/:id/manage', requireLogin, manageSeasonSubmit);
 router.post('/seasons/:id/end', requireLogin, endSeasonSubmit);
 router.post('/seasons/:id/delete', requireLogin, deleteSeasonSubmit);
 router.post('/seasons/:id/leave', requireLogin, leaveSeasonSubmit);
-router.get('/seasons/:id/members', requireLogin, seasonMembersPage);
+router.get('/seasons/:id/members', requireLogin, (req, res) => res.redirect('/seasons/' + req.params.id + '/manage'));
 router.post('/seasons/:id/members/:userId', requireLogin, seasonMemberAction);
 router.get('/seasons/:id/leaderboard', attachUser, seasonLeaderboardPage);
 router.get('/seasons/:id/zapasy', requireLogin, seasonMatchesPage);

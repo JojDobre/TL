@@ -78,9 +78,11 @@ const leagueDetailPage = asyncHandler(async (req, res) => {
 
   // môže prihlásený spravovať ligu? (tvorca ligy/sezóny, admin sezóny, glob. admin)
   let canManage = false;
+  let isSeasonMember = false;
   if (meId) {
     const u = await User.findByPk(meId);
     const sRole = await UserSeason.findOne({ where: { userId: meId, seasonId: league.seasonId } });
+    isSeasonMember = !!sRole;
     canManage = league.creatorId === meId
       || (u && u.role === 'admin')
       || (sRole && sRole.role === 'admin');
@@ -91,6 +93,7 @@ const leagueDetailPage = asyncHandler(async (req, res) => {
     rounds,
     leaderboard,
     isMember: !!myMembership,
+    isSeasonMember,
     isCreator: league.creatorId === meId,
     teamsCount: await league.countTeams(),
     myRank,

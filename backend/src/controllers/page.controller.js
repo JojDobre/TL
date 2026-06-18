@@ -4,7 +4,7 @@
 // Logika načítania dát je rovnaká ako v API controlleroch — líši sa len tým,
 // že na konci je res.render(...) namiesto res.json(...).
 
-const { Season, User, League, Round, Match, Tip, UserSeason } = require('../models');
+const { Season, User, League, Round, Match, Tip, Team, UserSeason, UserLeague, Sequelize } = require('../models');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcrypt');
 const { seasonStatus, isSeasonLocked, canViewSeasonContent } = require('../utils/season.utils');
@@ -83,6 +83,12 @@ const seasonDetailPage = asyncHandler(async (req, res) => {
   let participantsCount = 0;
   try { participantsCount = await season.countParticipants(); } catch { /* nič */ }
   const leagues = await League.findAll({ where: { seasonId: season.id }, order: [['createdAt', 'ASC']] });
+  // počet členov každej ligy (priamo z UserLeague)
+  const leaguesWithCounts = [];
+  for (const l of leagues) {
+    const mc = await UserLeague.count({ where: { leagueId: l.id } });
+    leaguesWithCounts.push({ ...l.toJSON(), membersCount: mc });
+  }
 
   // súhrnný rebríček (agregácia bodov z tipov vo všetkých ligách sezóny)
   let leaderboard = [];
@@ -103,10 +109,126 @@ const seasonDetailPage = asyncHandler(async (req, res) => {
     leaderboard = Object.values(byUser).sort((a, b) => b.totalPoints - a.totalPoints);
   } catch (e) { leaderboard = []; }
 
+  // ===== NOVINKY V SEZÓNE (odvodené z existujúcich dát) =====
+  // typy: nová liga, nové kolo (vytvorené), spustené kolo (otvorené na tip),
+  // vyhodnotené kolo (všetky zápasy finished), zrušený zápas.
+  const leagueIds = leagues.map((l) => l.id);
+  const leagueNameById = {};
+  leagues.forEach((l) => { leagueNameById[l.id] = l.name; });
+  const now = new Date();
+  const activity = [];
+
+  // nové ligy
+  leagues.forEach((l) => {
+    activity.push({
+      title: 'Nová liga: ' + l.name,
+      desc: 'V sezóne pribudla nová liga.',
+      tagText: 'Liga', tagClass: 'tag-gold',
+      at: l.createdAt,
+    });
+  });
+
+  if (leagueIds.length) {
+    const rounds = await Round.findAll({
+      where: { leagueId: { [Sequelize.Op.in]: leagueIds } },
+      attributes: ['id', 'name', 'leagueId', 'startDate', 'createdAt'],
+    });
+    const roundIds = rounds.map((r) => r.id);
+
+    // počty zápasov a vyhodnotených zápasov na kolo (pre detekciu vyhodnoteného kola)
+    let counts = {};
+    if (roundIds.length) {
+      const matches = await Match.findAll({
+        where: { roundId: { [Sequelize.Op.in]: roundIds } },
+        attributes: ['id', 'roundId', 'status'],
+      });
+      matches.forEach((m) => {
+        if (!counts[m.roundId]) counts[m.roundId] = { total: 0, finished: 0, lastFinishedAt: null };
+        counts[m.roundId].total += 1;
+        if (m.status === 'finished') counts[m.roundId].finished += 1;
+      });
+    }
+
+    rounds.forEach((r) => {
+      const lname = leagueNameById[r.leagueId] || '';
+      // vytvorené kolo
+      activity.push({
+        title: r.name + ' pridané · ' + lname,
+        desc: 'Pribudlo nové kolo do ligy.',
+        tagText: 'Nové kolo', tagClass: 'tag-info',
+        at: r.createdAt,
+      });
+      // spustené kolo (otvorené na tip) — len ak start už nastal
+      if (r.startDate && new Date(r.startDate) <= now) {
+        activity.push({
+          title: r.name + ' otvorené · ' + lname,
+          desc: 'Kolo je otvorené na tipovanie.',
+          tagText: 'Tipovanie', tagClass: 'tag-warning',
+          at: r.startDate,
+        });
+      }
+      // vyhodnotené kolo — všetky zápasy finished (a aspoň jeden existuje)
+      const c = counts[r.id];
+      if (c && c.total > 0 && c.finished === c.total) {
+        activity.push({
+          title: r.name + ' vyhodnotené · ' + lname,
+          desc: 'Body boli pridelené hráčom.',
+          tagText: 'Vyhodnotené', tagClass: 'tag-success',
+          at: r.startDate || r.createdAt,
+        });
+      }
+    });
+
+    // zrušené zápasy
+    if (roundIds.length) {
+      const canceled = await Match.findAll({
+        where: { roundId: { [Sequelize.Op.in]: roundIds }, status: 'canceled' },
+        include: [{ model: Team, as: 'homeTeam', attributes: ['name'] }, { model: Team, as: 'awayTeam', attributes: ['name'] }],
+        attributes: ['id', 'updatedAt'],
+      });
+      canceled.forEach((m) => {
+        const h = m.homeTeam ? m.homeTeam.name : '?';
+        const a = m.awayTeam ? m.awayTeam.name : '?';
+        activity.push({
+          title: 'Zápas ' + h + ' — ' + a + ' zrušený',
+          desc: 'Body sa za tento zápas neprideľujú.',
+          tagText: 'Zrušené', tagClass: 'tag-danger',
+          at: m.updatedAt,
+        });
+      });
+    }
+  }
+  activity.sort((x, y) => new Date(y.at) - new Date(x.at));
+  const news = activity.slice(0, 5);
+
+  // ===== TVOJ PROGRESS V SEZÓNE (pre prihláseného člena) =====
+  let progress = null;
+  if (meId && isMember) {
+    const idx = leaderboard.findIndex((e) => (e.user ? e.user.id : null) === meId);
+    const myPoints = idx >= 0 ? leaderboard[idx].totalPoints : 0;
+    const myRank = idx >= 0 ? idx + 1 : null;
+    // odohrané / celkové kolá v sezóne
+    let totalRounds = 0; let playedRounds = 0;
+    if (leagueIds.length) {
+      const rs = await Round.findAll({ where: { leagueId: { [Sequelize.Op.in]: leagueIds } }, attributes: ['id', 'endDate'] });
+      totalRounds = rs.length;
+      const now = new Date();
+      playedRounds = rs.filter((r) => r.endDate && new Date(r.endDate) < now).length;
+    }
+    progress = {
+      myPoints, myRank,
+      totalPlayers: leaderboard.length,
+      playedRounds, totalRounds,
+      progressPct: totalRounds > 0 ? Math.round((playedRounds / totalRounds) * 100) : 0,
+    };
+  }
+
   res.render('seasonDetail', {
     season: { ...season.toJSON(), participantsCount, leaguesCount: leagues.length, status },
-    leagues: leagues.map((l) => l.toJSON()),
+    leagues: leaguesWithCounts,
     leaderboard,
+    news,
+    progress,
     joinError: null,
     restricted: false,
     canManage,
@@ -131,7 +253,7 @@ const createSeasonSubmit = asyncHandler(async (req, res) => {
 
   const back = (error) => res.status(400).render('createSeason', { error });
 
-  if (!name || !name.trim()) return back('Názov sezóny je povinný.');
+  if (!name || !name.trim()) return await back('Názov sezóny je povinný.');
 
   // limit počtu AKTÍVNYCH sezón podľa roly (ended sa nepočítajú)
   const limit = SEASON_LIMITS[user.role];
@@ -139,7 +261,7 @@ const createSeasonSubmit = asyncHandler(async (req, res) => {
     const mine = await Season.findAll({ where: { creatorId: userId } });
     const activeCount = mine.filter((s) => seasonStatus(s) !== 'ended').length;
     if (activeCount >= limit) {
-      return back(user.role === 'player'
+      return await back(user.role === 'player'
         ? 'Máš už maximálny počet aktívnych sezón (1). Ukonči niektorú, alebo prejdi na VIP.'
         : `Máš už maximálny počet aktívnych sezón (${limit}). Ukonči niektorú pre vytvorenie ďalšej.`);
     }
@@ -154,15 +276,15 @@ const createSeasonSubmit = asyncHandler(async (req, res) => {
   let end = endDate ? new Date(endDate) : null;
   if (start && isNaN(start)) start = null;
   if (end && isNaN(end)) end = null;
-  if (start && end && end <= start) return back('Koniec sezóny musí byť po jej začiatku.');
-  if (end && end <= new Date()) return back('Dátum ukončenia musí byť v budúcnosti (alebo nechaj prázdne pre sezónu bez konca).');
+  if (start && end && end <= start) return await back('Koniec sezóny musí byť po jej začiatku.');
+  if (end && end <= new Date()) return await back('Dátum ukončenia musí byť v budúcnosti (alebo nechaj prázdne pre sezónu bez konca).');
 
   // heslo + súkromie — len pre community (oficiálne sú vždy verejné)
   let passwordHash = null;
   let priv = false;
   let hide = false;
   if (seasonType === 'community' && (isPrivate === 'on' || isPrivate === 'true')) {
-    if (!password || !password.trim()) return back('Súkromná sezóna musí mať heslo.');
+    if (!password || !password.trim()) return await back('Súkromná sezóna musí mať heslo.');
     passwordHash = await bcrypt.hash(password.trim(), 10);
     priv = true;
     hide = (hidden === 'on' || hidden === 'true');
@@ -225,7 +347,26 @@ const manageSeasonPage = asyncHandler(async (req, res) => {
   const allowed = season.creatorId === userId || (u && u.role === 'admin');
   if (!allowed) return res.status(403).render('error-page', { message: 'Nemáš oprávnenie spravovať túto sezónu.' });
 
-  res.render('manageSeason', { season: { ...season.toJSON(), status: seasonStatus(season) }, error: null });
+  // členovia sezóny
+  const memberships = await UserSeason.findAll({ where: { seasonId: season.id } });
+  const members = [];
+  for (const m of memberships) {
+    const mu = await User.findByPk(m.userId, { attributes: ['id', 'username', 'firstName', 'lastName'] });
+    if (mu) members.push({ ...mu.toJSON(), role: m.role, isCreator: mu.id === season.creatorId, joinedAt: m.createdAt });
+  }
+  members.sort((a, b) => (b.isCreator - a.isCreator) || (a.username || '').localeCompare(b.username || ''));
+
+  // súhrn
+  const leaguesCount = await League.count({ where: { seasonId: season.id } });
+  const creator = await User.findByPk(season.creatorId, { attributes: ['username', 'firstName', 'lastName'] });
+  const creatorName = creator ? ([creator.firstName, creator.lastName].filter(Boolean).join(' ') || creator.username) : '—';
+
+  res.render('manageSeason', {
+    season: { ...season.toJSON(), status: seasonStatus(season) },
+    members,
+    summary: { membersCount: members.length, leaguesCount, creatorName },
+    error: null,
+  });
 });
 
 // POST /seasons/:id/manage
@@ -239,18 +380,35 @@ const manageSeasonSubmit = asyncHandler(async (req, res) => {
   const allowed = season.creatorId === userId || (u && u.role === 'admin');
   if (!allowed) return res.status(403).render('error-page', { message: 'Nemáš oprávnenie spravovať túto sezónu.' });
 
-  const back = (error) => res.status(400).render('manageSeason', { season: { ...season.toJSON(), status: seasonStatus(season) }, error });
+  const back = async (error) => {
+    const memberships = await UserSeason.findAll({ where: { seasonId: season.id } });
+    const members = [];
+    for (const m of memberships) {
+      const mu = await User.findByPk(m.userId, { attributes: ['id', 'username', 'firstName', 'lastName'] });
+      if (mu) members.push({ ...mu.toJSON(), role: m.role, isCreator: mu.id === season.creatorId, joinedAt: m.createdAt });
+    }
+    members.sort((a, b) => (b.isCreator - a.isCreator) || (a.username || '').localeCompare(b.username || ''));
+    const leaguesCount = await League.count({ where: { seasonId: season.id } });
+    const creator = await User.findByPk(season.creatorId, { attributes: ['username', 'firstName', 'lastName'] });
+    const creatorName = creator ? ([creator.firstName, creator.lastName].filter(Boolean).join(' ') || creator.username) : '—';
+    return res.status(400).render('manageSeason', {
+      season: { ...season.toJSON(), status: seasonStatus(season) },
+      members,
+      summary: { membersCount: members.length, leaguesCount, creatorName },
+      error,
+    });
+  };
 
   // ukončenú sezónu nemožno upravovať
-  if (isSeasonLocked(season)) return back('Sezóna je ukončená a uzamknutá, nedá sa upravovať.');
-  if (!name || !name.trim()) return back('Názov sezóny je povinný.');
+  if (isSeasonLocked(season)) return await back('Sezóna je ukončená a uzamknutá, nedá sa upravovať.');
+  if (!name || !name.trim()) return await back('Názov sezóny je povinný.');
 
   let start = startDate ? new Date(startDate) : null;
   let end = endDate ? new Date(endDate) : null;
   if (start && isNaN(start)) start = null;
   if (end && isNaN(end)) end = null;
-  if (start && end && end <= start) return back('Koniec sezóny musí byť po jej začiatku.');
-  if (end && end <= new Date()) return back('Dátum ukončenia musí byť v budúcnosti (alebo nechaj prázdne pre sezónu bez konca).');
+  if (start && end && end <= start) return await back('Koniec sezóny musí byť po jej začiatku.');
+  if (end && end <= new Date()) return await back('Dátum ukončenia musí byť v budúcnosti (alebo nechaj prázdne pre sezónu bez konca).');
 
   season.name = name.trim();
   season.description = description || null;
@@ -267,7 +425,7 @@ const manageSeasonSubmit = asyncHandler(async (req, res) => {
         season.password = await bcrypt.hash(password.trim(), 10);
         season.hasPassword = true;
       } else if (!season.hasPassword) {
-        return back('Súkromná sezóna musí mať heslo.');
+        return await back('Súkromná sezóna musí mať heslo.');
       }
       season.hidden = (hidden === 'on' || hidden === 'true');
     } else {
@@ -362,7 +520,7 @@ const seasonMemberAction = asyncHandler(async (req, res) => {
   }
   // tvorcu sa nedotýkame
   if (targetId === season.creatorId) {
-    return res.redirect('/seasons/' + season.id + '/members');
+    return res.redirect('/seasons/' + season.id + '/manage');
   }
   if (action === 'remove') {
     await UserSeason.destroy({ where: { userId: targetId, seasonId: season.id } });
@@ -371,7 +529,7 @@ const seasonMemberAction = asyncHandler(async (req, res) => {
   } else if (action === 'demote') {
     await UserSeason.update({ role: 'player' }, { where: { userId: targetId, seasonId: season.id } });
   }
-  res.redirect('/seasons/' + season.id + '/members');
+  res.redirect('/seasons/' + season.id + '/manage');
 });
 
 module.exports = {

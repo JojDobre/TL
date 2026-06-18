@@ -143,7 +143,7 @@
             <% } else { %><span class="tag tag-info"><span class="dot"></span>Naplánovaný</span><% } %>
           </div>
           <div class="match-teams">
-            <div class="team"><span class="team-logo" style="background:var(--surface-3)"><%= m.homeAbbr %></span><span class="team-name"><%= m.homeTeam ? m.homeTeam.name : '—' %></span></div>
+            <div class="team"><% if (m.homeTeam && m.homeTeam.logo) { %><span class="team-logo" style="background:none;border:none"><img src="<%= m.homeTeam.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="background:var(--surface-3)"><%= m.homeAbbr %></span><% } %><span class="team-name"><%= m.homeTeam ? m.homeTeam.name : '—' %></span></div>
             <% if (isWinner) { %>
               <div class="onex2-pick" role="group">
                 <button type="button" class="onex2-btn<%= m.myTip && m.myTip.winner === 'home' ? ' sel' : '' %>" data-w="home"<%= locked ? ' disabled' : '' %>>1</button>
@@ -157,7 +157,7 @@
             %>
               <div class="tip-inputs"><input class="tip-num<%= hitHome ? ' hit' : '' %>" data-home inputmode="numeric" maxlength="2" value="<%= m.myTip && m.myTip.homeScore != null ? m.myTip.homeScore : '' %>" placeholder="–"<%= locked ? ' disabled' : '' %>><span class="tip-sep">:</span><input class="tip-num<%= hitAway ? ' hit' : '' %>" data-away inputmode="numeric" maxlength="2" value="<%= m.myTip && m.myTip.awayScore != null ? m.myTip.awayScore : '' %>" placeholder="–"<%= locked ? ' disabled' : '' %>></div>
             <% } %>
-            <div class="team away"><span class="team-logo" style="background:var(--surface-3)"><%= m.awayAbbr %></span><span class="team-name"><%= m.awayTeam ? m.awayTeam.name : '—' %></span></div>
+            <div class="team away"><% if (m.awayTeam && m.awayTeam.logo) { %><span class="team-logo" style="background:none;border:none"><img src="<%= m.awayTeam.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="background:var(--surface-3)"><%= m.awayAbbr %></span><% } %><span class="team-name"><%= m.awayTeam ? m.awayTeam.name : '—' %></span></div>
           </div>
           <% if (evaluated) { %>
             <div class="between" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
@@ -195,9 +195,9 @@
             <% if (canceled) { %><span class="tag tag-muted"><span class="dot"></span>Zrušený</span><% } else if (done) { %><span class="tag tag-success"><span class="dot"></span>Vyhodnotené</span><% } else { %><span class="tag tag-warning"><span class="dot"></span>Čaká na výsledok</span><% } %>
           </div>
           <div class="match-teams">
-            <div class="team"><span class="team-logo" style="background:var(--surface-3)"><%= m.homeAbbr %></span><span class="team-name"><%= m.homeTeam ? m.homeTeam.name : '—' %></span></div>
+            <div class="team"><% if (m.homeTeam && m.homeTeam.logo) { %><span class="team-logo" style="background:none;border:none"><img src="<%= m.homeTeam.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="background:var(--surface-3)"><%= m.homeAbbr %></span><% } %><span class="team-name"><%= m.homeTeam ? m.homeTeam.name : '—' %></span></div>
             <div class="match-score"<%= canceled ? ' style=\"color:var(--text-4)\"' : '' %>><span<%= hitHome ? ' style=\"color:var(--success)\"' : '' %>><%= m.homeScore != null ? m.homeScore : '—' %></span> : <span<%= hitAway ? ' style=\"color:var(--success)\"' : '' %>><%= m.awayScore != null ? m.awayScore : '—' %></span></div>
-            <div class="team away"><span class="team-logo" style="background:var(--surface-3)"><%= m.awayAbbr %></span><span class="team-name"><%= m.awayTeam ? m.awayTeam.name : '—' %></span></div>
+            <div class="team away"><% if (m.awayTeam && m.awayTeam.logo) { %><span class="team-logo" style="background:none;border:none"><img src="<%= m.awayTeam.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="background:var(--surface-3)"><%= m.awayAbbr %></span><% } %><span class="team-name"><%= m.awayTeam ? m.awayTeam.name : '—' %></span></div>
           </div>
           <div class="between" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
             <% var winLbl = function(w){ return w==='home'?'1 (domáci)':w==='draw'?'X (remíza)':w==='away'?'2 (hosť)':'—'; };

@@ -71,7 +71,11 @@
     </div>
     <div class="lg-actions row g-2 wrap-gap">
       <% if (!isMember) { %>
-        <button class="btn btn-primary btn-lg" data-open-join>Pripojiť sa do ligy</button>
+        <% if (typeof isSeasonMember !== 'undefined' && isSeasonMember) { %>
+          <button class="btn btn-primary btn-lg" data-open-join>Pripojiť sa do ligy</button>
+        <% } else { %>
+          <span class="muted" style="font-size:var(--fs-sm)">Najprv sa pripoj do sezóny, aby si sa mohol pripojiť do tejto ligy.</span>
+        <% } %>
       <% } %>
       <% if (typeof canManage !== 'undefined' && canManage) { %>
         <a href="/leagues/<%= league.id %>/edit" class="btn btn-secondary">Upraviť ligu</a>

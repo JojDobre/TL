@@ -75,7 +75,7 @@
           <span class="tag tag-info"><span class="dot"></span>Naplánovaný</span>
         </div>
         <div class="match-teams">
-          <div class="team"><span class="team-logo" style="background:var(--surface-3)"><%= m.homeAbbr %></span><span class="team-name"><%= m.homeTeam ? m.homeTeam.name : '—' %></span></div>
+          <div class="team"><% if (m.homeTeam && m.homeTeam.logo) { %><span class="team-logo" style="background:none;border:none"><img src="<%= m.homeTeam.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="background:var(--surface-3)"><%= m.homeAbbr %></span><% } %><span class="team-name"><%= m.homeTeam ? m.homeTeam.name : '—' %></span></div>
           <% if (isWinner) { %>
             <div class="onex2-pick" role="group">
               <button type="button" class="onex2-btn<%= m.myTip && m.myTip.winner === 'home' ? ' sel' : '' %>" data-w="home">1</button>
@@ -85,7 +85,7 @@
           <% } else { %>
             <div class="tip-inputs"><input class="tip-num" data-home inputmode="numeric" maxlength="2" value="<%= m.myTip && m.myTip.homeScore != null ? m.myTip.homeScore : '' %>" placeholder="–"><span class="tip-sep">:</span><input class="tip-num" data-away inputmode="numeric" maxlength="2" value="<%= m.myTip && m.myTip.awayScore != null ? m.myTip.awayScore : '' %>" placeholder="–"></div>
           <% } %>
-          <div class="team away"><span class="team-logo" style="background:var(--surface-3)"><%= m.awayAbbr %></span><span class="team-name"><%= m.awayTeam ? m.awayTeam.name : '—' %></span></div>
+          <div class="team away"><% if (m.awayTeam && m.awayTeam.logo) { %><span class="team-logo" style="background:none;border:none"><img src="<%= m.awayTeam.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="background:var(--surface-3)"><%= m.awayAbbr %></span><% } %><span class="team-name"><%= m.awayTeam ? m.awayTeam.name : '—' %></span></div>
         </div>
       </div>
       <% }); %>
