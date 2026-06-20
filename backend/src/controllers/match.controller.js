@@ -253,6 +253,19 @@ const evaluateMatch = asyncHandler(async (req, res) => {
     return res.status(200).json({ success: true, message: 'Zápas bol zrušený, body vynulované.', data: match });
   }
 
+  // VYMAZANIE VÝSLEDKU: vráť zápas do stavu pred vyhodnotením — zmaž skóre,
+  // status späť na 'scheduled' a vynuluj body všetkým tipom (inak by ostali
+  // pridelené z predošlého vyhodnotenia a skreslili rebríček).
+  if (newStatus === 'scheduled') {
+    match.status = 'scheduled';
+    match.homeScore = null;
+    match.awayScore = null;
+    await match.save();
+    for (const tip of match.Tips || []) { tip.points = 0; await tip.save(); }
+    await propagateToClones(match);
+    return res.status(200).json({ success: true, message: 'Výsledok vymazaný, body vrátené späť.', data: match });
+  }
+
   // inak vyžadujeme platné skóre
   if (!validScore(homeScore) || !validScore(awayScore)) {
     throw new ApiError(400, 'Zadaj platné skóre (celé nezáporné čísla).');

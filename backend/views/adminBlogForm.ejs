@@ -1,0 +1,128 @@
+<%- include('partials/head', { title: (article ? 'Upraviť článok' : 'Nový článok'), page: 'admin', active: 'admin', pageStyle: `
+  .ad-head { padding:26px 0 18px; }
+  .bf-layout { display:grid; grid-template-columns: 1fr 320px; gap:24px; align-items:start; padding-bottom:64px; }
+  .field-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .grad-preview { height:90px; border-radius:var(--r-md); display:flex; align-items:center; justify-content:center; font-size:38px; margin-top:8px; }
+  .md-hint { font-size:var(--fs-xs); color:var(--text-4); margin-top:6px; line-height:1.6; }
+  textarea.md { min-height:420px; font-family:var(--font-mono, monospace); font-size:var(--fs-sm); line-height:1.6; }
+  @media (max-width:900px){ .bf-layout { grid-template-columns:1fr; } }
+` }) %>
+
+<%- include('partials/admin-subnav', { active: 'blog' }) %>
+
+<%
+  // hodnoty pre formulár — pri edite z článku, inak prázdne/defaulty
+  const a = article || {};
+  const cats = ['Stratégia','Novinky','Rozhovory','Návody'];
+  const GRADS = [
+    'linear-gradient(135deg,#2b0a4a,#5b3fd6 60%,#0b4ea2)',
+    'linear-gradient(135deg,#0a3d2e,#15543a)',
+    'linear-gradient(135deg,#5b3fd6,#2b0a4a)',
+    'linear-gradient(135deg,#c2410c,#7a1f06)',
+    'linear-gradient(135deg,#0369a1,#06354f)',
+    'linear-gradient(135deg,#16a085,#0c5f4d)',
+    'linear-gradient(135deg,#8e44ad,#522963)'
+  ];
+  const curGrad = a.coverGradient || GRADS[0];
+%>
+
+<div class="wrap ad-head">
+  <a href="/admin/blog" class="muted" style="font-size:var(--fs-sm);display:inline-block;margin-bottom:10px">← Späť na zoznam</a>
+  <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)"><%= article ? 'Upraviť článok' : 'Nový článok' %></h1>
+</div>
+
+<div class="wrap">
+  <% if (typeof error !== 'undefined' && error) { %>
+    <div class="card card-pad" style="margin-bottom:16px;border-color:var(--danger-line);background:var(--danger-soft)"><b style="color:var(--danger)"><%= error %></b></div>
+  <% } %>
+
+  <form method="POST" action="<%= article ? '/admin/blog/' + a.id + '/edit' : '/admin/blog/new' %>">
+    <div class="bf-layout">
+      <!-- HLAVNÝ STĹPEC -->
+      <div class="stack g-4">
+        <div class="card card-pad stack g-4">
+          <div class="field">
+            <label class="label">Nadpis</label>
+            <input class="input" name="title" id="titleInput" required placeholder="Napríklad: 5 chýb pri tipovaní" value="<%= a.title || '' %>">
+          </div>
+          <div class="field">
+            <label class="label">Slug (adresa URL)</label>
+            <input class="input" name="slug" id="slugInput" placeholder="auto z nadpisu, napr. 5-chyb-pri-tipovani" value="<%= a.slug || '' %>">
+            <div class="md-hint">Necháš prázdne → vygeneruje sa z nadpisu. Použi malé písmená a pomlčky.</div>
+          </div>
+          <div class="field">
+            <label class="label">Perex (krátky popis na karte)</label>
+            <textarea class="textarea" name="excerpt" rows="3" placeholder="Pár viet, ktoré sa zobrazia v zozname a na úvode článku."><%= a.excerpt || '' %></textarea>
+          </div>
+          <div class="field">
+            <label class="label">Obsah článku (Markdown)</label>
+            <textarea class="textarea md" name="content" required placeholder="## Nadpis sekcie&#10;&#10;Bežný odsek textu. Môžeš použiť **tučné**, *kurzívu* a [odkaz](/seasons).&#10;&#10;> Zvýraznená citácia.&#10;&#10;- položka zoznamu&#10;- ďalšia položka"><%= a.content || '' %></textarea>
+            <div class="md-hint">
+              Podporované: <code>## Nadpis</code>, <code>### Podnadpis</code>, <code>**tučné**</code>, <code>*kurzíva*</code>, <code>[text](odkaz)</code>, <code>- zoznam</code>, <code>&gt; citácia</code>. Prázdny riadok = nový odsek. Nadpisy <code>##</code> sa automaticky pridajú do obsahu článku (TOC).
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOČNÝ PANEL -->
+      <aside class="stack g-4">
+        <div class="card card-pad stack g-4">
+          <div class="field">
+            <label class="label">Kategória</label>
+            <select class="select" name="category">
+              <% cats.forEach(function(c){ %><option value="<%= c %>" <%= (a.category || 'Novinky') === c ? 'selected' : '' %>><%= c %></option><% }); %>
+            </select>
+          </div>
+          <div class="field-row">
+            <div class="field"><label class="label">Emoji</label><input class="input" name="coverEmoji" id="emojiInput" maxlength="4" value="<%= a.coverEmoji || '📝' %>"></div>
+            <div class="field"><label class="label">Čas čítania (min)</label><input class="input" type="number" min="1" name="readMinutes" value="<%= a.readMinutes || 3 %>"></div>
+          </div>
+          <div class="field">
+            <label class="label">Pozadie covera</label>
+            <select class="select" name="coverGradient" id="gradSelect">
+              <% GRADS.forEach(function(g,i){ %><option value="<%= g %>" <%= curGrad === g ? 'selected' : '' %>>Variant <%= i+1 %></option><% }); %>
+            </select>
+            <div class="grad-preview" id="gradPreview" style="background:<%= curGrad %>"><span id="gradEmoji"><%= a.coverEmoji || '📝' %></span></div>
+          </div>
+        </div>
+
+        <div class="card card-pad stack g-4">
+          <label class="check"><input type="checkbox" name="featured" value="1" <%= a.featured ? 'checked' : '' %>> Odporúčaný článok (zobrazí sa veľký navrchu blogu)</label>
+          <label class="check"><input type="checkbox" name="published" value="1" <%= (article ? a.published : true) ? 'checked' : '' %>> Publikovať (viditeľné verejne)</label>
+        </div>
+
+        <div class="row g-2">
+          <button type="submit" class="btn btn-primary btn-block"><%= article ? 'Uložiť zmeny' : 'Vytvoriť článok' %></button>
+        </div>
+        <a href="/admin/blog" class="btn btn-secondary btn-block">Zrušiť</a>
+      </aside>
+    </div>
+  </form>
+</div>
+
+<script>
+(function(){
+  // živý náhľad gradientu + emoji
+  var gradSelect = document.getElementById('gradSelect');
+  var gradPreview = document.getElementById('gradPreview');
+  var emojiInput = document.getElementById('emojiInput');
+  var gradEmoji = document.getElementById('gradEmoji');
+  if (gradSelect) gradSelect.addEventListener('change', function(){ gradPreview.style.background = this.value; });
+  if (emojiInput) emojiInput.addEventListener('input', function(){ gradEmoji.textContent = this.value || '📝'; });
+
+  // auto-slug z nadpisu, len kým používateľ slug ručne neupraví
+  var titleInput = document.getElementById('titleInput');
+  var slugInput = document.getElementById('slugInput');
+  var slugTouched = slugInput.value.trim() !== '';
+  if (slugInput) slugInput.addEventListener('input', function(){ slugTouched = true; });
+  function slugify(s){
+    return s.toLowerCase()
+      .replace(/[áàä]/g,'a').replace(/[éě]/g,'e').replace(/í/g,'i').replace(/[óô]/g,'o').replace(/[úů]/g,'u').replace(/ý/g,'y')
+      .replace(/č/g,'c').replace(/š/g,'s').replace(/ž/g,'z').replace(/ň/g,'n').replace(/ť/g,'t').replace(/ď/g,'d').replace(/ľ/g,'l').replace(/ŕ/g,'r')
+      .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+  }
+  if (titleInput) titleInput.addEventListener('input', function(){ if(!slugTouched){ slugInput.value = slugify(this.value); } });
+})();
+</script>
+
+<%- include('partials/footer') %>

@@ -30,7 +30,7 @@
 </div>
 
 <% if (typeof error !== 'undefined' && error) { %>
-<div class="wrap"><div class="tag tag-danger" style="display:block;padding:12px 14px;margin-bottom:16px"><%= error %></div></div>
+<div class="wrap"><div class="tag tag-danger" style="display:block;padding:12px 14px;margin-bottom:16px; text-wrap: auto;"><%= error %></div></div>
 <% } %>
 
 <form class="wrap form-layout" action="/seasons/create" method="POST">
@@ -92,7 +92,7 @@
     </div>
     <div class="card card-pad" style="margin-top:18px;background:var(--surface-2)">
       <b class="hi" style="display:block;margin-bottom:6px">💡 Tip</b>
-      <p class="muted" style="font-size:var(--fs-sm)">Po vytvorení sezóny pridaj ligy a v nich kolá so zápasmi. Hráči sa pripoja cez 6-miestne ID ligy.</p>
+      <p class="muted" style="font-size:var(--fs-sm)">Po vytvorení sezóny pridaj ligy a v nich kolá so zápasmi. Hráči sa do sezóny pripoja cez 6-miestne ID.</p>
     </div>
     <div class="card card-pad" style="margin-top:18px">
       <button type="submit" class="btn btn-primary btn-block">Vytvoriť sezónu</button>

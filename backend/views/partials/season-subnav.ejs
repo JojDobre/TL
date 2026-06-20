@@ -14,9 +14,9 @@
   </a>
   <span style="width:1px;height:22px;background:var(--line)"></span>
   <a class="subnav-link <%= sa==='overview'?'active':'' %>" href="/seasons/<%= sid %>">Prehľad</a>
-  <a class="subnav-link <%= sa==='rules'?'active':'' %>" href="/seasons/<%= sid %>#rules">Pravidlá</a>
   <a class="subnav-link <%= sa==='leagues'?'active':'' %>" href="/seasons/<%= sid %>#leagues">Ligy</a>
   <a class="subnav-link <%= sa==='leaderboard'?'active':'' %>" href="/seasons/<%= sid %>/leaderboard">Rebríček</a>
+  <a class="subnav-link <%= sa==='rules'?'active':'' %>" href="/seasons/<%= sid %>#rules">Pravidlá</a>
   <a class="subnav-link <%= sa==='news'?'active':'' %>" href="/seasons/<%= sid %>#news">Aktuality</a>
   <% if (currentUserRole === 'admin') { %>
     <a class="subnav-link admin" href="/admin/competition">Admin</a>

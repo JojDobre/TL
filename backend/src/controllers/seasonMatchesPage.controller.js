@@ -10,6 +10,16 @@ const { seasonStatus } = require('../utils/season.utils');
 
 const Op = Sequelize.Op;
 const DEFAULT_SCORING = { exactScore: 10, correctGoals: 1, correctWinner: 3, goalDifference: 2 };
+
+// Stav kola odvodený z dátumov — identicky ako v roundPage.controller.
+// Tipovať sa dá LEN v otvorenom kole (now medzi startDate a endDate).
+function roundStatus(round) {
+  const now = new Date();
+  if (now < new Date(round.startDate)) return 'scheduled'; // ešte neotvorené
+  if (now > new Date(round.endDate)) return 'finished';     // uzávierka prešla
+  return 'open';
+}
+
 const teamAbbr = (name) => (name || '?').replace(/[^A-Za-zÀ-ž0-9 ]/g, '').split(' ').map((w) => w[0]).join('').substring(0, 3).toUpperCase() || (name || '?').substring(0, 3).toUpperCase();
 
 // GET /seasons/:id/zapasy
@@ -34,7 +44,10 @@ const seasonMatchesPage = asyncHandler(async (req, res) => {
   let totalMatches = 0;
   if (myLeagueIds.length) {
     const now = new Date();
-    const rounds = await Round.findAll({ where: { leagueId: { [Op.in]: myLeagueIds } }, attributes: ['id', 'name', 'leagueId', 'startDate', 'endDate'], order: [['startDate', 'ASC']] });
+    const allRounds = await Round.findAll({ where: { leagueId: { [Op.in]: myLeagueIds } }, attributes: ['id', 'name', 'leagueId', 'startDate', 'endDate'], order: [['startDate', 'ASC']] });
+    // len OTVORENÉ kolá — zápasy z neotvorených (scheduled) ani uzavretých
+    // (finished) kôl sa tu tipovať nedajú, takže ich nezobrazujeme.
+    const rounds = allRounds.filter((r) => roundStatus(r) === 'open');
     const roundIds = rounds.map((r) => r.id);
     let matches = [];
     if (roundIds.length) {

@@ -1,0 +1,248 @@
+<%- include('partials/head', { title: 'Návody', page: '', active: '', pageStyle: `
+  .gd-hero { padding:40px 0 22px; }
+  .gd-hero h1 { font-size:clamp(2.1rem,3.6vw,3rem); }
+  .gd-layout { display:grid; grid-template-columns: 240px 1fr; gap:40px; align-items:start; padding-bottom:72px; }
+  .gd-toc { position:sticky; top:128px; }
+  .gd-toc .stat-label { margin-bottom:10px; }
+  .gd-toc a { display:block; padding:7px 0 7px 14px; font-size:var(--fs-sm); color:var(--text-3); border-left:2px solid var(--line); text-decoration:none; transition:all .14s; }
+  .gd-toc a:hover, .gd-toc a.active { color:var(--brand-bright); border-left-color:var(--brand); }
+  .gd-sec { scroll-margin-top:108px; margin-bottom:14px; }
+  .gd-sec h2 { font-size:var(--fs-h3); margin-bottom:6px; }
+  .gd-sec > .lead { color:var(--text-3); margin-bottom:16px; }
+  .gd-body p { color:var(--text-2); line-height:1.7; margin-bottom:14px; }
+  .gd-body ul { list-style:none; padding:0; margin:0 0 16px; }
+  .gd-body li { color:var(--text-2); line-height:1.65; padding-left:26px; position:relative; margin-bottom:9px; }
+  .gd-body li::before { content:"\\203A"; position:absolute; left:8px; color:var(--brand-bright); font-weight:700; }
+  .gd-body b, .gd-body strong { color:var(--text-1); }
+
+  .hier { display:flex; flex-direction:column; gap:10px; margin:4px 0 6px; }
+  .hier-row { display:flex; align-items:center; gap:12px; padding:13px 16px; border-radius:var(--r-md); background:var(--surface-2); border:1px solid var(--line); }
+  .hier-row .lvl { width:34px; height:34px; border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center; font-size:18px; flex:none; }
+  .hier-row b { display:block; }
+  .hier-arrow { color:var(--text-4); font-size:1.1rem; padding-left:14px; }
+
+  .pts-table { width:100%; border-collapse:collapse; margin:6px 0 14px; }
+  .pts-table th, .pts-table td { text-align:left; padding:11px 14px; border-bottom:1px solid var(--line); font-size:var(--fs-sm); }
+  .pts-table th { color:var(--text-4); text-transform:uppercase; letter-spacing:.06em; font-size:var(--fs-xs); }
+  .pts-table td:last-child, .pts-table th:last-child { text-align:right; }
+  .pts-val { font-family:var(--num); font-weight:700; }
+
+  .role-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:6px 0 14px; }
+  .role-card { padding:18px; }
+  .role-card h4 { margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+  .step-list { counter-reset:step; list-style:none; padding:0; margin:6px 0 14px; }
+  .step-list li { counter-increment:step; padding:12px 0 12px 44px; position:relative; border-bottom:1px solid var(--line); color:var(--text-2); line-height:1.6; }
+  .step-list li:last-child { border:none; }
+  .step-list li::before { content:counter(step); position:absolute; left:0; top:11px; width:28px; height:28px; border-radius:50%; background:var(--brand-soft); color:var(--brand-bright); font-family:var(--num); font-weight:700; display:flex; align-items:center; justify-content:center; font-size:var(--fs-sm); }
+  .callout { display:flex; gap:12px; padding:14px 16px; border-radius:var(--r-md); background:var(--brand-soft); border:1px solid var(--brand-line); margin:6px 0 14px; }
+  .callout .ci { flex:none; font-size:18px; }
+  .callout p { margin:0; color:var(--text-2); font-size:var(--fs-sm); line-height:1.6; }
+
+  @media (max-width:900px){ .gd-layout { grid-template-columns:1fr; } .gd-toc { position:static; margin-bottom:8px; } .role-grid { grid-template-columns:1fr; } }
+` }) %>
+
+<div class="wrap gd-hero">
+  <div class="eyebrow">Návody</div>
+  <h1>Ako funguje Tiperliga</h1>
+  <p class="muted" style="margin-top:6px;max-width:60ch">Kompletný sprievodca platformou — od základných pojmov cez bodovanie až po vytvorenie vlastnej súťaže. Všetko, čo potrebuješ vedieť, na jednom mieste.</p>
+</div>
+
+<div class="wrap gd-layout">
+  <!-- TOC -->
+  <aside class="gd-toc">
+    <div class="stat-label">Obsah</div>
+    <nav id="gdToc">
+      <a href="#zaklady">Základné pojmy</a>
+      <a href="#struktura">Sezóna, liga, kolo, zápas</a>
+      <a href="#tipovanie">Ako tipovať</a>
+      <a href="#bodovanie">Bodovanie</a>
+      <a href="#role">Role a limity</a>
+      <a href="#sezona">Vytvorenie sezóny</a>
+      <a href="#liga">Vytvorenie ligy</a>
+      <a href="#pripojenie">Pripojenie do súťaže</a>
+      <a href="#faq">Časté otázky</a>
+    </nav>
+  </aside>
+
+  <!-- CONTENT -->
+  <main class="gd-body">
+
+    <!-- ZÁKLADY -->
+    <section id="zaklady" class="card card-pad gd-sec">
+      <h2>Základné pojmy</h2>
+      <p class="lead">Tiperliga je platforma na tipovanie športových výsledkov. Tipuješ, ako dopadnú zápasy, a za presnosť svojich tipov získavaš body. Cieľom je vyšplhať sa čo najvyššie v rebríčku.</p>
+      <ul>
+        <li><b>Tip</b> — tvoj odhad výsledku konkrétneho zápasu (víťaz alebo presné skóre).</li>
+        <li><b>Body</b> — získavaš ich podľa toho, ako presne si zápas trafil.</li>
+        <li><b>Rebríček</b> — poradie hráčov podľa nazbieraných bodov v rámci ligy alebo sezóny.</li>
+        <li><b>Uzávierka</b> — moment, po ktorom už nie je možné tip zadať ani upraviť (zvyčajne začiatok zápasu alebo kola).</li>
+      </ul>
+    </section>
+
+    <!-- ŠTRUKTÚRA -->
+    <section id="struktura" class="card card-pad gd-sec">
+      <h2>Sezóna, liga, kolo, zápas</h2>
+      <p class="lead">Súťaže sú usporiadané do štyroch úrovní. Pochopenie tejto hierarchie je kľúč k tomu, ako sa na platforme orientovať.</p>
+      <div class="hier">
+        <div class="hier-row"><span class="lvl" style="background:var(--brand-soft);color:var(--brand-bright)">🏆</span><div><b>Sezóna</b><span class="muted" style="font-size:var(--fs-sm)">Najvyššia úroveň — napr. „MS v hokeji 2026" alebo „Liga majstrov 26/27". Združuje ligy a má svoj rebríček.</span></div></div>
+        <div class="hier-arrow">↓</div>
+        <div class="hier-row"><span class="lvl" style="background:var(--gold-soft);color:var(--gold)">🎯</span><div><b>Liga</b><span class="muted" style="font-size:var(--fs-sm)">Súťaž vnútri sezóny s vlastnými pravidlami bodovania a vlastným rebríčkom. V jednej sezóne môže byť viac líg.</span></div></div>
+        <div class="hier-arrow">↓</div>
+        <div class="hier-row"><span class="lvl" style="background:var(--success-soft);color:var(--success)">📅</span><div><b>Kolo</b><span class="muted" style="font-size:var(--fs-sm)">Skupina zápasov v lige s jednou uzávierkou (napr. „Kolo 14"). Tipy zadávaš po kolách.</span></div></div>
+        <div class="hier-arrow">↓</div>
+        <div class="hier-row"><span class="lvl" style="background:var(--surface-3);color:var(--text-2)">⚽</span><div><b>Zápas</b><span class="muted" style="font-size:var(--fs-sm)">Jeden konkrétny duel dvoch tímov, ktorý tipuješ. Patrí do kola.</span></div></div>
+      </div>
+      <div class="callout"><span class="ci">💡</span><p>Jednoducho: <b>sezóna</b> obsahuje <b>ligy</b>, liga obsahuje <b>kolá</b> a kolo obsahuje jednotlivé <b>zápasy</b>, ktoré tipuješ.</p></div>
+    </section>
+
+    <!-- TIPOVANIE -->
+    <section id="tipovanie" class="card card-pad gd-sec">
+      <h2>Ako tipovať</h2>
+      <p class="lead">Tipovať môžeš v ligách, ktorých si členom, vždy pred uzávierkou daného kola.</p>
+      <ol class="step-list">
+        <li>Otvor sezónu alebo ligu, ktorej si členom, a vyber aktuálne kolo.</li>
+        <li>Pri každom zápase zadaj svoj tip — podľa typu buď <b>víťaza</b> (domáci / remíza / hosť), alebo <b>presné skóre</b>.</li>
+        <li>Tip ulož. Kým neuplynie uzávierka, môžeš ho ľubovoľne meniť.</li>
+        <li>Po odohraní zápasov správca zadá výsledky a systém ti automaticky pripíše body.</li>
+      </ol>
+      <p>Existujú dva typy tipovania, ktoré určuje nastavenie zápasu:</p>
+      <ul>
+        <li><b>Víťaz</b> — tipuješ len, kto vyhrá (alebo remízu). Jednoduchšie, menej bodov.</li>
+        <li><b>Presné skóre</b> — tipuješ konkrétny výsledok (napr. 2:1). Ťažšie, ale s vyššou odmenou a čiastkovými bodmi.</li>
+      </ul>
+      <div class="callout"><span class="ci">⏰</span><p>Po uzávierke kola sa tipy uzamknú a už ich nie je možné upraviť. Tipy ostatných hráčov uvidíš až po uzávierke — pred ňou sú skryté, aby bola súťaž férová.</p></div>
+    </section>
+
+    <!-- BODOVANIE -->
+    <section id="bodovanie" class="card card-pad gd-sec">
+      <h2>Bodovanie</h2>
+      <p class="lead">Body sa prideľujú podľa presnosti tipu. Nižšie je predvolený bodovací systém — každá liga si ho však môže nastaviť po svojom.</p>
+      <table class="pts-table">
+        <thead><tr><th>Za čo</th><th>Body</th></tr></thead>
+        <tbody>
+          <tr><td><b>Presný výsledok</b> (napr. tip 2:1, výsledok 2:1)</td><td class="pts-val" style="color:var(--success)">+10</td></tr>
+          <tr><td>Správny víťaz alebo remíza</td><td class="pts-val">+3</td></tr>
+          <tr><td>Správny gólový rozdiel</td><td class="pts-val">+2</td></tr>
+          <tr><td>Správny počet gólov jedného tímu</td><td class="pts-val">+1</td></tr>
+        </tbody>
+      </table>
+      <p>Ako sa to počíta pri tipe na <b>presné skóre</b>:</p>
+      <ul>
+        <li>Ak trafíš <b>presný výsledok</b>, získaš plný počet bodov (predvolene 10) a ďalšie zložky sa už nepripočítavajú.</li>
+        <li>Ak presný výsledok netrafíš, body sa <b>skladajú</b> z čiastkových zložiek: za správneho víťaza/remízu, za správny gólový rozdiel a za správny počet gólov domáceho aj hosťujúceho tímu (každý tím zvlášť).</li>
+      </ul>
+      <p>Pri tipe na <b>víťaza</b> sa hodnotí len to, či si trafil víťaza alebo remízu (predvolene +3).</p>
+      <div class="callout"><span class="ci">🔒</span><p>Bodovací systém ligy sa po vyhodnotení prvého zápasu uzamkne, aby sa pravidlá nedali meniť počas prebiehajúcej súťaže.</p></div>
+    </section>
+
+    <!-- ROLE -->
+    <section id="role" class="card card-pad gd-sec">
+      <h2>Role a limity</h2>
+      <p class="lead">Koľko sezón a líg môžeš súčasne vytvoriť, závisí od tvojej roly.</p>
+      <div class="role-grid">
+        <div class="card role-card" style="background:var(--surface-2)">
+          <h4>👤 Hráč</h4>
+          <ul style="margin:0">
+            <li>1 aktívna sezóna</li>
+            <li>5 líg</li>
+            <li>Neobmedzené tipovanie</li>
+          </ul>
+        </div>
+        <div class="card role-card" style="background:var(--surface-2)">
+          <h4>⭐ VIP</h4>
+          <ul style="margin:0">
+            <li>2 aktívne sezóny</li>
+            <li>10 líg</li>
+            <li>Neobmedzené tipovanie</li>
+          </ul>
+        </div>
+        <div class="card role-card" style="background:var(--surface-2)">
+          <h4>🛡️ Admin</h4>
+          <ul style="margin:0">
+            <li>Bez limitu sezón</li>
+            <li>Bez limitu líg</li>
+            <li>Správa oficiálnych súťaží</li>
+          </ul>
+        </div>
+      </div>
+      <p>Pripojiť sa do cudzích sezón a líg môžeš bez ohľadu na rolu — limity sa týkajú len súťaží, ktoré sám <b>vytvoríš</b>.</p>
+    </section>
+
+    <!-- SEZÓNA -->
+    <section id="sezona" class="card card-pad gd-sec">
+      <h2>Vytvorenie sezóny</h2>
+      <p class="lead">Sezóna je rámec pre tvoje súťaže. Vytvoríš ju v pár krokoch.</p>
+      <ol class="step-list">
+        <li>Klikni na <b>Vytvoriť sezónu</b> a zadaj názov a popis.</li>
+        <li>Zvoľ, či bude sezóna <b>verejná</b> (nájdu ju ostatní), alebo <b>skrytá</b> (prístup len cez ID/odkaz).</li>
+        <li>Voliteľne nastav <b>heslo</b>, ak chceš prístup obmedziť len pre pozvaných.</li>
+        <li>Po vytvorení dostane sezóna jedinečné <b>6-miestne ID</b>, ktorým pozývaš ďalších.</li>
+        <li>V sezóne následne vytvoríš jednu alebo viac líg.</li>
+      </ol>
+      <div class="callout"><span class="ci">💡</span><p>Komunitné sezóny si môže založiť ktokoľvek. Oficiálne sezóny (veľké turnaje) spravuje tím Tiperligy.</p></div>
+      <a href="/seasons/create" class="btn btn-primary btn-sm">Vytvoriť sezónu →</a>
+    </section>
+
+    <!-- LIGA -->
+    <section id="liga" class="card card-pad gd-sec">
+      <h2>Vytvorenie ligy</h2>
+      <p class="lead">Liga je samotná súťaž s vlastným rebríčkom a pravidlami bodovania.</p>
+      <ol class="step-list">
+        <li>V detaile sezóny klikni na <b>Vytvoriť ligu</b>.</li>
+        <li>Zadaj názov ligy a prípadne heslo, ak má byť súkromná.</li>
+        <li>Nastav <b>bodovací systém</b> — môžeš ponechať predvolený, alebo upraviť body za presný výsledok, víťaza, gólový rozdiel a góly tímu.</li>
+        <li>Pridaj <b>kolá</b> a do nich <b>zápasy</b> (tímy, čas, typ tipovania).</li>
+        <li>Pozvi hráčov cez ID ligy — a môže sa tipovať.</li>
+      </ol>
+      <div class="callout"><span class="ci">🔒</span><p>Bodovací systém uprav skôr, než sa vyhodnotí prvý zápas. Potom sa uzamkne.</p></div>
+      <a href="/leagues/create" class="btn btn-primary btn-sm">Vytvoriť ligu →</a>
+    </section>
+
+    <!-- PRIPOJENIE -->
+    <section id="pripojenie" class="card card-pad gd-sec">
+      <h2>Pripojenie do súťaže</h2>
+      <p class="lead">Do existujúcej sezóny alebo ligy sa dostaneš dvoma spôsobmi.</p>
+      <ul>
+        <li><b>Cez 6-miestne ID</b> — zadaj kód, ktorý ti poslal organizátor, na stránke Pripojiť sa. Ak je súťaž chránená, doplň aj heslo.</li>
+        <li><b>Prehľadávaním</b> — verejné sezóny nájdeš v zozname sezón a pripojíš sa priamo.</li>
+      </ul>
+      <div class="row g-2 wrap-gap">
+        <a href="/seasons" class="btn btn-secondary btn-sm">Prehľadať sezóny</a>
+        <a href="/join" class="btn btn-secondary btn-sm">Pripojiť sa cez ID</a>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq" class="card card-pad gd-sec">
+      <h2>Časté otázky</h2>
+      <p class="lead">Krátke odpovede na to, čo sa pýtajú najčastejšie.</p>
+      <ul>
+        <li><b>Môžem tip zmeniť?</b> Áno, kedykoľvek pred uzávierkou kola.</li>
+        <li><b>Vidím tipy ostatných?</b> Až po uzávierke kola, nikdy pred ňou.</li>
+        <li><b>Čo ak zápas nezatipujem?</b> Za nezatipovaný zápas nezískaš žiadne body.</li>
+        <li><b>Je platforma zadarmo?</b> Áno, registrácia aj tipovanie sú zadarmo.</li>
+        <li><b>Čo sa stane, keď opustím súťaž?</b> Vypadneš z jej líg, no tvoje doterajšie tipy ostávajú zachované pre korektný historický rebríček.</li>
+      </ul>
+      <p class="muted" style="font-size:var(--fs-sm)">Nenašiel si odpoveď? Napíš nám cez <a href="/kontakt" class="brand">kontaktný formulár</a>.</p>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  // zvýraznenie aktívnej položky TOC počas scrollovania
+  (function(){
+    var links = Array.prototype.slice.call(document.querySelectorAll('#gdToc a'));
+    var secs = links.map(function(a){ return document.querySelector(a.getAttribute('href')); }).filter(Boolean);
+    function onScroll(){
+      var pos = window.scrollY + 130;
+      var current = secs[0];
+      secs.forEach(function(s){ if (s.offsetTop <= pos) current = s; });
+      links.forEach(function(a){ a.classList.toggle('active', a.getAttribute('href') === '#' + (current && current.id)); });
+    }
+    window.addEventListener('scroll', onScroll, { passive:true });
+    onScroll();
+  })();
+</script>
+
+<%- include('partials/footer') %>

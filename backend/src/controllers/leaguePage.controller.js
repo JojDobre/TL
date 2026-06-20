@@ -445,4 +445,69 @@ const endLeagueSubmit = asyncHandler(async (req, res) => {
   res.redirect('/leagues/' + league.id);
 });
 
-module.exports = { leagueDetailPage, joinLeagueSubmit, createLeaguePage, createLeagueSubmit, editLeaguePage, editLeagueSubmit, deleteLeagueSubmit, leaveLeagueSubmit, leagueMembersPage, leagueMemberAction, endLeagueSubmit };
+// GET /leagues/:id/manage — tabová správa ligy (Členovia / Tímy / Bodovanie /
+// Nastavenia + Nebezpečná zóna). Štýlovo zhodné so správou sezóny.
+const manageLeaguePage = asyncHandler(async (req, res) => {
+  const userId = Number(req.session.userId);
+  const league = await League.findByPk(req.params.id, {
+    include: [{ model: Season, attributes: ['id', 'name', 'creatorId'] }],
+  });
+  if (!league) return res.status(404).render('error-page', { message: 'Liga nebola nájdená.' });
+  if (!(await isLeagueManager(league, userId))) {
+    return res.status(403).render('error-page', { message: 'Nemáš oprávnenie spravovať túto ligu.' });
+  }
+
+  // členovia ligy (rovnako ako leagueMembersPage)
+  const memberships = await UserLeague.findAll({ where: { leagueId: league.id } });
+  const members = [];
+  for (const m of memberships) {
+    const mu = await User.findByPk(m.userId, { attributes: ['id', 'username', 'firstName', 'lastName'] });
+    if (mu) members.push({ ...mu.toJSON(), role: m.role, isCreator: mu.id === league.creatorId, joinedAt: m.createdAt });
+  }
+  members.sort((a, b) => (b.isCreator - a.isCreator) || (a.username || '').localeCompare(b.username || ''));
+
+  // kolá a počet vyhodnotených zápasov → zámok bodovania
+  const rounds = await Round.findAll({ where: { leagueId: league.id }, attributes: ['id'] });
+  const roundIds = rounds.map((r) => r.id);
+  let finishedCount = 0;
+  let totalMatches = 0;
+  if (roundIds.length) {
+    totalMatches = await Match.count({ where: { roundId: { [Sequelize.Op.in]: roundIds } } });
+    finishedCount = await Match.count({ where: { roundId: { [Sequelize.Op.in]: roundIds }, status: 'finished' } });
+  }
+  const scoringLocked = !!league.scoringLocked || finishedCount > 0;
+
+  // odoslané tipy v lige
+  let tipsCount = 0;
+  if (roundIds.length) {
+    const matchIdsRows = await Match.findAll({ where: { roundId: { [Sequelize.Op.in]: roundIds } }, attributes: ['id'] });
+    const matchIds = matchIdsRows.map((m) => m.id);
+    if (matchIds.length) tipsCount = await Tip.count({ where: { matchId: { [Sequelize.Op.in]: matchIds } } });
+  }
+
+  // vlastník (meno)
+  const owner = await User.findByPk(league.creatorId, { attributes: ['username', 'firstName', 'lastName'] });
+  const ownerName = owner ? ([owner.firstName, owner.lastName].filter(Boolean).join(' ') || owner.username) : '—';
+
+  res.render('manageLeague', {
+    league: { ...league.toJSON(), scoringSystem: league.scoringSystem || DEFAULT_SCORING, scoringLocked },
+    seasonName: league.Season ? league.Season.name : '',
+    members,
+    summary: {
+      membersCount: members.length,
+      roundsCount: roundIds.length,
+      totalMatches,
+      finishedCount,
+      tipsCount,
+      ownerName,
+    },
+    // liga zo šablóny má tímy prevzaté → súpisku nemožno meniť
+    teamsLocked: !!league.templateId,
+    sports: SPORTS,
+    countries: COUNTRIES,
+    error: null,
+    meId: userId,
+  });
+});
+
+module.exports = { leagueDetailPage, joinLeagueSubmit, createLeaguePage, createLeagueSubmit, editLeaguePage, editLeagueSubmit, deleteLeagueSubmit, leaveLeagueSubmit, leagueMembersPage, leagueMemberAction, endLeagueSubmit, manageLeaguePage };

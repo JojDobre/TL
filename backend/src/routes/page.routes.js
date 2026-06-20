@@ -15,7 +15,7 @@ const {
   loginPage, loginSubmit, registerPage, registerSubmit, logout,
 } = require('../controllers/authPage.controller');
 const { adminDashboardPage, adminUsersPage, adminCompetitionsPage } = require('../controllers/adminPage.controller');
-const { leagueDetailPage, joinLeagueSubmit, createLeaguePage, createLeagueSubmit, editLeaguePage, editLeagueSubmit, deleteLeagueSubmit, leaveLeagueSubmit, leagueMembersPage, leagueMemberAction, endLeagueSubmit } = require('../controllers/leaguePage.controller');
+const { leagueDetailPage, joinLeagueSubmit, createLeaguePage, createLeagueSubmit, editLeaguePage, editLeagueSubmit, deleteLeagueSubmit, leaveLeagueSubmit, leagueMembersPage, leagueMemberAction, endLeagueSubmit, manageLeaguePage } = require('../controllers/leaguePage.controller');
 const { roundDetailPage } = require('../controllers/roundPage.controller');
 const { createRoundPage, createRoundSubmit, editRoundPage } = require('../controllers/roundPageCreate.controller');
 const { createMatchesPage } = require('../controllers/matchPage.controller');
@@ -25,16 +25,25 @@ const { listTeams, createTeam, bulkCreateTeams, deleteTeam, updateTeam } = requi
 const { availableTeams, leagueTeams, addTeam, removeTeam, createCustomTeam, updateCustomTeam, deleteCustomTeam } = require('../controllers/leagueTeam.controller');
 const { updateRound, deleteRound } = require('../controllers/round.controller');
 const { updateMatch, bulkCreateMatches } = require('../controllers/match.controller');
-const { seasonLeaderboardPage } = require('../controllers/leaderboardPage.controller');
+const { seasonLeaderboardPage, globalLeaderboardPage } = require('../controllers/leaderboardPage.controller');
 const { seasonMatchesPage } = require('../controllers/seasonMatchesPage.controller');
 const { myPage } = require('../controllers/myPage.controller');
 const { statsPage } = require('../controllers/statsPage.controller');
 const { profilePage } = require('../controllers/profilePage.controller');
 const { settingsPage, updateProfile, changePassword } = require('../controllers/settingsPage.controller');
 const { requireLogin, requireAdmin, apiRequireAdmin, apiRequireLogin, attachUser } = require('../middleware/page-auth.middleware');
+const { homePage } = require('../controllers/homePage.controller');
+const { aboutPage, kontaktPage, navodyPage } = require('../controllers/staticPage.controller');
+const { blogListPage, blogPostPage } = require('../controllers/blogPage.controller');
+const {
+  adminBlogListPage, adminBlogNewPage, adminBlogCreate,
+  adminBlogEditPage, adminBlogUpdate, adminBlogDelete,
+} = require('../controllers/adminBlog.controller');
+const { achievementsPage } = require('../controllers/achievementsPage.controller');
 
-// Domov → zatiaľ na sezóny
-router.get('/', (req, res) => res.redirect('/seasons'));
+
+// Domov 
+router.get('/', attachUser, homePage);
 
 // Auth
 router.get('/login', loginPage);
@@ -61,6 +70,7 @@ router.post('/seasons/:id/delete', requireLogin, deleteSeasonSubmit);
 router.post('/seasons/:id/leave', requireLogin, leaveSeasonSubmit);
 router.get('/seasons/:id/members', requireLogin, (req, res) => res.redirect('/seasons/' + req.params.id + '/manage'));
 router.post('/seasons/:id/members/:userId', requireLogin, seasonMemberAction);
+router.get('/leaderboards', attachUser, globalLeaderboardPage);
 router.get('/seasons/:id/leaderboard', attachUser, seasonLeaderboardPage);
 router.get('/seasons/:id/zapasy', requireLogin, seasonMatchesPage);
 router.get('/seasons/:id', attachUser, seasonDetailPage);
@@ -76,6 +86,7 @@ router.post('/leagues/:id/leave', requireLogin, leaveLeagueSubmit);
 router.get('/leagues/:id/members', requireLogin, leagueMembersPage);
 router.post('/leagues/:id/members/:userId', requireLogin, leagueMemberAction);
 router.post('/leagues/:id/end', requireLogin, endLeagueSubmit);
+router.get('/leagues/:id/manage', requireLogin, manageLeaguePage);
 router.get('/leagues/:id', attachUser, leagueDetailPage);
 
 // Kolá — /create PRED /:id
@@ -105,6 +116,14 @@ router.post('/api/admin/teams/bulk', apiRequireAdmin, bulkCreateTeams);
 router.delete('/api/admin/teams/:id', apiRequireAdmin, deleteTeam);
 router.put('/api/admin/teams/:id', apiRequireAdmin, updateTeam);
 
+// Admin blog (len admin)
+router.get('/admin/blog', requireAdmin, adminBlogListPage);
+router.get('/admin/blog/new', requireAdmin, adminBlogNewPage);
+router.post('/admin/blog/new', requireAdmin, adminBlogCreate);
+router.get('/admin/blog/:id/edit', requireAdmin, adminBlogEditPage);
+router.post('/admin/blog/:id/edit', requireAdmin, adminBlogUpdate);
+router.post('/admin/blog/:id/delete', requireAdmin, adminBlogDelete);
+
 // Súpiska tímov ligy (JSON, cez session login; oprávnenie rieši controller)
 router.get('/api/leagues/:id/teams', apiRequireLogin, leagueTeams);
 router.get('/api/leagues/:id/teams/available', apiRequireLogin, availableTeams);
@@ -113,5 +132,15 @@ router.post('/api/leagues/:id/teams/custom', apiRequireLogin, createCustomTeam);
 router.put('/api/teams/custom/:id', apiRequireLogin, updateCustomTeam);
 router.delete('/api/teams/custom/:id', apiRequireLogin, deleteCustomTeam);
 router.delete('/api/leagues/:id/teams/:teamId', apiRequireLogin, removeTeam);
+
+// Statické stránky (verejné). attachUser → navbar pozná prihláseného usera.
+router.get('/about', attachUser, aboutPage);
+router.get('/kontakt', attachUser, kontaktPage);
+router.get('/navody', attachUser, navodyPage);
+router.get('/achievements', requireLogin, achievementsPage);
+
+// Blog (verejné). attachUser → navbar pozná prihláseného usera.
+router.get('/blog', attachUser, blogListPage);
+router.get('/blog/:slug', attachUser, blogPostPage);
 
 module.exports = router;

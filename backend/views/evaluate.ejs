@@ -16,6 +16,7 @@
   .ev-colon { font-family:var(--num); font-weight:700; font-size:1.6rem; color:var(--text-4); }
   .ev-actions { display:flex; gap:10px; align-items:center; margin-top:18px; padding-top:16px; border-top:1px solid var(--line); flex-wrap:wrap; }
   .ev-meta { font-size:var(--fs-sm); color:var(--text-4); }
+  .ev-savebar { position:sticky; bottom:0; z-index:30; margin-top:18px; background: color-mix(in srgb, var(--surface-1) 92%, transparent); backdrop-filter:blur(12px); border:1px solid var(--line-strong); border-radius: var(--r-lg); padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:14px; box-shadow:var(--shadow-lg); flex-wrap:wrap; }
   .info-banner { display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:var(--r-md); background:var(--info-soft); border:1px solid rgba(58,160,255,.25); margin-bottom:20px; }
   @media (max-width:980px){ .ev-layout { grid-template-columns:1fr; } }
   @media (max-width:560px){
@@ -35,6 +36,8 @@
     .ev-actions .tag { align-self:center; }
     .ev-actions .grow { flex:none; }
     .ev-actions .ev-meta { text-align:center !important; }
+    .ev-savebar { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); flex-direction:column; align-items:stretch; gap:10px; }
+    .ev-savebar .btn { width:100%; }
   }
 ` }) %>
 
@@ -42,6 +45,7 @@
 
 <%
   function fmtDT(d){ if(!d) return ''; var dt=new Date(d); return dt.toLocaleDateString('sk-SK',{day:'numeric',month:'short'})+' · '+dt.toLocaleTimeString('sk-SK',{hour:'2-digit',minute:'2-digit'}); }
+  var NOW = Date.now();
 %>
 
 <div class="wrap ad-head">
@@ -62,11 +66,12 @@
       <div class="card card-pad" style="text-align:center;padding:40px"><p class="muted">V tomto kole nie sú žiadne zápasy.</p></div>
     <% } %>
 
-    <% matches.forEach(function (m) { var done = m.status === 'finished'; var canceled = m.status === 'canceled'; %>
-    <div class="card ev-match<%= done ? ' done' : '' %><%= canceled ? ' canceled' : '' %>" data-match-id="<%= m.id %>">
+    <% matches.forEach(function (m) { var done = m.status === 'finished'; var canceled = m.status === 'canceled'; var notPlayed = !done && !canceled && m.matchTime && new Date(m.matchTime).getTime() > NOW; %>
+    <div class="card ev-match<%= done ? ' done' : '' %><%= canceled ? ' canceled' : '' %>" data-match-id="<%= m.id %>"<%= notPlayed ? ' data-not-played' : '' %>>
       <div class="ev-top"><span class="ev-meta"><%= fmtDT(m.matchTime) %></span>
         <% if (done) { %><span class="tag tag-success" data-status><span class="dot"></span>Vyhodnotené</span>
         <% } else if (canceled) { %><span class="tag tag-muted" data-status><span class="dot" style="background:var(--text-4)"></span>Zrušený</span>
+        <% } else if (notPlayed) { %><span class="tag tag-info" data-status><span class="dot"></span>Ešte sa neodohral</span>
         <% } else { %><span class="tag tag-warning" data-status><span class="dot"></span>Čaká na výsledok</span><% } %>
       </div>
       <div class="ev-teams">
@@ -82,7 +87,7 @@
       </div>
       <div class="ev-actions">
         <% if (done) { %>
-          <span class="tag tag-success">✓ Body pridelené</span><button class="btn btn-secondary btn-sm" data-edit>Upraviť výsledok</button>
+          <span class="tag tag-success">✓ Body pridelené</span><button class="btn btn-danger btn-sm" data-clear>Vymazať výsledok</button>
         <% } else if (canceled) { %>
           <span class="tag tag-muted">Žiadne body sa neprideľujú</span><button class="btn btn-secondary btn-sm" data-restore>Obnoviť zápas</button>
         <% } else { %>
@@ -92,6 +97,13 @@
       </div>
     </div>
     <% }); %>
+
+    <% if (stats.pending > 0) { %>
+    <div class="ev-savebar">
+      <span class="ev-meta">Uloží všetky zápasy, ktoré majú vyplnené obe skóre. <b class="hi"><span id="fillReady">0</span></b> pripravených na uloženie.</span>
+      <button class="btn btn-primary" id="saveAll">Uložiť všetky výsledky</button>
+    </div>
+    <% } %>
   </main>
 
   <aside style="position:sticky;top:140px">
@@ -138,16 +150,49 @@
       if (!confirm('Označiť zápas ako zrušený? Body sa nikomu nepridelia.')) return;
       evaluate(card, { status: 'canceled' }, 'Zápas zrušený');
     }
-    else if (e.target.closest('[data-edit]') || e.target.closest('[data-restore]')) {
-      // prepni kartu späť na zadávanie skóre
-      var teams = card.querySelector('.ev-score');
-      teams.innerHTML = '<input class="input" inputmode="numeric" placeholder="0" data-home><span class="ev-colon">:</span><input class="input" inputmode="numeric" placeholder="0" data-away>';
-      var actions = card.querySelector('.ev-actions');
-      var meta = actions.querySelector('.ev-meta');
-      actions.innerHTML = '<button class="btn btn-primary" data-save>Uložiť výsledok</button><button class="btn btn-ghost" data-cancel>Označiť ako zrušený</button>';
-      if (meta) actions.appendChild(meta);
-      card.classList.remove('done','canceled');
+    else if (e.target.closest('[data-clear]')) {
+      if (!confirm('Vymazať výsledok tohto zápasu? Pridelené body sa hráčom vrátia a zápas sa vráti medzi nevyhodnotené.')) return;
+      evaluate(card, { status: 'scheduled' }, 'Výsledok vymazaný ✓');
     }
+    else if (e.target.closest('[data-restore]')) {
+      // zrušený zápas späť medzi nevyhodnotené
+      evaluate(card, { status: 'scheduled' }, 'Zápas obnovený ✓');
+    }
+  });
+
+  // ---- počítadlo zápasov pripravených na hromadné uloženie ----
+  function readyCards(){
+    var out=[];
+    document.querySelectorAll('[data-match-id]').forEach(function(card){
+      if (card.classList.contains('done') || card.classList.contains('canceled')) return;
+      var h=card.querySelector('[data-home]'), a=card.querySelector('[data-away]');
+      if (h && a && h.value!=='' && a.value!=='') out.push(card);
+    });
+    return out;
+  }
+  function recountReady(){ var el=document.getElementById('fillReady'); if(el) el.textContent=readyCards().length; }
+  document.addEventListener('input', function(e){ if(e.target.closest('[data-home]')||e.target.closest('[data-away]')) recountReady(); });
+  recountReady();
+
+  // ---- uložiť všetky výsledky naraz ----
+  var saveAll = document.getElementById('saveAll');
+  if (saveAll) saveAll.addEventListener('click', function(){
+    var cards = readyCards();
+    if (cards.length === 0) { toast('Žiadny zápas nemá vyplnené obe skóre.'); return; }
+    if (!confirm('Uložiť výsledky ' + cards.length + ' zápasov? Body sa hráčom okamžite pridelia.')) return;
+    saveAll.disabled = true; saveAll.textContent = 'Ukladám…';
+    var ops = cards.map(function(card){
+      var id = card.getAttribute('data-match-id');
+      var h = card.querySelector('[data-home]').value, a = card.querySelector('[data-away]').value;
+      return fetch('/api/matches/'+id+'/evaluate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ homeScore:Number(h), awayScore:Number(a), status:'finished' }) })
+        .then(function(r){ return r.json(); }).catch(function(){ return { success:false }; });
+    });
+    Promise.all(ops).then(function(res){
+      var fail = res.filter(function(r){ return r && r.success === false; });
+      if (fail.length) { toast(fail.length + ' z ' + cards.length + ' sa neuložilo.'); saveAll.disabled=false; saveAll.textContent='Uložiť všetky výsledky'; }
+      else { toast('Uložené: ' + cards.length + ' zápasov ✓', true); }
+      setTimeout(function(){ location.reload(); }, 800);
+    });
   });
 })();
 </script>

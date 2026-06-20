@@ -44,6 +44,10 @@
     <!-- ACCOUNT -->
     <div class="card card-pad set-card" id="account">
       <div class="sc-head"><div><h3>Účet</h3><p>Tvoje základné prihlasovacie a kontaktné údaje.</p></div></div>
+      <div class="row g-4 wrap-gap" style="margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--line)">
+        <span class="avatar" style="width:72px;height:72px;font-size:26px;background:linear-gradient(135deg,#7c5cff,#5b3fd6);color:#fff"><%= account.initials %></span>
+        <div><div class="label" style="margin-bottom:6px">Profilová fotka</div><div class="row g-2"><button type="button" class="btn btn-secondary btn-sm">Nahrať fotku</button><button type="button" class="btn btn-ghost btn-sm">Odstrániť</button></div></div>
+      </div>
       <div class="stack g-4">
         <div class="field-row">
           <div class="field"><label class="label">Prezývka (nick)</label><input class="input" id="acc-username" value="<%= account.username %>"></div>

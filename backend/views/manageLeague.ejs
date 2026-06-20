@@ -1,0 +1,359 @@
+<%- include('partials/head', { title: 'Správa ligy — ' + league.name, page: 'seasons', active: 'seasons', pageStyle: `
+  .ad-head { padding:24px 0 16px; }
+  .crumb { font-size:var(--fs-sm); color:var(--text-4); margin-bottom:12px; }
+  .crumb a { color:var(--text-3); } .crumb a:hover { color:var(--brand-bright); }
+  .ac-tabs { display:flex; gap:6px; margin:18px 0; flex-wrap:wrap; }
+  .ac-layout { display:grid; grid-template-columns:1fr 320px; gap:26px; align-items:start; padding-bottom:64px; }
+  .card-pad2 { padding:24px; }
+  .card-pad2 + .card-pad2 { margin-top:18px; }
+  .card-pad2 h3 { font-size:var(--fs-h4); margin-bottom:4px; }
+  .card-pad2 .sub { color:var(--text-3); font-size:var(--fs-sm); margin-bottom:18px; }
+  .mem-row { display:grid; grid-template-columns:auto 1fr 120px auto; gap:14px; align-items:center; padding:11px 0; border-bottom:1px solid var(--line); }
+  .mem-row:last-child { border:none; }
+  .mem-name { min-width:0; }
+  .mem-actions { display:flex; align-items:center; gap:8px; }
+  .score-row { display:flex; align-items:center; gap:14px; padding:11px 0; border-bottom:1px solid var(--line); }
+  .score-row:last-child { border:none; }
+  .score-row .desc { flex:1; }
+  .score-input { width:72px; flex:none; }
+  .score-input input { text-align:center; font-family:var(--num); font-weight:700; }
+  .danger-zone { border:1px solid rgba(240,71,106,.3); border-radius:var(--r-lg); padding:24px; margin-top:18px; background:color-mix(in srgb,var(--danger) 5%,var(--surface-1)); }
+  [data-cpanel="settings"]:not([hidden]) { display:flex; flex-direction:column; gap:18px; }
+  .danger-row { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 0; border-bottom:1px solid rgba(240,71,106,.15); flex-wrap:wrap; }
+  .danger-row:last-child { border:none; }
+  .mem-head { display:grid; grid-template-columns:1fr auto; align-items:center; gap:4px 14px; margin-bottom:14px; }
+  .mem-title { grid-column:1; grid-row:1; }
+  .mem-search { grid-column:2; grid-row:1; width:200px; }
+  .mem-sub { grid-column:1 / -1; grid-row:2; margin:0; }
+  .ac-lhead { display:flex; align-items:center; gap:16px; }
+  .ac-logo { flex:none; }
+  .ac-lhead-body { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; }
+  .ac-title { order:1; font-size:clamp(1.6rem,2.6vw,2.1rem); }
+  .ac-tag { order:2; }
+  .ac-desc { order:3; flex-basis:100%; font-size:var(--fs-sm); margin:0; }
+  .field-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  /* tímy */
+  .tm-toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px; }
+  .tm-toolbar .input, .tm-toolbar .select { height:40px; }
+  .tm-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; }
+  .tm-card { display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid var(--line); border-radius:var(--r-md); background:var(--surface-1); }
+  .tm-logo { width:38px; height:38px; border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; background:var(--surface-3); color:var(--text-2); background-size:cover; background-position:center; }
+  .tm-body { min-width:0; flex:1; }
+  .tm-name { font-weight:700; color:var(--text-1); font-size:var(--fs-sm); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tm-meta { color:var(--text-4); font-size:var(--fs-xs); }
+  .tm-empty { color:var(--text-3); font-size:var(--fs-sm); padding:18px 0; text-align:center; }
+  @media (max-width:980px){ .ac-layout { grid-template-columns:1fr; } }
+  @media (max-width:600px){
+    .card-pad2 { padding:18px; } .field-row { grid-template-columns:1fr; }
+    .ad-head .between { flex-direction:column; align-items:stretch; gap:14px; }
+    .ac-lhead { flex-direction:column; align-items:center; text-align:center; gap:10px; }
+    .ac-lhead-body { flex-direction:column; align-items:center; gap:6px; }
+    .ac-tag { order:0; } .ac-title { order:1; } .ac-desc { order:2; }
+    .ac-tabs.segment { display:flex !important; width:100%; }
+    .ac-tabs.segment button { flex:1; padding-inline:6px; }
+    .mem-head { grid-template-columns:1fr; gap:10px; }
+    .mem-title, .mem-sub, .mem-search { grid-column:1; grid-row:auto; }
+    .mem-search { width:100%; max-width:none; }
+    .mem-row { grid-template-columns:auto 1fr; grid-template-areas:"av name" ". actions"; column-gap:12px; row-gap:10px; align-items:start; }
+    .mem-row > .avatar { grid-area:av; } .mem-name { grid-area:name; } .mem-role { display:none; } .mem-actions { grid-area:actions; flex-wrap:wrap; }
+    .score-action { flex-direction:column; align-items:stretch; } .score-action .btn { width:100%; }
+  }
+` }) %>
+
+<%
+  function initials(u){ var n=[u.firstName,u.lastName].filter(Boolean).join(' ')||u.username||'?'; return n.split(' ').map(function(w){return w[0];}).filter(Boolean).slice(0,2).join('').toUpperCase(); }
+  function fullName(u){ return [u.firstName,u.lastName].filter(Boolean).join(' ')||u.username; }
+  function fmtD(d){ if(!d) return ''; var x=new Date(d); return x.toLocaleDateString('sk-SK',{day:'numeric',month:'short'}); }
+  var s = league.scoringSystem || {};
+  var isOfficial = league.type === 'official';
+%>
+
+<div class="wrap ad-head">
+  <div class="crumb"><a href="/seasons/<%= league.seasonId %>"><%= seasonName || 'Sezóna' %></a> › <a href="/leagues/<%= league.id %>"><%= league.name %></a> › Správa</div>
+  <div class="between wrap-gap" style="gap:16px">
+    <div class="ac-lhead">
+      <span class="team-logo ac-logo" style="width:54px;height:54px;font-size:16px;background:linear-gradient(135deg,#7c5cff,#3b1f8a)<% if (league.image) { %>;background-image:url('<%= league.image %>');background-size:cover;background-position:center<% } %>"><% if (!league.image) { %><%= (league.name||'L').substring(0,2).toUpperCase() %><% } %></span>
+      <div class="ac-lhead-body">
+        <span class="tag <%= isOfficial ? 'tag-brand' : 'tag-gold' %> ac-tag"><%= isOfficial ? 'Oficiálna' : 'Custom' %></span>
+        <h1 class="ac-title"><%= league.name %></h1>
+        <p class="muted ac-desc"><%= summary.membersCount %> hráčov · <%= summary.roundsCount %> kôl · ID <%= league.inviteCode %><% if (league.ended) { %> · <span style="color:var(--danger)">Ukončená</span><% } %></p>
+      </div>
+    </div>
+    <a href="/leagues/<%= league.id %>" class="btn btn-secondary">Zobraziť ligu →</a>
+  </div>
+  <div class="ac-tabs segment" style="display:inline-flex">
+    <button class="active" data-ct="members">Členovia</button>
+    <button data-ct="teams">Tímy</button>
+    <button data-ct="scoring">Bodovanie</button>
+    <button data-ct="settings">Nastavenia</button>
+  </div>
+</div>
+
+<% if (error) { %><div class="wrap" style="margin-bottom:14px"><div class="tag tag-danger" style="display:block;padding:12px 14px"><%= error %></div></div><% } %>
+
+<div class="wrap ac-layout">
+  <main>
+    <!-- ČLENOVIA -->
+    <section data-cpanel="members">
+      <div class="card card-pad2">
+        <div class="mem-head">
+          <h3 class="mem-title">Členovia ligy</h3>
+          <div class="input-icon search mem-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4" stroke-linecap="round"/></svg><input class="input" id="memSearch" placeholder="Hľadať…"></div>
+          <p class="sub mem-sub">Spravuj členov ligy — povýš na správcu, zruš správu alebo odober hráča.</p>
+        </div>
+        <% if (members.length === 0) { %>
+          <p class="tm-empty">Liga zatiaľ nemá žiadnych členov.</p>
+        <% } %>
+        <% members.forEach(function(m){ %>
+          <div class="mem-row" data-name="<%= (fullName(m)+' @'+m.username).toLowerCase() %>">
+            <span class="avatar avatar-md" style="background:var(--surface-3);color:var(--text-1)"><%= initials(m) %></span>
+            <div class="mem-name">
+              <div class="u-name" style="font-weight:700;color:var(--text-1)"><%= fullName(m) %><% if (m.isCreator) { %> <span class="tag tag-brand" style="padding:1px 6px">Vlastník</span><% } %></div>
+              <div class="muted" style="font-size:var(--fs-xs)">@<%= m.username %><% if (m.joinedAt) { %> · pripojený <%= fmtD(m.joinedAt) %><% } %></div>
+            </div>
+            <div class="mem-role"><span class="chip-role <%= m.isCreator ? 'role-admin' : (m.role === 'admin' ? 'role-vip' : 'role-player') %>"><%= m.isCreator ? 'Vlastník' : (m.role === 'admin' ? 'Správca' : 'Člen') %></span></div>
+            <div class="mem-actions">
+              <% if (m.isCreator) { %>
+                <button class="btn btn-ghost btn-sm" aria-disabled="true">—</button>
+              <% } else { %>
+                <form method="POST" action="/leagues/<%= league.id %>/members/<%= m.id %>" style="display:flex;gap:8px;align-items:center">
+                  <% if (m.role === 'admin') { %>
+                    <button class="btn btn-secondary btn-sm" name="action" value="demote">Zrušiť správu</button>
+                  <% } else { %>
+                    <button class="btn btn-secondary btn-sm" name="action" value="promote">Spraviť správcom</button>
+                  <% } %>
+                  <button class="btn btn-danger btn-sm" name="action" value="remove" data-confirm="Naozaj odobrať hráča <%= fullName(m) %> z ligy?">Kick</button>
+                </form>
+              <% } %>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+    </section>
+
+    <!-- TÍMY -->
+    <section data-cpanel="teams" hidden>
+      <div class="card card-pad2">
+        <h3>Tímy v lige</h3>
+        <p class="sub">Súpiska tímov, z ktorých sa vytvárajú zápasy. Pridaj existujúce tímy alebo vytvor vlastný.</p>
+
+        <% if (teamsLocked) { %>
+          <p class="tm-empty">Táto liga vznikla zo šablóny — tímy sú prevzaté zo šablóny a nedajú sa meniť.</p>
+        <% } else { %>
+          <div class="tm-toolbar">
+            <div class="input-icon search" style="flex:1;min-width:180px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4" stroke-linecap="round"/></svg><input class="input" id="teamSearch" placeholder="Hľadať tím na pridanie…"></div>
+            <button class="btn btn-secondary btn-sm" id="newTeamBtn">+ Vlastný tím</button>
+          </div>
+
+          <!-- formulár na vlastný tím (skrytý) -->
+          <div class="card" id="newTeamForm" hidden style="padding:16px;margin-bottom:16px;background:var(--surface-2)">
+            <div class="field-row">
+              <div class="field"><label class="label">Názov tímu</label><input class="input" id="ntName" placeholder="napr. FC Lokomotíva"></div>
+              <div class="field"><label class="label">Šport</label>
+                <select class="select" id="ntSport"><% (sports||[]).forEach(function(sp){ %><option value="<%= sp.code || sp %>"><%= sp.name || sp %></option><% }); %></select>
+              </div>
+            </div>
+            <div class="field-row" style="margin-top:12px">
+              <div class="field"><label class="label">Krajina</label>
+                <select class="select" id="ntCountry"><option value="">—</option><% (countries||[]).forEach(function(c){ %><option value="<%= c.code || c %>"><%= c.name || c %></option><% }); %></select>
+              </div>
+              <div class="field"><label class="label">Logo (URL, voliteľné)</label><input class="input" id="ntLogo" placeholder="https://…"></div>
+            </div>
+            <div class="row g-2" style="justify-content:flex-end;margin-top:14px"><button class="btn btn-ghost btn-sm" id="ntCancel">Zrušiť</button><button class="btn btn-primary btn-sm" id="ntSave">Vytvoriť a pridať</button></div>
+          </div>
+
+          <!-- dostupné tímy na pridanie (po hľadaní) -->
+          <div id="availBox" hidden style="margin-bottom:18px">
+            <div class="stat-label" style="margin-bottom:8px">Dostupné na pridanie</div>
+            <div class="tm-grid" id="availList"></div>
+          </div>
+
+          <div class="stat-label" style="margin:6px 0 8px">V súpiske (<span id="rosterCount">0</span>)</div>
+          <div class="tm-grid" id="rosterList"><div class="tm-empty" id="rosterEmpty">Načítavam…</div></div>
+        <% } %>
+      </div>
+    </section>
+
+    <!-- BODOVANIE -->
+    <section data-cpanel="scoring" hidden>
+      <form class="card card-pad2" method="POST" action="/leagues/<%= league.id %>/edit">
+        <h3>Bodovacie pravidlá</h3>
+        <p class="sub">Uprav, koľko bodov sa prideľuje. Zmeny sa prejavia až od ďalšieho vyhodnoteného kola.</p>
+        <!-- skryté polia, aby edit endpoint nezmazal názov/typ ligy -->
+        <input type="hidden" name="name" value="<%= league.name %>">
+        <input type="hidden" name="description" value="<%= league.description || '' %>">
+        <input type="hidden" name="type" value="<%= league.type %>">
+        <% if (league.scoringLocked) { %>
+          <div class="tag tag-danger" style="display:block;padding:10px 12px;margin-bottom:14px">Bodovanie je uzamknuté — liga už má vyhodnotený zápas, pravidlá sa nedajú meniť.</div>
+        <% } %>
+        <div class="score-row"><div class="desc"><b class="hi">Presný výsledok</b><div class="muted" style="font-size:var(--fs-sm)">Trafený presný počet gólov oboch tímov</div></div><div class="field score-input"><input class="input" name="exactScore" value="<%= s.exactScore != null ? s.exactScore : 10 %>"<%= league.scoringLocked ? ' disabled' : '' %>></div></div>
+        <div class="score-row"><div class="desc"><b class="hi">Víťaz / remíza</b><div class="muted" style="font-size:var(--fs-sm)">Správne určený výsledok zápasu</div></div><div class="field score-input"><input class="input" name="correctWinner" value="<%= s.correctWinner != null ? s.correctWinner : 3 %>"<%= league.scoringLocked ? ' disabled' : '' %>></div></div>
+        <div class="score-row"><div class="desc"><b class="hi">Gólový rozdiel</b><div class="muted" style="font-size:var(--fs-sm)">Trafený rozdiel skóre</div></div><div class="field score-input"><input class="input" name="goalDifference" value="<%= s.goalDifference != null ? s.goalDifference : 2 %>"<%= league.scoringLocked ? ' disabled' : '' %>></div></div>
+        <div class="score-row"><div class="desc"><b class="hi">Presný počet gólov tímu</b><div class="muted" style="font-size:var(--fs-sm)">Za každý správne tipnutý tím</div></div><div class="field score-input"><input class="input" name="correctGoals" value="<%= s.correctGoals != null ? s.correctGoals : 1 %>"<%= league.scoringLocked ? ' disabled' : '' %>></div></div>
+        <% if (!league.scoringLocked) { %>
+          <div class="row g-2 score-action" style="justify-content:flex-end;margin-top:18px"><button class="btn btn-primary" type="submit">Uložiť pravidlá</button></div>
+        <% } %>
+      </form>
+    </section>
+
+    <!-- NASTAVENIA + NEBEZPEČNÁ ZÓNA -->
+    <section data-cpanel="settings" hidden>
+      <form class="card card-pad2" method="POST" action="/leagues/<%= league.id %>/edit">
+        <h3>Základné nastavenia</h3>
+        <p class="sub">Názov, popis a prístup k lige.</p>
+        <!-- zachovaj bodovanie pri uložení nastavení -->
+        <input type="hidden" name="exactScore" value="<%= s.exactScore != null ? s.exactScore : 10 %>">
+        <input type="hidden" name="correctWinner" value="<%= s.correctWinner != null ? s.correctWinner : 3 %>">
+        <input type="hidden" name="goalDifference" value="<%= s.goalDifference != null ? s.goalDifference : 2 %>">
+        <input type="hidden" name="correctGoals" value="<%= s.correctGoals != null ? s.correctGoals : 1 %>">
+        <div class="stack g-4">
+          <div class="field"><label class="label">Názov ligy</label><input class="input" name="name" value="<%= league.name %>" required></div>
+          <div class="field"><label class="label">Popis</label><input class="input" name="description" value="<%= league.description || '' %>" placeholder="Krátky popis ligy"></div>
+          <input type="hidden" name="type" value="<%= league.type %>">
+          <div class="field"><label class="label">Heslo ligy</label><input class="input" type="password" name="password" placeholder="<%= league.hasPassword ? 'Zmeniť heslo (nechaj prázdne = bez zmeny)' : 'Nastaviť heslo (voliteľné)' %>"></div>
+          <% if (league.hasPassword) { %><label class="check"><input type="checkbox" name="removePassword"> Odstrániť heslo (liga bude verejná na pripojenie)</label><% } %>
+        </div>
+        <div class="row g-2" style="justify-content:flex-end;margin-top:18px"><button class="btn btn-primary" type="submit">Uložiť nastavenia</button></div>
+      </form>
+
+      <div class="danger-zone">
+        <h3 style="color:var(--danger);font-size:var(--fs-h4);margin-bottom:4px">Nebezpečná zóna</h3>
+        <p class="muted" style="font-size:var(--fs-sm);margin-bottom:12px">Tieto akcie sú citlivé. Postupuj opatrne.</p>
+        <div class="danger-row">
+          <div><b class="hi"><%= league.ended ? 'Znovu otvoriť ligu' : 'Ukončiť ligu' %></b><div class="muted" style="font-size:var(--fs-sm)"><%= league.ended ? 'Liga sa znovu sprístupní na tipovanie (podľa stavu kôl).' : 'Uzamkne ligu — nové tipy už nebudú možné.' %></div></div>
+          <form method="POST" action="/leagues/<%= league.id %>/end"><button class="btn btn-danger" type="submit" data-confirm="<%= league.ended ? 'Znovu otvoriť túto ligu?' : 'Naozaj ukončiť túto ligu?' %>"><%= league.ended ? 'Znovu otvoriť' : 'Ukončiť ligu' %></button></form>
+        </div>
+        <div class="danger-row">
+          <div><b class="hi">Vymazať ligu</b><div class="muted" style="font-size:var(--fs-sm)">Natrvalo odstráni ligu vrátane všetkých kôl, zápasov a tipov.</div></div>
+          <form method="POST" action="/leagues/<%= league.id %>/delete"><button class="btn btn-danger" type="submit" data-confirm="Naozaj NATRVALO vymazať túto ligu? Akcia je nevratná.">Vymazať ligu</button></form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <aside style="position:sticky;top:140px">
+    <div class="card card-pad">
+      <div class="stat-label" style="margin-bottom:12px">Súhrn ligy</div>
+      <div class="stack g-3" style="font-size:var(--fs-sm)">
+        <div class="between"><span class="muted">Členovia</span><b class="hi num"><%= summary.membersCount %></b></div>
+        <div class="between"><span class="muted">Odohrané kolá</span><b class="hi num"><%= summary.finishedCount %> / <%= summary.totalMatches %></b></div>
+        <div class="between"><span class="muted">Kolá</span><b class="hi num"><%= summary.roundsCount %></b></div>
+        <div class="between"><span class="muted">Odoslaných tipov</span><b class="hi num"><%= summary.tipsCount %></b></div>
+        <div class="between"><span class="muted">Typ</span><span class="tag <%= isOfficial ? 'tag-brand' : 'tag-gold' %>"><%= isOfficial ? 'Oficiálna' : 'Custom' %></span></div>
+        <div class="between"><span class="muted">Vlastník</span><b class="hi"><%= summary.ownerName %></b></div>
+      </div>
+    </div>
+    <div class="card card-pad" style="margin-top:18px;background:var(--surface-2)">
+      <b class="hi" style="display:block;margin-bottom:6px">ℹ️ Pozn.</b>
+      <p class="muted" style="font-size:var(--fs-sm)">Bodovanie sa uzamkne po prvom vyhodnotenom zápase, aby sa spätne nemenili pridelené body.</p>
+    </div>
+  </aside>
+</div>
+
+<div class="toast-wrap" id="toastWrap" style="position:fixed;bottom:24px;right:24px;z-index:200;display:flex;flex-direction:column;gap:10px"></div>
+
+<script>
+(function(){
+  var LID = <%= league.id %>;
+  var teamsLocked = <%= teamsLocked ? 'true' : 'false' %>;
+
+  // ---- taby ----
+  var btns = document.querySelectorAll('.ac-tabs [data-ct]');
+  btns.forEach(function(b){ b.addEventListener('click', function(){
+    btns.forEach(function(x){ x.classList.toggle('active', x===b); });
+    document.querySelectorAll('[data-cpanel]').forEach(function(p){ p.toggleAttribute('hidden', p.getAttribute('data-cpanel')!==b.getAttribute('data-ct')); });
+    if (b.getAttribute('data-ct')==='teams' && !teamsLocked) loadRoster();
+  }); });
+
+  // ---- toast ----
+  function toast(msg, ok){
+    var el=document.createElement('div'); el.className='toast '+(ok?'success':'error');
+    el.style.cssText='background:var(--surface-1);border:1px solid var(--line-strong);border-radius:12px;padding:12px 16px;box-shadow:var(--shadow-lg);color:var(--text-1);font-size:14px';
+    el.textContent=msg; document.getElementById('toastWrap').appendChild(el);
+    setTimeout(function(){ el.style.transition='opacity .3s'; el.style.opacity='0'; setTimeout(function(){el.remove();},300); }, 2600);
+  }
+
+  // ---- potvrdzovanie pri form tlačidlách ----
+  document.querySelectorAll('[data-confirm]').forEach(function(b){ b.addEventListener('click', function(e){ if(!confirm(b.getAttribute('data-confirm'))){ e.preventDefault(); } }); });
+
+  // ---- hľadanie členov ----
+  var ms=document.getElementById('memSearch');
+  if(ms) ms.addEventListener('input', function(){ var q=this.value.trim().toLowerCase(); document.querySelectorAll('.mem-row').forEach(function(r){ var n=r.getAttribute('data-name')||''; r.style.display=(!q||n.indexOf(q)>=0)?'':'none'; }); });
+
+  if (teamsLocked) return; // zvyšok je len pre tímy
+
+  // ---- TÍMY ----
+  function logoStyle(t){ return t.logo ? "background-image:url('"+t.logo+"')" : ''; }
+  function abbr(name){ return (name||'?').replace(/[^A-Za-zÀ-ž0-9 ]/g,'').split(' ').map(function(w){return w[0];}).join('').substring(0,3).toUpperCase() || (name||'?').substring(0,3).toUpperCase(); }
+
+  var rosterList=document.getElementById('rosterList');
+  var rosterCount=document.getElementById('rosterCount');
+  var availBox=document.getElementById('availBox');
+  var availList=document.getElementById('availList');
+
+  function teamCard(t, inRoster){
+    var div=document.createElement('div'); div.className='tm-card';
+    div.innerHTML='<span class="tm-logo" style="'+logoStyle(t)+'">'+(t.logo?'':abbr(t.name))+'</span>'+
+      '<div class="tm-body"><div class="tm-name">'+(t.name||'')+'</div><div class="tm-meta">'+([t.sport,t.country].filter(Boolean).join(' · ')||'tím')+(t.scope==='custom'?' · vlastný':'')+'</div></div>';
+    var btn=document.createElement('button'); btn.className='btn btn-sm '+(inRoster?'btn-danger':'btn-secondary'); btn.textContent=inRoster?'Odobrať':'Pridať';
+    btn.addEventListener('click', function(){ inRoster ? removeTeam(t.id) : addTeam(t.id); });
+    div.appendChild(btn);
+    return div;
+  }
+
+  function loadRoster(){
+    fetch('/api/leagues/'+LID+'/teams').then(function(r){return r.json();}).then(function(j){
+      var arr=(j&&j.data)||[];
+      rosterList.innerHTML='';
+      rosterCount.textContent=arr.length;
+      if(arr.length===0){ rosterList.innerHTML='<div class="tm-empty">Súpiska je prázdna — pridaj tímy nižšie.</div>'; return; }
+      arr.forEach(function(t){ rosterList.appendChild(teamCard(t,true)); });
+    }).catch(function(){ rosterList.innerHTML='<div class="tm-empty">Chyba pri načítaní súpisky.</div>'; });
+  }
+
+  function addTeam(teamId){
+    fetch('/api/leagues/'+LID+'/teams',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({teamId:teamId})})
+      .then(function(r){return r.json();}).then(function(j){ if(j&&j.success){ toast('Tím pridaný ✓',true); loadRoster(); doSearch(); } else { toast((j&&j.message)||'Nepodarilo sa pridať.'); } })
+      .catch(function(){ toast('Chyba pri pridávaní.'); });
+  }
+  function removeTeam(teamId){
+    fetch('/api/leagues/'+LID+'/teams/'+teamId,{method:'DELETE'})
+      .then(function(r){return r.json();}).then(function(j){ if(j&&j.success){ toast('Tím odobraný ✓',true); loadRoster(); doSearch(); } else { toast((j&&j.message)||'Nepodarilo sa odobrať.'); } })
+      .catch(function(){ toast('Chyba pri odoberaní.'); });
+  }
+
+  // hľadanie dostupných tímov
+  var ts=document.getElementById('teamSearch'); var tsTimer=null;
+  function doSearch(){
+    var q=ts?ts.value.trim():'';
+    if(!q){ availBox.hidden=true; availList.innerHTML=''; return; }
+    fetch('/api/leagues/'+LID+'/teams/available?search='+encodeURIComponent(q)).then(function(r){return r.json();}).then(function(j){
+      var arr=(j&&j.data)||[]; var sel=new Set((j&&j.selectedIds)||[]);
+      availList.innerHTML=''; availBox.hidden=false;
+      var avail=arr.filter(function(t){ return !sel.has(t.id); });
+      if(avail.length===0){ availList.innerHTML='<div class="tm-empty">Žiadne ďalšie tímy nevyhovujú hľadaniu.</div>'; return; }
+      avail.forEach(function(t){ availList.appendChild(teamCard(t,false)); });
+    }).catch(function(){ availList.innerHTML='<div class="tm-empty">Chyba pri hľadaní.</div>'; });
+  }
+  if(ts) ts.addEventListener('input', function(){ clearTimeout(tsTimer); tsTimer=setTimeout(doSearch,250); });
+
+  // vlastný tím
+  var ntForm=document.getElementById('newTeamForm');
+  var ntBtn=document.getElementById('newTeamBtn');
+  if(ntBtn) ntBtn.addEventListener('click', function(){ ntForm.hidden=!ntForm.hidden; });
+  var ntCancel=document.getElementById('ntCancel');
+  if(ntCancel) ntCancel.addEventListener('click', function(){ ntForm.hidden=true; });
+  var ntSave=document.getElementById('ntSave');
+  if(ntSave) ntSave.addEventListener('click', function(){
+    var name=document.getElementById('ntName').value.trim();
+    if(!name){ toast('Zadaj názov tímu.'); return; }
+    var body={ name:name, teamType:'club', sport:document.getElementById('ntSport').value, country:document.getElementById('ntCountry').value||null, logo:document.getElementById('ntLogo').value.trim()||null };
+    ntSave.disabled=true;
+    fetch('/api/leagues/'+LID+'/teams/custom',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(function(r){return r.json();}).then(function(j){ ntSave.disabled=false; if(j&&j.success){ toast('Tím vytvorený a pridaný ✓',true); document.getElementById('ntName').value=''; document.getElementById('ntLogo').value=''; ntForm.hidden=true; loadRoster(); } else { toast((j&&j.message)||'Nepodarilo sa vytvoriť.'); } })
+      .catch(function(){ ntSave.disabled=false; toast('Chyba pri vytváraní.'); });
+  });
+})();
+</script>
+
+<%- include('partials/footer') %>

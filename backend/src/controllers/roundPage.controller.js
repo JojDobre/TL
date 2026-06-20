@@ -4,7 +4,7 @@
 // vlastné tipy hráča, a (po uzávierke alebo pre správcu) aj cudzie tipy s bodmi.
 // Skrývanie cudzích tipov do uzávierky je rovnaké ako v round API controlleri.
 
-const { Round, League, Season, Match, Team, Tip, User, UserSeason } = require('../models');
+const { Round, League, Season, Match, Team, Tip, User, UserSeason, UserLeague } = require('../models');
 const { isSeasonLocked } = require('../utils/season.utils');
 const { asyncHandler } = require('../middleware/error.middleware');
 
@@ -50,6 +50,16 @@ const roundDetailPage = asyncHandler(async (req, res) => {
   const status = roundStatus(round);
   const isManager = await canManageRound(league, meId);
   const revealAll = status === 'finished' || isManager;
+
+  // členstvo v lige — len člen (alebo manažér) môže tipovať / zadávať skóre
+  let isMember = false;
+  if (meId) {
+    if (isManager) isMember = true;
+    else {
+      const ul = await UserLeague.findOne({ where: { userId: meId, leagueId: league.id } });
+      isMember = !!ul;
+    }
+  }
 
   // zápasy kola s tímami
   const matches = await Match.findAll({
@@ -128,6 +138,7 @@ const roundDetailPage = asyncHandler(async (req, res) => {
     leaderboard,
     revealAll,
     isManager,
+    isMember,
     myPoints,
     isClone: !!(league && league.templateId),
     seasonLocked: league.Season ? isSeasonLocked(league.Season) : false,

@@ -90,15 +90,15 @@
     </div>
 
     <div class="card card-pad">
-      <h3 style="font-size:var(--fs-h4);margin-bottom:18px">Zmena hesla</h3>
-      <div class="stack g-4">
-        <div class="field"><label class="label">Súčasné heslo</label><input class="input" type="password" placeholder="••••••••"></div>
-        <div class="field-row">
-          <div class="field"><label class="label">Nové heslo</label><input class="input" type="password" placeholder="••••••••"></div>
-          <div class="field"><label class="label">Potvrdiť heslo</label><input class="input" type="password" placeholder="••••••••"></div>
-        </div>
-        <div><button class="btn btn-secondary btn-sm">Aktualizovať heslo</button></div>
+      <div class="between" style="margin-bottom:18px"><h3 style="font-size:var(--fs-h4)">Účet</h3><a href="/settings" class="btn btn-secondary btn-sm">Upraviť v nastaveniach →</a></div>
+      <div class="stack g-3" style="font-size:var(--fs-sm)">
+        <div class="between"><span class="muted">Meno a priezvisko</span><b class="hi"><%= profile.name %></b></div>
+        <div class="between"><span class="muted">Prezývka</span><b class="hi">@<%= profile.username %></b></div>
+        <div class="between"><span class="muted">E-mail</span><b class="hi"><%= profile.email || '—' %></b></div>
+        <div class="between"><span class="muted">Rola</span><span class="tag <%= profile.role === 'admin' ? 'tag-brand' : (profile.role === 'vip' ? 'tag-gold' : 'tag-muted') %>"><%= profile.role === 'admin' ? 'Admin' : (profile.role === 'vip' ? 'VIP' : 'Hráč') %></span></div>
+        <% if (profile.createdAt) { %><div class="between"><span class="muted">Člen od</span><b class="hi"><%= new Date(profile.createdAt).toLocaleDateString('sk-SK',{day:'numeric',month:'long',year:'numeric'}) %></b></div><% } %>
       </div>
+      <p class="muted" style="font-size:var(--fs-xs);margin-top:16px">Údaje účtu, profilovú fotku a heslo zmeníš v <a href="/settings" style="color:var(--brand-bright)">nastaveniach</a>.</p>
     </div>
   </main>
 
@@ -115,18 +115,17 @@
     </div>
 
     <div class="card card-pad" style="margin-bottom:18px">
-      <div class="between" style="margin-bottom:14px"><div class="stat-label" style="margin:0">Odznaky</div><span class="faint" style="font-size:var(--fs-xs)">čoskoro</span></div>
+      <div class="between" style="margin-bottom:14px"><div class="stat-label" style="margin:0">Odznaky</div><a href="/achievements" class="faint" style="font-size:var(--fs-xs)">Všetky →</a></div>
+      <% if (typeof badges !== 'undefined' && badges && badges.length) { %>
       <div class="badge-grid">
-        <div class="badge locked"><div class="badge-ico" style="background:var(--surface-3)">🎯</div><div class="badge-name">Ostrostrelec</div></div>
-        <div class="badge locked"><div class="badge-ico" style="background:var(--surface-3)">🔥</div><div class="badge-name">Séria</div></div>
-        <div class="badge locked"><div class="badge-ico" style="background:var(--surface-3)">⚡</div><div class="badge-name">Rýchly tip</div></div>
-        <div class="badge locked"><div class="badge-ico" style="background:var(--surface-3)">🏒</div><div class="badge-name">Športovec</div></div>
-        <div class="badge locked"><div class="badge-ico" style="background:var(--surface-3)">🏆</div><div class="badge-name">Šampión</div></div>
-        <div class="badge locked"><div class="badge-ico" style="background:var(--surface-3)">💯</div><div class="badge-name">100 tipov</div></div>
-        <div class="badge locked"><div class="badge-ico" style="background:var(--surface-3)">👑</div><div class="badge-name">Č. 1</div></div>
-        <div class="badge locked"><div class="badge-ico" style="background:var(--surface-3)">🌟</div><div class="badge-name">Legenda</div></div>
+        <% badges.forEach(function(b){ %>
+          <div class="badge <%= b.earned ? '' : 'locked' %>"><div class="badge-ico" style="<%= b.earned ? 'background:var(--brand-soft);color:var(--brand-bright)' : 'background:var(--surface-3)' %>"><%= b.icon %></div><div class="badge-name"><%= b.name %></div></div>
+        <% }); %>
       </div>
-    </div>
+      <% } else { %>
+        <p class="muted" style="font-size:var(--fs-sm)">Zatiaľ žiadne odznaky. <a href="/achievements" class="brand">Pozri výzvy →</a></p>
+      <% } %>
+   </div>
 
     <div class="card card-pad">
       <div class="between" style="margin-bottom:12px"><div class="stat-label" style="margin:0">Moje ligy</div><a href="/my" class="faint" style="font-size:var(--fs-xs)">Všetky →</a></div>
@@ -157,3 +156,4 @@
 </script>
 
 <%- include('partials/footer') %>
+

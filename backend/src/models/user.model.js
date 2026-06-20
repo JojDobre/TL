@@ -9,12 +9,12 @@ module.exports = (sequelize, DataTypes) => {
       username: {
         type: DataTypes.STRING,            // Typ stlpca - reťazec
         allowNull: false,                  // Hodnota nesmie byť null
-        unique: true,                      // Hodnota musí byť unikátna v rámci tabuľky
+        // unique rieši pomenovaný index nižšie (users_username_unique),
+        // aby ho alter-sync neduplikoval pri každom štarte.
       },
       email: {
         type: DataTypes.STRING,
         allowNull: false,
-        unique: true,
         validate: {
           isEmail: true,                   // Validácia, že hodnota je platný email
         },
@@ -50,6 +50,13 @@ module.exports = (sequelize, DataTypes) => {
     }, {
       tableName: 'users',                  // Explicitné nastavenie názvu tabuľky v databáze
       timestamps: true,                    // Automatické pridanie stĺpcov createdAt a updatedAt
+      indexes: [
+        // Pomenované unikátne indexy: majú stabilné meno, takže ich
+        // sequelize.sync({alter}) nájde a nevytvára stále nové kópie
+        // (username_2, username_3, …) → nehrozí ER_TOO_MANY_KEYS.
+        { name: 'users_username_unique', unique: true, fields: ['username'] },
+        { name: 'users_email_unique', unique: true, fields: ['email'] },
+      ],
     });
   
     // Definícia asociácií (vzťahov) sa doplní neskôr

@@ -105,6 +105,10 @@
 <script>
 (function(){
   var save = document.getElementById('saveTips');
+  // stav tlačidla: "Uložené" (neaktívne) keď niet zmien, "Uložiť tipy" (aktívne) keď sú
+  var dirty = false;
+  function setSaved(){ dirty=false; if(save){ save.disabled=true; save.textContent='Uložené'; } }
+  function setDirty(){ if(!dirty){ dirty=true; if(save){ save.disabled=false; save.textContent='Uložiť tipy'; } } }
   function toast(msg, ok){
     var el=document.createElement('div'); el.className='toast '+(ok?'success':'error');
     el.style.cssText='background:var(--surface-1);border:1px solid var(--line-strong);border-radius:12px;padding:12px 16px;box-shadow:var(--shadow-lg);color:var(--text-1);font-size:14px';
@@ -119,9 +123,9 @@
     });
     var c=document.getElementById('tippedCount2'); if(c) c.textContent=n;
   }
-  document.querySelectorAll('.tip-num').forEach(function(inp){ inp.addEventListener('input',function(){ this.value=this.value.replace(/[^0-9]/g,'').substring(0,2); recount(); }); });
+  document.querySelectorAll('.tip-num').forEach(function(inp){ inp.addEventListener('input',function(){ this.value=this.value.replace(/[^0-9]/g,'').substring(0,2); recount(); setDirty(); }); });
   document.querySelectorAll('.onex2-pick').forEach(function(grp){
-    grp.addEventListener('click', function(e){ var b=e.target.closest('.onex2-btn'); if(!b)return; grp.querySelectorAll('.onex2-btn').forEach(function(x){x.classList.remove('sel');}); b.classList.add('sel'); recount(); });
+    grp.addEventListener('click', function(e){ var b=e.target.closest('.onex2-btn'); if(!b)return; grp.querySelectorAll('.onex2-btn').forEach(function(x){x.classList.remove('sel');}); b.classList.add('sel'); recount(); setDirty(); });
   });
   if (save) save.addEventListener('click', function(){
     if (save.disabled) return;
@@ -137,8 +141,14 @@
     });
     if(ops.length===0){ toast('Vyplň aspoň jeden tip.'); return; }
     save.disabled=true; save.textContent='Ukladám…';
-    Promise.all(ops).then(function(res){ var fail=res.filter(function(r){return r&&r.success===false;}); if(fail.length){ toast(fail[0].message||'Niektoré tipy sa neuložili.'); } else { toast('Tipy uložené ✓', true); } save.disabled=false; save.textContent='Uložiť tipy'; }).catch(function(){ toast('Chyba pri ukladaní.'); save.disabled=false; save.textContent='Uložiť tipy'; });
+    Promise.all(ops).then(function(res){ var fail=res.filter(function(r){return r&&r.success===false;}); if(fail.length){ toast(fail[0].message||'Niektoré tipy sa neuložili.'); save.disabled=false; save.textContent='Uložiť tipy'; } else { toast('Tipy uložené ✓', true); setSaved(); } }).catch(function(){ toast('Chyba pri ukladaní.'); save.disabled=false; save.textContent='Uložiť tipy'; });
   });
+
+  // počiatočný stav tlačidla: ak má hráč aspoň jeden vyplnený tip → "Uložené"
+  (function(){ var n=0; document.querySelectorAll('[data-match]').forEach(function(row){
+    if (row.getAttribute('data-type')==='winner'){ if(row.querySelector('.onex2-btn.sel')) n++; }
+    else { var h=row.querySelector('[data-home]').value, a=row.querySelector('[data-away]').value; if(h!==''&&a!=='') n++; }
+  }); if(n>0) setSaved(); })();
 })();
 </script>
 <% } %>

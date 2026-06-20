@@ -18,6 +18,7 @@ const settingsPage = asyncHandler(async (req, res) => {
       username: user.username,
       name: [user.firstName, user.lastName].filter(Boolean).join(' '),
       email: user.email || '',
+      initials: ([user.firstName, user.lastName].filter(Boolean).map((x) => x[0]).join('') || (user.username || '?')[0] || '?').toUpperCase(),
     },
   });
 });

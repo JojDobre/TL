@@ -69,7 +69,7 @@ const myPage = asyncHandler(async (req, res) => {
       accuracy = accuracyFromTips(tips, meId);
     }
     mySeasons.push({
-      id: s.id, name: s.name, type: s.type, hasPassword: s.hasPassword,
+      id: s.id, name: s.name, type: s.type, hasPassword: s.hasPassword, image: s.image || null,
       status: seasonStatus(s), rank, myPoints, accuracy,
       playedRounds, totalRounds,
       progressPct: totalRounds > 0 ? Math.round((playedRounds / totalRounds) * 100) : 0,
@@ -121,6 +121,7 @@ const myPage = asyncHandler(async (req, res) => {
         include: [
           { model: Team, as: 'homeTeam', attributes: ['name'] },
           { model: Team, as: 'awayTeam', attributes: ['name'] },
+          { model: Round, attributes: ['id', 'leagueId'], include: [{ model: League, attributes: ['id', 'seasonId'] }] },
         ],
         order: [['matchTime', 'ASC']],
         limit: 30,
@@ -135,6 +136,8 @@ const myPage = asyncHandler(async (req, res) => {
         away: m.awayTeam ? m.awayTeam.name : '—',
         homeAbbr: abbr(m.homeTeam ? m.homeTeam.name : ''),
         time: m.matchTime,
+        seasonId: m.Round && m.Round.League ? m.Round.League.seasonId : null,
+        leagueId: m.Round ? m.Round.leagueId : null,
       }));
     }
   }

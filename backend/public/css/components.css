@@ -626,7 +626,7 @@
         page). Hidden; admin entry point moves to the manage block. ---- */
 .manage-block { display:none; }
 @media (max-width: 900px){
-  .subnav { display:none !important; }
+  .subnav:not(.admin-bar) { display:none !important; }
   .manage-block { display:block; margin: 18px 0 6px; }
 }
 .manage-card {
@@ -677,3 +677,4 @@
   .cover-tags { display:flex; gap:6px; position:absolute; top:10px; left:14px; right:14px; z-index:2; flex-wrap:wrap; }
   .row-tags-hide-m { display:none !important; }
 }
+

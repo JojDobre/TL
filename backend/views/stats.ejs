@@ -18,6 +18,13 @@
   .team-row:last-child { border:none; }
   .team-row .bar-track { flex:1; height:7px; background:var(--surface-3); border-radius:99px; overflow:hidden; }
   .team-row .bar-track i { display:block; height:100%; background:linear-gradient(90deg,var(--success),#0fa376); border-radius:99px; }
+  .chart-tip { position:fixed; z-index:200; pointer-events:none; opacity:0; transition:opacity .12s; background:var(--surface-1); border:1px solid var(--line-strong); border-radius:var(--r-md); box-shadow:var(--shadow-lg); padding:9px 12px; font-size:var(--fs-xs); color:var(--text-1); max-width:220px; }
+  .chart-tip.show { opacity:1; }
+  .chart-tip .tt-t { font-weight:700; margin-bottom:3px; }
+  .chart-tip .tt-r { color:var(--text-3); display:flex; justify-content:space-between; gap:14px; }
+  .chart-tip .tt-r b { color:var(--text-1); }
+  .rk-dot { cursor:pointer; }
+  .bar-col .bar { cursor:pointer; }
   @media (max-width:900px){ .kpi-grid { grid-template-columns:repeat(2,1fr); } .chart-grid,.chart-grid-2 { grid-template-columns:1fr; } }
 ` }) %>
 
@@ -62,7 +69,7 @@
       <div class="donut-wrap">
         <% var ev = stats.evaluated || 1; var pE = Math.round(stats.exact/ev*100); var pP = Math.round(stats.partial/ev*100); %>
         <svg width="132" height="132" viewBox="0 0 42 42" style="flex:none">
-          <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--surface-3)" stroke-width="6"/>
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--danger)" stroke-width="6"/>
           <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--success)" stroke-width="6" stroke-dasharray="<%= pE %> <%= 100-pE %>" stroke-dashoffset="25" stroke-linecap="round"/>
           <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--brand)" stroke-width="6" stroke-dasharray="<%= pP %> <%= 100-pP %>" stroke-dashoffset="<%= 25 - pE %>" stroke-linecap="round"/>
           <text x="21" y="20" text-anchor="middle" style="font:700 7px var(--num);fill:var(--text-1)"><%= stats.evaluated %></text>
@@ -77,35 +84,98 @@
     </div>
   </div>
 
-  <!-- charts row 2 (vizuál — tieto metriky zatiaľ netrackujeme) -->
+  <!-- charts row 2 -->
   <div class="chart-grid-2">
     <div class="card card-pad">
       <div class="stat-label" style="margin-bottom:6px">Vývoj pozície v rebríčku</div>
-      <div class="muted" style="font-size:var(--fs-sm);margin-bottom:14px">Sledovanie vývoja pozície — čoskoro</div>
-      <div style="display:flex;align-items:center;justify-content:center;height:140px;color:var(--text-4)">—</div>
+      <div class="muted" style="font-size:var(--fs-sm);margin-bottom:14px">Tvoje poradie v oficiálnych ligách po jednotlivých kolách.</div>
+      <% if (!rankProgress || rankProgress.length < 2) { %>
+        <div style="display:flex;align-items:center;justify-content:center;height:140px;color:var(--text-4)">Zatiaľ málo dát z oficiálnych líg.</div>
+      <% } else {
+           // os Y = rank (1 hore = najlepší). Škálujeme medzi najlepším a najhorším rankom.
+           var ranks = rankProgress.map(function(p){return p.rank;});
+           var best = Math.min.apply(null, ranks), worst = Math.max.apply(null, ranks);
+           var span = (worst - best) || 1;
+           var n = rankProgress.length;
+           var W = 320, H = 140, padX = 10, padY = 16;
+           function ry(rank){ return padY + ((rank - best) / span) * (H - 2*padY); } // rank 1 → hore
+           function rx(i){ return padX + (i * (W - 2*padX) / (n - 1)); }
+           var pts = rankProgress.map(function(p,i){ return rx(i).toFixed(1)+','+ry(p.rank).toFixed(1); });
+      %>
+        <svg viewBox="0 0 <%= W %> <%= H %>" style="width:100%;height:140px" preserveAspectRatio="none">
+          <polyline points="<%= pts.join(' ') %>" fill="none" stroke="var(--gold-bright)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <% rankProgress.forEach(function(p,i){ %>
+            <circle class="rk-dot" cx="<%= rx(i).toFixed(1) %>" cy="<%= ry(p.rank).toFixed(1) %>" r="4" fill="var(--gold-bright)"
+              data-round="<%= p.roundName %>" data-league="<%= p.leagueName %>" data-rank="<%= p.rank %>" data-points="<%= p.points %>" data-players="<%= p.players %>" data-date="<%= p.endDate ? new Date(p.endDate).toLocaleDateString('sk-SK') : '' %>"></circle>
+          <% }); %>
+        </svg>
+        <div class="between" style="font-size:var(--fs-xs);color:var(--text-4);margin-top:6px"><span>najlepšie #<%= best %></span><span>aktuálne <b class="hi">#<%= rankProgress[rankProgress.length-1].rank %></b> z <%= rankProgress[rankProgress.length-1].players %></span></div>
+      <% } %>
     </div>
     <div class="card card-pad">
       <div class="stat-label" style="margin-bottom:16px">Tímy, ktoré tipuješ najpresnejšie</div>
-      <div style="display:flex;align-items:center;justify-content:center;height:140px;color:var(--text-4)">—</div>
+      <% if (!topTeams || topTeams.length === 0) { %>
+        <div style="display:flex;align-items:center;justify-content:center;height:140px;color:var(--text-4)">Zatiaľ málo vyhodnotených tipov.</div>
+      <% } else { %>
+        <% topTeams.forEach(function(t){ %>
+          <div class="team-row">
+            <% if (t.logo) { %><span class="team-logo" style="width:30px;height:30px;background:none"><img src="<%= t.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)"><%= (t.name||'?').substring(0,3).toUpperCase() %></span><% } %>
+            <div style="flex:1;min-width:0">
+              <div class="between" style="margin-bottom:5px"><span class="hi" style="font-size:var(--fs-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><%= t.name %></span><b class="hi num" style="font-size:var(--fs-sm)"><%= t.accuracy %>%</b></div>
+              <div class="bar-track"><i style="width:<%= t.accuracy %>%"></i></div>
+            </div>
+            <span class="muted" style="font-size:var(--fs-xs);flex:none"><%= t.scored %>/<%= t.tips %></span>
+          </div>
+        <% }); %>
+      <% } %>
     </div>
   </div>
   <% } %>
 </div>
 
-<% if (stats.evaluated > 0 && roundBars.length > 0) { %>
+<div class="chart-tip" id="chartTip"></div>
+
 <script>
+  var tip = document.getElementById('chartTip');
+  function showTip(html, x, y){ if(!tip) return; tip.innerHTML=html; tip.classList.add('show'); var ox=x+14, oy=y+14; if(ox+230>window.innerWidth) ox=x-230; tip.style.left=ox+'px'; tip.style.top=oy+'px'; }
+  function hideTip(){ if(tip) tip.classList.remove('show'); }
+
+  // ----- Body za kolo (stĺpce) -----
+  <% if (stats.evaluated > 0 && roundBars.length > 0) { %>
   var data = <%- JSON.stringify(roundBars) %>;
   var max = Math.max.apply(null, data.map(function(d){return d.points;}).concat([1]));
   var bars = document.getElementById('bars');
   if (bars) {
-    bars.innerHTML = data.map(function(d){
+    bars.innerHTML = data.map(function(d, i){
       var h = Math.round((d.points / max) * 170);
       var peak = d.points === max && max > 0;
-      return '<div class="bar-col"><span class="bar-val">'+d.points+'</span><div class="bar '+(peak?'peak':'')+'" data-h="'+h+'" style="height:0"></div><span class="bar-lbl" title="'+d.name+'">'+d.name+'</span></div>';
+      return '<div class="bar-col"><span class="bar-val">'+d.points+'</span><div class="bar '+(peak?'peak':'')+'" data-i="'+i+'" data-h="'+h+'" style="height:0"></div><span class="bar-lbl" title="'+d.name+'">'+d.name+'</span></div>';
     }).join('');
     requestAnimationFrame(function(){ setTimeout(function(){ bars.querySelectorAll('.bar').forEach(function(b){ b.style.height=b.dataset.h+'px'; }); }, 80); });
+    bars.querySelectorAll('.bar').forEach(function(b){
+      b.addEventListener('mousemove', function(e){
+        var d = data[+b.dataset.i];
+        var html = '<div class="tt-t">'+(d.leagueName?d.leagueName+' · ':'')+d.name+'</div>'+
+          '<div class="tt-r"><span>Body</span><b>'+d.points+'</b></div>'+
+          (d.endDate?'<div class="tt-r"><span>Uzávierka</span><b>'+new Date(d.endDate).toLocaleDateString('sk-SK')+'</b></div>':'');
+        showTip(html, e.clientX, e.clientY);
+      });
+      b.addEventListener('mouseleave', hideTip);
+    });
   }
+  <% } %>
+
+  // ----- Vývoj pozície v rebríčku (body na čiare) -----
+  document.querySelectorAll('.rk-dot').forEach(function(dot){
+    dot.addEventListener('mousemove', function(e){
+      var html = '<div class="tt-t">'+(dot.dataset.league?dot.dataset.league+' · ':'')+dot.dataset.round+'</div>'+
+        '<div class="tt-r"><span>Pozícia</span><b>#'+dot.dataset.rank+' z '+dot.dataset.players+'</b></div>'+
+        '<div class="tt-r"><span>Body</span><b>'+dot.dataset.points+'</b></div>'+
+        (dot.dataset.date?'<div class="tt-r"><span>Dátum</span><b>'+dot.dataset.date+'</b></div>':'');
+      showTip(html, e.clientX, e.clientY);
+    });
+    dot.addEventListener('mouseleave', hideTip);
+  });
 </script>
-<% } %>
 
 <%- include('partials/footer') %>

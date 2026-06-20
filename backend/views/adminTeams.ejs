@@ -4,8 +4,11 @@
   .team-row { display:grid; grid-template-columns:auto 1fr auto auto auto; gap:14px; align-items:center; padding:12px 16px; border-radius:var(--r-md); background:var(--surface-2); margin-bottom:8px; }
   .team-logo-sm { width:38px; height:38px; border-radius:10px; background:var(--surface-3); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; overflow:hidden; }
   .team-logo-sm img { width:100%; height:100%; object-fit:cover; }
+  .search { max-width:280px; }
   .add-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
   @media (max-width:760px){ .add-grid { grid-template-columns:1fr; } .team-row { grid-template-columns:auto 1fr auto; } .team-row .tcol-hide { display:none; } }
+  @media (max-width:600px){ .search { max-width:100%; width:100%; } .filters { flex-direction:column; align-items:stretch; } .filters > * { width:100%; } }
+
 ` }) %>
 
 <%- include('partials/admin-subnav', { active: 'teams' }) %>
@@ -40,19 +43,19 @@
 
     <!-- hromadne -->
     <div id="paneBulk" hidden>
-      <div class="add-grid">
+      <div class="add-grid" s>
         <div class="field"><label class="label">Typ</label><select class="select" id="bType"><option value="club">Kluby (šport + krajina)</option><option value="national">Národné tímy (bez športu)</option></select></div>
         <div class="field" data-bclub><label class="label">Šport</label><select class="select" id="bSport"><% sports.forEach(function(s){ %><option value="<%= s.code %>"><%= s.label %></option><% }); %></select></div>
         <div class="field"><label class="label">Krajina</label><select class="select" id="bCountry"><% countries.forEach(function(c){ %><option value="<%= c.code %>"><%= c.label %></option><% }); %></select></div>
       </div>
       <div class="field" style="margin-top:4px"><label class="label">Tímy — jeden na riadok</label><textarea class="textarea" id="bNames" rows="6" placeholder="Arsenal&#10;Manchester United&#10;Liverpool"></textarea></div>
-      <button class="btn btn-primary" id="addBulk">Pridať tímy</button>
+      <button class="btn btn-primary" id="addBulk" style="margin-top:16px;">Pridať tímy</button>
     </div>
   </div>
 
   <!-- FILTER + ZOZNAM -->
   <div class="filters">
-    <input class="input search" id="fSearch" placeholder="Hľadať tím…" style="max-width:260px">
+    <input class="input search" id="fSearch" placeholder="Hľadať tím…">
     <select class="select" id="fType" style="width:auto"><option value="">Všetky typy</option><option value="club">Kluby</option><option value="national">Národné</option></select>
     <select class="select" id="fSport" style="width:auto"><option value="">Všetky športy</option><% sports.forEach(function(s){ %><option value="<%= s.code %>"><%= s.label %></option><% }); %></select>
     <select class="select" id="fCountry" style="width:auto"><option value="">Všetky krajiny</option><% countries.forEach(function(c){ %><option value="<%= c.code %>"><%= c.label %></option><% }); %></select>

@@ -9,6 +9,16 @@
   .quick .qi { font-size:20px; }
   @media (max-width:980px){ .ad-grid { grid-template-columns:1fr; } }
   @media (max-width:760px){ .kpi-grid { grid-template-columns:1fr 1fr; } }
+  .ad-row3 { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; align-items:start; margin-top:18px; }
+  .lst-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--line); flex-wrap: wrap; }
+  .lst-row:last-child { border:none; }
+  .lst-row .av { width:32px; height:32px; border-radius:9px; flex:none; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:12px; background:var(--surface-3); color:var(--text-1); }
+  .lst-row .bd { min-width:0; flex:1; }
+  .lst-row .bd .nm { font-weight:700; color:var(--text-1); font-size:var(--fs-sm); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lst-row .bd .sub { color:var(--text-4); font-size:var(--fs-xs); }
+  .lst-row .val { font-family:var(--num); font-weight:700; color:var(--brand-bright); flex:none; }
+  .lst-empty { color:var(--text-3); font-size:var(--fs-sm); padding:8px 0; }
+  @media (max-width:980px){ .ad-row3 { grid-template-columns:1fr; } }
 ` }) %>
 
 <%- include('partials/admin-subnav', { active: 'dashboard' }) %>
@@ -30,9 +40,9 @@
 <div class="wrap" style="padding-bottom:64px">
   <div class="ad-grid">
     <div class="card card-pad">
-      <div class="stat-label" style="margin-bottom:14px">Vyžaduje pozornosť — zápasy po termíne bez výsledku</div>
+      <div class="stat-label" style="margin-bottom:14px">Vyžaduje pozornosť — zápasy po termíne bez výsledku <span class="muted" style="font-weight:400">(v súťažiach, ktoré spravuješ)</span></div>
       <% if (pending.length === 0) { %>
-        <p class="muted" style="font-size:var(--fs-sm)">Žiadne čakajúce zápasy. Všetko vyhodnotené ✓</p>
+        <p class="muted" style="font-size:var(--fs-sm)">Žiadne čakajúce zápasy v tebou spravovaných súťažiach. Všetko vyhodnotené ✓</p>
       <% } %>
       <% pending.forEach(function(p){ %>
       <div class="task-row">
@@ -44,6 +54,9 @@
         <% if (p.roundId) { %><a href="/rounds/<%= p.roundId %>/evaluate" class="btn btn-primary btn-sm">Vyhodnotiť</a><% } %>
       </div>
       <% }); %>
+      <% if (stats.pendingCount > pending.length) { %>
+        <p class="muted" style="font-size:var(--fs-xs);margin-top:6px">… a ďalších <%= stats.pendingCount - pending.length %> zápasov čaká na vyhodnotenie.</p>
+      <% } %>
     </div>
 
     <div class="card card-pad">
@@ -57,10 +70,58 @@
       <div class="hr" style="height:1px;background:var(--line);margin:18px 0"></div>
       <div class="stat-label" style="margin-bottom:8px">Súhrn</div>
       <div class="stack g-2" style="font-size:var(--fs-sm)">
+        <div class="between"><span class="muted">Spravujem líg</span><b class="hi num"><%= stats.managedLeaguesCount %></b></div>
+        <div class="between"><span class="muted">Oficiálne sezóny</span><b class="hi num"><%= stats.officialSeasons %></b></div>
         <div class="between"><span class="muted">Tímy v DB</span><b class="hi num"><%= stats.teamsCount %></b></div>
         <div class="between"><span class="muted">Tipy celkovo</span><b class="hi num"><%= stats.tipsCount %></b></div>
         <div class="between"><span class="muted">Sezóny celkovo</span><b class="hi num"><%= stats.seasonsCount %></b></div>
       </div>
+    </div>
+  </div>
+
+  <div class="ad-row3">
+    <!-- Najbližšie uzávierky -->
+    <div class="card card-pad">
+      <div class="stat-label" style="margin-bottom:14px">Najbližšie uzávierky kôl</div>
+      <% if (!upcomingDeadlines || upcomingDeadlines.length === 0) { %>
+        <p class="lst-empty">Žiadne otvorené kolá s blížiacou sa uzávierkou.</p>
+      <% } %>
+      <% (upcomingDeadlines||[]).forEach(function(d){ %>
+        <div class="lst-row">
+          <span class="av" style="background:var(--brand-soft);color:var(--brand-bright)">⏱</span>
+          <div class="bd"><div class="nm"><%= d.leagueName %> · <%= d.name %></div><div class="sub"><%= new Date(d.endDate).toLocaleString('sk-SK',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) %></div></div>
+          <a href="/rounds/<%= d.id %>" class="btn btn-secondary btn-sm">Otvoriť</a>
+        </div>
+      <% }); %>
+    </div>
+
+    <!-- Najaktívnejší hráči -->
+    <div class="card card-pad">
+      <div class="stat-label" style="margin-bottom:14px">Najaktívnejší hráči</div>
+      <% if (!topPlayers || topPlayers.length === 0) { %>
+        <p class="lst-empty">Zatiaľ žiadne odoslané tipy.</p>
+      <% } %>
+      <% (topPlayers||[]).forEach(function(p, i){ %>
+        <div class="lst-row">
+          <span class="av"><%= i+1 %></span>
+          <div class="bd"><div class="nm"><%= p.name %></div><div class="sub">@<%= p.username %></div></div>
+          <span class="val"><%= p.tipCount %> <span class="muted" style="font-weight:400;font-size:var(--fs-xs)">tipov</span></span>
+        </div>
+      <% }); %>
+    </div>
+
+    <!-- Noví používatelia -->
+    <div class="card card-pad">
+      <div class="stat-label" style="margin-bottom:14px">Noví používatelia</div>
+      <% if (!recentUsers || recentUsers.length === 0) { %>
+        <p class="lst-empty">Žiadni používatelia.</p>
+      <% } %>
+      <% (recentUsers||[]).forEach(function(u){ %>
+        <div class="lst-row">
+          <span class="av"><%= (u.name||'?').split(' ').map(function(w){return w[0];}).filter(Boolean).slice(0,2).join('').toUpperCase() %></span>
+          <div class="bd"><div class="nm"><%= u.name %><% if (u.role === 'admin') { %> <span class="tag tag-brand" style="padding:0 5px">admin</span><% } else if (u.role === 'vip') { %> <span class="tag tag-gold" style="padding:0 5px">VIP</span><% } %></div><div class="sub">@<%= u.username %><% if (u.createdAt) { %> · <%= new Date(u.createdAt).toLocaleDateString('sk-SK',{day:'numeric',month:'short'}) %><% } %></div></div>
+        </div>
+      <% }); %>
     </div>
   </div>
 </div>

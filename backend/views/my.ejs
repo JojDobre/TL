@@ -14,6 +14,7 @@
   .ms-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:18px; }
   .ms-card { overflow:hidden; display:flex; flex-direction:column; }
   .ms-cover { height:74px; position:relative; display:flex; align-items:flex-start; justify-content:space-between; padding:12px 14px; }
+  .ms-cover.has-img::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(8,10,18,.7) 0%, rgba(8,10,18,.2) 45%, rgba(8,10,18,.55) 100%); pointer-events:none; }
   .ms-cover .tag { position:relative; z-index:1; }
   .ms-body { padding:16px 18px 18px; display:flex; flex-direction:column; flex:1; }
   .ms-title { font-size:var(--fs-h4); margin-bottom:2px; }
@@ -59,7 +60,7 @@
       <p class="muted" style="margin-top:6px">Všetky sezóny a ligy, do ktorých si prihlásený, na jednom mieste.</p>
     </div>
     <div class="row g-2 wrap-gap my-cta">
-      <a href="/seasons" class="btn btn-secondary btn-sm">Pripojiť sa cez ID</a>
+      <button type="button" class="btn btn-secondary btn-sm" data-open-join>Pripojiť sa cez ID</button>
       <a href="/seasons" class="btn btn-primary btn-sm">Objaviť súťaže</a>
     </div>
   </div>
@@ -77,7 +78,7 @@
         <p class="muted" style="font-size:var(--fs-sm)">Najbližší zápas <%= upcoming[0].home %> – <%= upcoming[0].away %> o <%= fmtTime(upcoming[0].time) %>. Nezabudni natipovať.</p>
       </div>
       <div class="alert-act">
-        <a href="/seasons" class="btn btn-primary btn-sm">Vyplniť tipy →</a>
+        <a href="<%= upcoming[0].seasonId ? ('/seasons/' + upcoming[0].seasonId + '/zapasy') : '/seasons' %>" class="btn btn-primary btn-sm">Vyplniť tipy →</a>
       </div>
     </div>
   </div>
@@ -96,7 +97,7 @@
       <div class="ms-grid">
         <% mySeasons.forEach(function(s){ %>
         <div class="card card-hover ms-card">
-          <div class="ms-cover" style="background:linear-gradient(<%= grad(s.id) %>)">
+          <div class="ms-cover<% if (s.image) { %> has-img<% } %>" style="background:linear-gradient(<%= grad(s.id) %>)<% if (s.image) { %>;background-image:url('<%= s.image %>');background-size:cover;background-position:center<% } %>">
             <span class="tag <%= s.type === 'official' ? 'tag-brand' : 'tag-gold' %>"><%= s.type === 'official' ? 'Oficiálna' : 'Community' %></span>
             <% if (s.status === 'ended') { %><span class="tag tag-muted">Ukončená</span><% } else if (s.status === 'upcoming') { %><span class="tag tag-info"><span class="dot"></span>Pripravovaná</span><% } else { %><span class="tag tag-live"><span class="dot"></span>Live</span><% } %>
           </div>
@@ -175,7 +176,7 @@
         <b class="hi" style="display:block;margin-bottom:6px">Máš pozvánku?</b>
         <p class="muted" style="font-size:var(--fs-sm);margin-bottom:12px">Pripoj sa do sezóny cez 6-miestne ID alebo objav verejné súťaže.</p>
         <div class="stack g-2">
-          <a href="/seasons" class="btn btn-primary btn-sm btn-block">Pripojiť sa cez ID</a>
+          <button type="button" class="btn btn-primary btn-sm btn-block" data-open-join>Pripojiť sa cez ID</button>
           <a href="/seasons" class="btn btn-secondary btn-sm btn-block">Objaviť verejné súťaže</a>
         </div>
       </div>
@@ -194,11 +195,32 @@
       <p style="max-width:420px">Pridaj sa do oficiálnej sezóny, objav verejnú komunitnú ligu alebo sa pripoj k partii cez ID. Tvoje sezóny a ligy sa potom zobrazia tu.</p>
       <div class="row g-3 center wrap-gap" style="margin-top:6px">
         <a href="/seasons" class="btn btn-primary">Objaviť súťaže</a>
-        <a href="/seasons" class="btn btn-secondary">Pripojiť sa cez ID</a>
+        <button type="button" class="btn btn-secondary" data-open-join>Pripojiť sa cez ID</button>
       </div>
     </div>
   </div>
 </div>
 <% } %>
+
+<!-- ===== JOIN DIALOG ===== -->
+<div class="scrim" data-join hidden>
+  <form class="dialog" action="/seasons/join" method="POST">
+    <div class="between" style="margin-bottom:6px"><div class="dialog-title">Pripojiť sa do sezóny</div><button type="button" class="btn btn-ghost btn-icon" data-close-join>✕</button></div>
+    <p class="muted" style="font-size:var(--fs-sm);margin-bottom:20px">Zadaj 6-miestne ID sezóny, ktoré ti poslal jej zakladateľ.</p>
+    <div class="field" style="margin-bottom:22px">
+      <label class="label">ID sezóny</label>
+      <input class="input num" name="inviteCode" placeholder="napr. HK4F2X" style="letter-spacing:.3em;text-transform:uppercase;font-weight:700" maxlength="6" required>
+    </div>
+    <div class="row g-2" style="justify-content:flex-end"><button type="button" class="btn btn-secondary" data-close-join>Zrušiť</button><button type="submit" class="btn btn-primary">Pripojiť sa</button></div>
+  </form>
+</div>
+
+<script>
+  document.addEventListener('click', function (e) {
+    var dlg = document.querySelector('[data-join]'); if (!dlg) return;
+    if (e.target.closest('[data-open-join]')) dlg.removeAttribute('hidden');
+    else if (e.target.closest('[data-close-join]') || e.target === dlg) dlg.setAttribute('hidden','');
+  });
+</script>
 
 <%- include('partials/footer') %>

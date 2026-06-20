@@ -136,13 +136,12 @@
           <label class="check" style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><input type="checkbox" id="privToggle" name="isPrivate" <%= season.hasPassword ? 'checked' : '' %>> <span>Súkromná sezóna (chránená heslom)</span></label>
           <div id="privFields" <%= season.hasPassword ? '' : 'hidden' %>>
             <div class="field" style="margin-bottom:14px"><label class="label">Nové heslo <%= season.hasPassword ? '(nechaj prázdne pre ponechanie)' : '' %></label><input class="input" type="text" name="password" placeholder="napr. kamarati2026"></div>
-            <label class="check" style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><input type="checkbox" name="hidden" <%= season.hidden ? 'checked' : '' %>> <span>Skryť zo zoznamu sezón</span></label>
-            <label class="check" style="display:flex;align-items:center;gap:10px"><input type="checkbox" name="removePassword"> <span style="color:var(--danger)">Zrušiť heslo a spraviť verejnou</span></label>
+            <label class="check" style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><input type="checkbox" name="hidden" <%= season.hidden ? 'checked' : '' %>> <span style="color:var(--danger)">Skryť zo zoznamu sezón</span></label>
           </div>
         </div>
         <% } %>
 
-        <div><button type="submit" class="btn btn-primary">Uložiť zmeny</button></div>
+        <div><button type="submit" class="btn btn-primary" style="margin-top:16px">Uložiť zmeny</button></div>
       </form>
     </section>
 
@@ -194,6 +193,16 @@
   var pt=document.getElementById('privToggle');
   if(pt) pt.addEventListener('change',function(){ document.getElementById('privFields').toggleAttribute('hidden', !this.checked); });
 })();
+
+  <% if (error) { %>
+  (function(){
+    // pri chybe prepni na „Nebezpečná zóna" a posuň na banner
+    var d=document.querySelector('.ac-tabs [data-ct="danger"]');
+    if(d) d.click();
+    var b=document.querySelector('.tag-danger');
+    if(b) b.scrollIntoView({behavior:'smooth',block:'center'});
+  })();
+  <% } %>
 </script>
 
 <%- include('partials/footer') %>

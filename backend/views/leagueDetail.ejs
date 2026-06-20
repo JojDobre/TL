@@ -36,6 +36,10 @@
     .lg-actions { display:flex; }
     .lg-actions .btn-primary { flex:1; }
     .round-item { grid-template-columns:auto 1fr; column-gap:14px; row-gap:10px; align-items:center; }
+    .lg-actions form { flex:1 1 auto; display:flex; }
+    .lg-actions form .btn { width:100%; }
+    .lg-actions .btn-icon { flex:0 0 auto; }
+    .lg-actions a.btn-secondary { flex:1 1 auto; }
     .round-item > div { grid-column:2; }
     .round-item .rnd-pts { grid-column:2; justify-self:start; }
     .round-item .rnd-btn { grid-column:1 / -1; justify-self:stretch; text-align:center; }
@@ -78,8 +82,7 @@
         <% } %>
       <% } %>
       <% if (typeof canManage !== 'undefined' && canManage) { %>
-        <a href="/leagues/<%= league.id %>/edit" class="btn btn-secondary">Upraviť ligu</a>
-        <a href="/leagues/<%= league.id %>/members" class="btn btn-secondary">Členovia</a>
+        <a href="/leagues/<%= league.id %>/manage" class="btn btn-secondary">Spravovať</a>
       <% } %>
       <% if (typeof isMember !== 'undefined' && isMember && !isCreator) { %>
         <form action="/leagues/<%= league.id %>/leave" method="POST" onsubmit="return confirm('Naozaj opustiť túto ligu?')" style="display:inline">
@@ -112,8 +115,9 @@
         <div class="card round-item" style="border-color:var(--brand-line)">
           <span class="round-n active"><%= roundAbbr(r.name) %></span>
           <div><div class="row g-2 wrap-gap"><b class="hi"><%= r.description || r.name %></b><span class="tag tag-warning"><span class="dot"></span>Otvorené</span></div><div class="muted" style="font-size:var(--fs-sm)"><%= r.matchesCount %> zápasov · uzávierka <%= new Date(r.endDate).toLocaleDateString('sk-SK') %></div></div>
-          <span class="rnd-pts muted" style="font-size:var(--fs-sm)">tipuješ <b class="hi"><%= r.myTips %>/<%= r.matchesCount %></b></span>
-          <a href="/rounds/<%= r.id %>" class="rnd-btn btn btn-primary btn-sm">Tipovať</a>
+                    <span class="rnd-pts muted" style="font-size:var(--fs-sm)"><% if (isMember) { %>tipuješ <b class="hi"><%= r.myTips %>/<%= r.matchesCount %></b><% } %></span>
+          <a href="/rounds/<%= r.id %>" class="rnd-btn btn <%= isMember ? 'btn-primary' : 'btn-secondary' %> btn-sm"><%= isMember ? 'Tipovať' : 'Pozrieť' %></a>
+
         </div>
         <% } else if (r.status === 'finished') { %>
         <div class="card round-item">

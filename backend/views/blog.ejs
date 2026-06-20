@@ -1,0 +1,96 @@
+<%- include('partials/head', { title: 'Blog', page: 'blog', active: 'blog', pageStyle: `
+  .bl-head { padding:34px 0 24px; }
+  .bl-cats { display:flex; gap:8px; flex-wrap:wrap; margin-top:18px; }
+  .cat { font-size:var(--fs-sm); font-weight:600; padding:7px 14px; border-radius:var(--r-pill); background:var(--surface-2); border:1px solid var(--line); color:var(--text-3); cursor:pointer; transition:all .15s; text-decoration:none; }
+  .cat.active, .cat:hover { color:var(--text-1); border-color:var(--brand-line); background:var(--brand-soft); }
+
+  .featured { display:grid; grid-template-columns:1.3fr 1fr; gap:0; border-radius:var(--r-xl); overflow:hidden; margin-bottom:34px; }
+  .featured-img { min-height:300px; position:relative; }
+  .featured-img::after { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:90px; opacity:.25; }
+  .featured-body { padding:34px; display:flex; flex-direction:column; justify-content:center; background:var(--surface-1); }
+
+  .post-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+  .post-img { height:170px; position:relative; display:flex; align-items:center; justify-content:center; font-size:48px; }
+  .post-body { padding:18px 20px 22px; }
+  .post-meta { display:flex; gap:10px; align-items:center; font-size:var(--fs-xs); color:var(--text-4); margin-top:12px; }
+  @media (max-width:860px){ .featured { grid-template-columns:1fr; } .post-grid { grid-template-columns:1fr 1fr; } }
+  @media (max-width:560px){ .post-grid { grid-template-columns:1fr; } }
+` }) %>
+<%
+  // pomocná funkcia: tag trieda podľa kategórie (1:1 mapovanie zo šablóny)
+  function catTag(c) {
+    switch (c) {
+      case 'Stratégia': return 'tag-brand';
+      case 'Novinky':   return 'tag-info';
+      case 'Rozhovory': return 'tag-brand';
+      case 'Návody':    return 'tag-gold';
+      default:          return 'tag-info';
+    }
+  }
+  // pomocná funkcia: slovenský dátum (8. feb 2026)
+  const SK_M = ['jan','feb','mar','apr','máj','jún','júl','aug','sep','okt','nov','dec'];
+  function fmtDate(d) { const x = new Date(d); return x.getDate() + '. ' + SK_M[x.getMonth()] + ' ' + x.getFullYear(); }
+  const cats = ['Všetko','Stratégia','Novinky','Rozhovory','Návody'];
+  const activeCat = typeof currentCategory !== 'undefined' && currentCategory ? currentCategory : 'Všetko';
+%>
+
+<div class="wrap bl-head">
+  <div class="eyebrow">Blog</div>
+  <h1 style="font-size:clamp(2rem,3.4vw,2.8rem)">Tipy, stratégie a novinky</h1>
+  <p class="muted" style="margin-top:6px">Ako tipovať lepšie, rozhovory s top hráčmi a všetko zo sveta Tiperligy.</p>
+  <div class="bl-cats">
+    <% cats.forEach(function(c){ %>
+      <a class="cat <%= activeCat === c ? 'active' : '' %>" href="<%= c === 'Všetko' ? '/blog' : '/blog?kategoria=' + encodeURIComponent(c) %>"><%= c %></a>
+    <% }); %>
+  </div>
+</div>
+
+<div class="wrap" style="padding-bottom:64px">
+  <% if (featured) { %>
+  <!-- FEATURED -->
+  <a href="/blog/<%= featured.slug %>" class="card card-hover featured">
+    <div class="featured-img" style="background:<%= featured.coverGradient %>">
+      <style>.featured-img::after{content:"<%= featured.coverEmoji %>";}</style>
+      <span class="tag tag-gold" style="position:absolute;top:18px;left:18px">Odporúčané</span>
+    </div>
+    <div class="featured-body">
+      <span class="tag <%= catTag(featured.category) %>" style="align-self:flex-start;margin-bottom:14px"><%= featured.category %></span>
+      <h2 style="font-size:var(--fs-h2);margin-bottom:12px"><%= featured.title %></h2>
+      <p class="muted" style="margin-bottom:18px"><%= featured.excerpt %></p>
+      <div class="row g-3">
+        <span class="avatar avatar-sm" style="background:linear-gradient(135deg,#7c5cff,#5b3fd6);color:#fff"><%= (featured.author && featured.author.username ? featured.author.username : '?').substring(0,2).toUpperCase() %></span>
+        <div>
+          <b class="hi" style="font-size:var(--fs-sm)"><%= featured.author && featured.author.username ? featured.author.username : '—' %></b>
+          <div class="muted" style="font-size:var(--fs-xs)"><%= fmtDate(featured.createdAt) %> · <%= featured.readMinutes %> min čítania</div>
+        </div>
+      </div>
+    </div>
+  </a>
+  <% } %>
+
+  <!-- GRID -->
+  <% if (posts && posts.length) { %>
+  <div class="post-grid">
+    <% posts.forEach(function(p){ %>
+      <a href="/blog/<%= p.slug %>" class="card card-hover" style="overflow:hidden">
+        <div class="post-img" style="background:<%= p.coverGradient %>"><%= p.coverEmoji %></div>
+        <div class="post-body">
+          <span class="tag <%= catTag(p.category) %>"><%= p.category %></span>
+          <h4 style="margin:12px 0 6px"><%= p.title %></h4>
+          <p class="muted" style="font-size:var(--fs-sm)"><%= p.excerpt %></p>
+          <div class="post-meta"><span><%= fmtDate(p.createdAt) %></span>·<span><%= p.readMinutes %> min</span></div>
+        </div>
+      </a>
+    <% }); %>
+  </div>
+  <% } else if (!featured) { %>
+    <!-- prázdny stav: zatiaľ žiadne články -->
+    <div class="card card-pad center" style="text-align:center;padding:56px 24px">
+      <div style="font-size:42px;margin-bottom:12px">📝</div>
+      <h3 style="margin-bottom:6px">Zatiaľ tu nič nie je</h3>
+      <p class="muted">V tejto kategórii ešte nie sú žiadne články. Skús to čoskoro znova.</p>
+    </div>
+  <% } %>
+</div>
+
+<%- include('partials/footer') %>

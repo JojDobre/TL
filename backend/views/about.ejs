@@ -1,0 +1,82 @@
+<%- include('partials/head', { title: 'O nás', page: 'about', active: 'about', pageStyle: `
+  .ab-hero { text-align:center; padding:64px 0 40px; }
+  .ab-hero h1 { font-size:clamp(2.4rem,5vw,4rem); max-width:16ch; margin:0 auto 18px; }
+  .prose { max-width:680px; margin:0 auto; }
+  .prose p { color:var(--text-2); font-size:var(--fs-lg); line-height:1.7; margin-bottom:20px; }
+  .prose h2 { font-size:var(--fs-h2); margin:42px 0 14px; }
+  .metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin:48px 0; }
+  .metric { text-align:center; padding:26px 16px; }
+  .metric .n { font-family:var(--num); font-weight:700; font-size:2.6rem; line-height:1; white-space:nowrap; }
+  .metric .l { font-size:var(--fs-sm); color:var(--text-3); margin-top:8px; }
+  .values { display:grid; grid-template-columns:1fr; gap:14px; margin-top:24px; }
+  .value-row { display:flex; align-items:flex-start; gap:18px; }
+  .value-ico { width:46px; height:46px; border-radius:var(--r-md); display:flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:14px; flex:none; }
+  .value-row .value-ico { margin-bottom:0; }
+  .team-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-top:24px; }
+  .member { text-align:center; }
+  .member .avatar { display:flex; margin:0 auto 12px; }
+  .member b { display:block; }
+  .timeline { max-width:680px; margin:0 auto; }
+  .tl-item { display:flex; gap:20px; padding-bottom:26px; position:relative; }
+  .tl-item::before { content:""; position:absolute; left:39px; top:32px; bottom:-4px; width:2px; background:var(--line); }
+  .tl-item:last-child::before { display:none; }
+  .tl-year { font-family:var(--num); font-weight:700; color:var(--brand-bright); width:62px; flex:none; font-size:var(--fs-lg); }
+  .tl-dot { width:14px; height:14px; border-radius:50%; background:var(--brand); flex:none; margin-top:6px; box-shadow:var(--glow-brand); z-index:1; }
+  @media (max-width:820px){ .metrics,.team-grid { grid-template-columns:1fr 1fr; } }
+` }) %>
+
+<div class="wrap ab-hero">
+  <div class="eyebrow" style="margin-bottom:14px">Náš príbeh</div>
+  <h1>Spravili sme z tipovania šport sám o sebe</h1>
+  <p class="muted" style="max-width:54ch;margin:0 auto;font-size:var(--fs-lg)">Tiperliga vznikla z jednoduchej WhatsApp skupiny, kde sme si s kamošmi tipovali zápasy. Dnes je to platforma pre tisíce tipérov.</p>
+</div>
+
+<div class="wrap" style="max-width:1000px">
+  <div class="metrics">
+    <div class="card metric"><div class="n gold">14 280</div><div class="l">aktívnych tipérov</div></div>
+    <div class="card metric"><div class="n brand">320+</div><div class="l">komunitných líg</div></div>
+    <div class="card metric"><div class="n" style="color:var(--success)">2.1M</div><div class="l">odoslaných tipov</div></div>
+    <div class="card metric"><div class="n">2024</div><div class="l">rok založenia</div></div>
+  </div>
+</div>
+
+<div class="wrap" style="padding-block:20px 40px">
+  <div class="prose">
+    <p>Začalo to v zime 2024. Partia kamošov si počas hokejových majstrovstiev tipovala výsledky v skupinovej konverzácii — a niekto musel ručne počítať body v exceli. Bolo to chaotické, ale neskutočne zábavné.</p>
+    <p>Tak sme si povedali, že to spravíme poriadne. Chceli sme miesto, kde si <b class="hi">ktokoľvek môže založiť vlastnú ligu</b>, pozvať partiu cez jednoduché ID a sledovať, kto je naozaj najlepší tipér. Bez excelov, bez hádok o body.</p>
+    <h2>Čomu veríme</h2>
+    <p>Tipovanie nie je o peniazoch — je o súťaživosti, o tom poraziť kamoša a o radosti z dobrého odhadu. Preto je Tiperliga zadarmo a vždy bude o zábave a komunite.</p>
+  </div>
+
+  <div class="values">
+    <div class="card card-pad value-row"><div class="value-ico" style="background:var(--brand-soft);color:var(--brand-bright)">🎯</div><div><h4 style="margin-bottom:6px">Férovosť</h4><p class="muted" style="font-size:var(--fs-sm)">Transparentný bodovací systém. Výsledky zadáva admin oddelene od tipov — nikto nevidí cudzie tipy pred uzávierkou.</p></div></div>
+    <div class="card card-pad value-row"><div class="value-ico" style="background:var(--gold-soft);color:var(--gold)">🤝</div><div><h4 style="margin-bottom:6px">Komunita</h4><p class="muted" style="font-size:var(--fs-sm)">Vlastné ligy pre partiu, firmu či fanklub. Tipuj s ľuďmi, na ktorých ti záleží.</p></div></div>
+    <div class="card card-pad value-row"><div class="value-ico" style="background:var(--success-soft);color:var(--success)">⚡</div><div><h4 style="margin-bottom:6px">Jednoduchosť</h4><p class="muted" style="font-size:var(--fs-sm)">Pripojiť sa, tipnúť kolo, vidieť výsledky. Žiadne zbytočnosti — len čistá radosť z tipovania.</p></div></div>
+  </div>
+
+  <h2 style="text-align:center;margin:56px 0 8px;font-size:var(--fs-h2)">Cesta platformy</h2>
+  <div class="timeline" style="margin-top:30px">
+    <div class="tl-item"><span class="tl-year">2024</span><span class="tl-dot"></span><div><b class="hi" style="display:block;font-size:var(--fs-lg)">Zrod nápadu</b><p class="muted" style="font-size:var(--fs-sm)">WhatsApp tipovačka počas MS v hokeji prerástla do prvého prototypu.</p></div></div>
+    <div class="tl-item"><span class="tl-year">2024</span><span class="tl-dot"></span><div><b class="hi" style="display:block;font-size:var(--fs-lg)">Prvých 1 000 hráčov</b><p class="muted" style="font-size:var(--fs-sm)">Spustili sme komunitné ligy a custom bodovanie. Slovo sa rozšírilo.</p></div></div>
+    <div class="tl-item"><span class="tl-year">2025</span><span class="tl-dot"></span><div><b class="hi" style="display:block;font-size:var(--fs-lg)">Oficiálne sezóny</b><p class="muted" style="font-size:var(--fs-sm)">Pridali sme Ligu majstrov, NHL a ďalšie veľké turnaje s globálnym rebríčkom.</p></div></div>
+    <div class="tl-item"><span class="tl-year">2026</span><span class="tl-dot"></span><div><b class="hi" style="display:block;font-size:var(--fs-lg)">14 000+ tipérov</b><p class="muted" style="font-size:var(--fs-sm)">Štatistiky, odznaky, achievementy a mobilné tipovanie. A ideme ďalej.</p></div></div>
+  </div>
+
+  <h2 style="text-align:center;margin:56px 0 8px;font-size:var(--fs-h2)">Kto za tým stojí</h2>
+  <div class="team-grid">
+    <div class="member"><span class="avatar avatar-xl" style="background:linear-gradient(135deg,#7c5cff,#5b3fd6);color:#fff">PT</span><b class="hi">Peter Tóth</b><div class="muted" style="font-size:var(--fs-sm)">Zakladateľ</div></div>
+    <div class="member"><span class="avatar avatar-xl" style="background:linear-gradient(135deg,#16a085,#0c5f4d);color:#fff">MK</span><b class="hi">Mária Kučerová</b><div class="muted" style="font-size:var(--fs-sm)">Produkt</div></div>
+    <div class="member"><span class="avatar avatar-xl" style="background:linear-gradient(135deg,#d35400,#8a3700);color:#fff">JB</span><b class="hi">Jakub Beňo</b><div class="muted" style="font-size:var(--fs-sm)">Vývoj</div></div>
+    <div class="member"><span class="avatar avatar-xl" style="background:linear-gradient(135deg,#3a7bd5,#1b3f72);color:#fff">SH</span><b class="hi">Soňa Hrnčárová</b><div class="muted" style="font-size:var(--fs-sm)">Komunita</div></div>
+  </div>
+
+  <div class="card card-accent card-pad center" style="text-align:center;padding:48px 24px;margin-top:56px;background:radial-gradient(600px 300px at 50% 0%, rgba(124,92,255,.18), var(--surface-1))">
+    <div style="max-width:520px">
+      <h2 style="font-size:var(--fs-h1);margin-bottom:12px">Pridaj sa do hry</h2>
+      <p class="muted" style="margin-bottom:24px">Vytvor si účet a tipuj už dnes. Alebo si rovno založ ligu pre svoju partiu.</p>
+      <div class="row g-3 center wrap-gap"><a href="/register" class="btn btn-primary btn-lg">Vytvoriť účet</a><a href="/seasons" class="btn btn-secondary btn-lg">Prehľadať sezóny</a></div>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

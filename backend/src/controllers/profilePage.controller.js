@@ -5,6 +5,7 @@
 
 const { Tip, Match, Round, League, Team, User, UserLeague, Sequelize } = require('../models');
 const { asyncHandler } = require('../middleware/error.middleware');
+const { evaluateUser } = require('../utils/achievement.engine');
 
 // GET /profile
 const profilePage = asyncHandler(async (req, res) => {
@@ -77,6 +78,20 @@ const profilePage = asyncHandler(async (req, res) => {
     }
   }
 
+  // odznaky pre profil (top 8: najprv získané). Lazy vyhodnotenie cez engine.
+  // Obalené try/catch — ak tabuľka odznakov ešte nie je naseedovaná, profil
+  // sa aj tak vykreslí (zobrazí sa prázdny/odznakový blok bez pádu).
+  let badges = [];
+  try {
+    const { items } = await evaluateUser(meId);
+    const sorted = items.slice().sort((a, b) => (b.earned - a.earned) || (b.pct - a.pct));
+    badges = sorted.slice(0, 8).map((b) => ({
+      name: b.name, icon: b.icon, earned: b.earned, rarity: b.rarity,
+    }));
+  } catch (e) {
+    badges = [];
+  }
+
   res.render('profile', {
     profile: {
       name: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username,
@@ -91,6 +106,7 @@ const profilePage = asyncHandler(async (req, res) => {
     summary: { totalPoints, accuracy, tipsCount: allTips.length, evaluated },
     recent,
     topLeagues,
+    badges,
   });
 });
 

@@ -23,6 +23,10 @@ const pageRoutes = require('./src/routes/page.routes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const isProd = process.env.NODE_ENV === 'production';
+
+// za nginx reverse proxy — aby secure cookie a req.protocol fungovali správne
+app.set('trust proxy', 1);
 
 // ---- EJS view engine ----
 app.set('view engine', 'ejs');
@@ -49,7 +53,7 @@ app.use(helmet({
     },
   },
 }));
-app.use(morgan('dev'));
+if (!isProd) app.use(morgan('dev'));
 
 // ---- parsovanie tiel požiadaviek ----
 app.use(express.json());
@@ -60,7 +64,12 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'zmen-ma',
   resave: false,
   saveUninitialized: false,
-  cookie: { httpOnly: true, maxAge: 1000 * 60 * 60 * 24 * 7 }, // 7 dní
+  cookie: {
+    httpOnly: true,
+    secure: isProd,          // cez HTTPS posielať cookie len bezpečne
+    sameSite: 'lax',
+    maxAge: 1000 * 60 * 60 * 24 * 7,
+  }, // 7 dní
 }));
 
 // ---- sprístupnenie prihláseného používateľa všetkým šablónam ----
@@ -88,10 +97,9 @@ app.use('/', pageRoutes);
 app.use(errorHandler);
 
 // ---- štart ----
-if (process.env.NODE_ENV === 'development') {
-  syncDatabase()
-    .then(() => console.log('Databáza bola úspešne inicializovaná.'))
-    .catch((error) => console.error('Chyba pri inicializácii databázy:', error));
-}
+// Synchronizáciu riadi DB_SYNC (force/alter/off) — nie NODE_ENV.
+syncDatabase()
+  .then(() => console.log('Inicializácia DB hotová.'))
+  .catch((error) => console.error('Chyba pri inicializácii databázy:', error));
 
-app.listen(PORT, () => console.log(`Tiperliga beží na http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Tiperliga beží na porte ${PORT}`));

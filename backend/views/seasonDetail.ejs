@@ -12,6 +12,14 @@
   .blk-head { display:flex; align-items:flex-end; justify-content:space-between; gap:14px; margin-bottom:16px; flex-wrap:wrap; }
   .blk-head h2 { font-size:var(--fs-h3); }
 
+    /* anchor scroll offset: cieľ #rules/#leagues/#news sa nesmie skryť pod
+     sticky navbarom (--nav-h 68px) + sticky subnavom (54px) = 122px.
+     Na úzkom viewporte je subnav skrytý, ostáva len hlavný navbar (68px). */
+  #leagues, #news, #rules { scroll-margin-top: calc(var(--nav-h) + 54px + 8px); }
+  @media (max-width: 980px){
+    #leagues, #news, #rules { scroll-margin-top: calc(var(--nav-h) + 8px); }
+  }
+
   .league-card { display:grid; grid-template-columns: auto 1fr auto; gap:16px; align-items:center; padding:16px 18px; }
   .news-row:last-child { border-bottom:none !important; }
   .league-cover { position:relative; }
@@ -52,7 +60,7 @@
     .league-meta { margin-top:8px; }
 
     /* move the section “+ Vytvoriť ligu” below the cards, full width */
-    #leagues .blk-head .btn-brand { display:none; }
+    #leagues .blk-head .btn-brand { width: 100%; }
     .create-league-m { display:flex; margin-top:14px; }
   }
 ` }) %>
@@ -62,7 +70,7 @@
 <% if (typeof restricted !== 'undefined' && restricted) { %>
 <!-- ===== SÚKROMNÁ SEZÓNA — ZAMKNUTÝ DETAIL ===== -->
 <header class="season-hero">
-  <div class="season-hero-bg"<% if (season.image) { %> style="background-image:url('<%= season.image %>');background-size:cover;background-position:center;opacity:1"<% } %>></div>
+  <div class="season-hero-bg"<% if (season.image) { %> style="background-image:url('<%= season.image %>');background-size:cover;background-position:center;opacity:0.45"<% } %>></div>
   <div class="wrap season-hero-inner">
     <div class="row g-2 wrap-gap" style="margin-bottom:14px">
       <span class="tag tag-gold">Súkromná sezóna</span>
@@ -98,7 +106,7 @@
 
 <!-- ===== HERO ===== -->
 <header class="season-hero">
-  <div class="season-hero-bg"<% if (season.image) { %> style="background-image:url('<%= season.image %>');background-size:cover;background-position:center;opacity:1"<% } %>></div>
+  <div class="season-hero-bg"<% if (season.image) { %> style="background-image:url('<%= season.image %>');background-size:cover;background-position:center;opacity:0.45"<% } %>></div>
   <div class="wrap season-hero-inner">
     <div class="row g-2 wrap-gap" style="margin-bottom:14px">
       <span class="tag tag-brand"><%= season.type === 'official' ? 'Oficiálna sezóna' : 'Komunitná sezóna' %></span>
@@ -173,7 +181,7 @@
             <div class="row g-2 wrap-gap"><span style="font-weight:800;color:var(--text-1);font-size:var(--fs-lg)"><%= lg.name %></span></div>
             <div class="league-meta"><span><b><%= lg.membersCount != null ? lg.membersCount : '—' %></b> hráčov</span><span>ID: <b><%= lg.joinCode || lg.inviteCode || '—' %></b></span></div>
           </div>
-          <span class="muted" style="font-size:var(--fs-xs);max-width:130px;text-align:right">Najprv sa pripoj do sezóny</span>
+          <span class="muted" style="font-size:var(--fs-xs);max-width:100%;padding: 14px 16px 14px 16px; text-align:left">Najprv sa pripoj do sezóny</span>
         </div>
         <% } %>
         <% }); %>
@@ -191,7 +199,7 @@
         <div class="news-item">
           <span class="news-date"><%= n.at ? new Date(n.at).toLocaleDateString('sk-SK',{day:'numeric',month:'short'}) : '' %></span>
           <div>
-            <div class="row g-2 wrap-gap" style="margin-bottom:3px"><b class="hi"><%= n.title %></b><span class="tag <%= n.tagClass %>"><%= n.tagText %></span></div>
+            <div class="row g-2 wrap-gap" style="margin-bottom:3px"><span class="tag <%= n.tagClass %>"><%= n.tagText %></span><b class="hi"><%= n.title %></b></div>
             <p class="muted" style="font-size:var(--fs-sm)"><%= n.desc %></p>
           </div>
         </div>

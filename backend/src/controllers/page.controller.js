@@ -95,7 +95,9 @@ const seasonDetailPage = asyncHandler(async (req, res) => {
   try {
     const tips = await Tip.findAll({
       include: [
-        { model: Match, include: [{ model: Round, include: [{ model: League, where: { seasonId: season.id } }] }] },
+        // required:true na celej reťazi → INNER JOIN, takže where {seasonId}
+        // skutočne odfiltruje tipy z iných sezón (inak LEFT JOIN vráti všetky tipy).
+        { model: Match, required: true, include: [{ model: Round, required: true, include: [{ model: League, required: true, where: { seasonId: season.id } }] }] },
         { model: User, attributes: ['id', 'username', 'firstName', 'lastName'] },
       ],
     });
@@ -439,6 +441,9 @@ const manageSeasonSubmit = asyncHandler(async (req, res) => {
 });
 
 // POST /seasons/:id/end — ukončenie sezóny (uzamknutie)
+// POST /seasons/:id/end — prepínač: ukončiť ALEBO znovu otvoriť sezónu.
+// Formulár v manageSeason.ejs posiela na rovnaký endpoint pre oba prípady,
+// preto tu rozhodujeme podľa aktuálneho stavu sezóny.
 const endSeasonSubmit = asyncHandler(async (req, res) => {
   const userId = Number(req.session.userId);
   const season = await Season.findByPk(req.params.id);
@@ -446,12 +451,45 @@ const endSeasonSubmit = asyncHandler(async (req, res) => {
 
   const u = await User.findByPk(userId);
   const allowed = season.creatorId === userId || (u && u.role === 'admin');
-  if (!allowed) return res.status(403).render('error-page', { message: 'Nemáš oprávnenie ukončiť túto sezónu.' });
+  if (!allowed) return res.status(403).render('error-page', { message: 'Nemáš oprávnenie spravovať túto sezónu.' });
 
-  season.ended = true;
-  season.active = false;
+  const isEnded = seasonStatus(season) === 'ended';
+
+  if (!isEnded) {
+    // --- UKONČIŤ ---
+    season.ended = true;
+    season.active = false;
+    await season.save();
+    return res.redirect('/seasons/' + season.id);
+  }
+
+  // --- ZNOVU OTVORIŤ ---
+  // 1) kontrola limitu aktívnych sezón podľa roly (admin = bez limitu).
+  //    Limit sa viaže na rolu TVORCU sezóny, nie na obnovujúceho admina.
+  const ownerId = season.creatorId;
+  const owner = ownerId === userId ? u : await User.findByPk(ownerId);
+  const limit = owner ? SEASON_LIMITS[owner.role] : undefined;
+  if (limit !== undefined) {
+    // počet INÝCH aktívnych sezón tvorcu (túto práve obnovovanú nerátame)
+    const mine = await Season.findAll({ where: { creatorId: ownerId } });
+    const otherActive = mine.filter((s) => s.id !== season.id && seasonStatus(s) !== 'ended').length;
+    if (otherActive >= limit) {
+      const msg = owner.role === 'player'
+        ? 'Nedá sa obnoviť — už existuje iná aktívna sezóna (limit 1). Najprv ju ukonči, alebo prejdi na VIP.'
+        : `Nedá sa obnoviť — dosiahnutý limit aktívnych sezón (${limit}). Najprv ukonči inú sezónu.`;
+      return res.status(400).render('error-page', { message: msg });
+    }
+  }
+
+  // 2) odomknutie. Ak endDate už ubehol, seasonStatus by sezónu hneď znova
+  //    označil ako 'ended' → vyčistíme prešlý endDate, aby ostala aktívna.
+  season.ended = false;
+  season.active = true;
+  if (season.endDate && new Date(season.endDate) < new Date()) {
+    season.endDate = null;
+  }
   await season.save();
-  res.redirect('/seasons/' + season.id);
+  return res.redirect('/seasons/' + season.id);
 });
 
 // helper: je tvorca/admin sezóny?
@@ -487,6 +525,8 @@ const leaveSeasonSubmit = asyncHandler(async (req, res) => {
     return res.status(400).render('error-page', { message: 'Zakladateľ nemôže opustiť sezónu — môžeš ju ukončiť alebo zmazať.' });
   }
   await UserSeason.destroy({ where: { userId, seasonId: season.id } });
+  // opustenie sezóny → odchod aj zo všetkých jej líg
+  await removeUserFromSeasonLeagues(season.id, userId);
   res.redirect('/seasons');
 });
 
@@ -508,6 +548,18 @@ const seasonMembersPage = asyncHandler(async (req, res) => {
   res.render('seasonMembers', { season: season.toJSON(), members });
 });
 
+// Pomocník: odober používateľa zo VŠETKÝCH líg danej sezóny.
+// Volá sa pri vyhodení člena zo sezóny aj pri dobrovoľnom opustení sezóny —
+// člen mimo sezóny nesmie ostať v žiadnej jej lige.
+async function removeUserFromSeasonLeagues(seasonId, targetUserId) {
+  // ID všetkých líg patriacich sezóne
+  const leagues = await League.findAll({ where: { seasonId }, attributes: ['id'] });
+  const leagueIds = leagues.map((l) => l.id);
+  if (leagueIds.length === 0) return;
+  // zmaž členstvá používateľa v týchto ligách (tipy ostávajú kvôli histórii)
+  await UserLeague.destroy({ where: { userId: targetUserId, leagueId: { [Sequelize.Op.in]: leagueIds } } });
+}
+
 // POST /seasons/:id/members/:userId — akcia s členom (promote/demote/remove)
 const seasonMemberAction = asyncHandler(async (req, res) => {
   const userId = Number(req.session.userId);
@@ -524,6 +576,8 @@ const seasonMemberAction = asyncHandler(async (req, res) => {
   }
   if (action === 'remove') {
     await UserSeason.destroy({ where: { userId: targetId, seasonId: season.id } });
+    // vyhodenie zo sezóny → vyhodenie aj zo všetkých jej líg
+    await removeUserFromSeasonLeagues(season.id, targetId);
   } else if (action === 'promote') {
     await UserSeason.update({ role: 'admin' }, { where: { userId: targetId, seasonId: season.id } });
   } else if (action === 'demote') {

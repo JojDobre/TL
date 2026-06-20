@@ -12,7 +12,7 @@
   function dtLocal(d){ if(!d) return ''; var x=new Date(d); var off=x.getTimezoneOffset(); var l=new Date(x.getTime()-off*60000); return l.toISOString().slice(0,16); }
 %>
 
-<div class="wrap form-head" style="padding-top:24px">
+<div class="wrap form-head" style="padding-top:24px; padding-bottom:24px"">
   <div class="crumb"><a href="/leagues/<%= league.id %>"><%= league.name %></a> › <a href="/rounds/<%= round.id %>"><%= round.name %></a> › Upraviť</div>
   <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Upraviť kolo</h1>
 </div>

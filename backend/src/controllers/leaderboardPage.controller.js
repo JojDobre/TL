@@ -4,7 +4,8 @@
 // sezóny + presnosť (trafené tipy / odtipované vyhodnotené). Trend nemáme
 // (netrackujeme históriu poradia) → zobrazí sa "—".
 
-const { Season, League, Round, Match, Tip, User, UserSeason } = require('../models');
+const { Season, League, Round, Match, Tip, User, UserSeason, Sequelize } = require('../models');
+const Op = Sequelize.Op;
 const { asyncHandler } = require('../middleware/error.middleware');
 const { seasonStatus, canViewSeasonContent } = require('../utils/season.utils');
 
@@ -32,7 +33,9 @@ const seasonLeaderboardPage = asyncHandler(async (req, res) => {
   // všetky tipy v sezóne (cez Match→Round→League where seasonId)
   const tips = await Tip.findAll({
     include: [
-      { model: Match, include: [{ model: Round, include: [{ model: League, where: { seasonId: season.id }, attributes: ['id'] }], attributes: ['id'] }], attributes: ['id', 'status'] },
+      // required:true na celej reťazi → INNER JOIN, takže where {seasonId}
+      // skutočne odfiltruje tipy z iných sezón (inak LEFT JOIN vráti všetky tipy).
+      { model: Match, required: true, include: [{ model: Round, required: true, include: [{ model: League, required: true, where: { seasonId: season.id }, attributes: ['id'] }], attributes: ['id'] }], attributes: ['id', 'status'] },
       { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'role'] },
     ],
   });
@@ -77,4 +80,127 @@ const seasonLeaderboardPage = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { seasonLeaderboardPage };
+// GET /leaderboards — globálny rebríček z oficiálnych líg za posledný rok.
+// Súčet bodov všetkých hráčov z vyhodnotených tipov v oficiálnych ligách,
+// kde kolo skončilo za posledných 12 mesiacov. + presnosť a moja pozícia.
+const globalLeaderboardPage = asyncHandler(async (req, res) => {
+  const meId = req.userId ? Number(req.userId) : null;
+
+  // hranica: posledný rok; a hranica "pred týždňom" pre výpočet skokanov
+  const now = new Date();
+  const yearAgo = new Date(); yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  const officialLeagues = await League.findAll({ where: { type: 'official' }, attributes: ['id', 'name', 'seasonId'] });
+
+  // voliteľný filter podľa sezóny (?season=ID) — obmedzí na ligy danej sezóny
+  const seasonFilter = req.query.season ? Number(req.query.season) : null;
+  const filteredLeagues = seasonFilter
+    ? officialLeagues.filter((l) => l.seasonId === seasonFilter)
+    : officialLeagues;
+  const offLeagueIds = filteredLeagues.map((l) => l.id);
+
+  // názov vybranej sezóny (na popisok)
+  let selectedSeasonName = null;
+  if (seasonFilter && filteredLeagues.length) {
+    const sn = await Season.findByPk(seasonFilter, { attributes: ['name'] });
+    selectedSeasonName = sn ? sn.name : null;
+  }
+
+  let board = [];
+  let movers = [];
+  if (offLeagueIds.length) {
+    const rounds = await Round.findAll({
+      where: { leagueId: { [Op.in]: offLeagueIds }, endDate: { [Op.gte]: yearAgo } },
+      attributes: ['id'],
+    });
+    const roundIds = rounds.map((r) => r.id);
+
+    if (roundIds.length) {
+      const tips = await Tip.findAll({
+        attributes: ['userId', 'points'],
+        include: [
+          { model: Match, attributes: ['id', 'status'], where: { status: 'finished', roundId: { [Op.in]: roundIds } }, required: true,
+            include: [{ model: Round, attributes: ['id', 'endDate'] }] },
+          { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'role'] },
+        ],
+      });
+
+      const byUser = {};      // súčet k dnešku
+      const pointsWeekAgo = {}; // súčet k stavu pred 7 dňami (len kolá skončené pred týždňom)
+      tips.forEach((t) => {
+        if (!t.User) return;
+        const uid = t.User.id;
+        if (!byUser[uid]) byUser[uid] = { user: t.User.toJSON(), totalPoints: 0, evaluated: 0, hits: 0 };
+        byUser[uid].totalPoints += t.points || 0;
+        byUser[uid].evaluated += 1;
+        if ((t.points || 0) > 0) byUser[uid].hits += 1;
+
+        // stav spred týždňa: započítaj len tipy, ktorých kolo skončilo pred weekAgo
+        const rEnd = t.Match && t.Match.Round ? t.Match.Round.endDate : null;
+        if (rEnd && new Date(rEnd) < weekAgo) {
+          pointsWeekAgo[uid] = (pointsWeekAgo[uid] || 0) + (t.points || 0);
+        }
+      });
+
+      board = Object.values(byUser)
+        .map((b) => ({
+          userId: b.user.id,
+          name: [b.user.firstName, b.user.lastName].filter(Boolean).join(' ') || b.user.username,
+          username: b.user.username,
+          role: b.user.role,
+          initials: ([b.user.firstName, b.user.lastName].filter(Boolean).map((x) => x[0]).join('') || (b.user.username || '?')[0]).toUpperCase(),
+          totalPoints: b.totalPoints,
+          evaluated: b.evaluated,
+          accuracy: b.evaluated > 0 ? Math.round((b.hits / b.evaluated) * 100) : null,
+        }))
+        .sort((a, b) => b.totalPoints - a.totalPoints || (b.accuracy || 0) - (a.accuracy || 0));
+
+      board.forEach((row, i) => { row.rank = i + 1; });
+
+      // ── SKOKANI TÝŽDŇA ──
+      // poradie teraz vs. poradie podľa stavu pred týždňom; skok = zlepšenie pozície.
+      const rankNow = {};
+      board.forEach((r) => { rankNow[r.userId] = r.rank; });
+
+      const weekBoard = Object.keys(byUser)
+        .map((uid) => ({ userId: Number(uid), points: pointsWeekAgo[uid] || 0 }))
+        .sort((a, b) => b.points - a.points);
+      const rankThen = {};
+      weekBoard.forEach((r, i) => { rankThen[r.userId] = i + 1; });
+
+      movers = board
+        .map((r) => {
+          const then = rankThen[r.userId];
+          const gained = r.totalPoints - (pointsWeekAgo[r.userId] || 0); // body za posledný týždeň
+          const climb = (then != null) ? (then - r.rank) : 0;            // o koľko miest hore
+          return { userId: r.userId, name: r.name, username: r.username, initials: r.initials, rank: r.rank, climb, gained };
+        })
+        .filter((m) => m.gained > 0)                 // niečo získal za týždeň
+        .sort((a, b) => b.climb - a.climb || b.gained - a.gained)
+        .slice(0, 3);
+    }
+  }
+
+  const myRow = meId ? board.find((r) => r.userId === meId) : null;
+
+  // zoznam sezón pre filter (unikátne podľa seasonId)
+  const seasonOpts = [];
+  const seenSeason = {};
+  officialLeagues.forEach((l) => { if (!seenSeason[l.seasonId]) { seenSeason[l.seasonId] = 1; seasonOpts.push({ id: l.seasonId, name: l.name }); } });
+
+  res.render('leaderboards', {
+    board,
+    podium: board.slice(0, 3),
+    rest: board.slice(3),
+    myRow: myRow || null,
+    movers,
+    meId,
+    officialLeagues: seasonOpts,
+    seasonFilter,
+    selectedSeasonName,
+    periodLabel: selectedSeasonName ? selectedSeasonName : 'Posledný rok',
+  });
+});
+
+module.exports = { seasonLeaderboardPage, globalLeaderboardPage };
