@@ -14,6 +14,7 @@ const { Op } = Sequelize;
 const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
 const { ApiError, asyncHandler } = require('../middleware/error.middleware');
+const notify = require('../utils/notification.service');
 
 const LEAGUE_LIMITS = { player: 5, vip: 10 }; // admin = bez limitu
 const DEFAULT_SCORING = { exactScore: 10, correctGoals: 1, correctWinner: 3, goalDifference: 2 };
@@ -197,6 +198,10 @@ const joinLeague = asyncHandler(async (req, res) => {
     where: { userId: uid, seasonId: league.seasonId },
     defaults: { userId: uid, seasonId: league.seasonId, role: 'player', joinedAt: new Date() },
   });
+
+  // notifikácia ostatným členom ligy o novom hráčovi
+  const joiner = await User.findByPk(uid, { attributes: ['username'] });
+  await notify.memberJoined(league, uid, joiner ? joiner.username : null);
 
   res.status(200).json({
     success: true,

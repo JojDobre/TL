@@ -145,4 +145,121 @@ const roundDetailPage = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { roundDetailPage };
+// kvalita môjho tipu na zápas (pre farebné zvýraznenie vo výsledkoch)
+function tipQuality(myTip, match, exactPts) {
+  if (!match || match.status === 'canceled') return 'canceled';
+  if (match.status !== 'finished') return 'pending';
+  if (!myTip) return 'none';
+  const pts = myTip.points || 0;
+  if (match.tipType !== 'winner' && pts >= exactPts) return 'exact';
+  if (pts > 0) return 'partial';
+  return 'zero';
+}
+
+// GET /rounds/:id/results — výsledky vyhodnoteného kola + tipy ostatných
+const roundResultsPage = asyncHandler(async (req, res) => {
+  const round = await Round.findByPk(req.params.id, {
+    include: [{
+      model: League,
+      attributes: ['id', 'name', 'seasonId', 'scoringSystem', 'creatorId', 'templateId'],
+      include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'ended', 'endDate'] }],
+    }],
+  });
+  if (!round) return res.status(404).render('error-page', { message: 'Kolo nebolo nájdené.' });
+
+  const league = round.League;
+  const scoring = (league && league.scoringSystem) || DEFAULT_SCORING;
+  const exactPts = scoring.exactScore || 10;
+  const meId = req.userId ? Number(req.userId) : null;
+  const status = roundStatus(round);
+  const isManager = await canManageRound(league, meId);
+  // tipy ostatných sa odhalia po uzávierke alebo správcovi (rovnaká férová logika)
+  const revealAll = status === 'finished' || isManager;
+
+  const matches = await Match.findAll({
+    where: { roundId: round.id },
+    include: [{ model: Team, as: 'homeTeam' }, { model: Team, as: 'awayTeam' }],
+    order: [['matchTime', 'ASC']],
+  });
+
+  // moje tipy
+  const myTipsArr = meId ? await Tip.findAll({
+    where: { userId: meId },
+    include: [{ model: Match, where: { roundId: round.id }, required: true, attributes: ['id'] }],
+  }) : [];
+  const myTips = {};
+  myTipsArr.forEach((t) => { myTips[t.matchId] = t; });
+
+  // všetky tipy (na cudzie + rebríček)
+  const allTips = await Tip.findAll({
+    include: [
+      { model: Match, where: { roundId: round.id }, required: true, attributes: ['id'] },
+      { model: User, attributes: ['id', 'username', 'firstName', 'lastName'] },
+    ],
+  });
+  const othersByMatch = {};
+  const byUser = {};
+  allTips.forEach((t) => {
+    if (t.User) {
+      const uid = t.User.id;
+      if (!byUser[uid]) byUser[uid] = { user: t.User.toJSON(), totalPoints: 0 };
+      byUser[uid].totalPoints += t.points || 0;
+    }
+    if (revealAll && !(meId && t.userId === meId)) {
+      if (!othersByMatch[t.matchId]) othersByMatch[t.matchId] = [];
+      othersByMatch[t.matchId].push(t);
+    }
+  });
+
+  // priprav zápasy
+  const matchData = matches.map((m) => {
+    const mj = m.toJSON();
+    const my = myTips[m.id] || null;
+    const quality = tipQuality(my, mj, exactPts);
+    const others = (othersByMatch[m.id] || []).map((t) => ({
+      name: [t.User.firstName, t.User.lastName].filter(Boolean).join(' ') || t.User.username || 'Hráč',
+      abbr: teamAbbr([t.User.firstName, t.User.lastName].filter(Boolean).join(' ') || t.User.username),
+      homeScore: t.homeScore, awayScore: t.awayScore, winner: t.winner,
+      exact: (mj.tipType !== 'winner' && (t.points || 0) >= exactPts),
+    }));
+    return {
+      id: mj.id,
+      home: mj.homeTeam ? mj.homeTeam.name : '—',
+      away: mj.awayTeam ? mj.awayTeam.name : '—',
+      homeAbbr: teamAbbr(mj.homeTeam && mj.homeTeam.name),
+      awayAbbr: teamAbbr(mj.awayTeam && mj.awayTeam.name),
+      homeScore: mj.homeScore, awayScore: mj.awayScore, status: mj.status, tipType: mj.tipType,
+      myTip: my ? { homeScore: my.homeScore, awayScore: my.awayScore, winner: my.winner, points: my.points } : null,
+      quality,
+      othersCount: (othersByMatch[m.id] || []).length,
+      others: others.slice(0, 4),     // zobrazíme prvé 4, zvyšok "+N ďalších"
+      othersMore: Math.max(0, (othersByMatch[m.id] || []).length - 4),
+      revealAll,
+    };
+  });
+
+  // rebríček kola + moja pozícia
+  const leaderboard = Object.values(byUser).sort((a, b) => b.totalPoints - a.totalPoints);
+  let myRank = null;
+  leaderboard.forEach((row, i) => { if (meId && row.user.id === meId) myRank = i + 1; });
+
+  const myPoints = matchData.reduce((s, m) => s + (m.myTip && m.myTip.points ? m.myTip.points : 0), 0);
+  const myExactCount = matchData.filter((m) => m.quality === 'exact').length;
+  const myPartialCount = matchData.filter((m) => m.quality === 'partial').length;
+  const evaluatedCount = matches.filter((m) => m.status === 'finished').length;
+
+  res.render('round-results', {
+    round: { id: round.id, name: round.name, status },
+    league,
+    matches: matchData,
+    leaderboard: leaderboard.slice(0, 8),
+    revealAll,
+    isManager,
+    meId,
+    myPoints, myRank, myExactCount, myPartialCount, evaluatedCount,
+    totalMatches: matches.length,
+  });
+});
+
+module.exports = { roundDetailPage, roundResultsPage };
+

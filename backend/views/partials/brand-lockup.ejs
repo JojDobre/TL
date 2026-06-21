@@ -1,0 +1,29 @@
+<%# views/partials/brand-lockup.ejs
+    Oficiálna značka tifo.sk podľa js/shell.js: maskot (transparentné PNG) +
+    wordmark "tifo.sk". Holý <img> bez dlaždice, object-fit:contain, presne ako
+    ICON v shell.js.
+
+    Parametre (všetky voliteľné):
+      size       — výška/šírka marky v px (default 36)
+      wordmark   — true/false, zobraziť text "tifo.sk" (default true)
+      fontSize   — veľkosť wordmarku v px (default 20)
+      wordColor  — farba "tifo" (default var(--text-1))
+      href       — odkaz (default "/")
+      gap        — medzera marka↔text v px (default 10)
+      mb         — margin-bottom v px (default 0)
+-%>
+<%
+  const _size      = (typeof size      !== 'undefined') ? size      : 36;
+  const _wordmark  = (typeof wordmark  !== 'undefined') ? wordmark  : true;
+  const _fontSize  = (typeof fontSize  !== 'undefined') ? fontSize  : 20;
+  const _wordColor = (typeof wordColor !== 'undefined') ? wordColor : 'var(--text-1)';
+  const _href      = (typeof href      !== 'undefined') ? href      : '/';
+  const _gap       = (typeof gap       !== 'undefined') ? gap       : 10;
+  const _mb        = (typeof mb        !== 'undefined') ? mb        : 0;
+-%>
+<a class="row g-2" href="<%= _href %>" style="gap:<%= _gap %>px;<% if (_mb) { %>margin-bottom:<%= _mb %>px;<% } %>text-decoration:none;color:inherit">
+  <img class="logo-mark" src="/branding/identity/tifo-mascot-transparent.png" alt="" aria-hidden="true" style="width:<%= _size %>px;height:<%= _size %>px;object-fit:contain">
+  <% if (_wordmark) { %>
+    <span class="wordmark" style="font-family:var(--font-display);font-weight:700;font-size:<%= _fontSize %>px;letter-spacing:-.02em;color:<%= _wordColor %>">tifo<b style="color:var(--gold)">.sk</b></span>
+  <% } %>
+</a>

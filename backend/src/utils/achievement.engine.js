@@ -202,15 +202,22 @@ async function evaluateUser(userId) {
 
   // urči, čo treba novo udeliť
   const now = new Date();
+  const awardedDefs = []; // pre notifikáciu (name, rarity)
   for (const it of items) {
     if (!it.alreadyOwned && it.res.earned) {
       toAward.push({ userId: uid, achievementId: it.def.id, dateAwarded: now });
       ownedMap[it.def.id] = now;
+      awardedDefs.push({ name: it.def.name, rarity: it.def.rarity });
     }
   }
   if (toAward.length) {
     // bulkCreate s ignoreDuplicates pre istotu (lazy beh môže prebehnúť paralelne)
     await UserAchievement.bulkCreate(toAward, { ignoreDuplicates: true });
+    // notifikácia o nových odznakoch (fire-and-forget; import tu kvôli prípadnej cyklickosti)
+    try {
+      const notify = require('./notification.service');
+      await notify.achievementsAwarded(uid, awardedDefs);
+    } catch (e) { /* notifikácia je vedľajší efekt, chybu ignorujeme */ }
   }
 
   // zostav výstup pre view

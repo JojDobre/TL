@@ -10,6 +10,7 @@ const { cloneTemplateInto } = require('../utils/league-clone.util');
 const { deleteLeague } = require('../utils/delete.util');
 const { SPORTS, COUNTRIES } = require('../utils/team.constants');
 const { asyncHandler } = require('../middleware/error.middleware');
+const notify = require('../utils/notification.service');
 
 const DEFAULT_SCORING = { exactScore: 10, correctGoals: 1, correctWinner: 3, goalDifference: 2 };
 
@@ -119,7 +120,7 @@ const joinLeagueSubmit = asyncHandler(async (req, res) => {
   }
 
   // findOrCreate: ak už členstvo existuje, nič nevytvára (žiadny duplicitný PRIMARY)
-  await UserLeague.findOrCreate({
+    const [, leagueCreated] = await UserLeague.findOrCreate({
     where: { userId, leagueId: league.id },
     defaults: { userId, leagueId: league.id, role: 'player', joinedAt: new Date() },
   });
@@ -129,6 +130,12 @@ const joinLeagueSubmit = asyncHandler(async (req, res) => {
     defaults: { userId, seasonId: league.seasonId, role: 'player', joinedAt: new Date() },
   });
 
+  // notifikácia ostatným členom — len ak naozaj pribudol nový člen
+  if (leagueCreated) {
+    const joiner = await User.findByPk(userId, { attributes: ['username'] });
+    await notify.memberJoined(league, userId, joiner ? joiner.username : null);
+  }
+  
   res.redirect('/leagues/' + league.id);
 });
 

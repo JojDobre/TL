@@ -6,15 +6,7 @@
      Parametre: `active` = id aktívnej položky (home/seasons/leaderboards/...). -->
 <% const nav = typeof active !== 'undefined' ? active : ''; %>
 <div class="nav"><div class="wrap nav-inner">
-  <a class="row g-2" href="/" style="gap:10px">
-    <svg class="logo-mark" viewBox="0 0 48 48" fill="none" aria-hidden="true" style="width:34px;height:34px">
-      <defs><linearGradient id="tlg-shell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9d83ff"/><stop offset="1" stop-color="#5b3fd6"/></linearGradient></defs>
-      <path d="M24 4 L40 9 V23 C40 33 33 40 24 44 C15 40 8 33 8 23 V9 Z" fill="url(#tlg-shell)" stroke="#9d83ff" stroke-width="1.2"/>
-      <path d="M15 28 L24 17 L33 28" fill="none" stroke="#0d1124" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M19 33 L24 27 L29 33" fill="none" stroke="#facc15" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    <span class="wordmark" style="font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:-.02em;color:var(--text-1)">Tiper<b style="color:var(--gold)">liga</b></span>
-  </a>
+    <%- include('brand-lockup', { icon: 40, fontSize: 20, href: '/' }) %>
 
   <nav class="nav-links">
     <a class="nav-link <%= nav==='home'?'active':'' %>" href="/">Domov</a>
@@ -43,11 +35,14 @@
       </a>
     <% } else { %>
       <div style="position:relative">
-        <button class="btn btn-ghost btn-icon bell" data-bell aria-label="Notifikácie">
+        <button class="btn btn-ghost btn-icon bell" data-bell aria-label="Notifikácie" style="position:relative">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+          <span class="bell-badge" data-bell-badge hidden style="position:absolute;top:2px;right:2px;min-width:16px;height:16px;padding:0 4px;border-radius:99px;background:var(--danger,#e5484d);color:#fff;font-size:10px;font-weight:800;line-height:16px;text-align:center"></span>
         </button>
-        <div class="dropdown" data-bell-panel hidden>
+        <div class="dropdown" data-bell-panel hidden style="right:0;min-width:300px">
           <div class="dd-head">Notifikácie</div>
+          <div data-bell-list><div class="dd-link" style="color:var(--text-4)">Načítavam…</div></div>
+          <div class="dd-sep"></div>
           <a class="dd-link" href="/notifications">Zobraziť všetky</a>
         </div>
       </div>
@@ -71,3 +66,33 @@
     <% } %>
   </div>
 </div></div>
+
+<% if (currentUserId) { %>
+<script>
+(function(){
+  // Naplnenie zvončeka: počet neprečítaných (badge) + posledné notifikácie (dropdown).
+  var badge = document.querySelector('[data-bell-badge]');
+  var list = document.querySelector('[data-bell-list]');
+  function icon(t){
+    return ({new_round:'🏒',deadline:'⏰',result:'🎯',achievement:'🏆',rank:'📈',member:'👥',canceled:'🚫'})[t] || '🔔';
+  }
+  function esc(s){ var d=document.createElement('div'); d.textContent=s==null?'':String(s); return d.innerHTML; }
+  fetch('/api/notifications/unread-count', { headers:{ 'Accept':'application/json' } })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){ if(d && d.count > 0 && badge){ badge.textContent = d.count > 99 ? '99+' : d.count; badge.hidden = false; } })
+    .catch(function(){});
+  fetch('/api/notifications/recent', { headers:{ 'Accept':'application/json' } })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if(!list) return;
+      if(!d || !d.items || !d.items.length){ list.innerHTML = '<div class="dd-link" style="color:var(--text-4)">Žiadne notifikácie</div>'; return; }
+      list.innerHTML = d.items.map(function(n){
+        var href = n.link || '/notifications';
+        var dot = n.read ? '' : '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--brand);margin-right:6px;vertical-align:middle"></span>';
+        return '<a class="dd-link" href="'+href+'" style="white-space:normal;line-height:1.4">'+dot+'<span style="margin-right:6px">'+icon(n.type)+'</span>'+esc(n.title||'Notifikácia')+'</a>';
+      }).join('');
+    })
+    .catch(function(){});
+})();
+</script>
+<% } %>

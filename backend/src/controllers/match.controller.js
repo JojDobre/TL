@@ -13,6 +13,7 @@ const { Match, Round, Team, League, Season, User, UserSeason, Sequelize, Tip } =
 const { Op } = Sequelize;
 const { ApiError, asyncHandler } = require('../middleware/error.middleware');
 const { isLeagueLocked } = require('../utils/league.utils');
+const notify = require('../utils/notification.service');
 
 const DEFAULT_SCORING = { exactScore: 10, correctGoals: 1, correctWinner: 3, goalDifference: 2 };
 
@@ -250,6 +251,7 @@ const evaluateMatch = asyncHandler(async (req, res) => {
     await match.save();
     for (const tip of match.Tips || []) { tip.points = 0; await tip.save(); }
     await propagateToClones(match);
+    await notify.matchCanceled(match, match.Round, match.Tips || []);
     return res.status(200).json({ success: true, message: 'Zápas bol zrušený, body vynulované.', data: match });
   }
 
@@ -283,6 +285,7 @@ const evaluateMatch = asyncHandler(async (req, res) => {
       tip.points = calculatePoints(tip, match, scoring);
       await tip.save();
     }
+    await notify.matchEvaluated(match, match.Round, match.Tips || []);
   }
 
   // prepíš výsledok aj do prípadných klonov a prepočítaj ich tipy

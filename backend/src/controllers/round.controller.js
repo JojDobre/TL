@@ -12,6 +12,7 @@
 const { Round, League, Match, User, UserSeason, Season, Team, Tip, Sequelize } = require('../models');
 const { Op } = Sequelize;
 const { ApiError, asyncHandler } = require('../middleware/error.middleware');
+const notify = require('../utils/notification.service');
 
 const DEFAULT_EXACT = 10;
 
@@ -170,6 +171,9 @@ const createRound = asyncHandler(async (req, res) => {
     name: name.trim(), description, leagueId,
     startDate: startObj, endDate: endObj, active: true,
   });
+
+  // notifikácia členom ligy o novom kole (fire-and-forget, nezhodí akciu)
+  await notify.roundCreated(newRound, league);
 
   res.status(201).json({ success: true, message: 'Kolo bolo úspešne vytvorené.', data: newRound });
 });

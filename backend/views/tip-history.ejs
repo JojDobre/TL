@@ -1,0 +1,120 @@
+<%- include('partials/head', { title: 'História tipov', page: '', active: '', pageStyle: `
+  .th-head { padding:30px 0 18px; }
+  .filters { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:18px; }
+  .summary { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
+  .th-table { width:100%; }
+  .th-row { display:grid; grid-template-columns: 96px 1fr 86px 86px 90px; gap:14px; align-items:center; padding:14px; border-bottom:1px solid var(--line); }
+  .th-row:last-child { border:none; }
+  .th-head-row { display:grid; grid-template-columns: 96px 1fr 86px 86px 90px; gap:14px; padding:10px 14px; }
+  .th-head-row span { font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.1em; color:var(--text-4); font-weight:700; }
+  .th-date { font-size:var(--fs-xs); color:var(--text-4); font-weight:600; }
+  .th-match { display:flex; align-items:center; gap:10px; min-width:0; }
+  .th-teams { font-weight:600; color:var(--text-1); font-size:var(--fs-sm); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .th-sub { font-size:var(--fs-xs); color:var(--text-4); }
+  .th-val { font-family:var(--num); font-weight:700; text-align:center; font-variant-numeric:tabular-nums; }
+  .ta-r { text-align:right; }
+  @media (max-width:760px){
+    .summary { grid-template-columns:1fr 1fr; }
+    .filters { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .filters .select { width:100% !important; }
+    .filters .grow { display:none; }
+    .filters > span { grid-column:1 / -1; }
+    .th-head-row { display:none; }
+    .th-row { grid-template-columns:1fr 1fr auto; grid-template-areas:"match match pts" "tip res pts"; gap:5px 12px; align-items:center; padding:14px; }
+    .th-row .th-date-col { display:none; }
+    .th-match { grid-area:match; }
+    .th-match .team-logo { display:none; }
+    .th-teams { white-space:normal; }
+    .th-row > .th-val:nth-child(3) { grid-area:tip; justify-self:start; text-align:left; }
+    .th-row > .th-val:nth-child(4) { grid-area:res; justify-self:start; text-align:left; }
+    .th-row > .th-val:nth-child(3)::before { content:"Tip "; color:var(--text-4); font-weight:600; font-family:var(--font-sans); font-size:var(--fs-xs); }
+    .th-row > .th-val:nth-child(4)::before { content:"Výsl. "; color:var(--text-4); font-weight:600; font-family:var(--font-sans); font-size:var(--fs-xs); }
+    .th-row > .ta-r { grid-area:pts; align-self:center; }
+  }
+` }) %>
+<%
+  var SK_M=['jan','feb','mar','apr','máj','jún','júl','aug','sep','okt','nov','dec'];
+  function fmtDate(d){ if(!d) return '—'; var x=new Date(d); return x.getDate()+'. '+SK_M[x.getMonth()]; }
+  function ptsPill(q, pts){
+    if(q==='exact') return '<span class="pts-pill max">+'+pts+'</span>';
+    if(q==='partial') return '<span class="pts-pill">+'+pts+'</span>';
+    if(q==='zero') return '<span class="pts-pill zero">0</span>';
+    if(q==='canceled') return '<span class="tag tag-muted">Zrušený</span>';
+    return '<span class="tag tag-muted">Čaká</span>';
+  }
+  function tipCls(q){ return q==='exact' ? 'tip-correct' : q==='zero' ? 'tip-wrong' : ''; }
+  // helper na zachovanie ostatných filtrov v odkaze
+  function qs(overrides){
+    var base = { sezona: filters.season, liga: filters.league, vysledok: filters.result };
+    Object.assign(base, overrides);
+    return Object.entries(base).filter(function(e){ return e[1]; }).map(function(e){ return e[0]+'='+encodeURIComponent(e[1]); }).join('&');
+  }
+%>
+
+<div class="wrap th-head">
+  <div class="between wrap-gap" style="gap:16px">
+    <div>
+      <div class="eyebrow">História tipov</div>
+      <h1 style="font-size:clamp(2rem,3.2vw,2.6rem)">Všetky tvoje tipy</h1>
+      <p class="muted" style="margin-top:6px">Kompletný prehľad tipov, výsledkov a získaných bodov naprieč ligami.</p>
+    </div>
+    <a href="/stats" class="btn btn-secondary btn-sm">Štatistiky →</a>
+  </div>
+</div>
+
+<div class="wrap" style="padding-bottom:64px">
+  <div class="summary">
+    <div class="card stat"><div class="stat-value"><%= summary.totalTips %></div><div class="stat-label">tipov spolu</div></div>
+    <div class="card stat"><div class="stat-value ok"><%= summary.exactCount %></div><div class="stat-label">presných výsledkov</div></div>
+    <div class="card stat"><div class="stat-value gold"><%= summary.totalPoints %></div><div class="stat-label">získaných bodov</div></div>
+    <div class="card stat"><div class="stat-value brand"><%= summary.accuracy == null ? '—' : summary.accuracy + ' %' %></div><div class="stat-label">presnosť</div></div>
+  </div>
+
+  <!-- filtre: GET formulár, auto-submit pri zmene -->
+  <form method="GET" action="/tip-history" class="filters" id="thFilters">
+    <select class="select" style="width:auto" name="sezona" onchange="this.form.submit()">
+      <option value="">Všetky sezóny</option>
+      <% seasons.forEach(function(s){ %><option value="<%= s.id %>" <%= filters.season === s.id ? 'selected' : '' %>><%= s.name %></option><% }); %>
+    </select>
+    <select class="select" style="width:auto" name="liga" onchange="this.form.submit()">
+      <option value="">Všetky ligy</option>
+      <% leagues.forEach(function(l){ %><option value="<%= l.id %>" <%= filters.league === l.id ? 'selected' : '' %>><%= l.name %></option><% }); %>
+    </select>
+    <select class="select" style="width:auto" name="vysledok" onchange="this.form.submit()">
+      <option value="">Všetky výsledky</option>
+      <option value="exact" <%= filters.result === 'exact' ? 'selected' : '' %>>Iba presné</option>
+      <option value="zero" <%= filters.result === 'zero' ? 'selected' : '' %>>Iba bez bodov</option>
+    </select>
+    <div class="grow"></div>
+    <span class="muted" style="font-size:var(--fs-sm)">Zobrazené <%= shownCount %> z <%= summary.totalTips %></span>
+  </form>
+
+  <% if (rows.length === 0) { %>
+    <div class="card card-pad center" style="text-align:center;padding:48px 24px">
+      <div style="font-size:38px;margin-bottom:10px">🗂️</div>
+      <h3 style="margin-bottom:6px">Žiadne tipy</h3>
+      <p class="muted"><%= summary.totalTips === 0 ? 'Zatiaľ si nezadal žiadny tip. Vyber sezónu a začni tipovať.' : 'Pre zvolený filter nie sú žiadne tipy.' %></p>
+    </div>
+  <% } else { %>
+  <div class="card" style="padding:8px">
+    <div class="th-head-row"><span class="th-date-col">Dátum</span><span>Zápas</span><span style="text-align:center">Tvoj tip</span><span style="text-align:center">Výsledok</span><span class="ta-r">Body</span></div>
+    <div class="hr"></div>
+    <div class="th-table">
+      <% rows.forEach(function(r){ %>
+        <div class="th-row" <%= r.quality === 'canceled' ? 'style="opacity:.7"' : '' %>>
+          <span class="th-date th-date-col"><%= fmtDate(r.date) %><br><%= r.roundName %></span>
+          <div class="th-match">
+            <span class="team-logo" style="width:30px;height:30px;font-size:10px;background:linear-gradient(135deg,#3a7bd5,#1b3f72)"><%= r.homeAbbr %></span>
+            <div style="min-width:0"><div class="th-teams"><%= r.home %> — <%= r.away %></div><div class="th-sub col-hide"><%= r.leagueName %><%= r.quality === 'canceled' ? ' · zrušený zápas' : '' %></div></div>
+          </div>
+          <span class="th-val <%= tipCls(r.quality) %>"><%= r.tipStr %></span>
+          <span class="th-val <%= r.quality === 'canceled' ? 'muted' : '' %>"><%= r.resStr %></span>
+          <span class="ta-r"><%- ptsPill(r.quality, r.points) %></span>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+  <% } %>
+</div>
+
+<%- include('partials/footer') %>

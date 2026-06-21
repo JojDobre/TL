@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="sk" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tifo.sk — Logo &amp; Identita</title>
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/logo.css">
+<style>
+  body { padding: 0 0 120px; }
+  .wrap { width:100%; max-width:1180px; margin-inline:auto; padding-inline:32px; }
+  @media(max-width:720px){ .wrap{ padding-inline:18px; } }
+
+  /* ---------- top bar ---------- */
+  .topbar { position:sticky; top:0; z-index:30; backdrop-filter:blur(14px);
+    background:rgba(9,12,22,.72); border-bottom:1px solid var(--line); }
+  .topbar .wrap { display:flex; align-items:center; justify-content:space-between; height:64px; }
+  .topbar .wm { color:var(--text-1); }
+  .topbar nav { display:flex; gap:22px; }
+  .topbar nav a { font-family:var(--num); font-size:12px; color:var(--text-3); letter-spacing:.04em; text-decoration:none; }
+  .topbar nav a:hover { color:var(--gold); }
+  @media(max-width:760px){ .topbar nav{ display:none; } }
+
+  /* ---------- hero ---------- */
+  .hero { position:relative; overflow:hidden; padding:84px 0 70px; border-bottom:1px solid var(--line); }
+  .hero .glow { position:absolute; inset:0; z-index:-1; pointer-events:none;
+    background:
+      radial-gradient(620px 460px at 50% 8%, rgba(250,204,21,.16), transparent 62%),
+      radial-gradient(700px 520px at 12% 120%, rgba(124,92,255,.18), transparent 60%); }
+  .hero .wrap { display:flex; flex-direction:column; align-items:center; text-align:center; }
+  .pill { display:inline-block; font-family:var(--num); font-size:11px; font-weight:700;
+    letter-spacing:.16em; text-transform:uppercase; color:var(--gold); background:var(--gold-soft);
+    border:1px solid rgba(250,204,21,.35); padding:6px 14px; border-radius:999px; margin-bottom:30px; }
+  .hero h1 { font-family:var(--tifo-font); font-weight:700; font-size:clamp(2.6rem,7vw,4.6rem); letter-spacing:-.04em; margin-top:14px; color:var(--text-1); }
+  .hero h1 .sk { color:var(--gold); }
+  .hero p { max-width:56ch; color:var(--text-2); font-size:var(--fs-lg); line-height:1.55; margin-top:14px; }
+  .meaning { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:30px; }
+  .meaning span { font-family:var(--num); font-size:12px; color:var(--text-3);
+    border:1px solid var(--line-strong); border-radius:999px; padding:7px 14px; }
+  .meaning b { color:var(--text-1); font-weight:700; }
+
+  /* ---------- section scaffold ---------- */
+  section { padding:64px 0; border-bottom:1px solid var(--line); }
+  .sec-head { display:flex; align-items:baseline; gap:14px; margin-bottom:30px; }
+  .sec-num { font-family:var(--num); font-size:13px; font-weight:700; color:var(--gold); }
+  .sec-head h2 { font-size:var(--fs-h2); letter-spacing:-.02em; }
+  .sec-head p { color:var(--text-3); font-size:var(--fs-base); margin-left:auto; max-width:40ch; text-align:right; }
+  @media(max-width:720px){ .sec-head{ flex-direction:column; gap:6px; } .sec-head p{ margin-left:0; text-align:left; } }
+
+  .grid { display:grid; gap:22px; }
+  .g3 { grid-template-columns:repeat(3,1fr); }
+  .g2 { grid-template-columns:repeat(2,1fr); }
+  .g4 { grid-template-columns:repeat(4,1fr); }
+  @media(max-width:880px){ .g3,.g4{ grid-template-columns:repeat(2,1fr); } }
+  @media(max-width:560px){ .g2,.g3,.g4{ grid-template-columns:1fr; } }
+
+  .card { background:var(--surface-1); border:1px solid var(--line); border-radius:var(--r-lg);
+    padding:30px 24px 20px; display:flex; flex-direction:column; align-items:center; gap:18px; }
+  .stage { width:100%; aspect-ratio:4/3; border-radius:var(--r-md); display:flex;
+    align-items:center; justify-content:center; overflow:hidden; }
+  .stage img { width:64%; height:auto; }
+  .lbl { text-align:center; }
+  .lbl .t { font-family:var(--font-display); font-weight:700; font-size:14px; color:var(--text-1); }
+  .lbl .d { font-size:12.5px; color:var(--text-3); margin-top:2px; }
+  .tagm { display:inline-block; font-family:var(--num); font-size:10px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:3px 8px; border-radius:6px; margin-top:8px; }
+  .tagm.prim { color:var(--gold); background:var(--gold-soft); border:1px solid rgba(250,204,21,.3); }
+  .tagm.sec  { color:var(--text-3); background:var(--surface-2); border:1px solid var(--line-strong); }
+
+  .bg-dark { background:#080e14; }
+  .bg-deep { background:#06080f; }
+  .bg-light { background:#f4f6fc; }
+  .bg-gold { background:linear-gradient(150deg,#fde047,#f5a524); }
+  .bg-violet { background:linear-gradient(150deg,#7c5cff,#5b3fd6); }
+  .bg-check { background:
+      linear-gradient(45deg,#1a2236 25%,transparent 25%,transparent 75%,#1a2236 75%),
+      linear-gradient(45deg,#1a2236 25%,#11192b 25%,#11192b 75%,#1a2236 75%);
+    background-size:22px 22px; background-position:0 0,11px 11px; }
+
+  /* ---------- logo system grid ---------- */
+  .sys-stage { width:100%; aspect-ratio:16/10; background:#080e14; border-radius:var(--r-md);
+    display:flex; align-items:center; justify-content:center; }
+  .wmk { font-family:var(--tifo-font); font-weight:700; letter-spacing:-.03em; line-height:1; color:#eef1f9; }
+  .wmk .sk { color:var(--gold); }
+
+  /* ---------- construction / anatomy ---------- */
+  .anatomy { display:grid; grid-template-columns:1fr 1fr; gap:30px; align-items:center; }
+  @media(max-width:760px){ .anatomy{ grid-template-columns:1fr; } }
+  .anatomy .frame { background:
+      linear-gradient(var(--line) 1px, transparent 1px) 0 0/100% 12.5%,
+      linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0/12.5% 100%,
+      #0a0e1c;
+    border:1px solid var(--line-strong); border-radius:var(--r-md); padding:8%; }
+  .anatomy .frame img { width:100%; display:block; filter:drop-shadow(0 16px 30px rgba(0,0,0,.5)); }
+  .anatomy ul { list-style:none; display:flex; flex-direction:column; gap:16px; }
+  .anatomy li { display:flex; gap:14px; align-items:flex-start; }
+  .anatomy .pin { font-family:var(--num); font-weight:700; font-size:12px; color:var(--ink, #0a0e1c);
+    background:var(--gold); width:24px; height:24px; border-radius:50%; flex:none; display:flex;
+    align-items:center; justify-content:center; }
+  .anatomy .ttl { font-family:var(--font-display); font-weight:700; font-size:14px; color:var(--text-1); }
+  .anatomy .dsc { font-size:13px; color:var(--text-3); margin-top:2px; line-height:1.5; }
+
+  /* ---------- clearspace ---------- */
+  .clear-wrap { background:var(--surface-1); border:1px solid var(--line); border-radius:var(--r-lg); padding:40px; }
+  .clear-box { position:relative; width:240px; max-width:78%; margin:0 auto; }
+  .clear-box img { width:100%; display:block; position:relative; z-index:2; }
+  .clear-box .pad { position:absolute; inset:-22%; border:1.5px dashed rgba(250,204,21,.55); border-radius:8px; }
+  .clear-note { display:flex; gap:30px; flex-wrap:wrap; margin-top:30px; }
+  .clear-note div { flex:1; min-width:200px; }
+  .clear-note .k { font-family:var(--num); font-size:12px; color:var(--gold); letter-spacing:.12em; text-transform:uppercase; font-weight:700; }
+  .clear-note .v { color:var(--text-2); font-size:14px; margin-top:6px; line-height:1.5; }
+
+  /* ---------- sizing / favicon ---------- */
+  .sizes { display:flex; align-items:flex-end; gap:28px; flex-wrap:wrap; justify-content:center; }
+  .sizes figure { display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .sizes figcaption { font-family:var(--num); font-size:11px; color:var(--text-3); }
+
+  /* ---------- color palette ---------- */
+  .swatch { border-radius:var(--r-md); overflow:hidden; border:1px solid var(--line); }
+  .swatch .chip { height:104px; }
+  .swatch .info { padding:13px 15px; background:var(--surface-1); }
+  .swatch .nm { font-family:var(--font-display); font-weight:700; font-size:14px; color:var(--text-1); }
+  .swatch .hex { font-family:var(--num); font-size:12px; color:var(--text-3); margin-top:2px; letter-spacing:.04em; }
+
+  /* ---------- typography spec ---------- */
+  .type-spec { display:grid; grid-template-columns:1.2fr .8fr; gap:24px; align-items:stretch; }
+  @media(max-width:760px){ .type-spec{ grid-template-columns:1fr; } }
+  .type-big { background:#080e14; border:1px solid var(--line); border-radius:var(--r-lg); padding:40px;
+    display:flex; flex-direction:column; justify-content:center; gap:18px; }
+  .type-big .big { font-family:var(--tifo-font); font-weight:700; font-size:clamp(3rem,8vw,5rem); letter-spacing:-.04em; color:#eef1f9; line-height:1; }
+  .type-big .big .sk { color:var(--gold); }
+  .type-big .set { font-family:var(--tifo-font); font-weight:500; font-size:18px; color:var(--text-3); letter-spacing:.02em; }
+  .type-meta { display:flex; flex-direction:column; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:var(--r-lg); overflow:hidden; }
+  .type-meta .row { background:var(--surface-1); padding:16px 18px; }
+  .type-meta .k { font-family:var(--num); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-4); }
+  .type-meta .v { font-family:var(--font-display); font-weight:700; font-size:15px; color:var(--text-1); margin-top:3px; }
+
+  /* ---------- in-context mockups ---------- */
+  .mock-grid { display:grid; grid-template-columns:1.1fr .9fr; gap:22px; }
+  @media(max-width:760px){ .mock-grid{ grid-template-columns:1fr; } }
+  .mock { background:var(--surface-1); border:1px solid var(--line); border-radius:var(--r-lg); padding:24px; }
+  .mock .mh { font-family:var(--num); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-3); margin-bottom:18px; }
+
+  .browser { background:var(--bg-deep); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .browser .bar { display:flex; align-items:center; gap:7px; padding:10px 12px; background:#11151f; }
+  .browser .dot { width:11px; height:11px; border-radius:50%; }
+  .browser .tabrow { display:flex; gap:6px; padding:0 10px; background:#11151f; }
+  .browser .tab { display:flex; align-items:center; gap:8px; background:var(--bg-deep);
+    padding:9px 16px; border-radius:9px 9px 0 0; font-size:12.5px; color:var(--text-2); }
+  .browser .tab .tifo-icon { width:16px; height:16px; border-radius:5px; }
+  .browser .body { padding:26px; text-align:center; color:var(--text-4); font-size:12px; }
+
+  .phone-row { display:flex; gap:22px; align-items:flex-start; justify-content:center; padding:8px 0; }
+  .phone-row .tifo-icon { width:74px; height:74px; box-shadow:var(--shadow-lg); }
+  .app-name { font-size:11px; color:var(--text-2); text-align:center; margin-top:7px; }
+
+  .avatar-row { display:flex; gap:20px; align-items:center; }
+  .avatar-row .tifo-icon { width:88px; height:88px; flex:none; border:2px solid rgba(250,204,21,.35); }
+  .avatar-meta .h { font-family:var(--font-display); font-weight:700; color:var(--text-1); font-size:15px; }
+  .avatar-meta .u { font-size:12.5px; color:var(--text-3); }
+  .avatar-meta .bio { font-size:13px; color:var(--text-2); margin-top:6px; max-width:30ch; }
+
+  .tifo-badge { margin:0 auto; }
+  .ring-txt { position:absolute; inset:0; }
+  .ring-txt text { font-family:var(--font-display); font-weight:700; font-size:13px; letter-spacing:.32em; fill:var(--gold); }
+
+  .nav-sample { display:flex; align-items:center; gap:11px; padding:13px 18px; border-radius:12px; }
+  .nav-sample.on-dark { background:#080e14; border:1px solid var(--line); }
+  .nav-sample.on-light { background:#fff; border:1px solid #e4e7f2; }
+
+  /* ---------- don'ts ---------- */
+  .dont-card { background:var(--surface-1); border:1px solid var(--line); border-radius:var(--r-md);
+    overflow:hidden; display:flex; flex-direction:column; }
+  .dont-stage { aspect-ratio:3/2; display:flex; align-items:center; justify-content:center; background:#0c1020; overflow:hidden; }
+  .dont-stage img { width:54%; }
+  .dont-foot { display:flex; align-items:flex-start; gap:10px; padding:14px 16px; }
+  .dont-x { width:20px; height:20px; flex:none; border-radius:50%; background:var(--danger-soft);
+    color:var(--danger); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:12px; margin-top:1px; }
+  .dont-foot .tx { font-size:13px; color:var(--text-2); line-height:1.45; }
+
+  /* ---------- usage code ---------- */
+  .code { background:var(--bg-deep); border:1px solid var(--line); border-radius:var(--r-md);
+    padding:18px 20px; font-family:var(--num); font-size:12.5px; line-height:1.7; color:var(--text-2);
+    overflow-x:auto; white-space:pre; }
+  .code .tag { color:var(--brand-bright); }
+  .code .at { color:var(--gold); }
+  .code .cm { color:var(--text-4); }
+
+  /* ---------- downloads ---------- */
+  .files { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+  @media(max-width:560px){ .files{ grid-template-columns:1fr; } }
+  .file { display:flex; align-items:center; gap:14px; background:var(--surface-1);
+    border:1px solid var(--line); border-radius:var(--r-md); padding:16px 18px; }
+  .file .ext { font-family:var(--num); font-weight:700; font-size:12px; color:var(--gold);
+    background:var(--gold-soft); border:1px solid rgba(250,204,21,.3); border-radius:8px; padding:8px 10px; min-width:46px; text-align:center; }
+  .file .ext.css { color:var(--brand-bright); background:var(--brand-soft); border-color:var(--brand-line); }
+  .file .fn { font-family:var(--num); font-size:13.5px; color:var(--text-1); }
+  .file .fd { font-size:12px; color:var(--text-3); margin-top:2px; }
+</style>
+</head>
+<body>
+<div class="bg-field"></div>
+
+<!-- ============ TOP BAR ============ -->
+<header class="topbar">
+  <div class="wrap">
+    <a class="tifo-lockup" href="/">
+      <img class="tifo-logo tifo-logo--sm" src="/branding/identity/tifo-mascot-transparent.png" alt="tifo.sk">
+      <span class="tifo-wordmark wm">tifo<span class="tifo-wordmark--sk">.sk</span></span>
+    </a>
+    <nav>
+      <a href="#system">Systém</a>
+      <a href="#mono">Mono</a>
+      <a href="#construction">Konštrukcia</a>
+      <a href="#context">Kontext</a>
+      <a href="#files">Súbory</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<div class="hero" data-screen-label="Hero">
+  <div class="glow"></div>
+  <div class="wrap">
+    <span class="pill">Vizuálna identita · v1.0</span>
+    <img class="tifo-logo tifo-logo--hero" src="/branding/identity/tifo-mascot-transparent.png" alt="tifo.sk maskot s ďalekohľadom">
+    <h1>tifo<span class="sk">.sk</span></h1>
+    <p>Maskot s ďalekohľadom — zlatý chuligán, čo neustále sleduje ihrisko. Pozorovateľ, tipér, fanúšik kotla. Toto je kompletná logo identita značky tifo.sk.</p>
+    <div class="meaning">
+      <span><b>Ďalekohľad</b> — sledujeme, analyzujeme, tipujeme</span>
+      <span><b>Úsmev</b> — radosť z hry a tribún</span>
+      <span><b>Zlatá</b> — víťazstvo &amp; energia kotla</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 01 LOGO SYSTÉM ============ -->
+<section id="system" data-screen-label="Logo system">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <h2>Logo systém</h2>
+      <p>Šesť oficiálnych podôb jedného loga. Vyber podľa priestoru a kontextu.</p>
+    </div>
+    <div class="grid g3">
+      <!-- primary horizontal -->
+      <div class="card">
+        <div class="sys-stage">
+          <div class="tifo-lockup" style="font-size:30px;">
+            <img class="tifo-logo" style="height:74px;" src="/branding/identity/tifo-mascot-transparent.png" alt="">
+            <span class="tifo-wordmark wmk">tifo<span class="sk">.sk</span></span>
+          </div>
+        </div>
+        <div class="lbl"><div class="t">Primárny lockup</div><div class="d">maskot + wordmark, horizontálne</div><span class="tagm prim">Primárne</span></div>
+      </div>
+      <!-- stacked -->
+      <div class="card">
+        <div class="sys-stage">
+          <div class="tifo-lockup tifo-lockup--stack" style="font-size:24px;">
+            <img class="tifo-logo" style="height:84px;" src="/branding/identity/tifo-mascot-transparent.png" alt="">
+            <span class="tifo-wordmark wmk">tifo<span class="sk">.sk</span></span>
+          </div>
+        </div>
+        <div class="lbl"><div class="t">Vertikálny lockup</div><div class="d">avatar, splash, merch</div><span class="tagm sec">Sekundárne</span></div>
+      </div>
+      <!-- mark only -->
+      <div class="card">
+        <div class="sys-stage"><img src="/branding/identity/tifo-mascot-transparent.png" style="height:104px;" alt=""></div>
+        <div class="lbl"><div class="t">Brand mark</div><div class="d">samotný maskot — ikona, favicon</div><span class="tagm prim">Primárne</span></div>
+      </div>
+      <!-- wordmark only -->
+      <div class="card">
+        <div class="sys-stage"><span class="wmk" style="font-size:46px;">tifo<span class="sk">.sk</span></span></div>
+        <div class="lbl"><div class="t">Wordmark</div><div class="d">len text — pätička, právne dokumenty</div><span class="tagm sec">Sekundárne</span></div>
+      </div>
+      <!-- with tagline -->
+      <div class="card">
+        <div class="sys-stage">
+          <div class="tifo-lockup tifo-lockup--stack" style="font-size:24px;">
+            <img class="tifo-logo" style="height:74px;" src="/branding/identity/tifo-mascot-transparent.png" alt="">
+            <span class="tifo-wordmark wmk">tifo<span class="sk">.sk</span></span>
+            <span class="tifo-tagline">Tipuj · Boduj · Vyhrávaj</span>
+          </div>
+        </div>
+        <div class="lbl"><div class="t">Lockup s claimom</div><div class="d">kampane, plagáty, úvodné obrazovky</div><span class="tagm sec">Sekundárne</span></div>
+      </div>
+      <!-- descriptor lockup -->
+      <div class="card">
+        <div class="sys-stage">
+          <div class="tifo-lockup" style="font-size:26px;">
+            <img class="tifo-logo" style="height:64px;" src="/branding/identity/tifo-mascot-transparent.png" alt="">
+            <span style="display:flex;flex-direction:column;line-height:1.05;">
+              <span class="tifo-wordmark wmk">tifo<span class="sk">.sk</span></span>
+              <span style="font-family:var(--num);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-3);margin-top:4px;">Tipovacia liga</span>
+            </span>
+          </div>
+        </div>
+        <div class="lbl"><div class="t">Lockup s deskriptorom</div><div class="d">prvé predstavenie značky</div><span class="tagm sec">Sekundárne</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 02 MONOCHROME ============ -->
+<section id="mono" data-screen-label="Monochrome">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <h2>Jednofarebné verzie</h2>
+      <p>Keď farba nie je možná — razba, foil, tlač na jednu farbu, vodoznak. Detail maskota ostáva čitateľný.</p>
+    </div>
+    <div class="grid g3">
+      <div class="card">
+        <div class="stage bg-dark"><img src="/branding/identity/tifo-mono-gold.png" alt=""></div>
+        <div class="lbl"><div class="t">Zlatá mono</div><div class="d">na tmavej — foil, premium</div></div>
+      </div>
+      <div class="card">
+        <div class="stage bg-light"><img src="/branding/identity/tifo-mono-navy.png" alt=""></div>
+        <div class="lbl"><div class="t">Atramentová mono</div><div class="d">na svetlej — jednofarebná tlač</div></div>
+      </div>
+      <div class="card">
+        <div class="stage bg-violet"><img src="/branding/identity/tifo-mono-white.png" alt=""></div>
+        <div class="lbl"><div class="t">Knockout (biela)</div><div class="d">reverzná na plnej farbe</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 03 NA POZADÍ ============ -->
+<section data-screen-label="Backgrounds">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <h2>Plnofarebné na pozadí</h2>
+      <p>Transparentné PNG na akomkoľvek pozadí — tmavom, svetlom aj farebnom. Bez čiernej plochy.</p>
+    </div>
+    <div class="grid g3">
+      <div class="card">
+        <div class="stage bg-dark"><img src="/branding/identity/tifo-mascot-transparent.png" alt=""></div>
+        <div class="lbl"><div class="t">Na tmavej</div><div class="d">primárne — transparentné PNG, bez pozadia</div></div>
+      </div>
+      <div class="card">
+        <div class="stage bg-light"><img src="/branding/identity/tifo-mascot-transparent.png" alt=""></div>
+        <div class="lbl"><div class="t">Na svetlej · PNG</div><div class="d">transparentný — obrys drží na bielej</div></div>
+      </div>
+      <div class="card">
+        <div class="stage bg-violet"><img src="/branding/identity/tifo-mascot-transparent.png" alt=""></div>
+        <div class="lbl"><div class="t">Na fialovej · PNG</div><div class="d">brand violet #7C5CFF</div></div>
+      </div>
+      <div class="card">
+        <div class="stage bg-deep"><img src="/branding/identity/tifo-mascot-transparent.png" alt=""></div>
+        <div class="lbl"><div class="t">Na hĺbkovej</div><div class="d">#06080F — app pozadie</div></div>
+      </div>
+      <div class="card">
+        <div class="stage bg-check"><img src="/branding/identity/tifo-mascot-transparent.png" alt=""></div>
+        <div class="lbl"><div class="t">Transparentné PNG</div><div class="d">priehľadné pozadie · raster master</div></div>
+      </div>
+      <div class="card">
+        <div class="stage bg-gold"><img src="/branding/identity/tifo-mascot-transparent.png" alt=""></div>
+        <div class="lbl"><div class="t">Na zlatej · PNG</div><div class="d">opatrne — len veľké formáty</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 04 KONŠTRUKCIA ============ -->
+<section id="construction" data-screen-label="Construction">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">04</span>
+      <h2>Konštrukcia &amp; anatómia</h2>
+      <p>Tri prvky tvoria značku. Žiadny sa neodstraňuje ani nepresúva.</p>
+    </div>
+    <div class="anatomy">
+      <div class="frame"><img src="/branding/identity/tifo-mascot-transparent.png" alt=""></div>
+      <ul>
+        <li><span class="pin">1</span><div><div class="ttl">Čiapka</div><div class="dsc">Šiltovka kotla — identita fanúšika, nie hráča. Vždy hore, mierne sklonená.</div></div></li>
+        <li><span class="pin">2</span><div><div class="ttl">Ďalekohľad</div><div class="dsc">Jadro významu: sledovať, čítať hru, tipovať. Centrálny optický bod loga.</div></div></li>
+        <li><span class="pin">3</span><div><div class="ttl">Úsmev</div><div class="dsc">Drzý škľab — radosť z hry a súťaže. Dáva značke charakter a teplo.</div></div></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 05 OCHRANNÁ ZÓNA ============ -->
+<section data-screen-label="Clearspace">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">05</span>
+      <h2>Ochranná zóna &amp; minimum</h2>
+      <p>Okolo loga nechaj voľný priestor a nezmenšuj ho pod čitateľnú hranicu.</p>
+    </div>
+    <div class="clear-wrap">
+      <div class="clear-box">
+        <div class="pad"></div>
+        <img src="/branding/identity/tifo-mascot-transparent.png" alt="">
+      </div>
+      <div class="clear-note">
+        <div>
+          <div class="k">Ochranná zóna</div>
+          <div class="v">Min. odstup ≈ 22 % výšky loga na každej strane (trieda <code>.tifo-clearspace</code>). Nič doň nezasahuje.</div>
+        </div>
+        <div>
+          <div class="k">Minimálna veľkosť</div>
+          <div class="v">Digitál: 24 px na výšku pre ikonu, 32 px pre lockup. Tlač: 10 mm.</div>
+        </div>
+        <div>
+          <div class="k">Master súbory</div>
+          <div class="v">SVG vektor (tmavé pozadie) + transparentné PNG 1254×1254 (svetlé / farebné). Vždy škáluj z nich.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 06 IKONA / FAVICON ============ -->
+<section data-screen-label="Sizing">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">06</span>
+      <h2>Ikona &amp; favicon</h2>
+      <p>Vektor drží čitateľnosť aj v malom — na tmavom squircle dlaždici (<code>.tifo-icon</code>).</p>
+    </div>
+    <div class="card" style="padding:46px 24px;">
+      <div class="sizes">
+        <figure><span class="tifo-icon" style="width:128px;height:128px;"><img src="/branding/identity/tifo-mascot-transparent.png" alt=""></span><figcaption>128 px</figcaption></figure>
+        <figure><span class="tifo-icon" style="width:88px;height:88px;"><img src="/branding/identity/tifo-mascot-transparent.png" alt=""></span><figcaption>88 px</figcaption></figure>
+        <figure><span class="tifo-icon" style="width:64px;height:64px;"><img src="/branding/identity/tifo-mascot-transparent.png" alt=""></span><figcaption>64 px</figcaption></figure>
+        <figure><span class="tifo-icon" style="width:44px;height:44px;border-radius:22%;"><img src="/branding/identity/tifo-mascot-transparent.png" alt=""></span><figcaption>44 px</figcaption></figure>
+        <figure><span class="tifo-icon" style="width:32px;height:32px;border-radius:20%;"><img src="/branding/identity/tifo-mascot-transparent.png" alt=""></span><figcaption>32 px</figcaption></figure>
+        <figure><span class="tifo-icon" style="width:24px;height:24px;border-radius:18%;"><img src="/branding/identity/tifo-mascot-transparent.png" alt=""></span><figcaption>24 px</figcaption></figure>
+        <figure><span class="tifo-icon" style="width:16px;height:16px;border-radius:16%;"><img src="/branding/identity/tifo-mascot-transparent.png" alt=""></span><figcaption>16 px</figcaption></figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 07 V KONTEXTE ============ -->
+<section id="context" data-screen-label="In context">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">07</span>
+      <h2>Logo v kontexte</h2>
+      <p>Ako maskot žije v aplikácii, na webe a na sociálnych sieťach.</p>
+    </div>
+    <div class="mock-grid">
+      <div class="mock">
+        <div class="mh">Web · navbar &amp; favicon</div>
+        <div class="browser">
+          <div class="bar">
+            <span class="dot" style="background:#f0476a;"></span>
+            <span class="dot" style="background:#f5a524;"></span>
+            <span class="dot" style="background:#1fd497;"></span>
+          </div>
+          <div class="tabrow">
+            <div class="tab"><span class="tifo-icon"><img src="/branding/identity/tifo-mascot-transparent.png" alt=""></span>tifo.sk — Tipovacia liga</div>
+          </div>
+          <div class="body">— obsah stránky —</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px; margin-top:18px;">
+          <div class="nav-sample on-dark">
+            <img class="tifo-logo" style="height:30px;" src="/branding/identity/tifo-mascot-transparent.png" alt="">
+            <span class="tifo-wordmark" style="font-size:18px;color:var(--text-1);">tifo<span class="tifo-wordmark--sk">.sk</span></span>
+          </div>
+          <div class="nav-sample on-light">
+            <img class="tifo-logo" style="height:30px;" src="/branding/identity/tifo-mascot-transparent.png" alt="">
+            <span class="tifo-wordmark" style="font-size:18px;color:#111729;--tifo-gold:#d4a90a;">tifo<span class="tifo-wordmark--sk">.sk</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mock">
+        <div class="mh">Mobil · app ikona</div>
+        <div class="phone-row">
+          <div>
+            <span class="tifo-icon"><img src="/branding/identity/tifo-mascot-transparent.png" alt=""></span>
+            <div class="app-name">tifo.sk</div>
+          </div>
+          <div>
+            <span class="tifo-icon tifo-icon--round"><img src="/branding/identity/tifo-mascot-transparent.png" alt=""></span>
+            <div class="app-name">avatar</div>
+          </div>
+        </div>
+        <div class="mh" style="margin-top:24px;">Sociálne siete · profil</div>
+        <div class="avatar-row">
+          <span class="tifo-icon tifo-icon--round"><img src="/branding/identity/tifo-mascot-transparent.png" alt=""></span>
+          <div class="avatar-meta">
+            <div class="h">tifo.sk</div>
+            <div class="u">@tifo.sk</div>
+            <div class="bio">Tipovacia liga pre kotol. Sleduj, tipuj, vyhrávaj. 🔭</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid g3" style="margin-top:22px;">
+      <div class="card">
+        <div class="tifo-badge">
+          <svg class="ring-txt" viewBox="0 0 170 170">
+            <defs><path id="top" d="M 28 85 A 57 57 0 0 1 142 85"/><path id="bot" d="M 30 90 A 55 55 0 0 0 140 90"/></defs>
+            <text><textPath href="#top" startOffset="50%" text-anchor="middle">TIFO · SK</textPath></text>
+            <text><textPath href="#bot" startOffset="50%" text-anchor="middle">EST. 2026</textPath></text>
+          </svg>
+          <img src="/branding/identity/tifo-mascot-transparent.png" alt="">
+        </div>
+        <div class="lbl"><div class="t">Crest / odznak</div><div class="d">merch, nálepky, šál (.tifo-badge)</div></div>
+      </div>
+      <div class="card">
+        <div class="stage bg-violet" style="aspect-ratio:1/1;"><img src="/branding/identity/tifo-mascot-transparent.png" style="width:70%;" alt=""></div>
+        <div class="lbl"><div class="t">Sticker</div><div class="d">die-cut nálepka na žrď / notebook</div></div>
+      </div>
+      <div class="card">
+        <div class="stage" style="aspect-ratio:1/1; background:repeating-linear-gradient(45deg,#0c1020,#0c1020 26px,#11192b 26px,#11192b 52px);">
+          <img src="/branding/identity/tifo-mono-gold.png" style="width:62%; opacity:.5;" alt="">
+        </div>
+        <div class="lbl"><div class="t">Watermark</div><div class="d">jednofarebný mono na pozadí kariet</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 08 FARBY ============ -->
+<section data-screen-label="Colors">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">08</span>
+      <h2>Farby značky</h2>
+      <p>Zlatá maskota je hlavný akcent, fialová je systémová značka.</p>
+    </div>
+    <div class="grid g4">
+      <div class="swatch"><div class="chip" style="background:#facc15;"></div><div class="info"><div class="nm">Gold</div><div class="hex">#FACC15 · maskot / CTA</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#f5a524;"></div><div class="info"><div class="nm">Amber</div><div class="hex">#F5A524 · tieň maskota</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#7c5cff;"></div><div class="info"><div class="nm">Violet</div><div class="hex">#7C5CFF · systém / body</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#5b3fd6;"></div><div class="info"><div class="nm">Violet dim</div><div class="hex">#5B3FD6 · hĺbka</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#080e14;border-bottom:1px solid var(--line);"></div><div class="info"><div class="nm">Ink</div><div class="hex">#080E14 · plate / pozadie</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#111728;"></div><div class="info"><div class="nm">Surface</div><div class="hex">#111728 · karty</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#1fd497;"></div><div class="info"><div class="nm">Success</div><div class="hex">#1FD497 · trefa</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#f0476a;"></div><div class="info"><div class="nm">Danger</div><div class="hex">#F0476A · mimo</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 09 TYPOGRAFIA ============ -->
+<section data-screen-label="Typography">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">09</span>
+      <h2>Wordmark typografia</h2>
+      <p>Wordmark je vysádzaný, nie kreslený — drží sa presnej špecifikácie.</p>
+    </div>
+    <div class="type-spec">
+      <div class="type-big">
+        <div class="big">tifo<span class="sk">.sk</span></div>
+        <div class="set">ABCDEFGH · abcdefgh · 0123456789</div>
+      </div>
+      <div class="type-meta">
+        <div class="row"><div class="k">Písmo</div><div class="v">Space Grotesk</div></div>
+        <div class="row"><div class="k">Rez</div><div class="v">Bold (700)</div></div>
+        <div class="row"><div class="k">Prestrkanie</div><div class="v">−3 % (−0.03em)</div></div>
+        <div class="row"><div class="k">Veľkosť písmen</div><div class="v">Malé (lowercase)</div></div>
+        <div class="row"><div class="k">Akcent „.sk"</div><div class="v">vždy Gold #FACC15</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 10 DON'TS ============ -->
+<section data-screen-label="Donts">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">10</span>
+      <h2>Čo s logom nerobiť</h2>
+      <p>Maskot má jeden správny tvar a paletu. Nedeformuj ho.</p>
+    </div>
+    <div class="grid g4">
+      <div class="dont-card">
+        <div class="dont-stage"><img src="/branding/identity/tifo-mascot-transparent.png" style="transform:scaleX(1.5); width:60%;" alt=""></div>
+        <div class="dont-foot"><span class="dont-x">✕</span><span class="tx">Neroztiahnuť ani nedeformovať pomery.</span></div>
+      </div>
+      <div class="dont-card">
+        <div class="dont-stage"><img src="/branding/identity/tifo-mascot-transparent.png" style="filter:hue-rotate(180deg) saturate(1.4); width:54%;" alt=""></div>
+        <div class="dont-foot"><span class="dont-x">✕</span><span class="tx">Nemeniť farbu maskota na náhodnú.</span></div>
+      </div>
+      <div class="dont-card">
+        <div class="dont-stage" style="background:#f4f6fc;"><img src="/branding/identity/tifo-mascot-transparent.png" style="opacity:.4; width:54%;" alt=""></div>
+        <div class="dont-foot"><span class="dont-x">✕</span><span class="tx">Neznižovať krytie na nečitateľnú úroveň.</span></div>
+      </div>
+      <div class="dont-card">
+        <div class="dont-stage"><img src="/branding/identity/tifo-mascot-transparent.png" style="transform:rotate(18deg); width:52%;" alt=""></div>
+        <div class="dont-foot"><span class="dont-x">✕</span><span class="tx">Nenakláňať ani neotáčať logo.</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 11 POUŽITIE / CSS ============ -->
+<section data-screen-label="Usage">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">11</span>
+      <h2>Použitie v kóde</h2>
+      <p>Štýly loga sú v samostatnom súbore <code>css/logo.css</code> — pripoj a používaj triedy <code>.tifo-*</code>.</p>
+    </div>
+    <div class="code"><span class="cm">&lt;!-- 1 · pripoj samostatný štýl loga --&gt;</span>
+<span class="tag">&lt;link</span> rel=<span class="at">"stylesheet"</span> href=<span class="at">"css/logo.css"</span><span class="tag">&gt;</span>
+
+<span class="cm">&lt;!-- 2 · primárny lockup (transparentné PNG, bez pozadia) --&gt;</span>
+<span class="tag">&lt;a</span> class=<span class="at">"tifo-lockup"</span> href=<span class="at">"/"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;img</span> class=<span class="at">"tifo-logo tifo-logo--md"</span> src=<span class="at">"branding/identity/tifo-mascot-transparent.png"</span> alt=<span class="at">"tifo.sk"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;span</span> class=<span class="at">"tifo-wordmark"</span><span class="tag">&gt;</span>tifo<span class="tag">&lt;span</span> class=<span class="at">"tifo-wordmark--sk"</span><span class="tag">&gt;</span>.sk<span class="tag">&lt;/span&gt;&lt;/span&gt;</span>
+<span class="tag">&lt;/a&gt;</span>
+
+<span class="cm">&lt;!-- 3 · app ikona / favicon --&gt;</span>
+<span class="tag">&lt;span</span> class=<span class="at">"tifo-icon"</span> style=<span class="at">"width:64px;height:64px"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;img</span> src=<span class="at">"branding/identity/tifo-mascot-transparent.png"</span> alt=<span class="at">""</span><span class="tag">&gt;</span>
+<span class="tag">&lt;/span&gt;</span></div>
+  </div>
+</section>
+
+<!-- ============ 12 SÚBORY ============ -->
+<section id="files" data-screen-label="Files" style="border-bottom:none;">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">12</span>
+      <h2>Súbory loga</h2>
+      <p>Štýl + transparentný raster (hlavný) + vektor + jednofarebné verzie. Stiahni ako balík značky.</p>
+    </div>
+    <div class="files">
+      <div class="file"><span class="ext css">CSS</span><div><div class="fn">css/logo.css</div><div class="fd">samostatný štýl loga · triedy .tifo-*</div></div></div>
+      <div class="file"><span class="ext">SVG</span><div><div class="fn">tifo-mascot.svg</div><div class="fd">vektor · zapečená tmavá plocha (len na tmavé)</div></div></div>
+      <div class="file"><span class="ext">PNG</span><div><div class="fn">tifo-mascot-transparent.png</div><div class="fd">1254×1254 · priehľadné · raster master</div></div></div>
+      <div class="file"><span class="ext">PNG</span><div><div class="fn">tifo-mascot.png</div><div class="fd">1254×1254 · na tmavom pozadí</div></div></div>
+      <div class="file"><span class="ext">PNG</span><div><div class="fn">tifo-mono-gold.png</div><div class="fd">jednofarebná zlatá · na tmavé</div></div></div>
+      <div class="file"><span class="ext">PNG</span><div><div class="fn">tifo-mono-navy.png</div><div class="fd">jednofarebná atramentová · na svetlé</div></div></div>
+      <div class="file"><span class="ext">PNG</span><div><div class="fn">tifo-mono-white.png</div><div class="fd">knockout biela · reverzná</div></div></div>
+    </div>
+    <p style="margin-top:22px; max-width:64ch; color:var(--text-3); font-size:13.5px; line-height:1.6;">
+      Transparentné PNG (1254×1254) je hlavný zobrazovací súbor — nemá žiadne pozadie, takže sadí na tmavé, svetlé aj farebné plochy bez čiernej plochy. SVG vektor má zapečenú tmavú plochu maskota, preto ho použi len na tmavé pozadia. Jednofarebné verzie sú tonálne — zachovávajú detail maskota aj v jednej farbe. Všetky štýly loga sú izolované v <code>css/logo.css</code> — stačí tento súbor a priečinok <code>branding/identity/</code>.
+    </p>
+  </div>
+</section>
+
+</body>
+</html>

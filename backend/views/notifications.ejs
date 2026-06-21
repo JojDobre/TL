@@ -1,0 +1,133 @@
+<%- include('partials/head', { title: 'Notifikácie', page: '', active: '', pageStyle: `
+  .nt-head { padding:30px 0 18px; }
+  .nt-layout { max-width:780px; margin:0 auto; padding-bottom:64px; }
+  .nt-tabs { display:flex; gap:8px; margin:18px 0; }
+  .nt-item { display:flex; gap:15px; padding:16px 18px; border-radius:var(--r-md); border:1px solid var(--line); background:var(--surface-1); margin-bottom:10px; align-items:flex-start; transition:background .15s; position:relative; }
+  .nt-item.unread { background:color-mix(in srgb,var(--brand-soft) 50%, var(--surface-1)); border-color:var(--brand-line); }
+  .nt-item.unread::before { content:""; position:absolute; left:0; top:14px; bottom:14px; width:3px; border-radius:3px; background:var(--brand); }
+  .nt-ico { width:42px; height:42px; border-radius:var(--r-md); flex:none; display:flex; align-items:center; justify-content:center; font-size:19px; }
+  .nt-body { flex:1; min-width:0; }
+  .nt-title { font-weight:700; color:var(--text-1); margin-bottom:2px; }
+  .nt-msg { color:var(--text-3); font-size:var(--fs-sm); }
+  .nt-time { font-size:var(--fs-xs); color:var(--text-4); white-space:nowrap; flex:none; }
+  .nt-actions { display:flex; gap:8px; margin-top:10px; }
+  .day-label { font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.1em; color:var(--text-4); font-weight:700; margin:24px 0 10px; }
+  @media (max-width:560px){
+    .nt-head .between { flex-direction:column; align-items:stretch; }
+    .nt-head .between #markAll { width:100%; }
+    .nt-tabs.segment { display:flex !important; width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+    .nt-tabs.segment::-webkit-scrollbar { display:none; }
+    .nt-tabs.segment button { flex:1 0 auto; white-space:nowrap; }
+    .nt-item { flex-wrap:wrap; }
+    .nt-actions { flex-wrap:wrap; width:100%; }
+    .nt-actions .btn { flex:1; }
+  }
+` }) %>
+<%
+  // ikona + farba podľa typu notifikácie (1:1 paleta zo šablóny)
+  function ntIcon(t){
+    switch(t){
+      case 'new_round': return { e:'🏒', s:'background:var(--live-soft);color:var(--live)' };
+      case 'deadline':  return { e:'⏰', s:'background:var(--warning-soft);color:var(--warning)' };
+      case 'result':    return { e:'🎯', s:'background:var(--success-soft);color:var(--success)' };
+      case 'achievement': return { e:'🏆', s:'background:var(--gold-soft);color:var(--gold)' };
+      case 'rank':      return { e:'📈', s:'background:var(--brand-soft);color:var(--brand-bright)' };
+      case 'member':    return { e:'👥', s:'background:var(--info-soft);color:var(--info)' };
+      case 'canceled':  return { e:'🚫', s:'background:var(--surface-3);color:var(--text-3)' };
+      default:          return { e:'🔔', s:'background:var(--surface-3);color:var(--text-3)' };
+    }
+  }
+  // relatívny čas (pred X min / hod / dátum)
+  function relTime(d){
+    var now=new Date(), x=new Date(d), diff=Math.floor((now-x)/1000);
+    if(diff<60) return 'práve teraz';
+    if(diff<3600) return 'pred ' + Math.floor(diff/60) + ' min';
+    if(diff<86400) return 'pred ' + Math.floor(diff/3600) + ' hod';
+    var days=Math.floor(diff/86400);
+    if(days===1) return 'včera';
+    return x.toLocaleDateString('sk-SK',{day:'numeric',month:'short'});
+  }
+  // CTA label podľa typu
+  function ctaLabel(t){
+    if(t==='new_round'||t==='deadline') return 'Tipovať teraz';
+    if(t==='result') return 'Zobraziť výsledky';
+    if(t==='achievement') return 'Zobraziť odznaky';
+    if(t==='member') return 'Zobraziť ligu';
+    return 'Otvoriť';
+  }
+%>
+
+<div class="wrap nt-layout">
+  <div class="nt-head">
+    <div class="between wrap-gap" style="gap:14px">
+      <div>
+        <div class="eyebrow">Notifikácie</div>
+        <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Centrum upozornení
+          <% if (unreadCount > 0) { %>
+            <span class="tag tag-danger" style="vertical-align:middle;font-size:var(--fs-sm)" id="cnt"><%= unreadCount %> nové</span>
+          <% } else { %>
+            <span class="tag tag-muted" style="vertical-align:middle;font-size:var(--fs-sm)" id="cnt">všetko prečítané</span>
+          <% } %>
+        </h1>
+      </div>
+      <% if (unreadCount > 0) { %>
+      <form method="POST" action="/notifications/read-all" style="margin:0"><button class="btn btn-secondary btn-sm" id="markAll" type="submit">Označiť všetky ako prečítané</button></form>
+      <% } %>
+    </div>
+    <div class="nt-tabs segment" style="display:inline-flex">
+      <button class="active" data-nf>Všetky</button><button data-nf>Neprečítané</button><button data-nf>Kolá</button><button data-nf>Výsledky</button>
+    </div>
+  </div>
+
+  <% if (total === 0) { %>
+    <div class="card card-pad center" style="text-align:center;padding:56px 24px">
+      <div style="font-size:42px;margin-bottom:12px">🔔</div>
+      <h3 style="margin-bottom:6px">Žiadne notifikácie</h3>
+      <p class="muted">Keď sa niečo udeje — nové kolo, výsledky či odznak — uvidíš to tu.</p>
+    </div>
+  <% } else { %>
+    <% groups.forEach(function(g){ %>
+      <div class="day-label"><%= g.label %></div>
+      <% g.items.forEach(function(n){ var ic = ntIcon(n.type); %>
+        <div class="nt-item <%= n.read ? '' : 'unread' %>" data-type="<%= n.type %>">
+          <span class="nt-ico" style="<%= ic.s %>"><%= ic.e %></span>
+          <div class="nt-body">
+            <div class="between" style="gap:10px"><div class="nt-title"><%= n.title || 'Notifikácia' %></div><span class="nt-time"><%= relTime(n.createdAt) %></span></div>
+            <div class="nt-msg"><%= n.message %></div>
+            <div class="nt-actions">
+              <% if (n.link) { %><a href="<%= n.link %>" class="btn btn-primary btn-sm"><%= ctaLabel(n.type) %></a><% } %>
+              <% if (!n.read) { %>
+                <form method="POST" action="/notifications/<%= n.id %>/read" style="margin:0;display:inline"><button class="btn btn-ghost btn-sm" type="submit" data-read>Označiť prečítané</button></form>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      <% }); %>
+    <% }); %>
+  <% } %>
+</div>
+
+<script>
+  // filtre (vizuálne, na klientovi)
+  document.querySelectorAll('[data-nf]').forEach(function(b){ b.addEventListener('click', function(){
+    document.querySelectorAll('[data-nf]').forEach(function(x){ x.classList.toggle('active', x === b); });
+    var t = b.textContent.trim();
+    document.querySelectorAll('.nt-item').forEach(function(i){
+      var type = i.getAttribute('data-type');
+      var unread = i.classList.contains('unread');
+      var show = true;
+      if (t === 'Neprečítané') show = unread;
+      else if (t === 'Kolá') show = (type === 'new_round' || type === 'deadline');
+      else if (t === 'Výsledky') show = (type === 'result' || type === 'canceled');
+      i.style.display = show ? '' : 'none';
+    });
+    // skry prázdne day-label skupiny
+    document.querySelectorAll('.day-label').forEach(function(lbl){
+      var sib = lbl.nextElementSibling, anyVisible = false;
+      while (sib && sib.classList.contains('nt-item')) { if (sib.style.display !== 'none') anyVisible = true; sib = sib.nextElementSibling; }
+      lbl.style.display = anyVisible ? '' : 'none';
+    });
+  }); });
+</script>
+
+<%- include('partials/footer') %>

@@ -16,7 +16,7 @@ const {
 } = require('../controllers/authPage.controller');
 const { adminDashboardPage, adminUsersPage, adminCompetitionsPage } = require('../controllers/adminPage.controller');
 const { leagueDetailPage, joinLeagueSubmit, createLeaguePage, createLeagueSubmit, editLeaguePage, editLeagueSubmit, deleteLeagueSubmit, leaveLeagueSubmit, leagueMembersPage, leagueMemberAction, endLeagueSubmit, manageLeaguePage } = require('../controllers/leaguePage.controller');
-const { roundDetailPage } = require('../controllers/roundPage.controller');
+const { roundDetailPage, roundResultsPage } = require('../controllers/roundPage.controller');
 const { createRoundPage, createRoundSubmit, editRoundPage } = require('../controllers/roundPageCreate.controller');
 const { createMatchesPage } = require('../controllers/matchPage.controller');
 const { evaluatePage } = require('../controllers/evaluatePage.controller');
@@ -33,13 +33,19 @@ const { profilePage } = require('../controllers/profilePage.controller');
 const { settingsPage, updateProfile, changePassword } = require('../controllers/settingsPage.controller');
 const { requireLogin, requireAdmin, apiRequireAdmin, apiRequireLogin, attachUser } = require('../middleware/page-auth.middleware');
 const { homePage } = require('../controllers/homePage.controller');
-const { aboutPage, kontaktPage, navodyPage } = require('../controllers/staticPage.controller');
+const { aboutPage, kontaktPage, navodyPage, logoIdentityPage } = require('../controllers/staticPage.controller');
 const { blogListPage, blogPostPage } = require('../controllers/blogPage.controller');
 const {
   adminBlogListPage, adminBlogNewPage, adminBlogCreate,
   adminBlogEditPage, adminBlogUpdate, adminBlogDelete,
 } = require('../controllers/adminBlog.controller');
 const { achievementsPage } = require('../controllers/achievementsPage.controller');
+const {
+  notificationsPage, markRead, markAllRead, unreadCountApi, recentApi,
+} = require('../controllers/notificationsPage.controller');
+const { tipHistoryPage } = require('../controllers/tipHistoryPage.controller');
+const { discoverPage } = require('../controllers/discoverPage.controller');
+
 
 
 // Domov 
@@ -138,9 +144,22 @@ router.get('/about', attachUser, aboutPage);
 router.get('/kontakt', attachUser, kontaktPage);
 router.get('/navody', attachUser, navodyPage);
 router.get('/achievements', requireLogin, achievementsPage);
+router.get('/logo-identity', logoIdentityPage);
+router.get('/tip-history', requireLogin, tipHistoryPage);
+router.get('/rounds/:id/results', attachUser, roundResultsPage);
+router.get('/discover', attachUser, discoverPage);
 
 // Blog (verejné). attachUser → navbar pozná prihláseného usera.
 router.get('/blog', attachUser, blogListPage);
 router.get('/blog/:slug', attachUser, blogPostPage);
+
+// stránka + akcie (vyžadujú prihlásenie)
+router.get('/notifications', requireLogin, notificationsPage);
+router.post('/notifications/:id/read', requireLogin, markRead);
+router.post('/notifications/read-all', requireLogin, markAllRead);
+
+// API pre zvonček v navbare
+router.get('/api/notifications/unread-count', requireLogin, unreadCountApi);
+router.get('/api/notifications/recent', requireLogin, recentApi);
 
 module.exports = router;

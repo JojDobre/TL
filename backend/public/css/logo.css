@@ -1,0 +1,162 @@
+/* =====================================================================
+   tifo.sk — LOGO STYLESHEET
+   ---------------------------------------------------------------------
+   The official brand mark: the gold "binoculars" mascot.
+   This file is STANDALONE — it defines its own tokens, font and classes,
+   so you can drop it (plus the /branding/identity/ assets) into any page.
+
+   ASSETS (place in  branding/identity/ ):
+     tifo-mascot.svg               vector master · use on DARK backgrounds
+     tifo-mascot-transparent.png   transparent raster · light / colour bg
+     tifo-mascot.png               raster on its dark plate
+
+   QUICK USE:
+     <link rel="stylesheet" href="css/logo.css">
+
+     <!-- horizontal lockup -->
+     <a class="tifo-lockup">
+       <img class="tifo-logo tifo-logo--md" src="branding/identity/tifo-mascot.svg" alt="tifo.sk">
+       <span class="tifo-wordmark">tifo<span class="tifo-wordmark--sk">.sk</span></span>
+     </a>
+
+     <!-- app / favicon tile -->
+     <span class="tifo-icon" style="width:64px;height:64px">
+       <img src="branding/identity/tifo-mascot.svg" alt="">
+     </span>
+   ===================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root {
+  /* ---- logo colours ---- */
+  --tifo-gold:        #FACC15;   /* primary — the mascot gold */
+  --tifo-gold-bright: #FDE047;
+  --tifo-amber:       #F5A524;   /* mascot shadow tone */
+  --tifo-ink:         #080E14;   /* the logo's dark plate */
+  --tifo-violet:      #7C5CFF;   /* system brand accent */
+
+  /* ---- logo type ---- */
+  --tifo-font: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+}
+
+/* =====================================================================
+   THE MARK  (the mascot image)
+   Size with height; width stays auto to preserve the 1:1 artwork.
+   ===================================================================== */
+.tifo-logo {
+  display: block;
+  width: auto;
+  height: 2.5rem;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.tifo-logo--xs   { height: 1rem; }
+.tifo-logo--sm   { height: 1.75rem; }
+.tifo-logo--md   { height: 2.5rem; }
+.tifo-logo--lg   { height: 4.5rem; }
+.tifo-logo--xl   { height: 8rem; }
+.tifo-logo--hero { height: clamp(9rem, 22vw, 18.75rem);
+                   filter: drop-shadow(0 22px 44px rgba(0,0,0,.5)); }
+
+/* =====================================================================
+   WORDMARK  "tifo.sk"  — Space Grotesk, the ".sk" always gold
+   ===================================================================== */
+.tifo-wordmark {
+  font-family: var(--tifo-font);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: currentColor;
+  white-space: nowrap;
+}
+.tifo-wordmark--sk { color: var(--tifo-gold); }
+
+/* =====================================================================
+   LOCKUP  — mark + wordmark
+   ===================================================================== */
+.tifo-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55em;
+  text-decoration: none;
+  color: inherit;
+}
+.tifo-lockup .tifo-wordmark { font-size: 1.35em; }
+
+/* vertical (stacked) variant — avatar, splash, merch */
+.tifo-lockup--stack {
+  flex-direction: column;
+  gap: 0.4em;
+  text-align: center;
+}
+
+/* tagline / descriptor under a stacked lockup */
+.tifo-tagline {
+  font-family: var(--tifo-font);
+  font-weight: 500;
+  font-size: 0.34em;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--tifo-gold);
+  margin-top: 0.1em;
+}
+
+/* =====================================================================
+   ONE-COLOUR / MONOCHROME MARKS
+   Tonal single-colour renders of the mascot — features stay readable.
+   Pick by background, never recolour the full-colour mark by hand.
+     tifo-mono-navy.png   → light backgrounds / one-colour print
+     tifo-mono-gold.png   → dark backgrounds / premium, foil
+     tifo-mono-white.png  → knockout / reversed on a colour fill
+   ===================================================================== */
+
+/* =====================================================================
+   ICON TILE  — app icon / favicon / avatar on a dark plate
+   Set width AND height on the element; the mark insets automatically.
+   ===================================================================== */
+.tifo-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tifo-ink);
+  border-radius: 24%;
+  overflow: hidden;
+}
+.tifo-icon > * { width: 84%; height: 84%; }
+.tifo-icon--round { border-radius: 50%; }
+
+/* =====================================================================
+   BADGE / CREST  — circular gold-ringed emblem for merch & stickers
+   ===================================================================== */
+.tifo-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 10.5rem;
+  height: 10.5rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, #161d30, #0a0e1c);
+  border: 3px solid var(--tifo-gold);
+  box-shadow: 0 0 0 6px rgba(250,204,21,.12),
+              0 18px 50px -12px rgba(0,0,0,.7);
+}
+.tifo-badge > img { width: 74%; height: auto; }
+
+/* =====================================================================
+   CLEARSPACE  — minimum protected zone around the mark.
+   Wrap the logo; padding = ~22% of the mark on all sides.
+   ===================================================================== */
+.tifo-clearspace { display: inline-block; padding: 22%; }
+
+/* =====================================================================
+   RESPONSIVE  — ease the hero mark on small screens
+   ===================================================================== */
+@media (max-width: 640px) {
+  .tifo-lockup .tifo-wordmark { font-size: 1.2em; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tifo-logo { transition: filter .2s ease; }
+}

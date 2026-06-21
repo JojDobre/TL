@@ -37,4 +37,10 @@ const navodyPage = (req, res) => {
   res.render('navody');
 };
 
-module.exports = { aboutPage, kontaktPage, navodyPage };
+// GET /logo-identity — vizuálna identita značky tifo.sk (statická stránka, bez DB).
+// Samostatná stránka s vlastným topbarom/footerom (nepoužíva navbar partial).
+const logoIdentityPage = (req, res) => {
+  res.render('logo-identity');
+};
+
+module.exports = { aboutPage, kontaktPage, navodyPage, logoIdentityPage };
