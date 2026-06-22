@@ -61,7 +61,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // ---- session (nahrádza JWT v localStorage) ----
 app.use(session({
-  secret: process.env.SESSION_SECRET || '97d1c98b02ee90547571a0ca60238d9b438444f313b6301f9c5d5ea1fc0eed1baf895ce70ede27e9b494138eadc85b18',
+  secret: process.env.SESSION_SECRET || 'zmen-ma',
   resave: false,
   saveUninitialized: false,
   cookie: {

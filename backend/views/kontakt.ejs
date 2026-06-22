@@ -37,6 +37,18 @@
       <h3 style="font-size:var(--fs-h4);margin-bottom:6px">Napíš nám správu</h3>
       <p class="muted" style="font-size:var(--fs-sm);margin-bottom:18px">Vyber tému a popíš, s čím ti môžeme pomôcť.</p>
 
+      <% if (typeof sent !== 'undefined' && sent) { %>
+      <div class="card card-pad" style="background:var(--success-soft);color:var(--success);padding:12px 14px;margin-bottom:16px;font-size:var(--fs-sm)">Správa odoslaná. Ďakujeme! Ozveme sa čo najskôr.</div>
+      <% } %>
+      <% if (typeof error !== 'undefined' && error) { %>
+      <div class="card card-pad" style="background:var(--danger-soft);color:var(--danger);padding:12px 14px;margin-bottom:16px;font-size:var(--fs-sm)"><%= error %></div>
+      <% } %>
+
+      <!-- Reálne odoslanie na backend (POST /kontakt). Tému prenáša skryté pole,
+           ktoré aktualizuje existujúci topic-grid JS. -->
+      <form method="POST" action="/kontakt">
+      <input type="hidden" name="topic" id="topicInput" value="Všeobecná otázka">
+
       <div class="field" style="margin-bottom:16px">
         <label class="label">Téma</label>
         <div class="topic-grid" id="topics">
@@ -51,14 +63,15 @@
 
       <div class="stack g-4">
         <div class="field-row">
-          <div class="field"><label class="label">Meno</label><input class="input" placeholder="Tvoje meno" value="<%= typeof contactName !== 'undefined' && contactName ? contactName : '' %>"></div>
-          <div class="field"><label class="label">E-mail</label><input class="input" type="email" placeholder="meno@email.sk" value="<%= typeof contactEmail !== 'undefined' && contactEmail ? contactEmail : '' %>"></div>
+          <div class="field"><label class="label">Meno</label><input class="input" name="name" placeholder="Tvoje meno" value="<%= typeof contactName !== 'undefined' && contactName ? contactName : '' %>"></div>
+          <div class="field"><label class="label">E-mail</label><input class="input" type="email" name="email" placeholder="meno@email.sk" required value="<%= typeof contactEmail !== 'undefined' && contactEmail ? contactEmail : '' %>"></div>
         </div>
-        <div class="field"><label class="label">Predmet</label><input class="input" placeholder="Stručne, o čo ide"></div>
-        <div class="field"><label class="label">Správa</label><textarea class="textarea" rows="6" placeholder="Popíš svoju otázku alebo problém čo najpodrobnejšie…"></textarea></div>
-        <label class="check" style="font-size:var(--fs-sm)"><input type="checkbox" checked> Súhlasím so spracovaním údajov za účelom vybavenia podnetu.</label>
-        <div><button class="btn btn-primary" id="sendBtn">Odoslať správu</button></div>
+        <div class="field"><label class="label">Predmet</label><input class="input" name="subject" placeholder="Stručne, o čo ide"></div>
+        <div class="field"><label class="label">Správa</label><textarea class="textarea" name="message" rows="6" required placeholder="Popíš svoju otázku alebo problém čo najpodrobnejšie…"></textarea></div>
+        <label class="check" style="font-size:var(--fs-sm)"><input type="checkbox" name="consent" required checked> Súhlasím so spracovaním údajov za účelom vybavenia podnetu.</label>
+        <div><button class="btn btn-primary" id="sendBtn" type="submit">Odoslať správu</button></div>
       </div>
+      </form>
     </div>
   </main>
 
@@ -101,18 +114,14 @@
 <div class="toast-wrap" id="toastWrap" style="position:fixed;bottom:24px;right:24px;z-index:200;display:flex;flex-direction:column;gap:10px"></div>
 
 <script>
-  // prepínanie aktívnej témy (len vizuálne, 1:1 zo šablóny)
+  // prepínanie aktívnej témy + zápis do skrytého poľa (odosiela sa s formulárom)
   document.querySelectorAll('#topics .topic').forEach(t => t.addEventListener('click', () => {
     document.querySelectorAll('#topics .topic').forEach(x => x.classList.toggle('active', x === t));
+    var hidden = document.getElementById('topicInput');
+    if (hidden) hidden.value = t.textContent.trim();
   }));
-  // odoslanie zatiaľ len zobrazí toast (e-mailový backend pribudne neskôr)
-  document.getElementById('sendBtn').addEventListener('click', () => {
-    const el = document.createElement('div');
-    el.className = 'toast success';
-    el.innerHTML = '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg><div><div class="toast-title">Správa odoslaná</div><div class="toast-msg">Ďakujeme! Ozveme sa do 24 hodín.</div></div>';
-    document.getElementById('toastWrap').appendChild(el);
-    setTimeout(()=>{ el.style.transition='opacity .3s,transform .3s'; el.style.opacity='0'; el.style.transform='translateX(20px)'; setTimeout(()=>el.remove(),300); }, 3000);
-  });
+  // Formulár sa odosiela natívne (POST /kontakt); backend pošle e-mail cez Resend
+  // a vráti stránku s potvrdzovacím/erorovým bannerom.
 </script>
 
 <%- include('partials/footer') %>

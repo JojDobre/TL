@@ -24,6 +24,7 @@
     "jsonwebtoken": "^9.0.0",
     "mariadb": "^3.5.3",
     "morgan": "^1.10.0",
+    "resend": "^6.14.0",
     "sequelize": "^6.28.0",
     "uuid": "^11.1.0"
   },
