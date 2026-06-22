@@ -1,0 +1,31 @@
+<%# views/partials/meta-head.ejs
+    Kompletná identita v <head>: favicony, apple-touch, manifest, theme-color,
+    Open Graph + Twitter karty. Includuje sa v head.ejs aj auth-head.ejs.
+    Voliteľné locals: title (na <title> sa nepoužíva tu), metaDesc, ogUrl. -%>
+<% var _desc = (typeof metaDesc !== 'undefined' && metaDesc) ? metaDesc : 'Tipuj výsledky zápasov, súťaž v ligách a stúpaj v rebríčku. tifo.sk — komunitné aj oficiálne tipovacie súťaže na jednom mieste.'; -%>
+<% var _ttl = 'tifo.sk' + ((typeof title !== 'undefined' && title) ? (' — ' + title) : ''); -%>
+<!-- favicony -->
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="16x16" href="/branding/identity/favicon-16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/branding/identity/favicon-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="/branding/identity/favicon-48.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/branding/identity/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#080e14">
+<meta name="application-name" content="tifo.sk">
+<meta name="apple-mobile-web-app-title" content="tifo.sk">
+<meta name="description" content="<%= _desc %>">
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="tifo.sk">
+<meta property="og:title" content="<%= _ttl %>">
+<meta property="og:description" content="<%= _desc %>">
+<meta property="og:image" content="/branding/identity/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<% if (typeof ogUrl !== 'undefined' && ogUrl) { %><meta property="og:url" content="<%= ogUrl %>">
+<% } %><!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="<%= _ttl %>">
+<meta name="twitter:description" content="<%= _desc %>">
+<meta name="twitter:image" content="/branding/identity/og-image.png">

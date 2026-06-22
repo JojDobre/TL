@@ -22,6 +22,13 @@ const loginPage = (req, res) => {
   res.render('login', { error: null, oldEmail: '' });
 };
 
+// GET /forgot-password — stránka obnovy hesla (zatiaľ len UI; e-mailový backend
+// pribudne neskôr, preto sa reálne heslo nemení).
+const forgotPasswordPage = (req, res) => {
+  if (req.session.userId) return res.redirect('/seasons');
+  res.render('forgot-password');
+};
+
 // POST /login
 const loginSubmit = async (req, res) => {
   try {
@@ -83,4 +90,4 @@ const logout = (req, res) => {
   req.session.destroy(() => res.redirect('/seasons'));
 };
 
-module.exports = { loginPage, loginSubmit, registerPage, registerSubmit, logout };
+module.exports = { loginPage, loginSubmit, registerPage, registerSubmit, logout, forgotPasswordPage };

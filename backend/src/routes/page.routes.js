@@ -12,7 +12,7 @@ const {
   deleteSeasonSubmit, leaveSeasonSubmit, seasonMembersPage, seasonMemberAction,
 } = require('../controllers/page.controller');
 const {
-  loginPage, loginSubmit, registerPage, registerSubmit, logout,
+  loginPage, loginSubmit, registerPage, registerSubmit, logout, forgotPasswordPage,
 } = require('../controllers/authPage.controller');
 const { adminDashboardPage, adminUsersPage, adminCompetitionsPage } = require('../controllers/adminPage.controller');
 const { leagueDetailPage, joinLeagueSubmit, createLeaguePage, createLeagueSubmit, editLeaguePage, editLeagueSubmit, deleteLeagueSubmit, leaveLeagueSubmit, leagueMembersPage, leagueMemberAction, endLeagueSubmit, manageLeaguePage } = require('../controllers/leaguePage.controller');
@@ -45,6 +45,9 @@ const {
 } = require('../controllers/notificationsPage.controller');
 const { tipHistoryPage } = require('../controllers/tipHistoryPage.controller');
 const { discoverPage } = require('../controllers/discoverPage.controller');
+const { playerPage } = require('../controllers/playerPage.controller');
+const { comparePage } = require('../controllers/comparePage.controller');
+
 
 
 
@@ -56,6 +59,7 @@ router.get('/login', loginPage);
 router.post('/login', loginSubmit);
 router.get('/register', registerPage);
 router.post('/register', registerSubmit);
+router.get('/forgot-password', forgotPasswordPage);
 router.get('/logout', logout);
 
 // Sezóny — POZOR na poradie: /create a /join PRED /:id
@@ -148,6 +152,12 @@ router.get('/logo-identity', logoIdentityPage);
 router.get('/tip-history', requireLogin, tipHistoryPage);
 router.get('/rounds/:id/results', attachUser, roundResultsPage);
 router.get('/discover', attachUser, discoverPage);
+
+// verejný profil — dostupný aj neprihlásenému (attachUser kvôli spoločným súťažiam)
+router.get('/player/:id', attachUser, playerPage);
+
+// porovnanie ja vs iný hráč (vyžaduje prihlásenie)
+router.get('/compare', requireLogin, comparePage);
 
 // Blog (verejné). attachUser → navbar pozná prihláseného usera.
 router.get('/blog', attachUser, blogListPage);

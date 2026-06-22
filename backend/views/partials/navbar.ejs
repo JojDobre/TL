@@ -6,8 +6,8 @@
      Parametre: `active` = id aktívnej položky (home/seasons/leaderboards/...). -->
 <% const nav = typeof active !== 'undefined' ? active : ''; %>
 <div class="nav"><div class="wrap nav-inner">
-    <%- include('brand-lockup', { icon: 40, fontSize: 20, href: '/' }) %>
-
+<%- include('brand-lockup', { variant: 'horizontal', size: 36, fontSize: 20, href: '/' }) %>
+  
   <nav class="nav-links">
     <a class="nav-link <%= nav==='home'?'active':'' %>" href="/">Domov</a>
     <% if (currentUserId) { %>
@@ -73,26 +73,72 @@
   // Naplnenie zvončeka: počet neprečítaných (badge) + posledné notifikácie (dropdown).
   var badge = document.querySelector('[data-bell-badge]');
   var list = document.querySelector('[data-bell-list]');
+  var panel = document.querySelector('[data-bell-panel]');
   function icon(t){
     return ({new_round:'🏒',deadline:'⏰',result:'🎯',achievement:'🏆',rank:'📈',member:'👥',canceled:'🚫'})[t] || '🔔';
   }
   function esc(s){ var d=document.createElement('div'); d.textContent=s==null?'':String(s); return d.innerHTML; }
+  
+  // vykreslí prázdny stav do dropdownu
+  function renderEmpty(){
+    if (list) list.innerHTML = '<div class="dd-link" style="color:var(--text-4)">Žiadne notifikácie</div>';
+  }
+
+  // počiatočné načítanie badge počtu
   fetch('/api/notifications/unread-count', { headers:{ 'Accept':'application/json' } })
     .then(function(r){ return r.ok ? r.json() : null; })
     .then(function(d){ if(d && d.count > 0 && badge){ badge.textContent = d.count > 99 ? '99+' : d.count; badge.hidden = false; } })
     .catch(function(){});
+    
+  // počiatočné načítanie posledných notifikácií do dropdownu
   fetch('/api/notifications/recent', { headers:{ 'Accept':'application/json' } })
     .then(function(r){ return r.ok ? r.json() : null; })
     .then(function(d){
       if(!list) return;
-      if(!d || !d.items || !d.items.length){ list.innerHTML = '<div class="dd-link" style="color:var(--text-4)">Žiadne notifikácie</div>'; return; }
+      if(!d || !d.items || !d.items.length){ renderEmpty(); return; }
       list.innerHTML = d.items.map(function(n){
         var href = n.link || '/notifications';
         var dot = n.read ? '' : '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--brand);margin-right:6px;vertical-align:middle"></span>';
-        return '<a class="dd-link" href="'+href+'" style="white-space:normal;line-height:1.4">'+dot+'<span style="margin-right:6px">'+icon(n.type)+'</span>'+esc(n.title||'Notifikácia')+'</a>';
+        return '<a class="dd-link" data-notif-item data-notif-id="'+n.id+'" href="'+href+'" style="white-space:normal;line-height:1.4">'+dot+'<span style="margin-right:6px">'+icon(n.type)+'</span>'+esc(n.title||'Notifikácia')+'</a>';
       }).join('');
     })
     .catch(function(){});
+
+    
+  // Pri OTVORENÍ zvončeka: skry badge a označ všetky ako prečítané (trvalo).
+  var markedOnOpen = false;
+  document.addEventListener('click', function(e){
+    var bell = e.target.closest('[data-bell]');
+    if (bell) {
+      // dropdown sa prepína vo footri; tu len vyčistíme počítadlo pri otvorení
+      // (malý timeout, aby sme reagovali až po prepnutí 'hidden')
+      setTimeout(function(){
+        var open = panel && !panel.hasAttribute('hidden');
+        if (open && !markedOnOpen) {
+          markedOnOpen = true;
+          if (badge) { badge.hidden = true; badge.textContent = ''; }
+          fetch('/notifications/read-all', { method:'POST', headers:{ 'Accept':'application/json' } }).catch(function(){});
+        }
+      }, 0);
+      return;
+    }
+
+    // Klik na konkrétnu notifikáciu v dropdowne: označ prečítanú a odober z okienka.
+    var item = e.target.closest('[data-notif-item]');
+    if (item) {
+      var id = item.getAttribute('data-notif-id');
+      if (id) {
+        // označ prečítanú (na pozadí; navigácia na href prebehne normálne)
+        fetch('/notifications/'+id+'/read', { method:'POST', headers:{ 'Accept':'application/json' } }).catch(function(){});
+        // odober z dropdownu hneď
+        if (item.remove) item.remove(); else if (item.parentNode) item.parentNode.removeChild(item);
+        if (list && !list.querySelector('[data-notif-item]')) renderEmpty();
+      }
+      // necháme prebehnúť prirodzenú navigáciu na n.link
+      return;
+    }
+  });
+
 })();
 </script>
 <% } %>

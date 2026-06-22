@@ -1,29 +1,141 @@
-<%# views/partials/brand-lockup.ejs
-    Oficiálna značka tifo.sk podľa js/shell.js: maskot (transparentné PNG) +
-    wordmark "tifo.sk". Holý <img> bez dlaždice, object-fit:contain, presne ako
-    ICON v shell.js.
+<%#  ============================================================================
+     views/partials/brand-lockup.ejs  —  ZNACKA tifo.sk · VSETKY VARIANTY
+     ----------------------------------------------------------------------------
+     Jeden partial = vsetky oficialne podoby loga z /logo-identity.
+     Vyzaduje pripojeny  /css/logo.css  (uz je globalne v head.ejs aj auth-head.ejs).
 
-    Parametre (všetky voliteľné):
-      size       — výška/šírka marky v px (default 36)
-      wordmark   — true/false, zobraziť text "tifo.sk" (default true)
-      fontSize   — veľkosť wordmarku v px (default 20)
-      wordColor  — farba "tifo" (default var(--text-1))
-      href       — odkaz (default "/")
-      gap        — medzera marka↔text v px (default 10)
-      mb         — margin-bottom v px (default 0)
--%>
+     !!! V SNIPPETOCH NIZSIE NAHRAD znaky  {{  za otvaracu EJS znacku
+         a  }}  za zatvaraciu EJS znacku  !!!
+     (zapisane su zastupne, aby EJS nerozbil tento komentar.)
+
+     POUZITIE:   {{- include('partials/brand-lockup', { variant: 'horizontal' }) }}
+     (z partialu, ktory je sam v /partials, staci 'brand-lockup')
+
+     Spolocne volitelne parametre:
+       variant    — ktora podoba (zoznam nizsie), default 'horizontal'
+       href       — ak je zadane, obal je <a href>, inak <span>  (default '/')
+       size       — vyska marky (lockup/mark) alebo dlazdice (icon/badge) v px
+       fontSize   — velkost wordmarku v px (kde je text)
+       wordColor  — farba „tifo" casti wordmarku (default var(--text-1))
+       round      — true -> kruhova ikona (len variant 'icon')
+
+     ----------------------------------------------------------------------------
+     HOTOVE SNIPPETY  (nahrad {{ }} za EJS tagy)
+     ----------------------------------------------------------------------------
+
+     ——— LOGO SYSTEM (6) ———
+
+     1 · Primarny lockup (maskot + wordmark, horizontalne) — NAVBAR, FOOTER
+       {{- include('partials/brand-lockup', { variant: 'horizontal' }) }}
+       {{- include('partials/brand-lockup', { variant: 'horizontal', size: 36, fontSize: 20, href: '/' }) }}
+
+     2 · Vertikalny lockup (stacked) — avatar, splash, merch
+       {{- include('partials/brand-lockup', { variant: 'stack' }) }}
+       {{- include('partials/brand-lockup', { variant: 'stack', size: 84, fontSize: 24 }) }}
+
+     3 · Brand mark (len maskot) — ikona, favicon
+       {{- include('partials/brand-lockup', { variant: 'mark' }) }}
+       {{- include('partials/brand-lockup', { variant: 'mark', size: 104 }) }}
+
+     4 · Wordmark (len text „tifo.sk")
+       {{- include('partials/brand-lockup', { variant: 'wordmark' }) }}
+       {{- include('partials/brand-lockup', { variant: 'wordmark', fontSize: 46 }) }}
+
+     5 · Lockup s claimom (+ tagline „Tipuj · Boduj · Vyhravaj")
+       {{- include('partials/brand-lockup', { variant: 'tagline' }) }}
+       {{- include('partials/brand-lockup', { variant: 'tagline', size: 74, fontSize: 24 }) }}
+
+     6 · Lockup s deskriptorom (+ „Tipovacia liga")
+       {{- include('partials/brand-lockup', { variant: 'descriptor' }) }}
+       {{- include('partials/brand-lockup', { variant: 'descriptor', size: 64, fontSize: 26 }) }}
+
+     ——— JEDNOFAREBNE / MONO (3) ———
+
+     7 · Zlata mono (na tmave — foil, premium)
+       {{- include('partials/brand-lockup', { variant: 'mono-gold' }) }}
+
+     8 · Atramentova mono (na svetle — 1-farebna tlac)
+       {{- include('partials/brand-lockup', { variant: 'mono-navy' }) }}
+
+     9 · Knockout biela (reverzna na plnej farbe)
+       {{- include('partials/brand-lockup', { variant: 'mono-white' }) }}
+
+     ——— PLNOFAREBNE NA POZADI (6) ———  (maskot na farebnej ploche)
+
+     10 · Na tmavej (#080e14)
+       {{- include('partials/brand-lockup', { variant: 'bg-dark' }) }}
+     11 · Na svetlej (#f4f6fc)
+       {{- include('partials/brand-lockup', { variant: 'bg-light' }) }}
+     12 · Na fialovej (brand #7c5cff)
+       {{- include('partials/brand-lockup', { variant: 'bg-violet' }) }}
+     13 · Na hibkovej (#06080f — app pozadie)
+       {{- include('partials/brand-lockup', { variant: 'bg-deep' }) }}
+     14 · Na sachovnici (transparent ukazka)
+       {{- include('partials/brand-lockup', { variant: 'bg-check' }) }}
+     15 · Na zlatej (gradient — len velke formaty)
+       {{- include('partials/brand-lockup', { variant: 'bg-gold' }) }}
+       (velkost maskota na pozadi riadi `size`, default 120)
+
+     ——— IKONA / CREST (bonus) ———
+
+     16 · Icon dlazdica (squircle, tmavy plate — app/avatar)
+       {{- include('partials/brand-lockup', { variant: 'icon', size: 64 }) }}
+       {{- include('partials/brand-lockup', { variant: 'icon', size: 88, round: true }) }}
+
+     17 · Badge / crest (zlaty kruh „TIFO · SK / EST. 2026")
+       {{- include('partials/brand-lockup', { variant: 'badge' }) }}
+     ============================================================================ -%>
 <%
-  const _size      = (typeof size      !== 'undefined') ? size      : 36;
-  const _wordmark  = (typeof wordmark  !== 'undefined') ? wordmark  : true;
-  const _fontSize  = (typeof fontSize  !== 'undefined') ? fontSize  : 20;
-  const _wordColor = (typeof wordColor !== 'undefined') ? wordColor : 'var(--text-1)';
-  const _href      = (typeof href      !== 'undefined') ? href      : '/';
-  const _gap       = (typeof gap       !== 'undefined') ? gap       : 10;
-  const _mb        = (typeof mb        !== 'undefined') ? mb        : 0;
+  const MASCOT = '/branding/identity/tifo-mascot-transparent.png';
+  const MONO   = {
+    'mono-gold':  '/branding/identity/tifo-mono-gold.png',
+    'mono-navy':  '/branding/identity/tifo-mono-navy.png',
+    'mono-white': '/branding/identity/tifo-mono-white.png',
+  };
+  const BG = {
+    'bg-dark':   '#080e14',
+    'bg-light':  '#f4f6fc',
+    'bg-violet': 'linear-gradient(150deg,#7c5cff,#5b3fd6)',
+    'bg-deep':   '#06080f',
+    'bg-gold':   'linear-gradient(150deg,#fde047,#f5a524)',
+    'bg-check':  'repeating-conic-gradient(#1a2236 0% 25%, #11192b 0% 50%) 0 0 / 22px 22px',
+  };
+
+  const _variant   = (typeof variant   !== 'undefined') ? variant   : 'horizontal';
+  const _href      = (typeof href       !== 'undefined') ? href      : '/';
+  const _size      = (typeof size       !== 'undefined') ? size      : null;
+  const _fontSize  = (typeof fontSize   !== 'undefined') ? fontSize  : null;
+  const _wordColor = (typeof wordColor  !== 'undefined') ? wordColor : 'var(--text-1)';
+  const _round     = (typeof round      !== 'undefined') ? round     : false;
+
+  const tag      = _href ? 'a' : 'span';
+  const hrefAttr = _href ? (' href="' + _href + '"') : '';
+
+  const wm = (fs, col) =>
+    '<span class="tifo-wordmark"' +
+      (fs ? (' style="font-size:' + fs + 'px;color:' + (col||_wordColor) + '"') : (col ? (' style="color:' + col + '"') : '')) +
+    '>tifo<span class="tifo-wordmark--sk">.sk</span></span>';
 -%>
-<a class="row g-2" href="<%= _href %>" style="gap:<%= _gap %>px;<% if (_mb) { %>margin-bottom:<%= _mb %>px;<% } %>text-decoration:none;color:inherit">
-  <img class="logo-mark" src="/branding/identity/tifo-mascot-transparent.png" alt="" aria-hidden="true" style="width:<%= _size %>px;height:<%= _size %>px;object-fit:contain">
-  <% if (_wordmark) { %>
-    <span class="wordmark" style="font-family:var(--font-display);font-weight:700;font-size:<%= _fontSize %>px;letter-spacing:-.02em;color:<%= _wordColor %>">tifo<b style="color:var(--gold)">.sk</b></span>
-  <% } %>
-</a>
+<%_ if (_variant === 'horizontal') { const h=_size||36, fs=_fontSize||20; -%>
+<<%= tag %> class="tifo-lockup"<%- hrefAttr %>><img class="tifo-logo" style="height:<%= h %>px" src="<%= MASCOT %>" alt="tifo.sk"><%- wm(fs) %></<%= tag %>>
+<%_ } else if (_variant === 'stack') { const h=_size||84, fs=_fontSize||24; -%>
+<<%= tag %> class="tifo-lockup tifo-lockup--stack"<%- hrefAttr %>><img class="tifo-logo" style="height:<%= h %>px" src="<%= MASCOT %>" alt="tifo.sk"><%- wm(fs) %></<%= tag %>>
+<%_ } else if (_variant === 'mark') { const h=_size||104; -%>
+<<%= tag %><%- hrefAttr %> style="display:inline-flex;line-height:0"><img class="tifo-logo" style="height:<%= h %>px" src="<%= MASCOT %>" alt="tifo.sk"></<%= tag %>>
+<%_ } else if (_variant === 'wordmark') { const fs=_fontSize||46; -%>
+<<%= tag %><%- hrefAttr %> style="text-decoration:none"><%- wm(fs) %></<%= tag %>>
+<%_ } else if (_variant === 'tagline') { const h=_size||74, fs=_fontSize||24; -%>
+<<%= tag %> class="tifo-lockup tifo-lockup--stack"<%- hrefAttr %>><img class="tifo-logo" style="height:<%= h %>px" src="<%= MASCOT %>" alt="tifo.sk"><%- wm(fs) %><span class="tifo-tagline">Tipuj · Boduj · Vyhravaj</span></<%= tag %>>
+<%_ } else if (_variant === 'descriptor') { const h=_size||64, fs=_fontSize||26; -%>
+<<%= tag %> class="tifo-lockup"<%- hrefAttr %>><img class="tifo-logo" style="height:<%= h %>px" src="<%= MASCOT %>" alt="tifo.sk"><span style="display:flex;flex-direction:column;line-height:1.05"><%- wm(fs) %><span style="font-family:var(--num);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-3);margin-top:4px">Tipovacia liga</span></span></<%= tag %>>
+<%_ } else if (_variant === 'mono-gold' || _variant === 'mono-navy' || _variant === 'mono-white') { const h=_size||104; -%>
+<<%= tag %><%- hrefAttr %> style="display:inline-flex;line-height:0"><img style="height:<%= h %>px;width:auto" src="<%= MONO[_variant] %>" alt="tifo.sk"></<%= tag %>>
+<%_ } else if (BG[_variant]) { const m=_size||120; -%>
+<span style="display:inline-flex;align-items:center;justify-content:center;padding:28px;border-radius:var(--r-md,14px);background:<%= BG[_variant] %>"><img style="width:<%= m %>px;height:auto" src="<%= MASCOT %>" alt="tifo.sk"></span>
+<%_ } else if (_variant === 'icon') { const s=_size||64; -%>
+<<%= tag %><%- hrefAttr %> class="tifo-icon<%= _round ? ' tifo-icon--round' : '' %>" style="width:<%= s %>px;height:<%= s %>px"><img src="<%= MASCOT %>" alt="tifo.sk"></<%= tag %>>
+<%_ } else if (_variant === 'badge') { -%>
+<span class="tifo-badge"><svg viewBox="0 0 170 170" style="position:absolute;inset:0"><defs><path id="tb-top" d="M 28 85 A 57 57 0 0 1 142 85"/><path id="tb-bot" d="M 30 90 A 55 55 0 0 0 140 90"/></defs><text style="font-family:var(--font-display);font-weight:700;font-size:13px;letter-spacing:.32em;fill:var(--gold)"><textPath href="#tb-top" startOffset="50%" text-anchor="middle">TIFO · SK</textPath></text><text style="font-family:var(--font-display);font-weight:700;font-size:13px;letter-spacing:.32em;fill:var(--gold)"><textPath href="#tb-bot" startOffset="50%" text-anchor="middle">EST. 2026</textPath></text></svg><img src="<%= MASCOT %>" alt="tifo.sk"></span>
+<%_ } else { const h=_size||36, fs=_fontSize||20; -%>
+<<%= tag %> class="tifo-lockup"<%- hrefAttr %>><img class="tifo-logo" style="height:<%= h %>px" src="<%= MASCOT %>" alt="tifo.sk"><%- wm(fs) %></<%= tag %>>
+<%_ } -%>

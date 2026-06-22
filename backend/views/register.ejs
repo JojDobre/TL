@@ -23,15 +23,7 @@
   <!-- FORM -->
   <div class="auth-form">
     <div class="auth-card">
-      <a class="row g-2" href="/" style="margin-bottom:26px">
-        <svg viewBox="0 0 48 48" fill="none" style="width:34px;height:34px">
-          <defs><linearGradient id="tlg-r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9d83ff"/><stop offset="1" stop-color="#5b3fd6"/></linearGradient></defs>
-          <path d="M24 4 L40 9 V23 C40 33 33 40 24 44 C15 40 8 33 8 23 V9 Z" fill="url(#tlg-r)" stroke="#9d83ff" stroke-width="1.2"/>
-          <path d="M15 28 L24 17 L33 28" fill="none" stroke="#0d1124" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M19 33 L24 27 L29 33" fill="none" stroke="#facc15" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <span style="font-family:var(--font-display);font-weight:700;font-size:20px;color:var(--text-1)">Tiper<b style="color:var(--gold)">liga</b></span>
-      </a>
+      <div style="margin-bottom:26px"><%- include('partials/brand-lockup', { variant: 'horizontal', size: 38, fontSize: 20, href: '/' }) %></div>
       <h1>Vytvor si účet</h1>
       <p class="muted" style="margin:8px 0 26px">Zadarmo, za 30 sekúnd. Žiadna platobná karta.</p>
       <% if (typeof error !== 'undefined' && error) { %>
@@ -73,7 +65,7 @@
         <p style="color:rgba(255,255,255,.75);font-size:var(--fs-sm);font-style:italic">„Najlepšia tipovacia liga na hokej. S kolegami máme vlastnú ligu už druhú sezónu."</p>
       </div>
     </div>
-    <div style="color:rgba(255,255,255,.4);font-size:var(--fs-sm)">© 2026 Tiperliga</div>
+    <div style="color:rgba(255,255,255,.4);font-size:var(--fs-sm)">© 2026 tifo.sk</div>
   </div>
 </div>
 <script>

@@ -1,0 +1,136 @@
+<%- include('partials/head', { title: 'Porovnanie', page: 'leaderboards', active: 'leaderboards', pageStyle: `
+  .cmp-head { padding:28px 0 8px; }
+  .crumb { font-size:var(--fs-sm); color:var(--text-4); margin-bottom:10px; }
+  .crumb a { color:var(--text-3); } .crumb a:hover { color:var(--brand-bright); }
+  .vs-banner { display:grid; grid-template-columns:1fr auto 1fr; gap:16px; align-items:center; padding:28px 24px; margin-top:8px;
+    border-radius:var(--r-2xl); position:relative; overflow:hidden;
+    background:linear-gradient(120deg, color-mix(in srgb,var(--brand) 12%,var(--surface-1)), var(--surface-1) 50%, color-mix(in srgb,#3a7bd5 14%,var(--surface-1))); border:1px solid var(--line-strong); }
+  .vs-side { display:flex; flex-direction:column; align-items:center; gap:10px; text-align:center; position:relative; z-index:1; }
+  .vs-side .avatar { width:84px; height:84px; font-size:30px; box-shadow:0 0 0 4px var(--bg); }
+  .vs-name { font-family:var(--font-display); font-weight:700; font-size:var(--fs-h4); color:var(--text-1); }
+  .vs-handle { font-size:var(--fs-xs); color:var(--text-3); }
+  .vs-rank { font-family:var(--num); font-weight:700; font-size:1.4rem; }
+  .vs-mid { display:flex; flex-direction:column; align-items:center; gap:6px; position:relative; z-index:1; }
+  .vs-badge { font-family:var(--font-display); font-weight:800; font-size:1.6rem; color:var(--text-4); letter-spacing:.04em; }
+  .vs-lead { font-size:var(--fs-xs); font-weight:700; text-transform:uppercase; letter-spacing:.08em; padding:4px 10px; border-radius:var(--r-pill); }
+  .cmp-table { margin-top:24px; }
+  .cmp-row { display:grid; grid-template-columns:1fr 150px 1fr; gap:14px; align-items:center; padding:16px 14px; border-bottom:1px solid var(--line); }
+  .cmp-row:last-child { border-bottom:none; }
+  .cmp-label { text-align:center; font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.08em; color:var(--text-4); font-weight:700; }
+  .cmp-val { font-family:var(--num); font-weight:700; font-size:1.5rem; font-variant-numeric:tabular-nums; line-height:1; }
+  .cmp-l { text-align:right; }
+  .cmp-r { text-align:left; }
+  .cmp-val.win { color:var(--success); }
+  .cmp-val.lose { color:var(--text-3); }
+  .cmp-bar { height:8px; border-radius:99px; background:var(--surface-3); overflow:hidden; display:flex; margin-top:8px; }
+  .cmp-bar .l { background:linear-gradient(90deg,var(--brand-bright),var(--brand)); height:100%; }
+  .cmp-bar .r { background:linear-gradient(90deg,#1b3f72,#3a7bd5); height:100%; margin-left:auto; }
+  .cmp-side-wrap { display:flex; flex-direction:column; }
+  .h2h { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-top:24px; }
+  .meet-row { display:grid; grid-template-columns:1fr auto 1fr; gap:10px; align-items:center; padding:11px 0; border-bottom:1px solid var(--line); font-size:var(--fs-sm); }
+  .meet-row:last-child { border-bottom:none; }
+  .meet-row .who { font-family:var(--num); font-weight:700; }
+  @media (max-width:640px){
+    .vs-banner { padding:20px 14px; gap:8px; }
+    .vs-side .avatar { width:62px; height:62px; font-size:22px; }
+    .cmp-row { grid-template-columns:1fr 88px 1fr; gap:8px; }
+    .cmp-val { font-size:1.15rem; }
+    .h2h { grid-template-columns:1fr; }
+  }
+` }) %>
+<%
+  function rankColor(r){ if(r===1) return 'var(--gold)'; if(r===2 || r===3) return 'var(--success)'; if(!r) return 'var(--text-4)'; return 'var(--text-3)'; }
+  function fmtRank(r){ return r ? '#'+r : '—'; }
+%>
+
+<div class="wrap cmp-head">
+  <div class="crumb"><a href="/leaderboards">Rebríčky</a> › <a href="/player/<%= other.id %>"><%= other.name %></a> › Porovnanie</div>
+  <div class="eyebrow">Hlava na hlavu</div>
+  <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Ty vs <%= other.name %></h1>
+  <p class="muted" style="margin-top:6px"><% if (hasShared) { %>Porovnanie vašich výsledkov naprieč <%= sharedStandings.length %> spoločnými súťažami.<% } else { %>Porovnanie celkových výsledkov — spoločné súťaže zatiaľ nemáte.<% } %></p>
+</div>
+
+<div class="wrap" style="padding-bottom:64px">
+  <!-- VERSUS -->
+  <div class="vs-banner">
+    <div class="vs-side">
+      <span class="avatar avatar-xl avatar-ring" style="background:linear-gradient(135deg,#7c5cff,#5b3fd6);color:#fff"><%= me.initials %></span>
+      <div><div class="vs-name"><%= me.name %></div><div class="vs-handle">@<%= me.username %> · Ty</div></div>
+      <div class="vs-rank brand"><%= fmtRank(me.vsRank) %></div>
+    </div>
+    <div class="vs-mid">
+      <span class="vs-badge">VS</span>
+      <span class="vs-lead" style="<%= lead.style %>"><%= lead.label %></span>
+    </div>
+    <div class="vs-side">
+      <span class="avatar avatar-xl" style="background:linear-gradient(135deg,#3a7bd5,#1b3f72);color:#fff"><%= other.initials %></span>
+      <div><div class="vs-name"><%= other.name %></div><div class="vs-handle">@<%= other.username %></div></div>
+      <div class="vs-rank" style="color:#6cabdd"><%= fmtRank(other.vsRank) %></div>
+    </div>
+  </div>
+
+  <!-- STAT COMPARISON -->
+  <div class="card card-pad cmp-table">
+    <% metrics.forEach(function(m){
+       var aWin = m.a > m.b, bWin = m.b > m.a;
+       var suf = m.suffix || '';
+    %>
+      <div class="cmp-row">
+        <div class="cmp-side-wrap" style="align-items:flex-end">
+          <span class="cmp-val <%= aWin ? 'win' : 'lose' %> cmp-l"><%= m.a %><%= suf %></span>
+          <div class="cmp-bar"><span class="l" style="width:<%= m.split[0] %>%"></span></div>
+        </div>
+        <div class="cmp-label"><%= m.label %></div>
+        <div class="cmp-side-wrap" style="align-items:flex-start">
+          <span class="cmp-val <%= bWin ? 'win' : 'lose' %> cmp-r"><%= m.b %><%= suf %></span>
+          <div class="cmp-bar"><span class="r" style="width:<%= m.split[1] %>%"></span></div>
+        </div>
+      </div>
+    <% }); %>
+  </div>
+
+  <!-- SHARED COMPETITIONS H2H -->
+  <div class="h2h">
+    <div class="card card-pad">
+      <div class="stat-label" style="margin-bottom:12px">Postavenie v spoločných súťažiach</div>
+      <% if (sharedStandings.length === 0) { %>
+        <p class="muted" style="font-size:var(--fs-sm)">Nemáte žiadne spoločné súťaže.</p>
+      <% } else { %>
+        <% sharedStandings.forEach(function(s){ %>
+          <div class="meet-row">
+            <span class="who" style="color:<%= rankColor(s.myRank) %>"><%= fmtRank(s.myRank) %> · Ty</span>
+            <span class="tag tag-muted"><%= s.name %></span>
+            <span class="who" style="text-align:right;color:<%= rankColor(s.otherRank) %>"><%= fmtRank(s.otherRank) %> · <%= other.name.split(' ')[0] %></span>
+          </div>
+        <% }); %>
+      <% } %>
+    </div>
+
+    <div class="card card-pad">
+      <div class="stat-label" style="margin-bottom:12px">Kolá, kde ste sa stretli</div>
+      <% if (sharedRounds.length === 0) { %>
+        <p class="muted" style="font-size:var(--fs-sm)">Zatiaľ ste netipovali v rovnakom kole.</p>
+      <% } else { %>
+        <% sharedRounds.forEach(function(r){
+           var meWin = r.myPoints > r.otherPoints, otherWin = r.otherPoints > r.myPoints;
+        %>
+          <div class="meet-row">
+            <span class="who <%= meWin ? 'win' : '' %>" style="color:<%= meWin ? 'var(--success)' : 'var(--text-3)' %>">+<%= r.myPoints %></span>
+            <span class="muted"><%= r.name %><%= r.leagueName ? ' · ' + r.leagueName : '' %></span>
+            <span class="who <%= otherWin ? 'win' : '' %>" style="text-align:right;color:<%= otherWin ? 'var(--success)' : 'var(--text-3)' %>">+<%= r.otherPoints %></span>
+          </div>
+        <% }); %>
+        <% if (roundWins.total > 0) { %>
+          <p class="muted" style="font-size:var(--fs-xs);margin-top:12px">Z <%= roundWins.total %> spoločných kôl si vyhral <b class="hi"><%= roundWins.me %></b>, <%= other.name.split(' ')[0] %> <b class="hi"><%= roundWins.other %></b>.</p>
+        <% } %>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="row g-2 center wrap-gap" style="margin-top:26px">
+    <a href="/player/<%= other.id %>" class="btn btn-secondary">Späť na profil <%= other.name.split(' ')[0] %></a>
+    <a href="/leaderboards" class="btn btn-ghost">Celý rebríček</a>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

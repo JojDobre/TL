@@ -1,0 +1,153 @@
+<%- include('partials/head', { title: player.name, page: 'leaderboards', active: 'leaderboards', pageStyle: `
+  .pf-cover { height:150px; border-radius:var(--r-2xl); position:relative; overflow:hidden; margin-top:24px; background:linear-gradient(120deg,#0b2b52,#1b3f72 55%,#2b5fa8); }
+  .pf-cover::after { content:""; position:absolute; inset:0; background:radial-gradient(600px 200px at 80% 120%, rgba(124,92,255,.25), transparent); }
+  .pf-head { padding:0 24px; position:relative; z-index:2; }
+  .pf-head-top { margin-top:-48px; display:flex; align-items:flex-end; gap:18px; flex-wrap:wrap; }
+  .pf-head .avatar { box-shadow:0 0 0 5px var(--bg); }
+  .pf-id { flex:1; min-width:200px; padding-bottom:4px; }
+  .pf-name { font-family:var(--font-display); font-weight:700; font-size:1.9rem; color:var(--text-1); letter-spacing:-.02em; }
+  .crumb { font-size:var(--fs-sm); color:var(--text-4); margin-bottom:6px; }
+  .crumb a { color:var(--text-3); } .crumb a:hover { color:var(--brand-bright); }
+  .pf-layout { display:grid; grid-template-columns:1fr 1.4fr; gap:26px; align-items:start; padding:30px 0 64px; }
+  .stat-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+  .badge-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  .badge { text-align:center; padding:16px 8px; border-radius:var(--r-md); background:var(--surface-2); border:1px solid var(--line); }
+  .badge-ico { width:46px; height:46px; margin:0 auto 8px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:21px; }
+  .badge-name { font-size:var(--fs-xs); font-weight:700; color:var(--text-2); }
+  .shared-row { display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; padding:12px 14px; border-radius:var(--r-sm); background:var(--surface-2); }
+  .shared-logo { width:38px; height:38px; border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-weight:700; font-size:12px; color:#fff; }
+  .form-dots { display:flex; gap:6px; flex-wrap:wrap; }
+  .fd { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-family:var(--num); font-weight:700; font-size:12px; }
+  .fd.w { background:var(--success-soft); color:var(--success); border:1px solid rgba(31,212,151,.3); }
+  .fd.l { background:var(--danger-soft); color:var(--danger); border:1px solid rgba(240,71,106,.3); }
+  .fd.d { background:var(--surface-3); color:var(--text-3); border:1px solid var(--line); }
+  .moment { flex-wrap:nowrap !important; gap:10px; }
+  .moment > .row { flex-wrap:nowrap; min-width:0; }
+  .moment .pts-pill { flex:none; }
+  .moment .hi { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .moment > .muted { flex:none; white-space:nowrap; }
+  @media (max-width: 920px){ .pf-layout { grid-template-columns:1fr; } }
+  @media (max-width: 560px){
+    .badge-grid { grid-template-columns:repeat(3,1fr); }
+    .pf-head-top { justify-content:center; text-align:center; }
+    .pf-id { text-align:center; }
+    .pf-id .row { justify-content:center; }
+  }
+` }) %>
+<%
+  var SK_M=['januára','februára','marca','apríla','mája','júna','júla','augusta','septembra','októbra','novembra','decembra'];
+  function joined(d){ if(!d) return ''; var x=new Date(d); return 'Tipuje od '+SK_M[x.getMonth()]+' '+x.getFullYear(); }
+  function roleCls(r){ return r==='admin'?'role-admin':r==='vip'?'role-vip':'role-player'; }
+  function roleName(r){ return r==='admin'?'Admin':r==='vip'?'VIP':'Hráč'; }
+  function rankColor(r){ if(r===1) return 'var(--gold)'; if(r===2) return 'var(--brand-bright)'; if(r===3) return 'var(--success)'; return 'var(--text-3)'; }
+  function icoBg(r){
+    if(r==='legendary'||r==='epic') return 'background:var(--brand-soft);color:var(--brand-bright)';
+    if(r==='rare') return 'background:var(--info-soft);color:var(--info)';
+    if(r==='gold'||r==='legendary') return 'background:var(--gold-soft);color:var(--gold)';
+    return 'background:var(--success-soft);color:var(--success)';
+  }
+%>
+
+<div class="wrap">
+  <div class="crumb" style="margin-top:18px"><a href="/leaderboards">Rebríčky</a> › Verejný profil › <%= player.name %></div>
+  <div class="pf-cover"></div>
+  <div class="pf-head">
+    <div class="pf-head-top">
+      <span class="avatar avatar-xl" style="width:100px;height:100px;font-size:36px;background:linear-gradient(135deg,#3a7bd5,#1b3f72);color:#fff"><%= player.initials %></span>
+      <div class="pf-id">
+        <div class="row g-2 wrap-gap"><span class="pf-name"><%= player.name %></span><span class="chip-role <%= roleCls(player.role) %>"><%= roleName(player.role) %></span></div>
+        <div class="muted" style="font-size:var(--fs-sm)">@<%= player.username %> · <%= joined(player.createdAt) %></div>
+      </div>
+      <div class="row g-2 wrap-gap" style="padding-bottom:4px">
+        <% if (isLoggedIn) { %><a href="/compare?with=<%= player.id %>" class="btn btn-secondary btn-sm">Porovnať s tebou</a><% } %>
+        <a href="/leaderboards" class="btn btn-ghost btn-sm">Späť na rebríček</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap pf-layout">
+  <!-- LEFT: verejné štatistiky + forma + odznaky -->
+  <aside class="stack g-4">
+    <div class="card card-pad">
+      <div class="stat-label" style="margin-bottom:14px">Verejné štatistiky</div>
+      <div class="stat-grid">
+        <div class="card stat" style="background:var(--surface-2)"><div class="stat-value gold"><%= stats.totalPoints %></div><div class="stat-label">celkové body</div></div>
+        <div class="card stat" style="background:var(--surface-2)"><div class="stat-value brand"><%= stats.bestRank ? '#'+stats.bestRank : '—' %></div><div class="stat-label">najlepšia pozícia</div></div>
+        <div class="card stat" style="background:var(--surface-2)"><div class="stat-value"><%= stats.accuracy == null ? '—' : stats.accuracy + '%' %></div><div class="stat-label">presnosť</div></div>
+        <div class="card stat" style="background:var(--surface-2)"><div class="stat-value ok"><%= stats.bestStreak %></div><div class="stat-label">kôl v sérii</div></div>
+      </div>
+    </div>
+
+    <div class="card card-pad">
+      <div class="stat-label" style="margin-bottom:12px">Forma — posledných <%= form.length %> kôl</div>
+      <% if (form.length === 0) { %>
+        <p class="muted" style="font-size:var(--fs-sm)">Zatiaľ žiadne vyhodnotené kolá.</p>
+      <% } else { %>
+      <div class="form-dots">
+        <% form.forEach(function(f){ %>
+          <span class="fd <%= f %>"><%= f==='w'?'W':f==='l'?'L':'—' %></span>
+        <% }); %>
+      </div>
+      <p class="muted" style="font-size:var(--fs-xs);margin-top:12px">W = nadpriemerné body v kole · L = podpriemerné · — = priemer</p>
+      <% } %>
+    </div>
+
+    <div class="card card-pad">
+      <div class="between" style="margin-bottom:14px"><div class="stat-label" style="margin:0">Odznaky · <%= badgeCount %></div><span class="tag tag-muted">verejné</span></div>
+      <% if (badges.length === 0) { %>
+        <p class="muted" style="font-size:var(--fs-sm)">Zatiaľ žiadne odznaky.</p>
+      <% } else { %>
+      <div class="badge-grid">
+        <% badges.forEach(function(b){ %>
+          <div class="badge"><div class="badge-ico" style="<%= icoBg(b.rarity) %>"><%= b.icon %></div><div class="badge-name"><%= b.name %></div></div>
+        <% }); %>
+      </div>
+      <% } %>
+    </div>
+  </aside>
+
+  <!-- RIGHT: spoločné súťaže + momenty -->
+  <main class="stack g-4">
+    <% if (isLoggedIn) { %>
+    <div class="card card-pad">
+      <div class="between" style="margin-bottom:6px"><h3 style="font-size:var(--fs-h4)">Spoločné súťaže</h3><% if (shared.length) { %><span class="tag tag-brand" style="padding:2px 8px"><%= shared.length %> spoločné</span><% } %></div>
+      <p class="muted" style="font-size:var(--fs-sm);margin-bottom:16px">Súťaže, kde hráte obaja — a kto je momentálne vyššie.</p>
+      <% if (shared.length === 0) { %>
+        <p class="muted" style="font-size:var(--fs-sm)">Nemáte žiadne spoločné súťaže. <a href="/discover" class="brand">Objav súťaže →</a></p>
+      <% } else { %>
+      <div class="stack g-3">
+        <% shared.forEach(function(s){ %>
+          <div class="shared-row">
+            <span class="shared-logo" style="background:linear-gradient(135deg,#3a7bd5,#1b3f72)"><%= s.abbr %></span>
+            <div style="min-width:0"><b class="hi"><%= s.name %></b><div class="muted" style="font-size:var(--fs-xs)"><%= s.type === 'official' ? 'Oficiálna' : 'Community' %></div></div>
+            <div class="row g-3">
+              <div style="text-align:center"><div class="num" style="font-weight:700;color:<%= rankColor(s.theirRank) %>"><%= s.theirRank ? '#'+s.theirRank : '—' %></div><div class="hint"><%= player.name.split(' ')[0] %></div></div>
+              <div style="text-align:center"><div class="num" style="font-weight:700;color:<%= rankColor(s.myRank) %>"><%= s.myRank ? '#'+s.myRank : '—' %></div><div class="hint">Ty</div></div>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+      <% } %>
+    </div>
+    <% } %>
+
+    <div class="card card-pad">
+      <h3 style="font-size:var(--fs-h4);margin-bottom:14px">Najlepšie momenty</h3>
+      <% if (moments.length === 0) { %>
+        <p class="muted" style="font-size:var(--fs-sm)">Zatiaľ žiadne bodované kolá.</p>
+      <% } else { %>
+      <div class="stack g-3">
+        <% moments.forEach(function(m){ %>
+          <div class="row between moment" style="padding:11px 13px;border-radius:var(--r-sm);background:var(--surface-2)">
+            <span class="row g-3"><span class="pts-pill <%= m.points >= 20 ? 'max' : '' %>">+<%= m.points %> pts</span><span style="font-size:var(--fs-sm)" class="hi"><%= m.label %></span></span>
+            <span class="muted" style="font-size:var(--fs-xs)"><%= m.context %></span>
+          </div>
+        <% }); %>
+      </div>
+      <% } %>
+    </div>
+  </main>
+</div>
+
+<%- include('partials/footer') %>
