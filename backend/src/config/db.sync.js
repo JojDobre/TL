@@ -18,7 +18,7 @@ const { seedTeams } = require('../seeds/teams.seed');
 // Ak nie je nastavená, použije sa bezpečnejší "alter".
 const syncDatabase = async () => {
   try {
-    const isForce = process.env.DB_SYNC === 'alter';
+    const isForce = process.env.DB_SYNC === 'force';
     const mode = isForce
       ? { force: true }   // zmaže a vytvorí nanovo
       : { alter: true };  // zachová dáta, len upraví štruktúru
@@ -42,7 +42,7 @@ const syncDatabase = async () => {
 
     // Definičné dáta (odznaky, články) sa upsertujú VŽDY — sú idempotentné
     // a nezávisia od toho, či je DB prázdna.
-    await seedAchievements();
+    // await seedAchievements();
 
     // Seed spustíme len pri "force" alebo keď je DB prázdna (žiadni používatelia).
     // Tým zabránime duplicitnému vkladaniu pri každom reštarte v "alter" režime.
@@ -52,6 +52,7 @@ const syncDatabase = async () => {
       await seedInitialData();
       await seedArticles();
       await seedTeams();
+      await seedAchievements();
       console.log('Testovacie dáta boli vložené.');
     } else {
       console.log('Dáta už existujú, seeding preskočený.');
