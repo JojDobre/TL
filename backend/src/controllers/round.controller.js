@@ -12,6 +12,7 @@
 const { Round, League, Match, User, UserSeason, Season, Team, Tip, Sequelize } = require('../models');
 const { Op } = Sequelize;
 const { ApiError, asyncHandler } = require('../middleware/error.middleware');
+const { tipQualityWeight } = require('../utils/accuracy.util');
 const notify = require('../utils/notification.service');
 
 const DEFAULT_EXACT = 10;
@@ -126,12 +127,15 @@ const getRoundLeaderboard = asyncHandler(async (req, res) => {
           firstName: tip.User.firstName, lastName: tip.User.lastName,
           profileImage: tip.User.profileImage,
         },
-        totalPoints: 0, tipsCount: 0, exactPredictions: 0,
+        totalPoints: 0, tipsCount: 0, evaluated: 0, weightSum: 0,
       };
     }
     byUser[uid].totalPoints += tip.points || 0;
     byUser[uid].tipsCount += 1;
-    if ((tip.points || 0) >= exactScore) byUser[uid].exactPredictions += 1;
+    if (tip.Match && tip.Match.status === 'finished') {
+      byUser[uid].evaluated += 1;
+      byUser[uid].weightSum += tipQualityWeight(tip, tip.Match);
+    }
   });
 
   const leaderboard = Object.values(byUser)
@@ -139,7 +143,7 @@ const getRoundLeaderboard = asyncHandler(async (req, res) => {
     .map((entry, index) => ({
       ...entry,
       rank: index + 1,
-      accuracy: entry.tipsCount ? Math.round((entry.exactPredictions / entry.tipsCount) * 100) : 0,
+      accuracy: entry.evaluated ? Math.round((entry.weightSum / entry.evaluated) * 100) : 0,
     }));
 
   res.status(200).json({ success: true, data: leaderboard });

@@ -6,6 +6,7 @@
 const { Tip, Match, Round, League, Team, User, UserLeague, Sequelize } = require('../models');
 const { asyncHandler } = require('../middleware/error.middleware');
 const { evaluateUser } = require('../utils/achievement.engine');
+const { tipQualityWeight } = require('../utils/accuracy.util');
 
 // GET /profile
 const profilePage = asyncHandler(async (req, res) => {
@@ -29,14 +30,14 @@ const profilePage = asyncHandler(async (req, res) => {
     limit: 8,
   });
 
-  // súhrnné štatistiky (rovnaká logika ako /stats, zjednodušená)
-  const allTips = await Tip.findAll({ where: { userId: meId }, include: [{ model: Match, attributes: ['status', 'tipType'] }] });
-  let totalPoints = 0; let evaluated = 0; let hits = 0;
+  // súhrnné štatistiky (rovnaká vážená logika ako /stats)
+  const allTips = await Tip.findAll({ where: { userId: meId }, include: [{ model: Match, attributes: ['status', 'tipType', 'homeScore', 'awayScore'] }] });
+  let totalPoints = 0; let evaluated = 0; let weightSum = 0;
   allTips.forEach((t) => {
     totalPoints += t.points || 0;
-    if (t.Match && t.Match.status === 'finished') { evaluated += 1; if ((t.points || 0) > 0) hits += 1; }
+    if (t.Match && t.Match.status === 'finished') { evaluated += 1; weightSum += tipQualityWeight(t, t.Match); }
   });
-  const accuracy = evaluated > 0 ? Math.round((hits / evaluated) * 100) : null;
+  const accuracy = evaluated > 0 ? Math.round((weightSum / evaluated) * 100) : null;
 
   const abbr = (n) => (n || '?').substring(0, 3).toUpperCase();
   const recent = recentTips.map((t) => {

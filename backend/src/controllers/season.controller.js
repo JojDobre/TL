@@ -10,6 +10,7 @@
 const { Season, User, League, Match, Round, Tip, UserSeason } = require('../models');
 const { v4: uuidv4 } = require('uuid');
 const { ApiError, asyncHandler } = require('../middleware/error.middleware');
+const { tipQualityWeight } = require('../utils/accuracy.util');
 
 // 6-znakový alfanumerický kód pozvánky
 const generateInviteCode = () => uuidv4().substring(0, 6).toUpperCase();
@@ -226,13 +227,16 @@ const getSeasonLeaderboard = asyncHandler(async (req, res) => {
           firstName: tip.User.firstName, lastName: tip.User.lastName,
           profileImage: tip.User.profileImage,
         },
-        totalPoints: 0, tipsCount: 0, exactPredictions: 0,
+        totalPoints: 0, tipsCount: 0, evaluated: 0, weightSum: 0,
       };
     }
     byUser[uid].totalPoints += tip.points || 0;
     byUser[uid].tipsCount += 1;
-    // presný výsledok = 10 bodov (podľa špecifikácie bodovania)
-    if ((tip.points || 0) >= 10) byUser[uid].exactPredictions += 1;
+    // vážená presnosť — len z vyhodnotených zápasov (kvalita tipu)
+    if (tip.Match && tip.Match.status === 'finished') {
+      byUser[uid].evaluated += 1;
+      byUser[uid].weightSum += tipQualityWeight(tip, tip.Match);
+    }
   });
 
   const leaderboard = Object.values(byUser)
@@ -240,7 +244,7 @@ const getSeasonLeaderboard = asyncHandler(async (req, res) => {
     .map((entry, index) => ({
       ...entry,
       rank: index + 1,
-      accuracy: entry.tipsCount ? Math.round((entry.exactPredictions / entry.tipsCount) * 100) : 0,
+      accuracy: entry.evaluated ? Math.round((entry.weightSum / entry.evaluated) * 100) : 0,
     }));
 
   res.status(200).json({ success: true, data: leaderboard });

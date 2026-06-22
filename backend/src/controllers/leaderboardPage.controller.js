@@ -8,6 +8,7 @@ const { Season, League, Round, Match, Tip, User, UserSeason, Sequelize } = requi
 const Op = Sequelize.Op;
 const { asyncHandler } = require('../middleware/error.middleware');
 const { seasonStatus, canViewSeasonContent } = require('../utils/season.utils');
+const { tipQualityWeight } = require('../utils/accuracy.util');
 
 // GET /seasons/:id/leaderboard
 const seasonLeaderboardPage = asyncHandler(async (req, res) => {
@@ -35,29 +36,29 @@ const seasonLeaderboardPage = asyncHandler(async (req, res) => {
     include: [
       // required:true na celej reťazi → INNER JOIN, takže where {seasonId}
       // skutočne odfiltruje tipy z iných sezón (inak LEFT JOIN vráti všetky tipy).
-      { model: Match, required: true, include: [{ model: Round, required: true, include: [{ model: League, required: true, where: { seasonId: season.id }, attributes: ['id'] }], attributes: ['id'] }], attributes: ['id', 'status'] },
+      { model: Match, required: true, include: [{ model: Round, required: true, include: [{ model: League, required: true, where: { seasonId: season.id }, attributes: ['id'] }], attributes: ['id'] }], attributes: ['id', 'status', 'tipType', 'homeScore', 'awayScore'] },
       { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'role'] },
     ],
   });
 
-  // agregácia podľa hráča: body + presnosť (zásah = >0 bodov na vyhodnotenom zápase)
+  // agregácia podľa hráča: body + VÁŽENÁ presnosť (kvalita tipu, viď accuracy.util)
   const byUser = {};
   tips.forEach((tip) => {
     if (!tip.User || !tip.Match) return;
     const finished = tip.Match.status === 'finished';
     const uid = tip.User.id;
-    if (!byUser[uid]) byUser[uid] = { user: tip.User.toJSON(), totalPoints: 0, evaluated: 0, hits: 0 };
+    if (!byUser[uid]) byUser[uid] = { user: tip.User.toJSON(), totalPoints: 0, evaluated: 0, weightSum: 0 };
     byUser[uid].totalPoints += tip.points || 0;
     if (finished) {
       byUser[uid].evaluated += 1;
-      if ((tip.points || 0) > 0) byUser[uid].hits += 1;
+      byUser[uid].weightSum += tipQualityWeight(tip, tip.Match);
     }
   });
 
   const leaderboard = Object.values(byUser)
     .map((row) => ({
       ...row,
-      accuracy: row.evaluated > 0 ? Math.round((row.hits / row.evaluated) * 100) : null,
+      accuracy: row.evaluated > 0 ? Math.round((row.weightSum / row.evaluated) * 100) : null,
     }))
     .sort((a, b) => b.totalPoints - a.totalPoints);
 
@@ -118,9 +119,9 @@ const globalLeaderboardPage = asyncHandler(async (req, res) => {
 
     if (roundIds.length) {
       const tips = await Tip.findAll({
-        attributes: ['userId', 'points'],
+        attributes: ['userId', 'points', 'winner', 'homeScore', 'awayScore'],
         include: [
-          { model: Match, attributes: ['id', 'status'], where: { status: 'finished', roundId: { [Op.in]: roundIds } }, required: true,
+          { model: Match, attributes: ['id', 'status', 'tipType', 'homeScore', 'awayScore'], where: { status: 'finished', roundId: { [Op.in]: roundIds } }, required: true,
             include: [{ model: Round, attributes: ['id', 'endDate'] }] },
           { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'role'] },
         ],
@@ -131,10 +132,10 @@ const globalLeaderboardPage = asyncHandler(async (req, res) => {
       tips.forEach((t) => {
         if (!t.User) return;
         const uid = t.User.id;
-        if (!byUser[uid]) byUser[uid] = { user: t.User.toJSON(), totalPoints: 0, evaluated: 0, hits: 0 };
+        if (!byUser[uid]) byUser[uid] = { user: t.User.toJSON(), totalPoints: 0, evaluated: 0, weightSum: 0 };
         byUser[uid].totalPoints += t.points || 0;
         byUser[uid].evaluated += 1;
-        if ((t.points || 0) > 0) byUser[uid].hits += 1;
+        byUser[uid].weightSum += tipQualityWeight(t, t.Match);
 
         // stav spred týždňa: započítaj len tipy, ktorých kolo skončilo pred weekAgo
         const rEnd = t.Match && t.Match.Round ? t.Match.Round.endDate : null;
@@ -152,7 +153,7 @@ const globalLeaderboardPage = asyncHandler(async (req, res) => {
           initials: ([b.user.firstName, b.user.lastName].filter(Boolean).map((x) => x[0]).join('') || (b.user.username || '?')[0]).toUpperCase(),
           totalPoints: b.totalPoints,
           evaluated: b.evaluated,
-          accuracy: b.evaluated > 0 ? Math.round((b.hits / b.evaluated) * 100) : null,
+          accuracy: b.evaluated > 0 ? Math.round((b.weightSum / b.evaluated) * 100) : null,
         }))
         .sort((a, b) => b.totalPoints - a.totalPoints || (b.accuracy || 0) - (a.accuracy || 0));
 

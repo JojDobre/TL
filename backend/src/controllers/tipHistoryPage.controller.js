@@ -6,6 +6,7 @@
 const { Tip, Match, Round, League, Season, Team, Sequelize } = require('../models');
 const { Op } = Sequelize;
 const { asyncHandler } = require('../middleware/error.middleware');
+const { tipQualityWeight } = require('../utils/accuracy.util');
 
 const DEFAULT_EXACT = 10;
 const abbr = (n) => (n || '?').substring(0, 3).toUpperCase();
@@ -57,7 +58,7 @@ const tipHistoryPage = asyncHandler(async (req, res) => {
   const leagueMap = {};
 
   // summary
-  let totalTips = 0; let exactCount = 0; let totalPoints = 0; let evaluatedCount = 0;
+  let totalTips = 0; let exactCount = 0; let totalPoints = 0; let evaluatedCount = 0; let weightSum = 0;
 
   const rows = [];
   for (const t of tips) {
@@ -76,7 +77,7 @@ const tipHistoryPage = asyncHandler(async (req, res) => {
     totalPoints += (t.points || 0);
     const quality = tipQuality(t, m, exactPts);
     if (quality === 'exact') exactCount += 1;
-    if (m && m.status === 'finished') evaluatedCount += 1;
+    if (m && m.status === 'finished') { evaluatedCount += 1; weightSum += tipQualityWeight(t, m); }
 
     // aplikuj filtre na riadky
     if (fSeason && (!season || season.id !== fSeason)) continue;
@@ -104,7 +105,7 @@ const tipHistoryPage = asyncHandler(async (req, res) => {
     });
   }
 
-  const accuracy = evaluatedCount > 0 ? Math.round((exactCount / evaluatedCount) * 100) : null;
+  const accuracy = evaluatedCount > 0 ? Math.round((weightSum / evaluatedCount) * 100) : null;
 
   res.render('tip-history', {
     rows,

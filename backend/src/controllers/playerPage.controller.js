@@ -9,6 +9,7 @@ const { Tip, Match, Round, League, Season, Team, User, UserLeague, Sequelize } =
 const { Op } = Sequelize;
 const { asyncHandler } = require('../middleware/error.middleware');
 const { evaluateUser } = require('../utils/achievement.engine');
+const { tipQualityWeight } = require('../utils/accuracy.util');
 
 const DEFAULT_EXACT = 10;
 const abbr2 = (n) => (n || '?').substring(0, 2).toUpperCase();
@@ -61,7 +62,7 @@ const playerPage = asyncHandler(async (req, res) => {
   });
 
   // ── verejné štatistiky + per-round agregát (forma) ──
-  let totalPoints = 0; let evaluated = 0; let exactCount = 0;
+  let totalPoints = 0; let evaluated = 0; let exactCount = 0; let weightSum = 0;
   const roundAgg = {}; // roundId -> { name, leagueName, start, points }
   for (const t of tips) {
     totalPoints += t.points || 0;
@@ -70,6 +71,7 @@ const playerPage = asyncHandler(async (req, res) => {
     const exactPts = (league && league.scoringSystem && league.scoringSystem.exactScore) || DEFAULT_EXACT;
     if (m.status === 'finished') {
       evaluated += 1;
+      weightSum += tipQualityWeight(t, m);
       if (m.tipType !== 'winner' && (t.points || 0) >= exactPts) exactCount += 1;
     }
     if (round) {
@@ -77,7 +79,7 @@ const playerPage = asyncHandler(async (req, res) => {
       roundAgg[round.id].points += (t.points || 0);
     }
   }
-  const accuracy = evaluated > 0 ? Math.round((exactCount / evaluated) * 100) : null;
+  const accuracy = evaluated > 0 ? Math.round((weightSum / evaluated) * 100) : null;
 
   // forma: posledných 8 kôl podľa dátumu; W = nad priemerom, L = pod, — = okolo
   const roundsArr = Object.values(roundAgg).sort((a, b) => {

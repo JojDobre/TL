@@ -8,6 +8,7 @@
 const { Season, League, Round, Match, Tip, User, UserSeason, UserLeague, Team, Sequelize } = require('../models');
 const { asyncHandler } = require('../middleware/error.middleware');
 const { seasonStatus } = require('../utils/season.utils');
+const { tipQualityWeight } = require('../utils/accuracy.util');
 
 const Op = Sequelize.Op;
 
@@ -23,15 +24,15 @@ function rankFromTips(tips) {
   return Object.values(byUser).sort((a, b) => b.points - a.points);
 }
 
-// presnosť používateľa z jeho tipov (trafené / vyhodnotené)
+// vážená presnosť používateľa z jeho tipov (kvalita tipu / vyhodnotené)
 function accuracyFromTips(tips, meId) {
-  let ev = 0; let hit = 0;
+  let ev = 0; let weightSum = 0;
   tips.forEach((t) => {
     if (t.User && t.User.id !== meId) return;
     if (!t.Match || t.Match.status !== 'finished') return;
-    ev += 1; if ((t.points || 0) > 0) hit += 1;
+    ev += 1; weightSum += tipQualityWeight(t, t.Match);
   });
-  return ev > 0 ? Math.round((hit / ev) * 100) : null;
+  return ev > 0 ? Math.round((weightSum / ev) * 100) : null;
 }
 
 // GET /my
@@ -59,7 +60,7 @@ const myPage = asyncHandler(async (req, res) => {
       playedRounds = rounds.filter((r) => r.endDate && new Date(r.endDate) < now).length;
       const tips = await Tip.findAll({
         include: [
-          { model: Match, attributes: ['id', 'status'], include: [{ model: Round, attributes: ['id'], where: { leagueId: { [Op.in]: leagueIds } }, required: true }], required: true },
+          { model: Match, attributes: ['id', 'status', 'tipType', 'homeScore', 'awayScore'], include: [{ model: Round, attributes: ['id'], where: { leagueId: { [Op.in]: leagueIds } }, required: true }], required: true },
           { model: User, attributes: ['id'] },
         ],
       });

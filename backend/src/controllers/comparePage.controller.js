@@ -8,6 +8,7 @@
 const { Tip, Match, Round, League, Season, User, UserLeague, Sequelize } = require('../models');
 const { Op } = Sequelize;
 const { asyncHandler } = require('../middleware/error.middleware');
+const { tipQualityWeight } = require('../utils/accuracy.util');
 const { evaluateUser } = require('../utils/achievement.engine');
 
 const DEFAULT_EXACT = 10;
@@ -18,7 +19,7 @@ async function playerStats(userId) {
     where: { userId },
     include: [{
       model: Match,
-      attributes: ['id', 'roundId', 'status', 'tipType'],
+      attributes: ['id', 'roundId', 'status', 'tipType', 'homeScore', 'awayScore'],
       include: [{
         model: Round, attributes: ['id', 'name', 'leagueId', 'startDate'],
         include: [{ model: League, attributes: ['id', 'name', 'scoringSystem'] }],
@@ -26,7 +27,7 @@ async function playerStats(userId) {
     }],
   });
 
-  let totalPoints = 0; let evaluated = 0; let exactCount = 0;
+  let totalPoints = 0; let evaluated = 0; let exactCount = 0; let weightSum = 0;
   const roundAgg = {}; // roundId -> { name, leagueId, leagueName, start, points }
   for (const t of tips) {
     totalPoints += t.points || 0;
@@ -35,6 +36,7 @@ async function playerStats(userId) {
     const exactPts = (league && league.scoringSystem && league.scoringSystem.exactScore) || DEFAULT_EXACT;
     if (m.status === 'finished') {
       evaluated += 1;
+      weightSum += tipQualityWeight(t, m);
       if (m.tipType !== 'winner' && (t.points || 0) >= exactPts) exactCount += 1;
     }
     if (round) {
@@ -42,7 +44,7 @@ async function playerStats(userId) {
       roundAgg[round.id].points += (t.points || 0);
     }
   }
-  const accuracy = evaluated > 0 ? Math.round((exactCount / evaluated) * 100) : 0;
+  const accuracy = evaluated > 0 ? Math.round((weightSum / evaluated) * 100) : 0;
 
   // najdlhšia séria kôl s bodmi (zoradené dátumom)
   const arr = Object.values(roundAgg).sort((a, b) => {

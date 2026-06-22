@@ -6,6 +6,7 @@
 
 const { Tip, Match, Round, Team, League, User, Sequelize } = require('../models');
 const Op = Sequelize.Op;
+const { tipQualityWeight } = require('../utils/accuracy.util');
 const { asyncHandler } = require('../middleware/error.middleware');
 
 // GET /stats
@@ -26,29 +27,7 @@ const statsPage = asyncHandler(async (req, res) => {
     order: [['createdAt', 'ASC']],
   });
 
-  // Váha úspešnosti tipu (0–1) podľa toho, čo hráč trafil — prepočítané priamo
-  // z tipu a výsledku zápasu (nezávisí od bodovacieho systému ligy):
-  //   presný výsledok        → 1.0
-  //   správny víťaz/remíza    → 0.5
-  //   gólový rozdiel ALEBO počet gólov jedného tímu → 0.25
-  //   inak                   → 0
-  // Pri tipe typu 'winner' sa dá dosiahnuť len 0.5 (trafený víťaz) alebo 0.
-  function tipQualityWeight(tip, match) {
-    const hs = match.homeScore;
-    const as = match.awayScore;
-    if (hs == null || as == null) return 0;
-    const actual = hs > as ? 'home' : (hs < as ? 'away' : 'draw');
-    if (match.tipType === 'winner') {
-      return tip.winner && tip.winner === actual ? 0.5 : 0;
-    }
-    if (tip.homeScore == null || tip.awayScore == null) return 0;
-    if (tip.homeScore === hs && tip.awayScore === as) return 1.0;
-    const tipOutcome = tip.homeScore > tip.awayScore ? 'home' : (tip.homeScore < tip.awayScore ? 'away' : 'draw');
-    if (tipOutcome === actual) return 0.5;
-    if ((tip.homeScore - tip.awayScore) === (hs - as)) return 0.25;
-    if (tip.homeScore === hs || tip.awayScore === as) return 0.25;
-    return 0;
-  }
+  // Vážená presnosť tipu — cez zdieľanú utilitu (accuracy.util).
 
   let totalPoints = 0;
   let evaluated = 0;
