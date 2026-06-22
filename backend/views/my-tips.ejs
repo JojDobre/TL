@@ -1,0 +1,180 @@
+<%- include('partials/head', { title: 'Moje tipy', page: 'seasons', active: 'seasons', pageStyle: `
+  .zp-head { padding:26px 0 18px; }
+  .crumb { font-size:var(--fs-sm); color:var(--text-4); margin-bottom:12px; }
+  .crumb a { color:var(--text-3); } .crumb a:hover { color:var(--brand-bright); }
+  .season-block { margin-top:30px; }
+  .season-block:first-of-type { margin-top:8px; }
+  .season-title { display:flex; align-items:center; gap:10px; padding-bottom:10px; margin-bottom:6px; border-bottom:1px solid var(--line-strong); }
+  .season-title h2 { font-size:var(--fs-h4); }
+  .grp-head { display:flex; align-items:center; gap:10px; margin:20px 0 14px; }
+  .grp-head h3 { font-size:var(--fs-base); color:var(--text-2); }
+  .match-list > * + * { margin-top:14px; }
+  .match-row { padding:18px 20px; }
+  .match-row.tipped { border-color: var(--brand-line); box-shadow: 0 0 0 1px var(--brand-line); }
+  .onex2-pick { display:flex; gap:8px; }
+  .onex2-btn { width:52px; height:48px; border-radius:12px; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); font-weight:800; font-size:1.2rem; cursor:pointer; transition:all .15s; }
+  .onex2-btn:hover:not(:disabled) { border-color:var(--brand-line); color:var(--text-1); }
+  .onex2-btn.sel { background:var(--brand); border-color:var(--brand); color:#fff; }
+  .onex2-btn:disabled { opacity:.5; cursor:not-allowed; }
+  .tip-num:disabled { opacity:.45; cursor:not-allowed; background:var(--surface-2); }
+  .savebar { position:sticky; bottom:0; z-index:30; margin-top:16px; background: color-mix(in srgb, var(--surface-1) 92%, transparent); backdrop-filter:blur(12px); border:1px solid var(--line-strong); border-radius: var(--r-lg); padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:14px; box-shadow:var(--shadow-lg); }
+  .toast-wrap { position:fixed; bottom:24px; right:24px; z-index:200; display:flex; flex-direction:column; gap:10px; }
+  @media (max-width: 900px){
+    .savebar { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); flex-direction:column; align-items:stretch; gap:10px; }
+    .savebar .row.g-2 { width:100%; } .savebar .row.g-2 .btn { flex:1; }
+    .toast-wrap { bottom: calc(74px + env(safe-area-inset-bottom, 0px)); right:12px; left:12px; }
+  }
+  @media (max-width: 480px){
+    .match-row { padding:16px; } .match-row .match-teams { gap:8px; }
+    .match-row .team-name { font-size:var(--fs-xs); line-height:1.15; text-align:center; white-space:normal; overflow:visible; text-overflow:clip; max-width:none; word-break:normal; }
+    .match-row .tip-inputs { gap:5px; } .match-row .tip-num { width:42px; height:46px; font-size:1.2rem; }
+  }
+  @media (max-width: 560px){
+    /* season-title: názov + tag v prvom riadku, preklik pod nimi vpravo */
+    .season-title { display:grid; grid-template-columns:auto 1fr; grid-template-areas:"title tag" "link link"; align-items:center; column-gap:10px; row-gap:8px; }
+    .season-title h2 { grid-area:title; }
+    .season-title .tag { grid-area:tag; justify-self:start; }
+    .season-title a { grid-area:link; justify-self:end; margin-left:0 !important; }
+    /* grp-head: titulok na celú šírku + tag vedľa, popis (uzávierka) pod nimi vľavo */
+    .grp-head { display:grid; grid-template-columns:auto 1fr; grid-template-areas:"title tag" "desc desc"; align-items:center; column-gap:10px; row-gap:6px; }
+    .grp-head h3 { grid-area:title; }
+    .grp-head .tag { grid-area:tag; justify-self:start; }
+    .grp-head .muted { grid-area:desc; justify-self:start; margin-left:0 !important; }
+  }
+` }) %>
+
+<%
+  function fmtDT(d){ if(!d) return ''; var dt=new Date(d); return dt.toLocaleDateString('sk-SK',{day:'numeric',month:'short'})+' · '+dt.toLocaleTimeString('sk-SK',{hour:'2-digit',minute:'2-digit'}); }
+%>
+
+<div class="wrap zp-head">
+  <div class="crumb"><a href="/my">Moje súťaže</a> › Moje tipy</div>
+  <div class="between wrap-gap" style="gap:16px">
+    <div>
+      <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Moje tipy</h1>
+      <p class="muted" style="margin-top:6px">Všetky zápasy, ktoré môžeš práve tipovať alebo upraviť — naprieč všetkými tvojimi sezónami.</p>
+    </div>
+    <% if (totalMatches > 0) { %>
+    <div class="card card-pad" style="text-align:center"><div class="stat-value brand" style="font-size:1.6rem"><%= unfilled %></div><div class="stat-label">nevyplnených</div></div>
+    <% } %>
+  </div>
+</div>
+
+<div class="wrap" style="padding-bottom:64px">
+  <% if (notMember) { %>
+    <div class="card card-pad" style="text-align:center;padding:48px">
+      <p class="muted">Nie si pripojený do žiadnej ligy. Najprv sa pripoj do ligy, aby si mohol tipovať.</p>
+      <a href="/discover" class="btn btn-primary btn-sm" style="margin-top:14px">Objaviť súťaže</a>
+    </div>
+  <% } else if (totalMatches === 0) { %>
+    <div class="card card-pad" style="text-align:center;padding:48px">
+      <div style="font-size:40px;margin-bottom:10px">✅</div>
+      <h3 style="margin-bottom:6px">Nič na tipovanie</h3>
+      <p class="muted">Momentálne nemáš žiadne otvorené zápasy na tip. Keď sa otvorí nové kolo, objaví sa tu.</p>
+    </div>
+  <% } else { %>
+
+  <% seasonGroups.forEach(function(sg){ %>
+    <div class="season-block">
+      <div class="season-title">
+        <h2><%= sg.seasonName %></h2>
+        <% if (sg.seasonType) { %><span class="tag <%= sg.seasonType === 'official' ? 'tag-brand' : 'tag-gold' %>"><%= sg.seasonType === 'official' ? 'Oficiálna' : 'Community' %></span><% } %>
+        <% if (sg.seasonId) { %><a href="/seasons/<%= sg.seasonId %>/zapasy" class="muted" style="font-size:var(--fs-xs);margin-left:auto">Otvoriť sezónu →</a><% } %>
+      </div>
+
+      <% sg.rounds.forEach(function(g){ %>
+        <div class="grp-head">
+          <h3><%= g.roundName %></h3>
+          <span class="tag tag-muted"><%= g.leagueName %></span>
+          <% if (g.endDate) { %><span class="muted" style="font-size:var(--fs-xs);margin-left:auto">uzávierka <%= fmtDT(g.endDate) %></span><% } %>
+        </div>
+        <div class="match-list">
+          <% g.matches.forEach(function (m) {
+               var isWinner = m.tipType === 'winner';
+               var tipped = m.myTip && (isWinner ? m.myTip.winner : m.myTip.homeScore != null);
+          %>
+          <div class="card match match-row<%= tipped ? ' tipped' : '' %>" data-match data-match-id="<%= m.id %>" data-type="<%= isWinner ? 'winner' : 'exact' %>">
+            <div class="match-head">
+              <span class="match-meta"><%= fmtDT(m.matchTime) %><%= isWinner ? ' · tip: víťaz (1 X 2)' : '' %></span>
+              <span class="tag tag-info"><span class="dot"></span>Naplánovaný</span>
+            </div>
+            <div class="match-teams">
+              <div class="team"><% if (m.homeTeam && m.homeTeam.logo) { %><span class="team-logo" style="background:none;border:none"><img src="<%= m.homeTeam.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="background:var(--surface-3)"><%= m.homeAbbr %></span><% } %><span class="team-name"><%= m.homeTeam ? m.homeTeam.name : '—' %></span></div>
+              <% if (isWinner) { %>
+                <div class="onex2-pick" role="group">
+                  <button type="button" class="onex2-btn<%= m.myTip && m.myTip.winner === 'home' ? ' sel' : '' %>" data-w="home">1</button>
+                  <button type="button" class="onex2-btn<%= m.myTip && m.myTip.winner === 'draw' ? ' sel' : '' %>" data-w="draw">X</button>
+                  <button type="button" class="onex2-btn<%= m.myTip && m.myTip.winner === 'away' ? ' sel' : '' %>" data-w="away">2</button>
+                </div>
+              <% } else { %>
+                <div class="tip-inputs"><input class="tip-num" data-home inputmode="numeric" maxlength="2" value="<%= m.myTip && m.myTip.homeScore != null ? m.myTip.homeScore : '' %>" placeholder="–"><span class="tip-sep">:</span><input class="tip-num" data-away inputmode="numeric" maxlength="2" value="<%= m.myTip && m.myTip.awayScore != null ? m.myTip.awayScore : '' %>" placeholder="–"></div>
+              <% } %>
+              <div class="team away"><% if (m.awayTeam && m.awayTeam.logo) { %><span class="team-logo" style="background:none;border:none"><img src="<%= m.awayTeam.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="background:var(--surface-3)"><%= m.awayAbbr %></span><% } %><span class="team-name"><%= m.awayTeam ? m.awayTeam.name : '—' %></span></div>
+            </div>
+          </div>
+          <% }); %>
+        </div>
+      <% }); %>
+    </div>
+  <% }); %>
+
+  <div class="savebar">
+    <span class="muted" style="font-size:var(--fs-sm)">Tipy môžeš meniť až do začiatku každého zápasu. <b class="hi"><span id="tippedCount2"><%= totalMatches - unfilled %></span>/<%= totalMatches %></b> vyplnených</span>
+    <div class="row g-2"><button class="btn btn-primary" id="saveTips">Uložiť tipy</button></div>
+  </div>
+  <% } %>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<% if (!notMember && totalMatches > 0) { %>
+<script>
+(function(){
+  var save = document.getElementById('saveTips');
+  var dirty = false;
+  function setSaved(){ dirty=false; if(save){ save.disabled=true; save.textContent='Uložené'; } }
+  function setDirty(){ if(!dirty){ dirty=true; if(save){ save.disabled=false; save.textContent='Uložiť tipy'; } } }
+  function toast(msg, ok){
+    var el=document.createElement('div'); el.className='toast '+(ok?'success':'error');
+    el.style.cssText='background:var(--surface-1);border:1px solid var(--line-strong);border-radius:12px;padding:12px 16px;box-shadow:var(--shadow-lg);color:var(--text-1);font-size:14px';
+    el.textContent=msg; document.getElementById('toastWrap').appendChild(el);
+    setTimeout(function(){ el.style.transition='opacity .3s'; el.style.opacity='0'; setTimeout(function(){el.remove();},300); }, 2600);
+  }
+  function recount(){
+    var n=0, rows=document.querySelectorAll('[data-match]');
+    rows.forEach(function(row){
+      if (row.getAttribute('data-type')==='winner'){ if(row.querySelector('.onex2-btn.sel')) n++; }
+      else { var h=row.querySelector('[data-home]').value, a=row.querySelector('[data-away]').value; if(h!==''&&a!=='') n++; }
+    });
+    var c=document.getElementById('tippedCount2'); if(c) c.textContent=n;
+  }
+  document.querySelectorAll('.tip-num').forEach(function(inp){ inp.addEventListener('input',function(){ this.value=this.value.replace(/[^0-9]/g,'').substring(0,2); recount(); setDirty(); }); });
+  document.querySelectorAll('.onex2-pick').forEach(function(grp){
+    grp.addEventListener('click', function(e){ var b=e.target.closest('.onex2-btn'); if(!b)return; grp.querySelectorAll('.onex2-btn').forEach(function(x){x.classList.remove('sel');}); b.classList.add('sel'); recount(); setDirty(); });
+  });
+  if (save) save.addEventListener('click', function(){
+    if (save.disabled) return;
+    var rows=document.querySelectorAll('[data-match]'); var ops=[];
+    rows.forEach(function(row){
+      var id=Number(row.getAttribute('data-match-id'));
+      if (row.getAttribute('data-type')==='winner'){
+        var sel=row.querySelector('.onex2-btn.sel'); if(sel){ ops.push(fetch('/api/tips',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({matchId:id,winner:sel.getAttribute('data-w')})}).then(function(r){return r.json();})); }
+      } else {
+        var h=row.querySelector('[data-home]').value, a=row.querySelector('[data-away]').value;
+        if(h!==''&&a!==''){ ops.push(fetch('/api/tips',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({matchId:id,homeScore:Number(h),awayScore:Number(a)})}).then(function(r){return r.json();})); }
+      }
+    });
+    if(ops.length===0){ toast('Vyplň aspoň jeden tip.'); return; }
+    save.disabled=true; save.textContent='Ukladám…';
+    Promise.all(ops).then(function(res){ var fail=res.filter(function(r){return r&&r.success===false;}); if(fail.length){ toast(fail[0].message||'Niektoré tipy sa neuložili.'); save.disabled=false; save.textContent='Uložiť tipy'; } else { toast('Tipy uložené ✓', true); setSaved(); } }).catch(function(){ toast('Chyba pri ukladaní.'); save.disabled=false; save.textContent='Uložiť tipy'; });
+  });
+
+  (function(){ var n=0; document.querySelectorAll('[data-match]').forEach(function(row){
+    if (row.getAttribute('data-type')==='winner'){ if(row.querySelector('.onex2-btn.sel')) n++; }
+    else { var h=row.querySelector('[data-home]').value, a=row.querySelector('[data-away]').value; if(h!==''&&a!=='') n++; }
+  }); if(n>0) setSaved(); })();
+})();
+</script>
+<% } %>
+
+<%- include('partials/footer') %>

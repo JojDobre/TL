@@ -8,11 +8,6 @@ const { Tip, Match, Round, Team, League, User, Sequelize } = require('../models'
 const Op = Sequelize.Op;
 const { asyncHandler } = require('../middleware/error.middleware');
 
-// rozhodne, či tip dostal "plné" body (presný výsledok) — porovná s typom zápasu
-function isExactHit(tip, match, exactPoints) {
-  return (match.tipType !== 'winner') && (tip.points || 0) >= exactPoints;
-}
-
 // GET /stats
 const statsPage = asyncHandler(async (req, res) => {
   const meId = Number(req.session.userId);
@@ -23,7 +18,7 @@ const statsPage = asyncHandler(async (req, res) => {
   // všetky moje tipy s načítaným zápasom (a kolom kvôli zoskupeniu)
   const tips = await Tip.findAll({
     where: { userId: meId },
-    include: [{ model: Match, attributes: ['id', 'status', 'tipType', 'roundId'], include: [
+    include: [{ model: Match, attributes: ['id', 'status', 'tipType', 'roundId', 'homeScore', 'awayScore'], include: [
       { model: Round, attributes: ['id', 'name', 'endDate', 'leagueId'], include: [{ model: League, attributes: ['id', 'name'] }] },
       { model: Team, as: 'homeTeam', attributes: ['id', 'name', 'logo'] },
       { model: Team, as: 'awayTeam', attributes: ['id', 'name', 'logo'] },
@@ -31,26 +26,44 @@ const statsPage = asyncHandler(async (req, res) => {
     order: [['createdAt', 'ASC']],
   });
 
+  // Váha úspešnosti tipu (0–1) podľa toho, čo hráč trafil — prepočítané priamo
+  // z tipu a výsledku zápasu (nezávisí od bodovacieho systému ligy):
+  //   presný výsledok        → 1.0
+  //   správny víťaz/remíza    → 0.5
+  //   gólový rozdiel ALEBO počet gólov jedného tímu → 0.25
+  //   inak                   → 0
+  // Pri tipe typu 'winner' sa dá dosiahnuť len 0.5 (trafený víťaz) alebo 0.
+  function tipQualityWeight(tip, match) {
+    const hs = match.homeScore;
+    const as = match.awayScore;
+    if (hs == null || as == null) return 0;
+    const actual = hs > as ? 'home' : (hs < as ? 'away' : 'draw');
+    if (match.tipType === 'winner') {
+      return tip.winner && tip.winner === actual ? 0.5 : 0;
+    }
+    if (tip.homeScore == null || tip.awayScore == null) return 0;
+    if (tip.homeScore === hs && tip.awayScore === as) return 1.0;
+    const tipOutcome = tip.homeScore > tip.awayScore ? 'home' : (tip.homeScore < tip.awayScore ? 'away' : 'draw');
+    if (tipOutcome === actual) return 0.5;
+    if ((tip.homeScore - tip.awayScore) === (hs - as)) return 0.25;
+    if (tip.homeScore === hs || tip.awayScore === as) return 0.25;
+    return 0;
+  }
+
   let totalPoints = 0;
   let evaluated = 0;
-  let exact = 0;       // presný výsledok (plné body)
-  let partial = 0;     // niečo trafil (>0, ale nie plné)
-  let zero = 0;        // 0 bodov na vyhodnotenom
+  let exact = 0;       // presný výsledok (váha 1.0)
+  let partial = 0;     // čiastočne trafil (váha 0.25/0.5)
+  let zero = 0;        // 0 na vyhodnotenom
+  let weightSum = 0;   // súčet váh (pre váženú presnosť)
   const byRound = {};  // roundId -> { name, endDate, points }
-  const byTeam = {};   // teamId -> { name, logo, tips, scored }
+  const byTeam = {};   // teamId -> { name, logo, tips, weight }
 
   function addTeam(team) {
     if (!team) return null;
-    if (!byTeam[team.id]) byTeam[team.id] = { name: team.name, logo: team.logo || null, tips: 0, scored: 0 };
+    if (!byTeam[team.id]) byTeam[team.id] = { name: team.name, logo: team.logo || null, tips: 0, weight: 0 };
     return byTeam[team.id];
   }
-
-  // hrubý odhad "plných" bodov: ak existuje tip s presným výsledkom, býva to
-  // najvyššia hodnota; použijeme 10 ako default prah (typický exactScore),
-  // ale presnejšie: tip má plné body, ak rovná sa max možnému — to nevieme bez
-  // scoringu ligy, preto exact = tip.points sa rovná bodom za presný (>=10
-  // pri default). Pre robustnosť berieme: exact ak points >= 10 a typ nie je winner.
-  const EXACT_THRESHOLD = 10;
 
   tips.forEach((t) => {
     const m = t.Match;
@@ -58,8 +71,11 @@ const statsPage = asyncHandler(async (req, res) => {
     evaluated += 1;
     const p = t.points || 0;
     totalPoints += p;
-    if (isExactHit(t, m, EXACT_THRESHOLD)) exact += 1;
-    else if (p > 0) partial += 1;
+
+    const w = tipQualityWeight(t, m);  // 0 / 0.25 / 0.5 / 1.0
+    weightSum += w;
+    if (w >= 1) exact += 1;
+    else if (w > 0) partial += 1;
     else zero += 1;
 
     if (m.Round) {
@@ -68,34 +84,33 @@ const statsPage = asyncHandler(async (req, res) => {
       byRound[rid].points += p;
     }
 
-    // presnosť per tím — započítaj oba tímy zápasu
+    // úspešnosť per tím — pripočítaj váhu (nie binárne) k obom tímom zápasu
     [m.homeTeam, m.awayTeam].forEach((team) => {
       const rec = addTeam(team);
-      if (rec) { rec.tips += 1; if (p > 0) rec.scored += 1; }
+      if (rec) { rec.tips += 1; rec.weight += w; }
     });
   });
 
-  const accuracy = evaluated > 0 ? Math.round(((exact + partial) / evaluated) * 100) : null;
+  // vážená presnosť = priemer váh × 100
+  const accuracy = evaluated > 0 ? Math.round((weightSum / evaluated) * 100) : null;
 
   // body za posledných ~12 kôl (zoradené podľa endDate)
   const rounds = Object.values(byRound)
     .sort((a, b) => new Date(a.endDate || 0) - new Date(b.endDate || 0))
     .slice(-12);
   const roundPoints = rounds.map((r) => r.points);
-  // ── VÝVOJ POZÍCIE V REBRÍČKU (len oficiálne ligy) ──────────────────────
-  // Rank po každom oficiálnom kole: kumulatívne body VŠETKÝCH hráčov v
-  // oficiálnych ligách, po každom kole (chronologicky) určíme moju pozíciu.
+  // ── VÝVOJ POZÍCIE V REBRÍČKU — posledných 30 dní ──────────────────────
+  // Pozícia hráča naprieč VŠETKÝMI oficiálnymi ligami spolu (ako leaderboards),
+  // počítaná z kumulatívnych bodov ku koncu každého dňa (23:59). Body pribúdajú
+  // podľa toho, kedy bol zápas vyhodnotený (Match.updatedAt pre finished zápasy).
   let rankProgress = [];
-  const officialLeagues = await League.findAll({ where: { type: 'official' }, attributes: ['id', 'name'] });
+  const officialLeagues = await League.findAll({ where: { type: 'official' }, attributes: ['id'] });
   const offLeagueIds = officialLeagues.map((l) => l.id);
-  const leagueNameById = {};
-  officialLeagues.forEach((l) => { leagueNameById[l.id] = l.name; });
 
   if (offLeagueIds.length) {
     const offRounds = await Round.findAll({
       where: { leagueId: { [Op.in]: offLeagueIds } },
-      attributes: ['id', 'name', 'endDate', 'leagueId'],
-      order: [['endDate', 'ASC']],
+      attributes: ['id'],
     });
     const offRoundIds = offRounds.map((r) => r.id);
 
@@ -103,33 +118,58 @@ const statsPage = asyncHandler(async (req, res) => {
       const allTips = await Tip.findAll({
         where: { points: { [Op.ne]: null } },
         attributes: ['userId', 'points', 'matchId'],
-        include: [{ model: Match, attributes: ['id', 'roundId', 'status'], where: { status: 'finished', roundId: { [Op.in]: offRoundIds } }, required: true }],
-      });
-      const pointsByRoundUser = {}; // roundId -> { userId -> body }
-      allTips.forEach((t) => {
-        const rid = t.Match.roundId;
-        if (!pointsByRoundUser[rid]) pointsByRoundUser[rid] = {};
-        pointsByRoundUser[rid][t.userId] = (pointsByRoundUser[rid][t.userId] || 0) + (t.points || 0);
+        include: [{
+          model: Match,
+          attributes: ['id', 'roundId', 'status', 'updatedAt'],
+          where: { status: 'finished', roundId: { [Op.in]: offRoundIds } },
+          required: true,
+        }],
       });
 
-      const cumByUser = {};
-      offRounds.forEach((r) => {
-        const perUser = pointsByRoundUser[r.id];
-        if (!perUser) return;
-        Object.keys(perUser).forEach((uid) => { cumByUser[uid] = (cumByUser[uid] || 0) + perUser[uid]; });
-        if (cumByUser[meId] == null) return;
-        const myTotal = cumByUser[meId];
-        let rank = 1;
-        Object.keys(cumByUser).forEach((uid) => { if (cumByUser[uid] > myTotal) rank += 1; });
-        rankProgress.push({
-          roundName: r.name,
-          leagueName: leagueNameById[r.leagueId] || '',
-          endDate: r.endDate,
-          rank,
-          points: myTotal,
-          players: Object.keys(cumByUser).length,
+      if (allTips.length) {
+        function dayKey(d) {
+          const x = new Date(d);
+          return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
+        }
+        const pointsByDayUser = {};
+        allTips.forEach((t) => {
+          const when = t.Match.updatedAt || t.Match.createdAt;
+          const k = dayKey(when);
+          if (!pointsByDayUser[k]) pointsByDayUser[k] = {};
+          pointsByDayUser[k][t.userId] = (pointsByDayUser[k][t.userId] || 0) + (t.points || 0);
         });
-      });
+
+        const today = new Date();
+        const startWin = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        startWin.setDate(startWin.getDate() - 29); // 30 dní vrátane dnes
+        const startKey = dayKey(startWin);
+
+        const cumByUser = {};
+        const allDays = Object.keys(pointsByDayUser).sort();
+        // 1) napočítaj všetko PRED oknom do kumulatívu
+        allDays.forEach((k) => {
+          if (k < startKey) {
+            const per = pointsByDayUser[k];
+            Object.keys(per).forEach((uid) => { cumByUser[uid] = (cumByUser[uid] || 0) + per[uid]; });
+          }
+        });
+        // 2) prejdi 30 dní okna
+        for (let i = 0; i < 30; i++) {
+          const d = new Date(startWin);
+          d.setDate(startWin.getDate() + i);
+          const k = dayKey(d);
+          const per = pointsByDayUser[k];
+          if (per) {
+            Object.keys(per).forEach((uid) => { cumByUser[uid] = (cumByUser[uid] || 0) + per[uid]; });
+          }
+          if (cumByUser[meId] != null) {
+            const myTotal = cumByUser[meId];
+            let rank = 1;
+            Object.keys(cumByUser).forEach((uid) => { if (cumByUser[uid] > myTotal) rank += 1; });
+            rankProgress.push({ date: k, rank, points: myTotal, players: Object.keys(cumByUser).length });
+          }
+        }
+      }
     }
   }
 
@@ -140,7 +180,7 @@ const statsPage = asyncHandler(async (req, res) => {
   // TOP TÍMY podľa presnosti (min. 2 tipy, aby % bolo zmysluplné), top 6
   const topTeams = Object.values(byTeam)
     .filter((t) => t.tips >= 2)
-    .map((t) => ({ name: t.name, logo: t.logo, tips: t.tips, scored: t.scored, accuracy: Math.round((t.scored / t.tips) * 100) }))
+    .map((t) => ({ name: t.name, logo: t.logo, tips: t.tips, scored: Math.round(t.weight * 10) / 10, accuracy: Math.round((t.weight / t.tips) * 100) }))
     .sort((a, b) => b.accuracy - a.accuracy || b.tips - a.tips)
     .slice(0, 6);
 

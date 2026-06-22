@@ -47,6 +47,8 @@ const { tipHistoryPage } = require('../controllers/tipHistoryPage.controller');
 const { discoverPage } = require('../controllers/discoverPage.controller');
 const { playerPage } = require('../controllers/playerPage.controller');
 const { comparePage } = require('../controllers/comparePage.controller');
+const { myTipsPage } = require('../controllers/myTipsPage.controller');
+
 
 
 
@@ -150,6 +152,7 @@ router.get('/navody', attachUser, navodyPage);
 router.get('/achievements', requireLogin, achievementsPage);
 router.get('/logo-identity', logoIdentityPage);
 router.get('/tip-history', requireLogin, tipHistoryPage);
+router.get('/moje-tipy', requireLogin, myTipsPage);
 router.get('/rounds/:id/results', attachUser, roundResultsPage);
 router.get('/discover', attachUser, discoverPage);
 

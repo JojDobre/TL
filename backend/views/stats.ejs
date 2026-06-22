@@ -69,7 +69,7 @@
       <div class="donut-wrap">
         <% var ev = stats.evaluated || 1; var pE = Math.round(stats.exact/ev*100); var pP = Math.round(stats.partial/ev*100); %>
         <svg width="132" height="132" viewBox="0 0 42 42" style="flex:none">
-          <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--danger)" stroke-width="6"/>
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--danger)" stroke-width="6"  stroke-dashoffset="<%= 25 - pE %>" stroke-linecap="round"/>
           <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--success)" stroke-width="6" stroke-dasharray="<%= pE %> <%= 100-pE %>" stroke-dashoffset="25" stroke-linecap="round"/>
           <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--brand)" stroke-width="6" stroke-dasharray="<%= pP %> <%= 100-pP %>" stroke-dashoffset="<%= 25 - pE %>" stroke-linecap="round"/>
           <text x="21" y="20" text-anchor="middle" style="font:700 7px var(--num);fill:var(--text-1)"><%= stats.evaluated %></text>
@@ -88,9 +88,9 @@
   <div class="chart-grid-2">
     <div class="card card-pad">
       <div class="stat-label" style="margin-bottom:6px">Vývoj pozície v rebríčku</div>
-      <div class="muted" style="font-size:var(--fs-sm);margin-bottom:14px">Tvoje poradie v oficiálnych ligách po jednotlivých kolách.</div>
-      <% if (!rankProgress || rankProgress.length < 2) { %>
-        <div style="display:flex;align-items:center;justify-content:center;height:140px;color:var(--text-4)">Zatiaľ málo dát z oficiálnych líg.</div>
+      <div class="muted" style="font-size:var(--fs-sm);margin-bottom:14px">Tvoje poradie v oficiálnych ligách za posledných 30 dní.</div>
+      <% if (!rankProgress || rankProgress.length < 1) { %>
+        <div style="display:flex;align-items:center;justify-content:center;height:140px;color:var(--text-4)">Zatiaľ žiadne dáta z oficiálnych líg.</div>
       <% } else {
            // os Y = rank (1 hore = najlepší). Škálujeme medzi najlepším a najhorším rankom.
            var ranks = rankProgress.map(function(p){return p.rank;});
@@ -99,14 +99,14 @@
            var n = rankProgress.length;
            var W = 320, H = 140, padX = 10, padY = 16;
            function ry(rank){ return padY + ((rank - best) / span) * (H - 2*padY); } // rank 1 → hore
-           function rx(i){ return padX + (i * (W - 2*padX) / (n - 1)); }
+           function rx(i){ return n <= 1 ? W / 2 : padX + (i * (W - 2*padX) / (n - 1)); }
            var pts = rankProgress.map(function(p,i){ return rx(i).toFixed(1)+','+ry(p.rank).toFixed(1); });
       %>
         <svg viewBox="0 0 <%= W %> <%= H %>" style="width:100%;height:140px" preserveAspectRatio="none">
-          <polyline points="<%= pts.join(' ') %>" fill="none" stroke="var(--gold-bright)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <% if (n > 1) { %><polyline points="<%= pts.join(' ') %>" fill="none" stroke="var(--gold-bright)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><% } %>
           <% rankProgress.forEach(function(p,i){ %>
-            <circle class="rk-dot" cx="<%= rx(i).toFixed(1) %>" cy="<%= ry(p.rank).toFixed(1) %>" r="4" fill="var(--gold-bright)"
-              data-round="<%= p.roundName %>" data-league="<%= p.leagueName %>" data-rank="<%= p.rank %>" data-points="<%= p.points %>" data-players="<%= p.players %>" data-date="<%= p.endDate ? new Date(p.endDate).toLocaleDateString('sk-SK') : '' %>"></circle>
+            <circle class="rk-dot" cx="<%= rx(i).toFixed(1) %>" cy="<%= ry(p.rank).toFixed(1) %>" r="<%= n <= 1 ? 6 : 4 %>" fill="var(--gold-bright)"
+              data-rank="<%= p.rank %>" data-points="<%= p.points %>" data-players="<%= p.players %>" data-date="<%= new Date(p.date).toLocaleDateString('sk-SK') %>"></circle>
           <% }); %>
         </svg>
         <div class="between" style="font-size:var(--fs-xs);color:var(--text-4);margin-top:6px"><span>najlepšie #<%= best %></span><span>aktuálne <b class="hi">#<%= rankProgress[rankProgress.length-1].rank %></b> z <%= rankProgress[rankProgress.length-1].players %></span></div>
@@ -119,7 +119,7 @@
       <% } else { %>
         <% topTeams.forEach(function(t){ %>
           <div class="team-row">
-            <% if (t.logo) { %><span class="team-logo" style="width:30px;height:30px;background:none"><img src="<%= t.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)"><%= (t.name||'?').substring(0,3).toUpperCase() %></span><% } %>
+            <% if (t.logo) { %><span class="team-logo" style="width:30px;height:30px;background:none; border:none;"><img src="<%= t.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)"><%= (t.name||'?').substring(0,3).toUpperCase() %></span><% } %>
             <div style="flex:1;min-width:0">
               <div class="between" style="margin-bottom:5px"><span class="hi" style="font-size:var(--fs-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><%= t.name %></span><b class="hi num" style="font-size:var(--fs-sm)"><%= t.accuracy %>%</b></div>
               <div class="bar-track"><i style="width:<%= t.accuracy %>%"></i></div>
@@ -168,10 +168,9 @@
   // ----- Vývoj pozície v rebríčku (body na čiare) -----
   document.querySelectorAll('.rk-dot').forEach(function(dot){
     dot.addEventListener('mousemove', function(e){
-      var html = '<div class="tt-t">'+(dot.dataset.league?dot.dataset.league+' · ':'')+dot.dataset.round+'</div>'+
+      var html = '<div class="tt-t">'+dot.dataset.date+'</div>'+
         '<div class="tt-r"><span>Pozícia</span><b>#'+dot.dataset.rank+' z '+dot.dataset.players+'</b></div>'+
-        '<div class="tt-r"><span>Body</span><b>'+dot.dataset.points+'</b></div>'+
-        (dot.dataset.date?'<div class="tt-r"><span>Dátum</span><b>'+dot.dataset.date+'</b></div>':'');
+        '<div class="tt-r"><span>Body</span><b>'+dot.dataset.points+'</b></div>';
       showTip(html, e.clientX, e.clientY);
     });
     dot.addEventListener('mouseleave', hideTip);
