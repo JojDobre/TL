@@ -108,14 +108,27 @@ const myPage = asyncHandler(async (req, res) => {
   }
 
   // ---- NAJBLIŽŠIE ZÁPASY NA TIP (naprieč mojimi ligami) ----
-  // budúce zápasy v ligách, ktorých som člen, ktoré ešte nemám natipované
+  // Tipovateľné = zápasy v OTVORENÝCH kolách (now medzi startDate a endDate),
+  // ktoré sú scheduled a ešte nezačali, a ktoré používateľ ešte nemá natipované.
+  // Logika je zladená so stránkou /seasons/:id/zapasy, aby počet v banneri
+  // zodpovedal tomu, čo sa reálne dá tipovať (nie nevyhodnotené zápasy).
   let upcoming = [];
   let unfilledCount = 0;
+  let hasOpenMatches = false; // existujú vôbec otvorené tipovateľné zápasy (aj keď natipované)?
+  let firstOpenSeasonId = null; // sezóna, kam smerovať tlačidlá (otvorené zápasy)
   if (myLeagueIds.length) {
-    const rounds = await Round.findAll({ where: { leagueId: { [Op.in]: myLeagueIds } }, attributes: ['id'] });
-    const roundIds = rounds.map((r) => r.id);
+    const now = new Date();
+    // len OTVORENÉ kolá: startDate <= now <= endDate
+    const openRounds = await Round.findAll({
+      where: {
+        leagueId: { [Op.in]: myLeagueIds },
+        startDate: { [Op.lte]: now },
+        endDate: { [Op.gt]: now },
+      },
+      attributes: ['id'],
+    });
+    const roundIds = openRounds.map((r) => r.id);
     if (roundIds.length) {
-      const now = new Date();
       const matches = await Match.findAll({
         where: { roundId: { [Op.in]: roundIds }, status: 'scheduled', matchTime: { [Op.gt]: now } },
         include: [
@@ -130,6 +143,11 @@ const myPage = asyncHandler(async (req, res) => {
       const tippedIds = new Set(myTips.map((t) => t.matchId));
       const abbr = (n) => (n || '?').substring(0, 3).toUpperCase();
       const notTipped = matches.filter((m) => !tippedIds.has(m.id));
+      hasOpenMatches = matches.length > 0; // sú nejaké otvorené tipovateľné zápasy
+      // sezóna prvého otvoreného zápasu — cieľ tlačidla aj keď je všetko natipované
+      if (matches.length && matches[0].Round && matches[0].Round.League) {
+        firstOpenSeasonId = matches[0].Round.League.seasonId;
+      }
       unfilledCount = notTipped.length;
       upcoming = notTipped.slice(0, 3).map((m) => ({
         home: m.homeTeam ? m.homeTeam.name : '—',
@@ -148,6 +166,8 @@ const myPage = asyncHandler(async (req, res) => {
     myLeagues,
     upcoming,
     unfilledCount,
+    hasOpenMatches,
+    firstOpenSeasonId,
     hasAnything: mySeasons.length > 0 || myLeagues.length > 0,
   });
 });

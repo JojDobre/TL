@@ -3,6 +3,8 @@
   .my-greet { font-family:var(--font-display); font-weight:700; font-size:clamp(1.9rem,3.2vw,2.6rem); letter-spacing:-.02em; }
   .alert-banner { margin:22px 0 8px; display:grid; grid-template-columns:auto 1fr auto; gap:18px 22px; align-items:center; padding:20px 24px; border-radius:var(--r-xl); position:relative; overflow:hidden; background:linear-gradient(120deg, color-mix(in srgb,var(--warning) 16%,var(--surface-1)), var(--surface-1) 70%); border:1px solid rgba(245,165,36,.32); }
   .alert-banner::after { content:""; position:absolute; inset:0; pointer-events:none; background:radial-gradient(420px 160px at 92% -20%, rgba(245,165,36,.22), transparent 70%); }
+  .alert-banner.ok { background:linear-gradient(120deg, color-mix(in srgb,var(--success) 15%,var(--surface-1)), var(--surface-1) 70%); border-color:rgba(31,212,151,.32); }
+  .alert-banner.ok::after { background:radial-gradient(420px 160px at 92% -20%, rgba(31,212,151,.20), transparent 70%); }
   .alert-ic { width:54px; height:54px; border-radius:var(--r-md); flex:none; display:flex; align-items:center; justify-content:center; background:var(--warning-soft); color:var(--warning); font-size:26px; position:relative; z-index:1; }
   .alert-tx { position:relative; z-index:1; min-width:0; }
   .alert-tx h3 { font-size:var(--fs-h4); }
@@ -68,13 +70,14 @@
 
 <% if (hasAnything) { %>
 <div id="stateFull">
-  <!-- ALERT: najbližšia uzávierka + nevyplnené tipy -->
+  <!-- ALERT: nevyplnené tipy / všetko natipované -->
   <% if (unfilledCount > 0 && upcoming.length > 0) { %>
+  <!-- (1) sú nevyplnené tipovateľné zápasy -->
   <div class="wrap">
     <div class="alert-banner">
       <span class="alert-ic">⏳</span>
       <div class="alert-tx">
-        <div class="row g-2 wrap-gap" style="margin-bottom:5px"><h3>Máš <%= unfilledCount %> nevyplnených tipov</h3><span class="tag tag-warning"><span class="dot"></span>Uzávierka čoskoro</span></div>
+        <div class="row g-2 wrap-gap" style="margin-bottom:5px"><h3>Máš <%= unfilledCount %> <%= unfilledCount === 1 ? 'nevyplnený tip' : (unfilledCount < 5 ? 'nevyplnené tipy' : 'nevyplnených tipov') %></h3><span class="tag tag-warning"><span class="dot"></span>Uzávierka čoskoro</span></div>
         <p class="muted" style="font-size:var(--fs-sm)">Najbližší zápas <%= upcoming[0].home %> – <%= upcoming[0].away %> o <%= fmtTime(upcoming[0].time) %>. Nezabudni natipovať.</p>
       </div>
       <div class="alert-act">
@@ -82,7 +85,23 @@
       </div>
     </div>
   </div>
+  <% } else if (hasOpenMatches) { %>
+  <!-- (2) sú otvorené zápasy, ale všetko je natipované -->
+  <div class="wrap">
+    <div class="alert-banner ok">
+      <span class="alert-ic">✅</span>
+      <div class="alert-tx">
+        <div class="row g-2 wrap-gap" style="margin-bottom:5px"><h3>Máš všetko natipované</h3><span class="tag tag-success"><span class="dot"></span>Hotovo</span></div>
+        <p class="muted" style="font-size:var(--fs-sm)">V otvorených kolách nemáš žiadne nevyplnené tipy. Sleduj výsledky a rebríček.</p>
+      </div>
+      <div class="alert-act">
+        <a href="<%= firstOpenSeasonId ? ('/seasons/' + firstOpenSeasonId + '/zapasy') : '/seasons' %>" class="btn btn-secondary btn-sm">Skontrolovať tipy →</a>
+      </div>
+    </div>
+  </div>
   <% } %>
+  <!-- (3) žiadne otvorené kolá: banner sa nezobrazuje -->
+
 
   <div class="wrap my-layout">
     <main>
@@ -159,7 +178,7 @@
           <span class="nm-when"><%= fmtTime(u.time) %></span>
         </div>
         <% }); %>
-        <a href="/seasons" class="btn btn-brand btn-block btn-sm" style="margin-top:14px">Tipovať teraz →</a>
+        <a href="<%= upcoming[0] && upcoming[0].seasonId ? ('/seasons/' + upcoming[0].seasonId + '/zapasy') : '/seasons' %>" class="btn btn-brand btn-block btn-sm" style="margin-top:14px">Tipovať teraz →</a>
         <% } %>
       </div>
 

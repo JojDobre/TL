@@ -3,6 +3,8 @@ const db = require('../models');
 const seedInitialData = require('../seeds/initial-data.seed');
 const { seedAchievements } = require('../seeds/achievements.seed');
 const { seedArticles } = require('../seeds/articles.seed');
+const { seedTeams } = require('../seeds/teams.seed');
+
 
 // Synchronizácia databázy a vloženie počiatočných dát.
 //
@@ -41,7 +43,6 @@ const syncDatabase = async () => {
     // Definičné dáta (odznaky, články) sa upsertujú VŽDY — sú idempotentné
     // a nezávisia od toho, či je DB prázdna.
     await seedAchievements();
-    await seedArticles();
 
     // Seed spustíme len pri "force" alebo keď je DB prázdna (žiadni používatelia).
     // Tým zabránime duplicitnému vkladaniu pri každom reštarte v "alter" režime.
@@ -49,6 +50,8 @@ const syncDatabase = async () => {
     if (isForce || userCount === 0) {
       console.log('Začínam testovací seed...');
       await seedInitialData();
+      await seedArticles();
+      await seedTeams();
       console.log('Testovacie dáta boli vložené.');
     } else {
       console.log('Dáta už existujú, seeding preskočený.');
