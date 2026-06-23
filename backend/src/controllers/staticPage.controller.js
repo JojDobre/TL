@@ -52,14 +52,15 @@ const kontaktSubmit = asyncHandler(async (req, res) => {
     });
   }
 
-  // Predmet skombinujeme s vybranou témou, aby bol podnet v schránke prehľadný.
-  const fullSubject = [topic, subject].filter(Boolean).join(' — ') || '(bez predmetu)';
-
+  // Tému, predmet a súhlas posielame zvlášť — e-mail ich zobrazí samostatne
+  // (téma ako štítok, predmet ako pole, súhlas ako stav).
   const result = await sendContactEmail({
     name: name || contactName,
     email,
-    subject: fullSubject,
+    topic: topic || '',
+    subject: subject || '',
     message,
+    consent: !!req.body.consent,
   });
 
   // skipped = chýba RESEND_API_KEY (dev). Pre používateľa to berieme ako úspech,
