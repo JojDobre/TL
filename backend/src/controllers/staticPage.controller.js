@@ -42,6 +42,8 @@ const kontaktPage = asyncHandler(async (req, res) => {
 //   • AJAX (fetch z view) → vracia JSON { ok, error } a stránka sa nereloadne
 //   • klasický POST (fallback bez JS) → vracia vykreslenú stránku s bannerom
 const kontaktSubmit = asyncHandler(async (req, res) => {
+    console.log('[kontakt] body:', req.body);   // <-- dočasný diagnostický riadok
+
   const { name, email, subject, topic, message } = req.body;
   const { contactName, contactEmail } = await prefillFromSession(req);
 
