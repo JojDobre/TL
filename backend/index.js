@@ -6,7 +6,7 @@ const morgan = require('morgan');
 const path = require('path');
 const syncDatabase = require('./src/config/db.sync');
 
-const { errorHandler } = require('./src/middleware/error.middleware');
+const { errorHandler, notFoundHandler } = require('./src/middleware/error.middleware');
 
 // API routes (vracajú JSON — pre akcie cez fetch z prehliadača)
 const authApi = require('./src/routes/auth.routes');
@@ -93,7 +93,12 @@ app.use('/api/tips', tipApi);
 // ---- Stránky (HTML cez EJS) ----
 app.use('/', pageRoutes);
 
-// ---- Error handling ----
+// ---- 404 — žiadna z routes vyššie nesedela ----
+// Musí byť ZA všetkými routes a PRED errorHandlerom. Vytvorí ApiError(404),
+// ktorý errorHandler vyrenderuje ako HTML stránku (prehliadač) alebo JSON (/api/*).
+app.use(notFoundHandler);
+
+// ---- Error handling (úplne posledný middleware) ----
 app.use(errorHandler);
 
 // ---- štart ----

@@ -47,19 +47,42 @@ const errorHandler = (err, req, res, next) => {
     message = 'Token vypršal.';
   }
 
-  // Na server vždy zalogujeme plný detail (vrátane stack trace) pre ladenie
-  console.error(`[ERROR] ${req.method} ${req.originalUrl} ->`, err);
-
-  // Klientovi pošleme len bezpečnú správu. Stack trace pridáme LEN mimo produkcie.
-  const responseBody = {
-    success: false,
-    message,
-  };
-  if (process.env.NODE_ENV !== 'production') {
-    responseBody.stack = err.stack;
+  // Na server vždy zalogujeme plný detail (vrátane stack trace) pre ladenie.
+  // 404 nelogujeme ako chybu (zbytočný šum z botov a preklepov v URL).
+  if (statusCode !== 404) {
+    console.error(`[ERROR] ${req.method} ${req.originalUrl} ->`, err);
   }
 
-  res.status(statusCode).json(responseBody);
+  // Rozhodnutie JSON vs HTML:
+  //  - API požiadavky (/api/*) a klienti, čo si pýtajú JSON → JSON odpoveď
+  //  - bežná návšteva v prehliadači (zlý odkaz) → vyrenderovaná error-page.ejs
+  const wantsJson =
+    req.originalUrl.startsWith('/api/') ||
+    req.xhr ||
+    (req.headers.accept && req.headers.accept.indexOf('application/json') !== -1 &&
+      (!req.headers.accept || req.headers.accept.indexOf('text/html') === -1));
+
+  if (wantsJson) {
+    // Klientovi pošleme len bezpečnú správu. Stack trace pridáme LEN mimo produkcie.
+    const responseBody = { success: false, message };
+    if (process.env.NODE_ENV !== 'production') responseBody.stack = err.stack;
+    return res.status(statusCode).json(responseBody);
+  }
+
+  // HTML stránka chyby. Pri 404 zobrazíme priateľskú hlášku, inak konkrétnu správu.
+  const pageMessage = statusCode === 404
+    ? 'Stránka nebola nájdená.'
+    : message;
+
+  // render môže sám zlyhať (napr. chýbajúca šablóna) — preto fallback na plain text,
+  // aby sme sa nikdy nezacyklili v ďalšej chybe.
+  res.status(statusCode).render('error-page', { statusCode, message: pageMessage }, (renderErr, html) => {
+    if (renderErr) {
+      console.error('[ERROR] Render error-page zlyhal ->', renderErr);
+      return res.status(statusCode).type('text/plain').send(`${statusCode} — ${pageMessage}`);
+    }
+    res.send(html);
+  });
 };
 
 module.exports = {

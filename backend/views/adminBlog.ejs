@@ -1,6 +1,6 @@
 <%- include('partials/head', { title: 'Správa blogu', page: 'admin', active: 'admin', pageStyle: `
   .ad-head { padding:26px 0 18px; }
-  .b-head, .b-row { display:grid; grid-template-columns: 2fr 130px 110px 90px 150px; gap:14px; align-items:center; }
+  .b-head, .b-row { display:grid; grid-template-columns: 1.5fr 140px 120px 120px 120px; gap:14px; align-items:center; }
   .b-head { padding:10px 16px; }
   .b-head span { font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.08em; color:var(--text-4); font-weight:700; }
   .b-row { padding:13px 16px; border-bottom:1px solid var(--line); }
@@ -9,9 +9,41 @@
   .b-title { display:flex; align-items:center; gap:12px; min-width:0; }
   .b-emoji { width:38px; height:38px; border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center; font-size:20px; flex:none; }
   .b-name { font-weight:700; color:var(--text-1); font-size:var(--fs-sm); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .b-slug { font-size:var(--fs-xs); color:var(--text-4); }
-  .b-actions { display:flex; gap:8px; justify-content:flex-end; }
-  @media (max-width:860px){ .b-head { display:none; } .b-row { grid-template-columns:1fr; row-gap:8px; } .b-col-hide { display:none; } .b-actions { justify-content:flex-start; } }
+  .b-slug { font-size:var(--fs-xs); color:var(--text-4); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .b-actions { display:flex; gap:6px; justify-content:flex-end; }
+  .b-actions form { display:inline; }
+  .b-actions .btn-ico { width:34px; height:34px; padding:0; display:inline-flex; align-items:center; justify-content:center; border-radius:var(--r-xs); }
+  .b-actions .btn-ico svg { width:17px; height:17px; }
+  .b-actions .btn-del { color:var(--danger); border:1px solid var(--line); background:transparent; }
+  .b-actions .btn-del:hover { background:var(--danger); color:#fff; border-color:var(--danger); }
+  .b-meta { display:none; }
+
+  @media (max-width:860px){
+    .b-head { display:none; }
+    .b-row {
+      grid-template-columns:1fr;
+      gap:12px;
+      padding:14px;
+      border:1px solid var(--line);
+      border-radius:var(--r-md);
+      margin-bottom:10px;
+      background:var(--surface-1);
+    }
+    .b-row:last-child { margin-bottom:0; }
+    .b-row:hover { background:var(--surface-1); }
+    .b-emoji { width:44px; height:44px; font-size:22px; }
+    .b-name { white-space:normal; }
+    .b-cell-cat, .b-cell-date, .b-cell-status { display:none; }
+    .b-meta { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; }
+    .b-actions {
+      justify-content:center;
+      gap:8px;
+      padding-top:10px;
+      border-top:1px solid var(--line);
+    }
+    .b-actions .btn-ico { width:40px; height:40px; }
+    .b-actions .btn-ico svg { width:18px; height:18px; }
+  }
 ` }) %>
 
 <%- include('partials/admin-subnav', { active: 'blog' }) %>
@@ -34,7 +66,7 @@
   <% } %>
 
   <div class="card" style="padding:8px">
-    <div class="b-head"><span>Článok</span><span>Kategória</span><span class="b-col-hide">Dátum</span><span>Stav</span><span></span></div>
+    <div class="b-head"><span>Článok</span><span>Kategória</span><span>Dátum</span><span>Stav</span><span></span></div>
     <div class="hr"></div>
     <% articles.forEach(function(a){ %>
       <div class="b-row">
@@ -42,23 +74,43 @@
           <span class="b-emoji" style="background:<%= a.coverGradient %>"><%= a.coverEmoji %></span>
           <div style="min-width:0"><div class="b-name"><%= a.title %><% if (a.featured) { %> <span class="tag tag-gold" style="margin-left:4px">Odporúčané</span><% } %></div><div class="b-slug">/blog/<%= a.slug %></div></div>
         </div>
-        <span><span class="tag tag-info"><%= a.category %></span></span>
-        <span class="b-col-hide muted" style="font-size:var(--fs-sm)"><%= fmtDate(a.createdAt) %></span>
-        <span>
+
+        <%# desktop bunky (na mobile skryte cez .b-cell-*) %>
+        <span class="b-cell-cat"><span class="tag tag-info"><%= a.category %></span></span>
+        <span class="b-cell-date muted" style="font-size:var(--fs-sm)"><%= fmtDate(a.createdAt) %></span>
+        <span class="b-cell-status">
           <% if (a.published) { %><span class="status-dot" style="color:var(--success)"><span style="width:7px;height:7px;border-radius:50%;background:var(--success);display:inline-block;margin-right:6px"></span>Publikovaný</span>
           <% } else { %><span class="status-dot" style="color:var(--text-4)"><span style="width:7px;height:7px;border-radius:50%;background:var(--text-4);display:inline-block;margin-right:6px"></span>Koncept</span><% } %>
         </span>
+
+        <%# mobil: zhrnutie metadat v jednom riadku %>
+        <div class="b-meta">
+          <span class="tag tag-info"><%= a.category %></span>
+          <% if (a.published) { %><span class="status-dot" style="color:var(--success)"><span style="width:7px;height:7px;border-radius:50%;background:var(--success);display:inline-block;margin-right:6px"></span>Publikovaný</span>
+          <% } else { %><span class="status-dot" style="color:var(--text-4)"><span style="width:7px;height:7px;border-radius:50%;background:var(--text-4);display:inline-block;margin-right:6px"></span>Koncept</span><% } %>
+          <span class="muted" style="font-size:var(--fs-sm)"><%= fmtDate(a.createdAt) %></span>
+        </div>
+
         <div class="b-actions">
-          <a class="btn btn-secondary btn-sm" href="/blog/<%= a.slug %>" target="_blank">Náhľad</a>
-          <a class="btn btn-secondary btn-sm" href="/admin/blog/<%= a.id %>/edit">Upraviť</a>
-          <form method="POST" action="/admin/blog/<%= a.id %>/delete" onsubmit="return confirm('Naozaj zmazať článok „<%= a.title.replace(/'/g, '') %>“?');" style="display:inline">
-            <button type="submit" class="btn btn-sm" style="color:var(--danger);border:1px solid var(--line)">Zmazať</button>
+          <%# Nahlad – ikona oka %>
+          <a class="btn btn-secondary btn-ico" href="/blog/<%= a.slug %>" target="_blank" title="Náhľad" aria-label="Náhľad">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </a>
+          <%# Upravit – ikona ceruzky %>
+          <a class="btn btn-secondary btn-ico" href="/admin/blog/<%= a.id %>/edit" title="Upraviť" aria-label="Upraviť">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </a>
+          <%# Zmazat – ikona kosa %>
+          <form method="POST" action="/admin/blog/<%= a.id %>/delete" onsubmit="return confirm('Naozaj zmazať článok „<%= a.title.replace(/'/g, '') %>“?');">
+            <button type="submit" class="btn btn-ico btn-del" title="Zmazať" aria-label="Zmazať">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+            </button>
           </form>
         </div>
       </div>
     <% }); %>
     <% if (articles.length === 0) { %>
-      <div class="b-row"><div class="b-title"><div class="b-name">Zatiaľ žiadne články. Vytvor prvý cez „+ Nový článok".</div></div></div>
+      <div class="b-row"><div class="b-title"><div class="b-name">Zatiaľ žiadne články. Vytvor prvý cez „+ Nový článok“.</div></div></div>
     <% } %>
   </div>
 </div>

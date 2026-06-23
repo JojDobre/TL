@@ -1,10 +1,24 @@
-<%- include('partials/head', { title: 'Chyba', page: '', active: '' }) %>
+<%
+  // statusCode môže prísť z errorHandleru aj z priamych render('error-page') volaní (kde nie je) → fallback
+  var _code = (typeof statusCode !== 'undefined' && statusCode) ? statusCode : 404;
+  var _msg = (typeof message !== 'undefined' && message) ? message : 'Stránka nebola nájdená.';
+  // priateľský nadpis podľa typu chyby
+  var _eyebrow = _code === 404 ? 'Stránka neexistuje'
+              : _code === 403 ? 'Prístup zamietnutý'
+              : _code === 400 ? 'Neplatná požiadavka'
+              : 'Niečo sa pokazilo';
+%>
+<%- include('partials/head', { title: _code + ' — ' + _eyebrow, page: '', active: '' }) %>
 
-<div class="wrap" style="padding:80px 0;text-align:center;min-height:50vh;display:flex;flex-direction:column;align-items:center;justify-content:center">
-  <div class="eyebrow">Ups</div>
-  <h1 style="font-size:clamp(2rem,4vw,3rem);margin:8px 0 12px"><%= typeof message !== 'undefined' && message ? message : 'Stránka nebola nájdená.' %></h1>
-  <p class="muted" style="max-width:48ch;margin-bottom:28px">Skontroluj adresu, alebo sa vráť späť na sezóny.</p>
-  <a href="/seasons" class="btn btn-primary btn-lg">← Späť na sezóny</a>
+<div class="wrap" style="padding:64px 0 80px;text-align:center;min-height:56vh;display:flex;flex-direction:column;align-items:center;justify-content:center">
+  <div style="font-size:clamp(5rem,18vw,9rem);font-weight:800;line-height:.9;letter-spacing:-.04em;background:linear-gradient(135deg,var(--brand),var(--gold,#e8b800));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:var(--brand)"><%= _code %></div>
+  <div class="eyebrow" style="margin-top:14px"><%= _eyebrow %></div>
+  <h1 style="font-size:clamp(1.6rem,3.4vw,2.4rem);margin:8px 0 12px"><%= _msg %></h1>
+  <p class="muted" style="max-width:48ch;margin-bottom:28px">Skontroluj adresu, alebo sa vráť na úvod či na zoznam sezón.</p>
+  <div class="wrap-gap" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+    <a href="/" class="btn btn-secondary btn-lg">← Domov</a>
+    <a href="/seasons" class="btn btn-primary btn-lg">Prejsť na sezóny</a>
+  </div>
 </div>
 
 <%- include('partials/footer') %>
