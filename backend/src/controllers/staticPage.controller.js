@@ -38,18 +38,33 @@ const kontaktPage = asyncHandler(async (req, res) => {
 });
 
 // POST /kontakt — spracuje odoslaný formulár a pošle e-mail na schránku podpory.
+// Podporuje dva režimy:
+//   • AJAX (fetch z view) → vracia JSON { ok, error } a stránka sa nereloadne
+//   • klasický POST (fallback bez JS) → vracia vykreslenú stránku s bannerom
 const kontaktSubmit = asyncHandler(async (req, res) => {
   const { name, email, subject, topic, message } = req.body;
   const { contactName, contactEmail } = await prefillFromSession(req);
 
-  // Základná validácia povinných polí (e-mail + správa).
-  if (!email || !message || !message.trim()) {
-    return res.status(400).render('kontakt', {
+  // Detekcia AJAX požiadavky (fetch posiela tieto hlavičky).
+  const wantsJson =
+    req.xhr ||
+    (req.get('X-Requested-With') === 'XMLHttpRequest') ||
+    (req.get('Accept') || '').includes('application/json');
+
+  // pomocník: odpoveď podľa režimu (JSON pre AJAX, render pre klasický POST)
+  const fail = (status, msg) => {
+    if (wantsJson) return res.status(status).json({ ok: false, error: msg });
+    return res.status(status).render('kontakt', {
       contactName: name || contactName,
       contactEmail: email || contactEmail,
       sent: false,
-      error: 'Vyplň e-mail aj text správy.',
+      error: msg,
     });
+  };
+
+  // Základná validácia povinných polí (e-mail + správa).
+  if (!email || !message || !message.trim()) {
+    return fail(400, 'Vyplň e-mail aj text správy.');
   }
 
   // Tému, predmet a súhlas posielame zvlášť — e-mail ich zobrazí samostatne
@@ -66,15 +81,11 @@ const kontaktSubmit = asyncHandler(async (req, res) => {
   // skipped = chýba RESEND_API_KEY (dev). Pre používateľa to berieme ako úspech,
   // aby sme neodhaľovali internú konfiguráciu; chyba je zalogovaná v service.
   if (!result.success && !result.skipped) {
-    return res.status(500).render('kontakt', {
-      contactName: name || contactName,
-      contactEmail: email || contactEmail,
-      sent: false,
-      error: 'Správu sa nepodarilo odoslať. Skús to neskôr alebo nám napíš priamo na e-mail.',
-    });
+    return fail(500, 'Správu sa nepodarilo odoslať. Skús to neskôr alebo nám napíš priamo na e-mail.');
   }
 
-  // Úspech → render s potvrdzovacím bannerom; polia opäť predvyplníme zo session.
+  // Úspech.
+  if (wantsJson) return res.json({ ok: true });
   return res.render('kontakt', { contactName, contactEmail, sent: true, error: null });
 });
 
