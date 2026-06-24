@@ -22,8 +22,8 @@
   .th-vs { font-size:var(--fs-sm); color:var(--text-2); white-space:nowrap; }
   .th-tip { font-family:var(--num); font-weight:700; font-size:var(--fs-sm); color:var(--text-1); white-space:nowrap; }
   .th-meta { font-size:var(--fs-xs); color:var(--text-4); }
-  @media (max-width:980px){ .pf-layout { grid-template-columns:1fr; } }
-  @media (max-width:560px){ .badge-grid { grid-template-columns:repeat(3,1fr); } .field-row { grid-template-columns:1fr; } .th-row { grid-template-columns:1fr auto auto; gap:10px; } .th-row .th-meta { display:none; } .pf-id-row { flex-direction:column; align-items:center; text-align:center; } .pf-id { text-align:center; } .pf-id .row.g-2 { justify-content:center; flex-wrap:wrap; } .pf-id-row > .row.g-2 { justify-content:center; flex-wrap:wrap; width:100%; } }
+  @media (max-width:980px){ .pf-layout { grid-template-columns:1fr; } .pf-id-row { flex-direction:column; align-items:center; text-align:center; } .pf-id { text-align:center; } .pf-id .row.g-2 { justify-content:center; flex-wrap:wrap; } .pf-id-row > .row.g-2 { justify-content:center; flex-wrap:wrap; width:100%; } }
+  @media (max-width:560px){ .badge-grid { grid-template-columns:repeat(3,1fr); } .field-row { grid-template-columns:1fr; } .th-row { grid-template-columns:1fr auto auto; gap:10px; } .th-row .th-meta { display:none; }  }
 ` }) %>
 
 <%
@@ -54,7 +54,7 @@
   <!-- LEFT: posledné tipy + edit -->
   <main>
     <div class="card card-pad" style="margin-bottom:18px">
-      <div class="between" style="margin-bottom:6px"><h3 style="font-size:var(--fs-h4)">Posledné tipy</h3><a href="/stats" class="btn btn-ghost btn-sm">Štatistiky →</a></div>
+      <div class="between" style="margin-bottom:6px"><h3 style="font-size:var(--fs-h4)">Posledné tipy</h3><a href="/tip-history" class="btn btn-ghost btn-sm">História →</a></div>
       <p class="muted" style="font-size:var(--fs-sm);margin-bottom:8px">Tvoje naposledy odoslané tipy a získané body.</p>
       <% if (recent.length === 0) { %>
         <p class="muted" style="padding:20px 0">Zatiaľ si neodoslal žiadne tipy.</p>
@@ -70,8 +70,9 @@
     </div>
 
     <div class="card card-pad">
-      <div class="between" style="margin-bottom:18px"><h3 style="font-size:var(--fs-h4)">Účet</h3><a href="/settings" class="btn btn-secondary btn-sm">Upraviť v nastaveniach →</a></div>
-      <div class="stack g-3" style="font-size:var(--fs-sm)">
+      <div class="between" ><h3 style="font-size:var(--fs-h4)">Účet</h3><a href="/settings" class="btn btn-ghost btn-sm">Upraviť →</a></div>
+      <p class="muted" style="font-size:var(--fs-sm);margin-bottom:8px">Základné informácie o tvojom účte.</p>
+      <div class="stack g-3" style="font-size:var(--fs-sm); margin-top:16px">
         <div class="between"><span class="muted">Meno a priezvisko</span><b class="hi"><%= profile.name %></b></div>
         <div class="between"><span class="muted">Prezývka</span><b class="hi">@<%= profile.username %></b></div>
         <div class="between"><span class="muted">E-mail</span><b class="hi"><%= profile.email || '—' %></b></div>

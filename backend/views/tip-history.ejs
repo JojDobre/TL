@@ -72,15 +72,15 @@
 
   <!-- filtre: GET formulár, auto-submit pri zmene -->
   <form method="GET" action="/tip-history" class="filters" id="thFilters">
-    <select class="select" style="width:auto" name="sezona" onchange="this.form.submit()">
+    <select class="select" style="width:auto" name="sezona">
       <option value="">Všetky sezóny</option>
       <% seasons.forEach(function(s){ %><option value="<%= s.id %>" <%= filters.season === s.id ? 'selected' : '' %>><%= s.name %></option><% }); %>
     </select>
-    <select class="select" style="width:auto" name="liga" onchange="this.form.submit()">
-      <option value="">Všetky ligy</option>
-      <% leagues.forEach(function(l){ %><option value="<%= l.id %>" <%= filters.league === l.id ? 'selected' : '' %>><%= l.name %></option><% }); %>
+    <select class="select" style="width:auto" name="liga">
+      <option value="" data-season="">Všetky ligy</option>
+      <% leagues.forEach(function(l){ %><% if (!filters.season || l.seasonId === filters.season) { %><option value="<%= l.id %>" data-season="<%= l.seasonId || '' %>" <%= filters.league === l.id ? 'selected' : '' %>><%= l.name %></option><% } %><% }); %>
     </select>
-    <select class="select" style="width:auto" name="vysledok" onchange="this.form.submit()">
+    <select class="select" style="width:auto" name="vysledok">
       <option value="">Všetky výsledky</option>
       <option value="exact" <%= filters.result === 'exact' ? 'selected' : '' %>>Iba presné</option>
       <option value="zero" <%= filters.result === 'zero' ? 'selected' : '' %>>Iba bez bodov</option>
@@ -91,8 +91,6 @@
 
   <% if (rows.length === 0) { %>
     <div class="card card-pad center" style="text-align:center;padding:48px 24px">
-      <div style="font-size:38px;margin-bottom:10px">🗂️</div>
-      <h3 style="margin-bottom:6px">Žiadne tipy</h3>
       <p class="muted"><%= summary.totalTips === 0 ? 'Zatiaľ si nezadal žiadny tip. Vyber sezónu a začni tipovať.' : 'Pre zvolený filter nie sú žiadne tipy.' %></p>
     </div>
   <% } else { %>
@@ -116,5 +114,24 @@
   </div>
   <% } %>
 </div>
+
+<script>
+// auto-submit filtra pri zmene ktoréhokoľvek selectu — bez inline onchange
+// (inline handlery blokuje CSP script-src-attr), takže viažeme listener tu
+(function(){
+  var form = document.getElementById('thFilters');
+  if (!form) return;
+  var seasonSel = form.querySelector('select[name="sezona"]');
+  var leagueSel = form.querySelector('select[name="liga"]');
+  form.querySelectorAll('select').forEach(function(sel){
+    sel.addEventListener('change', function(){
+      // pri zmene sezóny vynuluj ligu — zoznam líg sa po reloade prefiltruje
+      // na danú sezónu (inak by liga z inej sezóny visela vo filtri)
+      if (sel === seasonSel && leagueSel) leagueSel.value = '';
+      form.submit();
+    });
+  });
+})();
+</script>
 
 <%- include('partials/footer') %>

@@ -15,6 +15,11 @@
   .badge { text-align:center; padding:16px 8px; border-radius:var(--r-md); background:var(--surface-2); border:1px solid var(--line); }
   .badge-ico { width:46px; height:46px; margin:0 auto 8px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:21px; }
   .badge-name { font-size:var(--fs-xs); font-weight:700; color:var(--text-2); }
+  .badge.badge-hidden { display:none; }
+  .badge-grid.badges-open .badge.badge-hidden { display:block; }
+  .badges-toggle { width:100%; margin-top:12px; }
+  .badges-toggle .chev { display:inline-block; transition:transform .18s ease; margin-left:6px; }
+  .badges-toggle[aria-expanded="true"] .chev { transform:rotate(180deg); }
   .shared-row { display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; padding:12px 14px; border-radius:var(--r-sm); background:var(--surface-2); }
   .shared-logo { width:38px; height:38px; border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-weight:700; font-size:12px; color:#fff; }
   .form-dots { display:flex; gap:6px; flex-wrap:wrap; }
@@ -102,11 +107,14 @@
       <% if (badges.length === 0) { %>
         <p class="muted" style="font-size:var(--fs-sm)">Zatiaľ žiadne odznaky.</p>
       <% } else { %>
-      <div class="badge-grid">
-        <% badges.forEach(function(b){ %>
-          <div class="badge"><div class="badge-ico" style="<%= icoBg(b.rarity) %>"><%= b.icon %></div><div class="badge-name"><%= b.name %></div></div>
+      <div class="badge-grid" id="badgeGrid">
+        <% badges.forEach(function(b, i){ %>
+          <div class="badge<%= i >= 8 ? ' badge-hidden' : '' %>"><div class="badge-ico" style="<%= icoBg(b.rarity) %>"><%= b.icon %></div><div class="badge-name"><%= b.name %></div></div>
         <% }); %>
       </div>
+      <% if (badges.length > 8) { %>
+        <button type="button" class="btn btn-secondary btn-sm badges-toggle" id="badgesToggle" aria-expanded="false" data-total="<%= badges.length %>">Zobraziť všetky (<%= badges.length %>)<span class="chev">▾</span></button>
+      <% } %>
       <% } %>
     </div>
   </aside>
@@ -153,5 +161,21 @@
     </div>
   </main>
 </div>
+
+<script>
+(function(){
+  var btn = document.getElementById('badgesToggle');
+  var grid = document.getElementById('badgeGrid');
+  if (!btn || !grid) return;
+  var total = btn.getAttribute('data-total');
+  btn.addEventListener('click', function(){
+    var open = grid.classList.toggle('badges-open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    btn.innerHTML = open
+      ? 'Zobraziť menej<span class="chev">▾</span>'
+      : 'Zobraziť všetky (' + total + ')<span class="chev">▾</span>';
+  });
+})();
+</script>
 
 <%- include('partials/footer') %>

@@ -98,25 +98,54 @@ const playerPage = asyncHandler(async (req, res) => {
   let bestStreak = 0; let cur = 0;
   roundsArr.forEach((r) => { cur = r.points > 0 ? cur + 1 : 0; if (cur > bestStreak) bestStreak = cur; });
 
-  // ── pozície v ligách hráča → najlepšia pozícia ──
+  // ── pozície v OFICIÁLNYCH ligách hráča → najlepšia pozícia ──
+  // Berie sa len oficiálny rebríček (League.type === 'official'), rovnako ako
+  // globálny rebríček na /leaderboards. Pozícia sa NEzapočíta, ak má hráč v lige
+  // 0 bodov (aj keby formálne vyšiel prvý v prázdnom/nulovom rebríčku).
   const tMems = await UserLeague.findAll({ where: { userId: targetId }, attributes: ['leagueId'] });
   const targetLeagueIds = tMems.map((m) => m.leagueId);
   let bestRank = null;
   const boards = {}; // leagueId -> board (cache pre spoločné súťaže)
-  for (const lid of targetLeagueIds) {
-    const board = await leagueBoard(lid);
-    boards[lid] = board;
-    const r = rankOf(board, targetId);
-    if (r !== null && (bestRank === null || r < bestRank)) bestRank = r;
+  if (targetLeagueIds.length) {
+    // zisti typy líg, aby sme oddelili oficiálne od komunitných
+    const tLeagues = await League.findAll({
+      where: { id: { [Op.in]: targetLeagueIds } },
+      attributes: ['id', 'type'],
+    });
+    const officialLeagueIds = tLeagues.filter((l) => l.type === 'official').map((l) => l.id);
+
+    for (const lid of officialLeagueIds) {
+      const board = await leagueBoard(lid);
+      boards[lid] = board;
+      const myPts = board[targetId] || 0;
+      if (myPts <= 0) continue; // 0 bodov = pozícia sa neráta
+      const r = rankOf(board, targetId);
+      if (r !== null && (bestRank === null || r < bestRank)) bestRank = r;
+    }
   }
 
-  // ── odznaky (verejné, earned) ──
+  // ── odznaky (verejné, získané) ──
+  // Pošleme VŠETKY získané, zoradené podľa rarity (legendary → epic → rare →
+  // common), v rámci rovnakej rarity od najnovšie získaných. View zobrazí
+  // prvých 8 a tlačidlom rozbalí zvyšok.
   let badges = [];
   let badgeCount = 0;
+  const RARITY_RANK = { legendary: 0, epic: 1, rare: 2, common: 3 };
   try {
     const { items, earnedCount } = await evaluateUser(targetId);
     badgeCount = earnedCount;
-    badges = items.filter((b) => b.earned).slice(0, 8).map((b) => ({ name: b.name, icon: b.icon, rarity: b.rarity }));
+    badges = items
+      .filter((b) => b.earned)
+      .sort((a, b) => {
+        const ra = RARITY_RANK[a.rarity] != null ? RARITY_RANK[a.rarity] : 9;
+        const rb = RARITY_RANK[b.rarity] != null ? RARITY_RANK[b.rarity] : 9;
+        if (ra !== rb) return ra - rb;
+        // novšie získané prvé
+        const ta = a.dateAwarded ? new Date(a.dateAwarded).getTime() : 0;
+        const tb = b.dateAwarded ? new Date(b.dateAwarded).getTime() : 0;
+        return tb - ta;
+      })
+      .map((b) => ({ name: b.name, icon: b.icon, rarity: b.rarity }));
   } catch (e) { badges = []; }
 
   // ── spoločné súťaže s prihláseným (prienik líg) ──

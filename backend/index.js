@@ -48,6 +48,9 @@ app.use(helmet({
       // pre prípadné inline štýly v šablónach
       'style-src': ["'self'", "'unsafe-inline'", 'https:'],
       'script-src': ["'self'", "'unsafe-inline'"],
+      // povoliť inline event handlery (onchange/onclick v šablónach);
+      // helmet defaultne nastavuje script-src-attr na 'none', čo ich blokuje
+      'script-src-attr': ["'unsafe-inline'"],
       // formuláre/akcie len na náš pôvod
       'connect-src': ["'self'"],
     },

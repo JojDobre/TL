@@ -28,7 +28,7 @@ const tipHistoryPage = asyncHandler(async (req, res) => {
 
   // filtre z query (voliteľné)
   const fSeason = req.query.sezona ? Number(req.query.sezona) : null;
-  const fLeague = req.query.liga ? Number(req.query.liga) : null;
+  let fLeague = req.query.liga ? Number(req.query.liga) : null;
   const fResult = req.query.vysledok || null; // 'exact' | 'zero'
 
   // všetky tipy hráča s plným kontextom
@@ -56,6 +56,18 @@ const tipHistoryPage = asyncHandler(async (req, res) => {
   // dropdown zoznamy (sezóny/ligy z tipov hráča)
   const seasonMap = {};
   const leagueMap = {};
+
+  // edge-case: ak je vybraná sezóna aj liga, ale liga nepatrí do tej sezóny
+  // (napr. po prepnutí sezóny zostala stará liga vo filtri), ligu ignorujeme,
+  // aby filter nezobrazil prázdny výsledok a dropdown ostal konzistentný.
+  if (fSeason && fLeague) {
+    let belongs = false;
+    for (const t of tips) {
+      const lg = t.Match && t.Match.Round && t.Match.Round.League;
+      if (lg && lg.id === fLeague) { belongs = (lg.seasonId === fSeason); break; }
+    }
+    if (!belongs) fLeague = null;
+  }
 
   // summary
   let totalTips = 0; let exactCount = 0; let totalPoints = 0; let evaluatedCount = 0; let weightSum = 0;
@@ -111,7 +123,7 @@ const tipHistoryPage = asyncHandler(async (req, res) => {
     rows,
     summary: { totalTips, exactCount, totalPoints, accuracy },
     seasons: Object.entries(seasonMap).map(([id, name]) => ({ id: Number(id), name })),
-    leagues: Object.entries(leagueMap).map(([id, v]) => ({ id: Number(id), name: v.name })),
+    leagues: Object.entries(leagueMap).map(([id, v]) => ({ id: Number(id), name: v.name, seasonId: v.seasonId })),
     filters: { season: fSeason, league: fLeague, result: fResult },
     shownCount: rows.length,
   });
