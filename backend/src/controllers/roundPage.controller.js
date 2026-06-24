@@ -102,6 +102,7 @@ const roundDetailPage = asyncHandler(async (req, res) => {
       awayAbbr: teamAbbr(mj.awayTeam && mj.awayTeam.name),
       myTip: my ? { homeScore: my.homeScore, awayScore: my.awayScore, winner: my.winner, points: my.points } : null,
       others: (othersByMatch[m.id] || []).map((t) => ({
+        userId: t.userId,
         name: [t.User.firstName, t.User.lastName].filter(Boolean).join(' ') || t.User.username || 'Hráč',
         abbr: teamAbbr([t.User.firstName, t.User.lastName].filter(Boolean).join(' ') || t.User.username),
         homeScore: t.homeScore, awayScore: t.awayScore, winner: t.winner, points: t.points,
@@ -262,4 +263,3 @@ const roundResultsPage = asyncHandler(async (req, res) => {
 });
 
 module.exports = { roundDetailPage, roundResultsPage };
-

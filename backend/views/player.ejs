@@ -2,9 +2,10 @@
   .pf-cover { height:150px; border-radius:var(--r-2xl); position:relative; overflow:hidden; margin-top:24px; background:linear-gradient(120deg,#0b2b52,#1b3f72 55%,#2b5fa8); }
   .pf-cover::after { content:""; position:absolute; inset:0; background:radial-gradient(600px 200px at 80% 120%, rgba(124,92,255,.25), transparent); }
   .pf-head { padding:0 24px; position:relative; z-index:2; }
-  .pf-head-top { margin-top:-48px; display:flex; align-items:flex-end; gap:18px; flex-wrap:wrap; }
+  .pf-head-top { margin-top:-52px; display:flex; justify-content:center; align-items:flex-end; }
   .pf-head .avatar { box-shadow:0 0 0 5px var(--bg); }
-  .pf-id { flex:1; min-width:200px; padding-bottom:4px; }
+  .pf-id-row { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; margin-top:16px; flex-wrap:wrap; }
+  .pf-id { flex:1; min-width:200px; }
   .pf-name { font-family:var(--font-display); font-weight:700; font-size:1.9rem; color:var(--text-1); letter-spacing:-.02em; }
   .crumb { font-size:var(--fs-sm); color:var(--text-4); margin-bottom:6px; }
   .crumb a { color:var(--text-3); } .crumb a:hover { color:var(--brand-bright); }
@@ -29,9 +30,10 @@
   @media (max-width: 920px){ .pf-layout { grid-template-columns:1fr; } }
   @media (max-width: 560px){
     .badge-grid { grid-template-columns:repeat(3,1fr); }
-    .pf-head-top { justify-content:center; text-align:center; }
+    .pf-id-row { flex-direction:column; align-items:center; text-align:center; }
     .pf-id { text-align:center; }
-    .pf-id .row { justify-content:center; }
+    .pf-id .row.g-2 { justify-content:center; flex-wrap:wrap; }
+    .pf-id-row > .row.g-2 { justify-content:center; flex-wrap:wrap; width:100%; }
   }
 ` }) %>
 <%
@@ -54,11 +56,13 @@
   <div class="pf-head">
     <div class="pf-head-top">
       <span class="avatar avatar-xl" style="width:100px;height:100px;font-size:36px;background:linear-gradient(135deg,#3a7bd5,#1b3f72);color:#fff"><%= player.initials %></span>
+    </div>
+    <div class="pf-id-row">
       <div class="pf-id">
         <div class="row g-2 wrap-gap"><span class="pf-name"><%= player.name %></span><span class="chip-role <%= roleCls(player.role) %>"><%= roleName(player.role) %></span></div>
         <div class="muted" style="font-size:var(--fs-sm)">@<%= player.username %> · <%= joined(player.createdAt) %></div>
       </div>
-      <div class="row g-2 wrap-gap" style="padding-bottom:4px">
+      <div class="row g-2 wrap-gap">
         <% if (isLoggedIn) { %><a href="/compare?with=<%= player.id %>" class="btn btn-secondary btn-sm">Porovnať s tebou</a><% } %>
         <a href="/leaderboards" class="btn btn-ghost btn-sm">Späť na rebríček</a>
       </div>

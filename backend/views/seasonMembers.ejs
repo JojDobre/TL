@@ -20,8 +20,8 @@
   <div class="mem-row">
     <span class="mem-av"><%= initials(m) %></span>
     <div class="mem-name">
-      <b><%= [m.firstName, m.lastName].filter(Boolean).join(' ') || m.username %></b>
-      <div class="muted" style="font-size:var(--fs-xs)">@<%= m.username %></div>
+      <b><a class="player-link" href="/player/<%= m.id %>"><%= [m.firstName, m.lastName].filter(Boolean).join(' ') || m.username %></a></b>
+      <div class="muted" style="font-size:var(--fs-xs)"><a class="player-link" href="/player/<%= m.id %>">@<%= m.username %></a></div>
     </div>
     <% if (m.isCreator) { %>
       <span class="tag tag-gold">Zakladateľ</span>

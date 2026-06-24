@@ -108,8 +108,8 @@
           <div class="mem-row" data-name="<%= (fullName(m)+' @'+m.username).toLowerCase() %>">
             <span class="avatar avatar-md" style="background:var(--surface-3);color:var(--text-1)"><%= initials(m) %></span>
             <div class="mem-name">
-              <div class="u-name" style="font-weight:700;color:var(--text-1)"><%= fullName(m) %><% if (m.isCreator) { %> <span class="tag tag-brand" style="padding:1px 6px">Vlastník</span><% } %></div>
-              <div class="muted" style="font-size:var(--fs-xs)">@<%= m.username %><% if (m.joinedAt) { %> · pripojený <%= fmtD(m.joinedAt) %><% } %></div>
+              <div class="u-name" style="font-weight:700;color:var(--text-1)"><a class="player-link" href="/player/<%= m.id %>"><%= fullName(m) %></a><% if (m.isCreator) { %> <span class="tag tag-brand" style="padding:1px 6px">Vlastník</span><% } %></div>
+              <div class="muted" style="font-size:var(--fs-xs)"><a class="player-link" href="/player/<%= m.id %>">@<%= m.username %></a><% if (m.joinedAt) { %> · pripojený <%= fmtD(m.joinedAt) %><% } %></div>
             </div>
             <div class="mem-role"><span class="chip-role <%= m.isCreator ? 'role-admin' : (m.role === 'admin' ? 'role-vip' : 'role-player') %>"><%= m.isCreator ? 'Vlastník' : (m.role === 'admin' ? 'Správca' : 'Člen') %></span></div>
             <div class="mem-actions">

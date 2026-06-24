@@ -69,26 +69,6 @@
       <% }); %>
     </div>
 
-    <div class="card card-pad" style="margin-bottom:18px">
-      <h3 style="font-size:var(--fs-h4);margin-bottom:18px">Údaje účtu</h3>
-      <div class="stack g-4">
-        <div class="field-row">
-          <div class="field"><label class="label">Meno a priezvisko</label><input class="input" value="<%= profile.name %>"></div>
-          <div class="field"><label class="label">Prezývka (nick)</label><input class="input" value="<%= profile.username %>"></div>
-        </div>
-        <div class="field"><label class="label">E-mail</label><input class="input" type="email" value="<%= profile.email %>"></div>
-        <div class="field"><label class="label">O mne</label><textarea class="textarea" placeholder="Pár slov o tebe…"></textarea><span class="hint">Zobrazí sa na tvojom verejnom profile. Max 200 znakov.</span></div>
-      </div>
-    </div>
-
-    <div class="card card-pad" style="margin-bottom:18px">
-      <h3 style="font-size:var(--fs-h4);margin-bottom:18px">Profilová fotka</h3>
-      <div class="row g-4 wrap-gap">
-        <span class="avatar" style="width:72px;height:72px;font-size:26px;background:linear-gradient(135deg,#7c5cff,#5b3fd6);color:#fff"><%= profile.initials %></span>
-        <div class="row g-2"><button class="btn btn-secondary btn-sm">Nahrať fotku</button><button class="btn btn-ghost btn-sm">Odstrániť</button></div>
-      </div>
-    </div>
-
     <div class="card card-pad">
       <div class="between" style="margin-bottom:18px"><h3 style="font-size:var(--fs-h4)">Účet</h3><a href="/settings" class="btn btn-secondary btn-sm">Upraviť v nastaveniach →</a></div>
       <div class="stack g-3" style="font-size:var(--fs-sm)">

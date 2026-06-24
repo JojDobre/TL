@@ -77,7 +77,7 @@
   <div class="podium">
     <% var p2 = podium[1], p1 = podium[0], p3 = podium[2]; %>
     <% if (p2) { %>
-    <div class="pod pod2" data-uid="<%= p2.userId %>">
+    <div class="pod pod2" data-uid="<%= p2.userId %>" data-player-link="<%= p2.userId %>" data-me="<%= (meId && p2.userId === meId) ? '1' : '0' %>">
       <span class="pod-rank top2">2</span>
       <span class="avatar avatar-xl" style="background:linear-gradient(<%= grad(p2.userId) %>);color:#fff"><%= p2.initials %></span>
       <div class="pod-name"><%= p2.name %></div>
@@ -87,7 +87,7 @@
     <% } else { %><div></div><% } %>
 
     <% if (p1) { %>
-    <div class="pod pod1" data-uid="<%= p1.userId %>">
+    <div class="pod pod1" data-uid="<%= p1.userId %>" data-player-link="<%= p1.userId %>" data-me="<%= (meId && p1.userId === meId) ? '1' : '0' %>">
       <span class="pod-crown">👑</span>
       <span class="pod-rank top1">1</span>
       <span class="avatar avatar-xl avatar-ring" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-dim));color:var(--gold-ink)"><%= p1.initials %></span>
@@ -98,7 +98,7 @@
     <% } %>
 
     <% if (p3) { %>
-    <div class="pod pod3" data-uid="<%= p3.userId %>">
+    <div class="pod pod3" data-uid="<%= p3.userId %>" data-player-link="<%= p3.userId %>" data-me="<%= (meId && p3.userId === meId) ? '1' : '0' %>">
       <span class="pod-rank top3">3</span>
       <span class="avatar avatar-xl" style="background:linear-gradient(<%= grad(p3.userId) %>);color:#fff"><%= p3.initials %></span>
       <div class="pod-name"><%= p3.name %></div>
@@ -137,7 +137,7 @@
       <div class="hr"></div>
       <div class="lb-table" id="lbTable">
         <% board.forEach(function(r){ %>
-          <div class="lb-row<%= (meId && r.userId === meId) ? ' me' : '' %>" data-uid="<%= r.userId %>" data-me="<%= (meId && r.userId === meId) ? '1' : '0' %>" data-name="<%= (r.name + ' @' + r.username).toLowerCase() %>" data-points="<%= r.totalPoints %>" data-accuracy="<%= r.accuracy || 0 %>">
+          <div class="lb-row<%= (meId && r.userId === meId) ? ' me' : '' %>" data-uid="<%= r.userId %>" data-player-link="<%= r.userId %>" data-me="<%= (meId && r.userId === meId) ? '1' : '0' %>" data-name="<%= (r.name + ' @' + r.username).toLowerCase() %>" data-points="<%= r.totalPoints %>" data-accuracy="<%= r.accuracy || 0 %>">
             <span class="lb-rank<%= r.rank === 1 ? ' top1' : (r.rank === 2 ? ' top2' : (r.rank === 3 ? ' top3' : '')) %>"><%= r.rank %></span>
             <div class="lb-user">
               <span class="avatar avatar-md" style="background:linear-gradient(<%= r.rank === 1 ? '135deg,var(--gold-bright),var(--gold-dim)' : grad(r.userId) %>);color:<%= r.rank === 1 ? 'var(--gold-ink)' : '#fff' %>"><%= r.initials %></span>
@@ -205,14 +205,8 @@
 
 <script>
 (function(){
-  var MEID = '<%= meId || "" %>';
-  // klik funguje zatiaľ len na vlastný riadok → /profile (verejný profil hráča ešte nie je)
-  function bindSelf(el, uid){
-    if (MEID && uid === MEID) { el.style.cursor = 'pointer'; el.addEventListener('click', function(){ location.href = '/profile'; }); }
-    else { el.style.cursor = 'default'; }
-  }
-  document.querySelectorAll('.lb-table .lb-row').forEach(function(r){ bindSelf(r, r.dataset.uid); });
-  document.querySelectorAll('.podium .pod[data-uid]').forEach(function(p){ bindSelf(p, p.dataset.uid); });
+  // Klik na riadok/pódium → profil hráča rieši centrálny helper v enhance.js
+  // (initPlayerRows) cez atribút data-player-link. Tu už netreba viazať klik.
 
   // hľadanie
   var s = document.getElementById('lbSearch');

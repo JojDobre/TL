@@ -63,7 +63,7 @@
   <!-- PODIUM (top 3) -->
   <div class="podium">
     <% if (top[1]) { %>
-    <div class="pod pod2">
+    <div class="pod pod2" data-player-link="<%= top[1].user.id %>" data-me="<%= (meId && top[1].user.id === meId) ? '1' : '0' %>">
       <span class="pod-rank top2">2</span>
       <span class="avatar avatar-xl" style="background:<%= gradFor(1) %>"><%= initials(top[1].user) %></span>
       <div class="pod-name"><%= fullName(top[1].user) %></div>
@@ -73,7 +73,7 @@
     <% } else { %><div></div><% } %>
 
     <% if (top[0]) { %>
-    <div class="pod pod1">
+    <div class="pod pod1" data-player-link="<%= top[0].user.id %>" data-me="<%= (meId && top[0].user.id === meId) ? '1' : '0' %>">
       <span class="pod-crown">👑</span>
       <span class="pod-rank top1">1</span>
       <span class="avatar avatar-xl" style="background:linear-gradient(135deg,var(--gold-bright,#facc15),var(--gold-dim,#a88207));color:var(--gold-ink,#3a2e00)"><%= initials(top[0].user) %></span>
@@ -84,7 +84,7 @@
     <% } %>
 
     <% if (top[2]) { %>
-    <div class="pod pod3">
+    <div class="pod pod3" data-player-link="<%= top[2].user.id %>" data-me="<%= (meId && top[2].user.id === meId) ? '1' : '0' %>">
       <span class="pod-rank top3">3</span>
       <span class="avatar avatar-xl" style="background:<%= gradFor(2) %>"><%= initials(top[2].user) %></span>
       <div class="pod-name"><%= fullName(top[2].user) %></div>
@@ -104,7 +104,7 @@
       <div class="hr" style="height:1px;background:var(--line);margin:0 6px"></div>
       <div class="lb-table">
         <% leaderboard.forEach(function(row, i){ var rank=i+1; var me = meId && row.user.id === meId; %>
-        <div class="lb-row <%= me ? 'me' : '' %>">
+        <div class="lb-row <%= me ? 'me' : '' %>" data-player-link="<%= row.user.id %>" data-me="<%= me ? '1' : '0' %>">
           <span class="lb-rank <%= rank<=3 ? 'top'+rank : '' %>"><%= rank %></span>
           <div class="lb-user">
             <span class="avatar avatar-md" style="background:<%= rank===1 ? 'linear-gradient(135deg,var(--gold-bright,#facc15),var(--gold-dim,#a88207))' : gradFor(i) %><%= rank===1 ? ';color:var(--gold-ink,#3a2e00)' : '' %>"><%= initials(row.user) %></span>

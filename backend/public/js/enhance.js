@@ -233,9 +233,37 @@
     });
   }
 
+  /* ---- 7 · klikateľné riadky rebríčkov → profil hráča -------------- */
+  // Každý prvok s [data-player-link="<userId>"] sa stane klikateľným celý.
+  // Klik vedie na /player/:id, alebo na /profile ak je to prihlásený užívateľ
+  // (atribút data-me="1"). Klik na vnorený odkaz/tlačidlo/formulár sa ignoruje,
+  // aby fungovali napr. akcie pri členoch (povýšiť/odobrať).
+  function initPlayerRows() {
+    var MEID = (document.body && document.body.getAttribute('data-uid')) || '';
+    [].slice.call(document.querySelectorAll('[data-player-link]')).forEach(function (el) {
+      var uid = el.getAttribute('data-player-link');
+      if (!uid) return;
+      var isMe = el.getAttribute('data-me') === '1' || (MEID && String(uid) === String(MEID));
+      var href = isMe ? '/profile' : ('/player/' + uid);
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', function (e) {
+        // neprebíjaj klik na interaktívne prvky vnútri riadku
+        if (e.target.closest('a, button, form, input, select, label, [data-copy]')) return;
+        location.href = href;
+      });
+      // klávesnicová prístupnosť
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('role', 'link');
+      el.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { location.href = href; }
+      });
+    });
+  }
+
   function init() {
     autoTagReveal();
     initReveal(); initCount(); initCountdown(); initScrollProgress(); initGlowFollow();
+    initPlayerRows();
   }
   window.TLenhance = init;
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

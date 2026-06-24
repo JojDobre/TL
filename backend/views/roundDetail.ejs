@@ -234,7 +234,7 @@
             <% } %>
             <div data-others-list>
             <% m.others.forEach(function (o) { %>
-            <div class="other-tip" data-name="<%= (o.name||'').toLowerCase() %>"><span class="avatar avatar-sm" style="background:var(--surface-3)"><%= initials(o.name) %></span><span class="nm"><%= o.name %></span><b class="<%= o.points >= (m.tipType === 'winner' ? (s.correctWinner||3) : (s.exactScore||10)) ? 'tip-correct' : 'hi' %>"><%= m.tipType === 'winner' ? (o.winner==='home'?'1':o.winner==='draw'?'X':o.winner==='away'?'2':'–') : ((o.homeScore != null ? o.homeScore : '–') + ' : ' + (o.awayScore != null ? o.awayScore : '–')) %></b><span class="pts-pill<%= o.points >= (m.tipType === 'winner' ? (s.correctWinner||3) : (s.exactScore||10)) ? ' max' : (o.points ? '' : ' zero') %>">+<%= o.points || 0 %></span></div>
+            <div class="other-tip" data-name="<%= (o.name||'').toLowerCase() %>"><span class="avatar avatar-sm" style="background:var(--surface-3)"><%= initials(o.name) %></span><span class="nm"><% if (o.userId) { %><a class="player-link" href="/player/<%= o.userId %>"><%= o.name %></a><% } else { %><%= o.name %><% } %></span><b class="<%= o.points >= (m.tipType === 'winner' ? (s.correctWinner||3) : (s.exactScore||10)) ? 'tip-correct' : 'hi' %>"><%= m.tipType === 'winner' ? (o.winner==='home'?'1':o.winner==='draw'?'X':o.winner==='away'?'2':'–') : ((o.homeScore != null ? o.homeScore : '–') + ' : ' + (o.awayScore != null ? o.awayScore : '–')) %></b><span class="pts-pill<%= o.points >= (m.tipType === 'winner' ? (s.correctWinner||3) : (s.exactScore||10)) ? ' max' : (o.points ? '' : ' zero') %>">+<%= o.points || 0 %></span></div>
             <% }); %>
             </div>
             <div class="others-pager" data-others-pager style="display:none;align-items:center;justify-content:center;gap:14px;margin-top:10px">
@@ -275,7 +275,7 @@
       <div class="lb">
         <% if (leaderboard.length === 0) { %><p class="muted" style="font-size:var(--fs-sm)">Zatiaľ bez bodov.</p><% } %>
         <% leaderboard.slice(0,6).forEach(function (e, i) { var u=e.user; var me = currentUserId && u.id === currentUserId; var nm = [u.firstName,u.lastName].filter(Boolean).join(' ')||u.username; %>
-        <div class="lb-row<%= me ? ' me' : '' %>"><span class="lb-rank <%= i===0?'top1':i===1?'top2':i===2?'top3':'' %>"><%= i+1 %></span><div class="lb-user"><span class="avatar avatar-sm<%= me ? ' avatar-ring' : '' %>" style="background:<%= i===0?'linear-gradient(135deg,var(--gold-bright),var(--gold-dim));color:var(--gold-ink)':'var(--surface-3)' %>"><%= initials(nm) %></span><span class="lb-name"><%= me ? 'Ty' : nm %></span></div><span class="lb-pts"><%= e.totalPoints %></span></div>
+        <div class="lb-row<%= me ? ' me' : '' %>" data-player-link="<%= u.id %>" data-me="<%= me ? '1' : '0' %>"><span class="lb-rank <%= i===0?'top1':i===1?'top2':i===2?'top3':'' %>"><%= i+1 %></span><div class="lb-user"><span class="avatar avatar-sm<%= me ? ' avatar-ring' : '' %>" style="background:<%= i===0?'linear-gradient(135deg,var(--gold-bright),var(--gold-dim));color:var(--gold-ink)':'var(--surface-3)' %>"><%= initials(nm) %></span><span class="lb-name"><%= me ? 'Ty' : nm %></span></div><span class="lb-pts"><%= e.totalPoints %></span></div>
         <% }); %>
       </div>
     </div>

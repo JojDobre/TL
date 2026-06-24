@@ -678,3 +678,17 @@
   .row-tags-hide-m { display:none !important; }
 }
 
+
+/* ===== preklik na verejný profil hráča (/player/:id) ===== */
+/* Nenápadný odkaz: dedí farbu a hrúbku okolitého textu (meno),
+   na hover sa zvýrazní a podčiarkne. Funguje v rebríčkoch aj zoznamoch členov. */
+.player-link { color: inherit; text-decoration: none; cursor: pointer; transition: color .12s ease; }
+.player-link:hover { color: var(--brand-bright); text-decoration: underline; text-underline-offset: 2px; }
+/* keď je meno v bunke s overflow ellipsis (.lb-name, .pod-name), odkaz musí tiež orezávať */
+.lb-name .player-link, .pod-name .player-link { display:inline; }
+
+/* ===== klikateľný riadok rebríčka / pódium → profil hráča ===== */
+[data-player-link] { transition: background .12s ease, transform .12s ease; }
+[data-player-link]:hover { background: color-mix(in srgb, var(--brand) 9%, transparent); }
+.podium [data-player-link]:hover { transform: translateY(-2px); }
+[data-player-link]:focus-visible { outline: 2px solid var(--brand-bright); outline-offset: 2px; }
