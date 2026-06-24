@@ -39,7 +39,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4" stroke-linecap="round"/></svg>
       <input class="input" name="q" placeholder="Hľadať podľa názvu alebo ID…" value="<%= q %>">
     </div>
-    <select class="select" style="width:auto" name="sort" onchange="this.form.submit()">
+    <select class="select" style="width:auto" name="sort">
       <option value="players" <%= sort === 'players' ? 'selected' : '' %>>Najviac hráčov</option>
       <option value="newest" <%= sort === 'newest' ? 'selected' : '' %>>Najnovšie</option>
     </select>
@@ -48,23 +48,30 @@
 </div>
 
 <div class="wrap dc-layout">
-  <!-- FILTRE (UI; šport/veľkosť nie sú v dátach, preto nefiltrujú) -->
+  <!-- FILTRE -->
   <aside class="card card-pad filter-card">
     <b class="hi" style="display:block;margin-bottom:6px">Filtre</b>
-    <div class="fc-group">
-      <div class="fc-title">Prístup</div>
-      <div class="stack g-2">
-        <label class="check" style="font-size:var(--fs-sm)"><input type="checkbox" checked> Verejné (pripojiť hneď)</label>
-        <label class="check" style="font-size:var(--fs-sm)"><input type="checkbox" checked> Chránené heslom</label>
+    <form method="GET" action="/discover" id="dcFilters">
+      <%# zachovaj aktuálne hľadanie a triedenie %>
+      <input type="hidden" name="q" value="<%= q %>">
+      <input type="hidden" name="sort" value="<%= sort %>">
+      <input type="hidden" name="f" value="1">
+      <div class="fc-group">
+        <div class="fc-title">Prístup</div>
+        <div class="stack g-2">
+          <label class="check" style="font-size:var(--fs-sm)"><input type="checkbox" name="access" value="pub" <%= filters.showPublic ? 'checked' : '' %>> Verejné (pripojiť hneď)</label>
+          <label class="check" style="font-size:var(--fs-sm)"><input type="checkbox" name="access" value="pwd" <%= filters.showProtected ? 'checked' : '' %>> Chránené heslom</label>
+        </div>
       </div>
-    </div>
-    <div class="fc-group">
-      <div class="fc-title">Stav</div>
-      <div class="stack g-2">
-        <label class="check" style="font-size:var(--fs-sm)"><input type="checkbox" checked> Práve prebieha</label>
-        <label class="check" style="font-size:var(--fs-sm)"><input type="checkbox" checked> Čoskoro štartuje</label>
+      <div class="fc-group">
+        <div class="fc-title">Stav</div>
+        <div class="stack g-2">
+          <label class="check" style="font-size:var(--fs-sm)"><input type="checkbox" name="status" value="active" <%= filters.showActive ? 'checked' : '' %>> Práve prebieha</label>
+          <label class="check" style="font-size:var(--fs-sm)"><input type="checkbox" name="status" value="upcoming" <%= filters.showUpcoming ? 'checked' : '' %>> Čoskoro štartuje</label>
+          <label class="check" style="font-size:var(--fs-sm)"><input type="checkbox" name="status" value="ended" <%= filters.showEnded ? 'checked' : '' %>> Ukončené</label>
+        </div>
       </div>
-    </div>
+    </form>
     <a href="/discover" class="faint" style="font-size:var(--fs-xs);display:inline-block;margin-top:12px">Vymazať filtre</a>
   </aside>
 
@@ -86,9 +93,10 @@
         <a href="/seasons/<%= s.id %>" class="card card-hover" style="overflow:hidden">
           <div class="dc-cover" style="background:<%= COVERS[i % COVERS.length] %>">
             <span class="tag tag-gold">Community</span>
+            <% if (s.hasPassword) { %><span class="tag tag-muted">🔒</span><% } %>
             <% if (s.status === 'active') { %><span class="tag tag-live"><span class="dot"></span>Live</span>
             <% } else if (s.status === 'upcoming') { %><span class="tag tag-info">Čoskoro</span>
-            <% } else if (s.hasPassword) { %><span class="tag tag-muted">🔒</span><% } %>
+            <% } else { %><span class="tag tag-muted">Ukončená</span><% } %>
           </div>
           <div class="dc-body">
             <h4 style="font-size:var(--fs-h4);margin-bottom:3px"><%= s.name %></h4>
@@ -108,5 +116,29 @@
     <% } %>
   </main>
 </div>
+
+<script>
+// auto-submit pri zmene triedenia a filtrov (bez inline onchange — kvôli CSP)
+(function(){
+  var bar = document.getElementById('dcBar');
+  if (bar) {
+    var sortSel = bar.querySelector('select[name="sort"]');
+    if (sortSel) sortSel.addEventListener('change', function(){ bar.submit(); });
+  }
+  var filters = document.getElementById('dcFilters');
+  if (filters) {
+    // pri zmene filtra prenes aktuálne hľadanie a triedenie z horného formulára
+    filters.addEventListener('change', function(){
+      if (bar) {
+        var q = bar.querySelector('input[name="q"]');
+        var sort = bar.querySelector('select[name="sort"]');
+        if (q) filters.querySelector('input[name="q"]').value = q.value;
+        if (sort) filters.querySelector('input[name="sort"]').value = sort.value;
+      }
+      filters.submit();
+    });
+  }
+})();
+</script>
 
 <%- include('partials/footer') %>

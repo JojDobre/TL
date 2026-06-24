@@ -12,8 +12,8 @@
   .season-meta b { color:var(--text-1); font-family:var(--num); white-space:nowrap; }
   .blk-head { display:flex; align-items:flex-end; justify-content:space-between; gap:14px; margin:36px 0 18px; flex-wrap:wrap; }
   .blk-head h2 { font-size:var(--fs-h3); }
-  @media (max-width:900px){ .g3,.g4 { grid-template-columns:1fr 1fr; } .se-search { grid-template-columns:1fr; } }
-  @media (max-width:560px){ .g3,.g4 { grid-template-columns:1fr; } }
+  @media (max-width:900px){ .g3,.g4 { grid-template-columns:1fr 1fr; } .se-search { grid-template-columns:1fr !important; } }
+  @media (max-width:560px){ .g3,.g4 { grid-template-columns:1fr; } .se-search { grid-template-columns:1fr !important; } }
 ` }) %>
 
 <%
@@ -54,8 +54,9 @@
   <div class="card card-pad" style="margin-top:40px;background:linear-gradient(120deg,color-mix(in srgb,var(--gold) 7%,var(--surface-1)),var(--surface-1))">
     <div class="eyebrow" style="color:var(--gold)">Komunitné sezóny</div>
     <h3 style="margin:6px 0 16px">Hľadaj verejné ligy alebo sa pripoj cez ID</h3>
-    <div class="se-search" style="grid-template-columns:1fr">
+    <div class="se-search" style="grid-template-columns:1fr auto">
       <div class="input-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4" stroke-linecap="round"/></svg><input class="input" id="seasonSearch" placeholder="Hľadať podľa názvu sezóny…"></div>
+      <a href="/discover" class="btn btn-secondary">Objaviť všetky →</a>
     </div>
   </div>
 
