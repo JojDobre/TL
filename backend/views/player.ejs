@@ -68,8 +68,8 @@
         <div class="muted" style="font-size:var(--fs-sm)">@<%= player.username %> · <%= joined(player.createdAt) %></div>
       </div>
       <div class="row g-2 wrap-gap">
-        <% if (isLoggedIn) { %><a href="/compare?with=<%= player.id %>" class="btn btn-secondary btn-sm">Porovnať s tebou</a><% } %>
         <a href="/leaderboards" class="btn btn-ghost btn-sm">Späť na rebríček</a>
+        <% if (isLoggedIn) { %><a href="/compare?with=<%= player.id %>" class="btn btn-secondary btn-sm">Porovnať s tebou</a><% } %>
       </div>
     </div>
   </div>

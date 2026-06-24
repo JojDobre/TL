@@ -7,7 +7,7 @@ const router = express.Router();
 
 const {
   seasonsPage, seasonDetailPage,
-  createSeasonPage, createSeasonSubmit, joinSeasonSubmit,
+  createSeasonPage, createSeasonSubmit, joinSeasonSubmit, joinPage, joinSubmit,
   manageSeasonPage, manageSeasonSubmit, endSeasonSubmit,
   deleteSeasonSubmit, leaveSeasonSubmit, seasonMembersPage, seasonMemberAction,
 } = require('../controllers/page.controller');
@@ -34,7 +34,7 @@ const { profilePage } = require('../controllers/profilePage.controller');
 const { settingsPage, updateProfile, changePassword } = require('../controllers/settingsPage.controller');
 const { requireLogin, requireAdmin, apiRequireAdmin, apiRequireLogin, attachUser } = require('../middleware/page-auth.middleware');
 const { homePage } = require('../controllers/homePage.controller');
-const { aboutPage, kontaktPage, kontaktSubmit, navodyPage, logoIdentityPage } = require('../controllers/staticPage.controller');
+const { aboutPage, kontaktPage, kontaktSubmit, navodyPage, logoIdentityPage, podmienkyPage, sukromiePage } = require('../controllers/staticPage.controller');
 const { blogListPage, blogPostPage } = require('../controllers/blogPage.controller');
 const {
   adminBlogListPage, adminBlogNewPage, adminBlogCreate,
@@ -67,6 +67,10 @@ router.post('/forgot-password', forgotPasswordSubmit);
 router.get('/logout', logout);
 router.get('/reset-password', resetPasswordPage);
 router.post('/reset-password', resetPasswordSubmit);
+
+// Pripojenie cez ID/kód — samostatná stránka
+router.get('/join', requireLogin, joinPage);
+router.post('/join', requireLogin, joinSubmit);
 
 // Sezóny — POZOR na poradie: /create a /join PRED /:id
 router.get('/my', requireLogin, myPage);
@@ -154,6 +158,8 @@ router.get('/about', attachUser, aboutPage);
 router.get('/kontakt', attachUser, kontaktPage);
 router.post('/kontakt', attachUser, kontaktSubmit);
 router.get('/navody', attachUser, navodyPage);
+router.get('/podmienky', attachUser, podmienkyPage);
+router.get('/sukromie', attachUser, sukromiePage);
 router.get('/achievements', requireLogin, achievementsPage);
 router.get('/logo-identity', logoIdentityPage);
 router.get('/tip-history', requireLogin, tipHistoryPage);

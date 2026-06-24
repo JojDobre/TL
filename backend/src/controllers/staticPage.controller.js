@@ -102,4 +102,14 @@ const logoIdentityPage = (req, res) => {
   res.render('logo-identity');
 };
 
-module.exports = { aboutPage, kontaktPage, kontaktSubmit, navodyPage, logoIdentityPage };
+// GET /podmienky — Podmienky používania (statická stránka)
+const podmienkyPage = (req, res) => {
+  res.render('podmienky');
+};
+
+// GET /sukromie — Zásady ochrany súkromia / GDPR (statická stránka)
+const sukromiePage = (req, res) => {
+  res.render('sukromie');
+};
+
+module.exports = { aboutPage, kontaktPage, kontaktSubmit, navodyPage, logoIdentityPage, podmienkyPage, sukromiePage };

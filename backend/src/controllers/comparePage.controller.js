@@ -147,9 +147,9 @@ const comparePage = asyncHandler(async (req, res) => {
   // celkové vedenie podľa pozícií v spoločných ligách
   let leadLabel = 'Nerozhodne';
   let leadStyle = 'background:var(--surface-3);color:var(--text-3)';
-  if (myBestPositions > otherBestPositions) { leadLabel = `Vedieš ${myBestPositions} : ${otherBestPositions}`; leadStyle = 'background:var(--success-soft);color:var(--success)'; }
-  else if (otherBestPositions > myBestPositions) { leadLabel = `Prehrávaš ${myBestPositions} : ${otherBestPositions}`; leadStyle = 'background:var(--danger-soft);color:var(--danger)'; }
-  else if (myBestPositions + otherBestPositions > 0) { leadLabel = `Stav ${myBestPositions} : ${otherBestPositions}`; }
+  if (myBestPositions > otherBestPositions) { leadLabel = `${myBestPositions} : ${otherBestPositions}`; leadStyle = 'background:var(--success-soft);color:var(--success)'; }
+  else if (otherBestPositions > myBestPositions) { leadLabel = `${myBestPositions} : ${otherBestPositions}`; leadStyle = 'background:var(--danger-soft);color:var(--danger)'; }
+  else if (myBestPositions + otherBestPositions > 0) { leadLabel = `${myBestPositions} : ${otherBestPositions}`; }
 
   // najlepšia pozícia každého (naprieč spoločnými ligami) pre VS banner
   const myVsRank = sharedStandings.reduce((best, s) => (s.myRank && (best === null || s.myRank < best) ? s.myRank : best), null);

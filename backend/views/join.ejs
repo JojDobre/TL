@@ -1,0 +1,54 @@
+<%- include('partials/head', { title: 'Pripojiť sa', page: 'seasons', active: 'seasons', pageStyle: `
+  .join-wrap { max-width:520px; margin:0 auto; padding:48px 0 80px; }
+  .join-card { padding:32px 30px; }
+  .join-ico { width:56px; height:56px; border-radius:var(--r-md); display:flex; align-items:center; justify-content:center; font-size:26px; background:var(--brand-soft); margin-bottom:18px; }
+  .join-card h1 { font-size:clamp(1.6rem,3vw,2rem); margin-bottom:8px; }
+  .join-err { background:var(--danger-soft,rgba(229,72,77,.12)); border:1px solid var(--danger,#e5484d); color:var(--danger,#e5484d); border-radius:var(--r-sm); padding:11px 14px; font-size:var(--fs-sm); margin-bottom:18px; }
+  .join-code { letter-spacing:.3em; text-transform:uppercase; font-weight:700; text-align:center; font-size:1.25rem; }
+  .join-hint { font-size:var(--fs-xs); color:var(--text-4); margin-top:6px; }
+  @media (max-width:560px){ .join-wrap { padding:28px 0 60px; } .join-card { padding:24px 20px; } }
+` }) %>
+
+<div class="wrap join-wrap">
+  <div class="card join-card">
+    <div class="join-ico">🎟️</div>
+    <h1>Pripojiť sa cez ID</h1>
+    <p class="muted" style="font-size:var(--fs-sm);margin-bottom:24px">Zadaj ID sezóny alebo ligy, ktoré ti poslal organizátor. Ak je chránené heslom, doplň aj heslo.</p>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="join-err"><%= error %></div>
+    <% } %>
+
+    <form method="POST" action="/join" class="stack g-3">
+      <div class="field">
+        <label class="label">ID sezóny alebo ligy</label>
+        <input class="input join-code" name="code" placeholder="napr. HK4F2X" maxlength="12" value="<%= typeof code !== 'undefined' ? code : '' %>" autocomplete="off" autocapitalize="characters" required autofocus>
+        <div class="join-hint">6–12 znakov, veľké písmená a číslice.</div>
+      </div>
+
+      <div class="field"<%= (typeof needPassword !== 'undefined' && needPassword) ? '' : ' hidden' %> id="pwField">
+        <label class="label">Heslo <span class="muted" style="font-weight:400">(ak je vyžadované)</span></label>
+        <input class="input" type="password" name="password" placeholder="Heslo sezóny/ligy" autocomplete="off"<%= (typeof needPassword !== 'undefined' && needPassword) ? ' autofocus' : '' %>>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:6px">Pripojiť sa</button>
+    </form>
+
+    <div class="row g-2" style="justify-content:center;margin-top:20px">
+      <a href="/discover" class="btn btn-ghost btn-sm">Objaviť verejné súťaže</a>
+      <a href="/my" class="btn btn-ghost btn-sm">Moje súťaže</a>
+    </div>
+  </div>
+</div>
+
+<script>
+// keď používateľ nemá zobrazené pole hesla, ponúkni mu ho odhaliť (napr. vie, že liga je chránená)
+(function(){
+  var pw = document.getElementById('pwField');
+  if (!pw) return;
+  var code = document.querySelector('input[name="code"]');
+  if (code) code.addEventListener('input', function(){ this.value = this.value.toUpperCase(); });
+})();
+</script>
+
+<%- include('partials/footer') %>

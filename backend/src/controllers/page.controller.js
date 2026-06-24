@@ -586,12 +586,80 @@ const seasonMemberAction = asyncHandler(async (req, res) => {
   res.redirect('/seasons/' + season.id + '/manage');
 });
 
+// GET /join — samostatná stránka na pripojenie cez ID/kód
+const joinPage = asyncHandler(async (req, res) => {
+  res.render('join', {
+    error: (req.query.error || null),
+    needPassword: req.query.pw === '1',
+    code: (req.query.code || '').toUpperCase(),
+  });
+});
+
+// POST /join — pripojenie cez kód: skúsi ligu (joinCode) aj sezónu (inviteCode).
+// Jedno pole "code" + voliteľné heslo. Po úspechu presmeruje na detail.
+const joinSubmit = asyncHandler(async (req, res) => {
+  const userId = Number(req.session.userId);
+  if (!userId) return res.redirect('/login');
+
+  const code = (req.body.code || '').trim().toUpperCase();
+  const password = req.body.password || '';
+  if (!code) return res.redirect('/join?error=' + encodeURIComponent('Zadaj ID alebo kód.'));
+
+  const back = (msg, extra) => res.redirect('/join?code=' + encodeURIComponent(code) +
+    '&error=' + encodeURIComponent(msg) + (extra || ''));
+
+  // 1) skús LIGU podľa joinCode
+  const league = await League.findOne({ where: { joinCode: code } });
+  if (league && league.active) {
+    if (league.hasPassword) {
+      const ok = password && await bcrypt.compare(password, league.password || '');
+      if (!ok) return back(password ? 'Nesprávne heslo ligy.' : 'Táto liga je chránená heslom.', '&pw=1');
+    }
+    const [, created] = await UserLeague.findOrCreate({
+      where: { userId, leagueId: league.id },
+      defaults: { userId, leagueId: league.id, role: 'player', joinedAt: new Date() },
+    });
+    await UserSeason.findOrCreate({
+      where: { userId, seasonId: league.seasonId },
+      defaults: { userId, seasonId: league.seasonId, role: 'player', joinedAt: new Date() },
+    });
+    if (created) {
+      try {
+        const notify = require('../utils/notification.service');
+        const joiner = await User.findByPk(userId, { attributes: ['username'] });
+        await notify.memberJoined(league, userId, joiner ? joiner.username : null);
+      } catch (e) { /* notifikácia nesmie zhodiť pripojenie */ }
+    }
+    return res.redirect('/leagues/' + league.id);
+  }
+
+  // 2) skús SEZÓNU podľa inviteCode
+  const season = await Season.findOne({ where: { inviteCode: code } });
+  if (season) {
+    if (isSeasonLocked(season)) return back('Táto sezóna je už ukončená.');
+    if (season.hasPassword) {
+      const ok = password && await bcrypt.compare(password, season.password || '');
+      if (!ok) return back(password ? 'Nesprávne heslo sezóny.' : 'Táto sezóna je chránená heslom.', '&pw=1');
+    }
+    await UserSeason.findOrCreate({
+      where: { userId, seasonId: season.id },
+      defaults: { userId, seasonId: season.id, role: 'player', joinedAt: new Date() },
+    });
+    return res.redirect('/seasons/' + season.id);
+  }
+
+  // 3) kód nenájdený
+  return back('Nenašli sme ligu ani sezónu s týmto ID.');
+});
+
 module.exports = {
   seasonsPage,
   seasonDetailPage,
   createSeasonPage,
   createSeasonSubmit,
   joinSeasonSubmit,
+  joinPage,
+  joinSubmit,
   manageSeasonPage,
   manageSeasonSubmit,
   endSeasonSubmit,

@@ -109,27 +109,27 @@
     <div class="card card-pad">
       <div class="stat-label" style="margin-bottom:12px">Kolá, kde ste sa stretli</div>
       <% if (sharedRounds.length === 0) { %>
-        <p class="muted" style="font-size:var(--fs-sm)">Zatiaľ ste netipovali v rovnakom kole.</p>
+        <p class="muted" style="font-size:var(--fs-sm); text-align:center">Zatiaľ ste netipovali v rovnakom kole.</p>
       <% } else { %>
         <% sharedRounds.forEach(function(r){
            var meWin = r.myPoints > r.otherPoints, otherWin = r.otherPoints > r.myPoints;
         %>
           <div class="meet-row">
             <span class="who <%= meWin ? 'win' : '' %>" style="color:<%= meWin ? 'var(--success)' : 'var(--text-3)' %>">+<%= r.myPoints %></span>
-            <span class="muted"><%= r.name %><%= r.leagueName ? ' · ' + r.leagueName : '' %></span>
+            <span class="muted" style="text-align:center"><%= r.name %><%= r.leagueName ? ' · ' + r.leagueName : '' %></span>
             <span class="who <%= otherWin ? 'win' : '' %>" style="text-align:right;color:<%= otherWin ? 'var(--success)' : 'var(--text-3)' %>">+<%= r.otherPoints %></span>
           </div>
         <% }); %>
         <% if (roundWins.total > 0) { %>
-          <p class="muted" style="font-size:var(--fs-xs);margin-top:12px">Z <%= roundWins.total %> spoločných kôl si vyhral <b class="hi"><%= roundWins.me %></b>, <%= other.name.split(' ')[0] %> <b class="hi"><%= roundWins.other %></b>.</p>
+          <p class="muted" style="font-size:var(--fs-xs);margin-top:12px; text-align:center">Z <%= roundWins.total %> spoločných kôl si vyhral <b class="hi"><%= roundWins.me %></b>, <%= other.name.split(' ')[0] %> <b class="hi"><%= roundWins.other %></b>.</p>
         <% } %>
       <% } %>
     </div>
   </div>
 
   <div class="row g-2 center wrap-gap" style="margin-top:26px">
-    <a href="/player/<%= other.id %>" class="btn btn-secondary">Späť na profil <%= other.name.split(' ')[0] %></a>
-    <a href="/leaderboards" class="btn btn-ghost">Celý rebríček</a>
+    <a href="/player/<%= other.id %>" class="btn btn-ghost">Späť na profil <%= other.name.split(' ')[0] %></a>
+    <a href="/leaderboards" class="btn btn-secondary">Celý rebríček</a>
   </div>
 </div>
 
