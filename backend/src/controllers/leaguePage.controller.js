@@ -14,6 +14,19 @@ const notify = require('../utils/notification.service');
 
 const DEFAULT_SCORING = { exactScore: 10, correctGoals: 1, correctWinner: 3, goalDifference: 2 };
 
+// dostupné šablóny: now v okne [availableFrom, availableTo] (prázdne = bez limitu)
+function availableTemplateWhere() {
+  const now = new Date();
+  const Op = Sequelize.Op;
+  return {
+    isTemplate: true,
+    [Op.and]: [
+      { [Op.or]: [{ availableFrom: null }, { availableFrom: { [Op.lte]: now } }] },
+      { [Op.or]: [{ availableTo: null }, { availableTo: { [Op.gte]: now } }] },
+    ],
+  };
+}
+
 // stav kola podľa dátumov: 'open' | 'finished' | 'scheduled'
 function roundStatus(round) {
   const now = new Date();
@@ -187,7 +200,7 @@ const createLeaguePage = asyncHandler(async (req, res) => {
 
   // dostupné šablóny (oficiálne ligy označené ako šablóna) — na výber pri klonovaní
   const templates = await League.findAll({
-    where: { isTemplate: true },
+    where: availableTemplateWhere(),
     attributes: ['id', 'name', 'description'],
     order: [['name', 'ASC']],
   });
@@ -260,7 +273,7 @@ const createLeagueSubmit = asyncHandler(async (req, res) => {
   // šablóna (ak vybraná) — over, že je to platná šablóna
   let template = null;
   if (req.body.templateId) {
-    template = await League.findOne({ where: { id: req.body.templateId, isTemplate: true } });
+    template = await League.findOne({ where: { id: req.body.templateId, ...availableTemplateWhere() } });
     if (!template) return renderErr('Vybraná šablóna neexistuje.');
   }
 

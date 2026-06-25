@@ -1,0 +1,345 @@
+<%- include('partials/head', { title: 'Upraviť šablónu', page: 'admin', active: 'admin', pageStyle: `
+  .ad-head { padding:22px 0 14px; }
+  .ed-grid { display:grid; grid-template-columns: 320px 1fr; gap:24px; align-items:start; padding-bottom:72px; }
+  .ed-side { position:sticky; top:128px; display:flex; flex-direction:column; gap:16px; }
+  .sec-card { padding:20px; }
+  .sec-card h3 { font-size:var(--fs-h4); margin-bottom:4px; }
+  .sec-card .sub { color:var(--text-3); font-size:var(--fs-sm); margin-bottom:14px; }
+
+  .team-pill { display:inline-flex; align-items:center; gap:7px; padding:6px 10px; border-radius:99px; background:var(--surface-2); border:1px solid var(--line); font-size:var(--fs-sm); margin:0 6px 6px 0; }
+  .team-pill button { background:none; border:none; color:var(--text-4); cursor:pointer; font-size:14px; line-height:1; padding:0; }
+  .team-pill button:hover { color:var(--danger); }
+
+  .search-res { max-height:230px; overflow:auto; border:1px solid var(--line); border-radius:var(--r-md); margin-top:8px; }
+  .sr-item { display:flex; align-items:center; justify-content:space-between; padding:9px 12px; border-bottom:1px solid var(--line); font-size:var(--fs-sm); }
+  .sr-item:last-child { border:none; }
+  .sr-item.added { opacity:.5; }
+
+  .round-block { margin-bottom:12px; border:1px solid var(--line); border-radius:var(--r-md); overflow:hidden; }
+  .round-head { display:flex; align-items:center; gap:12px; padding:13px 16px; background:var(--surface-2); cursor:pointer; user-select:none; }
+  .round-head:hover { background:var(--surface-3); }
+  .round-head .chev { color:var(--text-4); transition:transform .2s; flex:none; font-size:13px; }
+  .round-block.open .round-head .chev { transform:rotate(90deg); }
+  .round-head .rh-main { flex:1; min-width:0; }
+  .round-head .rh-count { font-size:var(--fs-xs); color:var(--text-3); background:var(--surface-1); border:1px solid var(--line); border-radius:99px; padding:2px 9px; white-space:nowrap; flex:none; }
+  .round-body { border-top:1px solid var(--line); padding:14px 16px; display:none; }
+  .round-block.open .round-body { display:block; }
+  .match-list { max-height:300px; overflow-y:auto; margin:-4px -4px 0; padding:0 4px; }
+  .match-list::-webkit-scrollbar { width:8px; } .match-list::-webkit-scrollbar-thumb { background:var(--line-strong); border-radius:8px; }
+  .match-line { display:grid; grid-template-columns:1fr auto auto auto; gap:10px; align-items:center; padding:9px 2px; border-bottom:1px solid var(--line); font-size:var(--fs-sm); }
+  .match-line:last-child { border:none; }
+  .match-teams { color:var(--text-1); font-weight:600; }
+  .add-match-row { display:grid; grid-template-columns:1fr 1fr 1fr auto auto; gap:8px; align-items:end; margin-top:12px; padding-top:12px; border-top:1px dashed var(--line); }
+  .mini-label { font-size:var(--fs-xs); color:var(--text-4); display:block; margin-bottom:3px; }
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--surface-3); color:var(--text-1); padding:11px 18px; border-radius:10px; z-index:300; font-size:var(--fs-sm); box-shadow:0 6px 20px rgba(0,0,0,.35); border:1px solid var(--line-strong); }
+  .toast.err { background:#3a1620; border-color:rgba(240,71,106,.5); color:#ffb3c2; }
+
+  @media (max-width:900px){
+    .ed-grid { grid-template-columns:1fr; gap:16px; }
+    .ed-side { position:static; }
+  }
+  @media (max-width:600px){
+    .ad-head { padding:16px 0 10px; }
+    .add-match-row { grid-template-columns:1fr 1fr; gap:8px; }
+    .add-match-row .btn-add-match { grid-column:1 / -1; }
+    .match-line { grid-template-columns:1fr auto; row-gap:4px; padding:10px 2px; }
+    .match-line .match-teams { grid-column:1 / -1; }
+    .match-line .muted { font-size:var(--fs-xs); }
+    .match-list { max-height:260px; }
+    .round-head { padding:12px 14px; }
+    .round-head .rh-main b { font-size:var(--fs-sm); }
+  }
+` }) %>
+
+<%- include('partials/admin-subnav', { active: 'templates' }) %>
+
+<div class="wrap ad-head">
+  <div class="crumb" style="margin-bottom:6px"><a href="/admin/templates">Šablóny</a> › Úprava</div>
+  <h1 style="font-size:clamp(1.6rem,2.6vw,2.1rem)"><%= template.name %></h1>
+  <p class="muted" style="margin-top:4px;font-size:var(--fs-sm)">Pridaj tímy, potom kolá a do nich zápasy. Všetko sa ukladá hneď. Výsledky zadáš na stránke <a href="/admin/templates/<%= template.id %>/evaluate" class="brand">Vyhodnotiť</a>.</p>
+</div>
+
+<div class="wrap ed-grid">
+  <!-- ĽAVO: meta + tímy -->
+  <aside class="ed-side">
+    <!-- META -->
+    <div class="card sec-card">
+      <h3>Nastavenia šablóny</h3>
+      <p class="sub">Názov a okno dostupnosti.</p>
+      <form method="POST" action="/admin/templates/<%= template.id %>/meta">
+        <div class="field" style="margin-bottom:12px"><label class="label">Názov</label><input class="input" name="name" value="<%= template.name %>" required></div>
+        <div class="field" style="margin-bottom:12px"><label class="label">Dostupná od</label><input class="input" type="date" name="availableFrom" value="<%= template.availableFrom ? new Date(template.availableFrom).toISOString().slice(0,10) : '' %>"></div>
+        <div class="field" style="margin-bottom:14px"><label class="label">Dostupná do</label><input class="input" type="date" name="availableTo" value="<%= template.availableTo ? new Date(template.availableTo).toISOString().slice(0,10) : '' %>"></div>
+        <button class="btn btn-secondary btn-sm btn-block" type="submit">Uložiť nastavenia</button>
+      </form>
+    </div>
+
+    <!-- TÍMY -->
+    <div class="card sec-card">
+      <h3>Tímy</h3>
+      <p class="sub">Súpiska, z ktorej tvoríš zápasy. Pridaj existujúce alebo založ nové.</p>
+
+      <div id="teamPills">
+        <% if (teams.length === 0) { %><p class="muted" id="noTeams" style="font-size:var(--fs-sm)">Zatiaľ žiadne tímy.</p><% } %>
+        <% teams.forEach(function(t){ %>
+        <span class="team-pill" data-team-id="<%= t.id %>"><%= t.name %><button title="Odobrať" data-remove-team="<%= t.id %>">✕</button></span>
+        <% }); %>
+      </div>
+
+      <div style="margin-top:14px">
+        <input class="input" id="teamSearch" placeholder="Hľadať existujúci tím…">
+        <div class="search-res" id="searchRes" hidden></div>
+      </div>
+
+      <div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)">
+        <label class="mini-label">Založiť nový tím</label>
+        <input class="input" id="ntName" placeholder="Názov tímu" style="margin-bottom:8px">
+        <div class="row g-2" style="margin-bottom:8px">
+          <select class="select" id="ntType" style="flex:1"><option value="club">Klub</option><option value="national">Národný tím</option></select>
+          <select class="select" id="ntSport" style="flex:1"><% sports.forEach(function(s){ %><option value="<%= s.code %>"><%= s.label %></option><% }); %></select>
+        </div>
+        <select class="select" id="ntCountry" style="width:100%;margin-bottom:8px"><option value="">— krajina (voliteľné) —</option><% countries.forEach(function(c){ %><option value="<%= c.code %>"><%= c.label %></option><% }); %></select>
+        <button class="btn btn-brand btn-sm btn-block" id="addCustomBtn">+ Pridať nový tím</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- PRAVO: kolá a zápasy -->
+  <main>
+    <div class="card sec-card" style="margin-bottom:16px">
+      <h3>Pridať kolo</h3>
+      <p class="sub">Každé kolo má vlastnú uzávierku tipovania.</p>
+      <div class="row g-2 wrap-gap" style="align-items:end">
+        <div class="field" style="flex:2;min-width:160px"><label class="label">Názov kola</label><input class="input" id="rName" placeholder="napr. 1. kolo / Štvrťfinále"></div>
+        <div class="field" style="flex:1;min-width:130px"><label class="label">Začiatok</label><input class="input" type="datetime-local" id="rStart"></div>
+        <div class="field" style="flex:1;min-width:130px"><label class="label">Uzávierka</label><input class="input" type="datetime-local" id="rEnd"></div>
+        <button class="btn btn-primary" id="addRoundBtn">+ Pridať</button>
+      </div>
+    </div>
+
+    <div id="roundsWrap">
+      <% if (rounds.length === 0) { %>
+      <div class="card sec-card" id="noRounds" style="text-align:center;color:var(--text-3)">Zatiaľ žiadne kolá. Pridaj prvé vyššie.</div>
+      <% } %>
+      <% rounds.forEach(function(r){ %>
+      <div class="round-block" data-round="<%= r.id %>">
+        <div class="round-head" data-toggle-round>
+          <span class="chev">▶</span>
+          <div class="rh-main"><b class="hi"><%= r.name %></b> <span class="muted" style="font-size:var(--fs-xs)"><%= r.startDate ? new Date(r.startDate).toLocaleString('sk-SK') : '' %> → <%= r.endDate ? new Date(r.endDate).toLocaleString('sk-SK') : '' %></span></div>
+          <span class="rh-count"><%= r.matches.length %> záp.</span>
+          <button class="btn btn-ghost btn-icon" title="Vymazať kolo" data-del-round="<%= r.id %>" style="color:var(--danger)" onclick="event.stopPropagation()">🗑</button>
+        </div>
+        <div class="round-body">
+          <div class="match-list" data-matches="<%= r.id %>">
+            <% if (r.matches.length === 0) { %><p class="muted nomatch" style="font-size:var(--fs-sm)">Žiadne zápasy.</p><% } %>
+            <% r.matches.forEach(function(m){ %>
+            <div class="match-line" data-match="<%= m.id %>">
+              <span class="match-teams"><%= m.homeTeam %> <span class="faint">vs</span> <%= m.awayTeam %></span>
+              <span class="muted"><%= new Date(m.matchTime).toLocaleString('sk-SK',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}) %></span>
+              <span class="tag <%= m.tipType === 'winner' ? 'tag-muted' : 'tag-info' %>"><%= m.tipType === 'winner' ? 'Víťaz' : 'Skóre' %></span>
+              <button class="btn btn-ghost btn-icon" title="Vymazať" data-del-match="<%= m.id %>" style="color:var(--danger)">✕</button>
+            </div>
+            <% }); %>
+          </div>
+
+          <div class="add-match-row" data-addmatch="<%= r.id %>">
+            <div><span class="mini-label">Domáci</span><select class="select sel-home"></select></div>
+            <div><span class="mini-label">Hosť</span><select class="select sel-away"></select></div>
+            <div><span class="mini-label">Čas</span><input class="input inp-time" type="datetime-local"></div>
+            <div><span class="mini-label">Typ</span><select class="select sel-type"><option value="exact_score">Skóre</option><option value="winner">Víťaz</option></select></div>
+            <button class="btn btn-secondary btn-sm btn-add-match">+ Zápas</button>
+          </div>
+        </div>
+      </div>
+      <% }); %>
+    </div>
+  </main>
+</div>
+
+<script>
+  var TID = <%= template.id %>;
+  // súpiska tímov v pamäti: [{id,name}]
+  var TEAMS = <%- JSON.stringify(teams.map(function(t){ return { id:t.id, name:t.name }; })) %>;
+
+  function toast(msg, err){ var t=document.createElement('div'); t.className='toast'+(err?' err':''); t.textContent=msg; document.body.appendChild(t); setTimeout(function(){ t.remove(); }, err?3200:1800); }
+  async function api(url, opts){
+    var r = await fetch(url, Object.assign({ headers:{ 'Content-Type':'application/json' } }, opts));
+    var j = await r.json().catch(function(){ return {}; });
+    if (!r.ok || j.success === false) throw new Error(j.message || ('Chyba '+r.status));
+    return j;
+  }
+  function teamOptions(selected){
+    return '<option value="">—</option>' + TEAMS.map(function(t){ return '<option value="'+t.id+'"'+(t.id==selected?' selected':'')+'>'+t.name+'</option>'; }).join('');
+  }
+  // naplň všetky add-match dropdowny aktuálnymi tímami
+  function refreshAllTeamSelects(){
+    document.querySelectorAll('.add-match-row').forEach(function(row){
+      row.querySelector('.sel-home').innerHTML = teamOptions();
+      row.querySelector('.sel-away').innerHTML = teamOptions();
+    });
+  }
+  refreshAllTeamSelects();
+
+  // aktualizuj počet zápasov v hlavičke kola
+  function updateRoundCount(rid){
+    var block = document.querySelector('.round-block[data-round="'+rid+'"]'); if (!block) return;
+    var n = block.querySelectorAll('.match-line').length;
+    var c = block.querySelector('.rh-count'); if (c) c.textContent = n + ' záp.';
+  }
+
+  // ===== TÍMY: vyhľadávanie existujúcich =====
+  var searchBox = document.getElementById('teamSearch');
+  var searchRes = document.getElementById('searchRes');
+  var searchTimer;
+  searchBox.addEventListener('input', function(){
+    clearTimeout(searchTimer);
+    var q = this.value.trim();
+    if (q.length < 2){ searchRes.setAttribute('hidden',''); return; }
+    searchTimer = setTimeout(async function(){
+      try {
+        var j = await api('/api/leagues/'+TID+'/teams/available?search='+encodeURIComponent(q));
+        var added = {}; TEAMS.forEach(function(t){ added[t.id]=true; });
+        searchRes.innerHTML = (j.data||[]).map(function(t){
+          var isAdded = added[t.id];
+          return '<div class="sr-item'+(isAdded?' added':'')+'"><span>'+t.name+'</span>'+(isAdded?'<span class="faint">v súpiske</span>':'<button class="btn btn-secondary btn-sm" data-add-existing="'+t.id+'" data-name="'+t.name.replace(/"/g,'&quot;')+'">Pridať</button>')+'</div>';
+        }).join('') || '<div class="sr-item"><span class="muted">Nič sa nenašlo.</span></div>';
+        searchRes.removeAttribute('hidden');
+      } catch(e){ toast(e.message, true); }
+    }, 250);
+  });
+
+  function addTeamPill(id, name){
+    var no = document.getElementById('noTeams'); if (no) no.remove();
+    var span = document.createElement('span');
+    span.className = 'team-pill'; span.setAttribute('data-team-id', id);
+    span.innerHTML = name + '<button title="Odobrať" data-remove-team="'+id+'">✕</button>';
+    document.getElementById('teamPills').appendChild(span);
+    TEAMS.push({ id:id, name:name }); refreshAllTeamSelects();
+  }
+
+  document.addEventListener('click', async function(e){
+    // rozbalenie/zbalenie kola
+    var th = e.target.closest('[data-toggle-round]');
+    if (th){ th.closest('.round-block').classList.toggle('open'); return; }
+    // pridať existujúci tím
+    var addEx = e.target.closest('[data-add-existing]');
+    if (addEx){
+      var id = addEx.getAttribute('data-add-existing'); var name = addEx.getAttribute('data-name');
+      try { await api('/api/leagues/'+TID+'/teams', { method:'POST', body: JSON.stringify({ teamId: Number(id) }) });
+        addTeamPill(Number(id), name); addEx.closest('.sr-item').classList.add('added'); addEx.outerHTML='<span class="faint">v súpiske</span>'; toast('Tím pridaný.');
+      } catch(err){ toast(err.message, true); }
+      return;
+    }
+    // odobrať tím zo súpisky
+    var rm = e.target.closest('[data-remove-team]');
+    if (rm){
+      var tid = rm.getAttribute('data-remove-team');
+      try { await api('/api/leagues/'+TID+'/teams/'+tid, { method:'DELETE' });
+        rm.closest('.team-pill').remove();
+        TEAMS = TEAMS.filter(function(t){ return t.id != tid; }); refreshAllTeamSelects();
+        toast('Tím odobraný.');
+      } catch(err){ toast(err.message, true); }
+      return;
+    }
+    // vymazať kolo
+    var dr = e.target.closest('[data-del-round]');
+    if (dr){
+      if (!confirm('Vymazať toto kolo aj s jeho zápasmi?')) return;
+      var rid = dr.getAttribute('data-del-round');
+      try { await api('/api/rounds/'+rid, { method:'DELETE' });
+        document.querySelector('.round-block[data-round="'+rid+'"]').remove(); toast('Kolo vymazané.');
+      } catch(err){ toast(err.message, true); }
+      return;
+    }
+    // vymazať zápas
+    var dm = e.target.closest('[data-del-match]');
+    if (dm){
+      var mid = dm.getAttribute('data-del-match');
+      try { await api('/api/matches/'+mid, { method:'DELETE' });
+        var ridDel = dm.closest('.round-block').getAttribute('data-round');
+        var listEl = dm.closest('.match-list');
+        dm.closest('.match-line').remove();
+        if (listEl && listEl.querySelectorAll('.match-line').length === 0) listEl.innerHTML = '<p class="muted nomatch" style="font-size:var(--fs-sm)">Žiadne zápasy.</p>';
+        updateRoundCount(ridDel);
+        toast('Zápas vymazaný.');
+      } catch(err){ toast(err.message, true); }
+      return;
+    }
+    // pridať zápas
+    var am = e.target.closest('.btn-add-match');
+    if (am){
+      var row = am.closest('.add-match-row'); var rid2 = row.getAttribute('data-addmatch');
+      var home = row.querySelector('.sel-home').value, away = row.querySelector('.sel-away').value;
+      var time = row.querySelector('.inp-time').value, type = row.querySelector('.sel-type').value;
+      if (!home || !away){ toast('Vyber oba tímy.', true); return; }
+      if (home === away){ toast('Tímy musia byť rôzne.', true); return; }
+      if (!time){ toast('Zadaj čas zápasu.', true); return; }
+      try {
+        var j = await api('/api/matches', { method:'POST', body: JSON.stringify({ roundId: Number(rid2), homeTeamId: Number(home), awayTeamId: Number(away), matchTime: time, tipType: type }) });
+        var hName = (TEAMS.find(function(t){return t.id==home;})||{}).name || '?';
+        var aName = (TEAMS.find(function(t){return t.id==away;})||{}).name || '?';
+        var list = document.querySelector('.match-list[data-matches="'+rid2+'"]');
+        var nm = list.querySelector('.nomatch'); if (nm) nm.remove();
+        var d = new Date(time);
+        var line = document.createElement('div');
+        line.className='match-line'; line.setAttribute('data-match', j.data.id);
+        line.innerHTML = '<span class="match-teams">'+hName+' <span class="faint">vs</span> '+aName+'</span>'
+          + '<span class="muted">'+d.toLocaleString('sk-SK',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})+'</span>'
+          + '<span class="tag '+(type==='winner'?'tag-muted':'tag-info')+'">'+(type==='winner'?'Víťaz':'Skóre')+'</span>'
+          + '<button class="btn btn-ghost btn-icon" title="Vymazať" data-del-match="'+j.data.id+'" style="color:var(--danger)">✕</button>';
+        list.appendChild(line);
+        updateRoundCount(rid2);
+        row.querySelector('.inp-time').value=''; row.querySelector('.sel-home').value=''; row.querySelector('.sel-away').value='';
+        toast('Zápas pridaný.');
+      } catch(err){ toast(err.message, true); }
+      return;
+    }
+  });
+
+  // založiť nový (custom) tím
+  document.getElementById('addCustomBtn').addEventListener('click', async function(){
+    var name = document.getElementById('ntName').value.trim();
+    if (!name){ toast('Zadaj názov tímu.', true); return; }
+    var teamType = document.getElementById('ntType').value;
+    var sport = document.getElementById('ntSport').value;
+    var country = document.getElementById('ntCountry').value;
+    try {
+      var j = await api('/api/leagues/'+TID+'/teams/custom', { method:'POST', body: JSON.stringify({ name: name, teamType: teamType, sport: sport, country: country }) });
+      addTeamPill(j.data.id, j.data.name);
+      document.getElementById('ntName').value='';
+      toast('Nový tím vytvorený a pridaný.');
+    } catch(err){ toast(err.message, true); }
+  });
+
+  // pridať kolo
+  document.getElementById('addRoundBtn').addEventListener('click', async function(){
+    var name = document.getElementById('rName').value.trim();
+    var start = document.getElementById('rStart').value, end = document.getElementById('rEnd').value;
+    if (!name){ toast('Zadaj názov kola.', true); return; }
+    if (!start || !end){ toast('Zadaj začiatok aj uzávierku.', true); return; }
+    try {
+      var j = await api('/api/rounds', { method:'POST', body: JSON.stringify({ name: name, leagueId: TID, startDate: start, endDate: end }) });
+      var rid = j.data.id;
+      var no = document.getElementById('noRounds'); if (no) no.remove();
+      var block = document.createElement('div');
+      block.className='round-block open'; block.setAttribute('data-round', rid);
+      var sD = new Date(start), eD = new Date(end);
+      block.innerHTML =
+        '<div class="round-head" data-toggle-round><span class="chev">▶</span><div class="rh-main"><b class="hi">'+name+'</b> <span class="muted" style="font-size:var(--fs-xs)">'+sD.toLocaleString('sk-SK')+' → '+eD.toLocaleString('sk-SK')+'</span></div>'
+        + '<span class="rh-count">0 záp.</span>'
+        + '<button class="btn btn-ghost btn-icon" title="Vymazať kolo" data-del-round="'+rid+'" style="color:var(--danger)" onclick="event.stopPropagation()">🗑</button></div>'
+        + '<div class="round-body"><div class="match-list" data-matches="'+rid+'"><p class="muted nomatch" style="font-size:var(--fs-sm)">Žiadne zápasy.</p></div>'
+        + '<div class="add-match-row" data-addmatch="'+rid+'">'
+        + '<div><span class="mini-label">Domáci</span><select class="select sel-home">'+teamOptions()+'</select></div>'
+        + '<div><span class="mini-label">Hosť</span><select class="select sel-away">'+teamOptions()+'</select></div>'
+        + '<div><span class="mini-label">Čas</span><input class="input inp-time" type="datetime-local"></div>'
+        + '<div><span class="mini-label">Typ</span><select class="select sel-type"><option value="exact_score">Skóre</option><option value="winner">Víťaz</option></select></div>'
+        + '<button class="btn btn-secondary btn-sm btn-add-match">+ Zápas</button></div></div>';
+      document.getElementById('roundsWrap').appendChild(block);
+      document.getElementById('rName').value=''; document.getElementById('rStart').value=''; document.getElementById('rEnd').value='';
+      toast('Kolo pridané.');
+    } catch(err){ toast(err.message, true); }
+  });
+</script>
+
+<%- include('partials/footer') %>

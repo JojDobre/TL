@@ -1,0 +1,185 @@
+<%- include('partials/head', { title: 'Vyhodnotiť šablónu', page: 'admin', active: 'admin', pageStyle: `
+  .ad-head { padding:22px 0 14px; }
+  .ev-prog { display:flex; align-items:center; gap:14px; margin-top:10px; }
+  .ev-prog .bar { flex:1; max-width:340px; height:8px; border-radius:99px; background:var(--surface-3); overflow:hidden; }
+  .ev-prog .bar i { display:block; height:100%; background:var(--brand); }
+
+  .rnd { margin-bottom:12px; border:1px solid var(--line); border-radius:var(--r-md); overflow:hidden; }
+  .rnd-title { display:flex; align-items:center; gap:10px; padding:13px 16px; background:var(--surface-2); cursor:pointer; user-select:none; }
+  .rnd-title:hover { background:var(--surface-3); }
+  .rnd-title .chev { color:var(--text-4); transition:transform .2s; flex:none; font-size:13px; }
+  .rnd.open .rnd-title .chev { transform:rotate(90deg); }
+  .rnd-title h3 { font-size:var(--fs-h4); flex:1; min-width:0; }
+  .rnd-title .rt-count { font-size:var(--fs-xs); color:var(--text-3); background:var(--surface-1); border:1px solid var(--line); border-radius:99px; padding:2px 9px; white-space:nowrap; flex:none; }
+  .rnd-body { display:none; padding:14px 16px; border-top:1px solid var(--line); }
+  .rnd.open .rnd-body { display:block; }
+
+  .ev-match { display:grid; grid-template-columns:1fr auto auto; gap:14px; align-items:center; padding:13px 16px; border-radius:var(--r-md); background:var(--surface-2); border:1px solid var(--line); margin-bottom:8px; }
+  .ev-match.done { border-color:rgba(52,211,153,.35); }
+  .ev-match.canceled { opacity:.6; }
+  .ev-teams { font-weight:600; color:var(--text-1); }
+  .ev-teams .faint { font-weight:400; }
+  .ev-when { font-size:var(--fs-xs); color:var(--text-4); }
+  .score-in { display:flex; align-items:center; gap:6px; }
+  .score-in input { width:54px; text-align:center; font-family:var(--num); font-weight:700; }
+  .score-in span { color:var(--text-4); }
+  .ev-actions { display:flex; gap:6px; align-items:center; }
+  .winner-pick { display:flex; gap:6px; }
+  .winner-pick button { padding:6px 12px; font-size:var(--fs-sm); border-radius:var(--r-sm); border:1px solid var(--line); background:var(--surface-1); color:var(--text-2); cursor:pointer; }
+  .winner-pick button.sel { background:var(--brand); color:#fff; border-color:transparent; }
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--surface-3); color:var(--text-1); padding:11px 18px; border-radius:10px; z-index:300; font-size:var(--fs-sm); box-shadow:0 6px 20px rgba(0,0,0,.35); border:1px solid var(--line-strong); }
+  .toast.err { background:#3a1620; border-color:rgba(240,71,106,.5); color:#ffb3c2; }
+
+  @media (max-width:760px){ .ev-match { grid-template-columns:1fr; gap:10px; } .ev-actions { justify-content:flex-start; flex-wrap:wrap; } }
+  @media (max-width:600px){
+    .ad-head { padding:16px 0 10px; }
+    .ev-prog .bar { max-width:none; }
+    .rnd-title { padding:12px 14px; } .rnd-title h3 { font-size:var(--fs-sm); }
+    .ev-match { padding:12px 14px; }
+    .score-in input { width:48px; }
+    .winner-pick { flex-wrap:wrap; } .winner-pick button { flex:1; min-width:84px; }
+    .ev-actions .btn { flex:1; }
+  }
+` }) %>
+
+<%- include('partials/admin-subnav', { active: 'templates' }) %>
+
+<div class="wrap ad-head">
+  <div class="crumb" style="margin-bottom:6px"><a href="/admin/templates">Šablóny</a> › Vyhodnotenie</div>
+  <h1 style="font-size:clamp(1.6rem,2.6vw,2.1rem)"><%= template.name %></h1>
+  <p class="muted" style="margin-top:4px;font-size:var(--fs-sm)">Zadaj výsledky zápasov. Výsledok sa automaticky prejaví vo všetkých ligách, ktoré vznikli z tejto šablóny, a hráčom sa prepočítajú body.</p>
+  <div class="ev-prog">
+    <div class="bar"><i style="width:<%= totalMatches > 0 ? Math.round((evaluatedMatches/totalMatches)*100) : 0 %>%"></i></div>
+    <span class="muted" style="font-size:var(--fs-sm)"><b class="hi num"><%= evaluatedMatches %></b> / <%= totalMatches %> vyhodnotených</span>
+  </div>
+</div>
+
+<div class="wrap" style="padding-bottom:72px">
+  <% if (rounds.length === 0) { %>
+    <div class="card card-pad" style="text-align:center;color:var(--text-3)">Táto šablóna nemá žiadne kolá. Najprv ich pridaj v <a href="/admin/templates/<%= template.id %>/edit" class="brand">úprave</a>.</div>
+  <% } %>
+
+  <% rounds.forEach(function(r){ var rdone = r.matches.filter(function(m){ return m.status==='finished'||m.status==='canceled'; }).length; %>
+  <section class="rnd<%= rdone < r.matches.length && r.matches.length > 0 ? ' open' : '' %>">
+    <div class="rnd-title" data-toggle-round><span class="chev">▶</span><h3><%= r.name %></h3><span class="rt-count"><%= rdone %>/<%= r.matches.length %> hotových</span></div>
+    <div class="rnd-body">
+    <% if (r.matches.length === 0) { %><p class="muted" style="font-size:var(--fs-sm)">Žiadne zápasy v tomto kole.</p><% } %>
+    <% r.matches.forEach(function(m){ var done = (m.status==='finished'); var canc = (m.status==='canceled'); %>
+    <div class="ev-match <%= done ? 'done' : '' %> <%= canc ? 'canceled' : '' %>" data-match="<%= m.id %>" data-type="<%= m.tipType %>">
+      <div>
+        <div class="ev-teams"><%= m.homeTeam %> <span class="faint">vs</span> <%= m.awayTeam %></div>
+        <div class="ev-when"><%= new Date(m.matchTime).toLocaleString('sk-SK') %> · <%= m.tipType === 'winner' ? 'tip na víťaza' : 'tip na skóre' %><span class="m-state"><%= canc ? ' · zrušený' : (done ? ' · vyhodnotený' : '') %></span></div>
+      </div>
+
+      <% if (m.tipType === 'winner') { %>
+      <div class="winner-pick">
+        <button data-w="home" class="<%= (done && m.homeScore > m.awayScore) ? 'sel' : '' %>">Domáci</button>
+        <button data-w="draw" class="<%= (done && m.homeScore === m.awayScore && m.homeScore != null) ? 'sel' : '' %>">Remíza</button>
+        <button data-w="away" class="<%= (done && m.awayScore > m.homeScore) ? 'sel' : '' %>">Hosť</button>
+      </div>
+      <% } else { %>
+      <div class="score-in">
+        <input class="input sc-home" type="number" min="0" inputmode="numeric" value="<%= m.homeScore != null ? m.homeScore : '' %>" placeholder="–">
+        <span>:</span>
+        <input class="input sc-away" type="number" min="0" inputmode="numeric" value="<%= m.awayScore != null ? m.awayScore : '' %>" placeholder="–">
+      </div>
+      <% } %>
+
+      <div class="ev-actions">
+        <button class="btn btn-primary btn-sm btn-save">Uložiť</button>
+        <% if (done || canc) { %><button class="btn btn-ghost btn-sm btn-clear" title="Vymazať výsledok">↺</button><% } %>
+        <button class="btn btn-ghost btn-sm btn-cancel" title="Zrušiť zápas" style="color:var(--danger)">Zrušiť</button>
+      </div>
+    </div>
+    <% }); %>
+    </div>
+  </section>
+  <% }); %>
+</div>
+
+<script>
+  function toast(msg, err){ var t=document.createElement('div'); t.className='toast'+(err?' err':''); t.textContent=msg; document.body.appendChild(t); setTimeout(function(){ t.remove(); }, err?3200:1800); }
+  async function api(url, opts){
+    var r = await fetch(url, Object.assign({ headers:{ 'Content-Type':'application/json' } }, opts));
+    var j = await r.json().catch(function(){ return {}; });
+    if (!r.ok || j.success === false) throw new Error(j.message || ('Chyba '+r.status));
+    return j;
+  }
+  function markDone(row, canceled){
+    row.classList.toggle('done', !canceled);
+    row.classList.toggle('canceled', !!canceled);
+    var st = row.querySelector('.m-state'); if (st) st.textContent = canceled ? ' · zrušený' : ' · vyhodnotený';
+  }
+
+  function updateRoundProgress(row){
+    var rnd = row.closest('.rnd'); if (!rnd) return;
+    var all = rnd.querySelectorAll('.ev-match').length;
+    var dn = rnd.querySelectorAll('.ev-match.done, .ev-match.canceled').length;
+    var c = rnd.querySelector('.rt-count'); if (c) c.textContent = dn + '/' + all + ' hotových';
+  }
+  function updateGlobalProgress(){
+    var all = document.querySelectorAll('.ev-match').length;
+    var dn = document.querySelectorAll('.ev-match.done, .ev-match.canceled').length;
+    var bar = document.querySelector('.ev-prog .bar i'); if (bar) bar.style.width = (all ? Math.round(dn/all*100) : 0) + '%';
+    var lbl = document.querySelector('.ev-prog .num'); if (lbl) lbl.textContent = dn;
+  }
+
+  document.addEventListener('click', async function(e){
+    // rozbalenie/zbalenie kola
+    var th = e.target.closest('[data-toggle-round]');
+    if (th){ th.closest('.rnd').classList.toggle('open'); return; }
+
+    var row = e.target.closest('.ev-match'); if (!row) return;
+    var mid = row.getAttribute('data-match');
+    var type = row.getAttribute('data-type');
+
+    // výber víťaza (len vizuálne, uloží sa na Uložiť)
+    var w = e.target.closest('.winner-pick button');
+    if (w){ row.querySelectorAll('.winner-pick button').forEach(function(b){ b.classList.remove('sel'); }); w.classList.add('sel'); return; }
+
+    // uložiť výsledok
+    if (e.target.closest('.btn-save')){
+      var payload;
+      if (type === 'winner'){
+        var sel = row.querySelector('.winner-pick button.sel');
+        if (!sel){ toast('Vyber víťaza alebo remízu.', true); return; }
+        var wv = sel.getAttribute('data-w');
+        // víťaz reprezentovaný ako skóre 1:0 / 0:1 / 0:0 (rozhodujúci je výsledok)
+        payload = { homeScore: wv==='home'?1:0, awayScore: wv==='away'?1:0, status:'finished' };
+      } else {
+        var h = row.querySelector('.sc-home').value, a = row.querySelector('.sc-away').value;
+        if (h===''||a===''){ toast('Zadaj obe skóre.', true); return; }
+        payload = { homeScore: Number(h), awayScore: Number(a), status:'finished' };
+      }
+      try { await api('/api/matches/'+mid+'/evaluate', { method:'POST', body: JSON.stringify(payload) });
+        markDone(row, false); updateRoundProgress(row); updateGlobalProgress(); toast('Výsledok uložený a rozoslaný do líg.');
+        if (!row.querySelector('.btn-clear')){ var b=document.createElement('button'); b.className='btn btn-ghost btn-sm btn-clear'; b.title='Vymazať výsledok'; b.textContent='↺'; row.querySelector('.btn-save').after(b); }
+      } catch(err){ toast(err.message, true); }
+      return;
+    }
+
+    // zrušiť zápas
+    if (e.target.closest('.btn-cancel')){
+      if (!confirm('Označiť zápas ako zrušený? Body zaň nezíska nikto.')) return;
+      try { await api('/api/matches/'+mid+'/evaluate', { method:'POST', body: JSON.stringify({ status:'canceled' }) });
+        markDone(row, true); updateRoundProgress(row); updateGlobalProgress(); toast('Zápas zrušený.');
+      } catch(err){ toast(err.message, true); }
+      return;
+    }
+
+    // vymazať výsledok (späť na nevyhodnotený)
+    if (e.target.closest('.btn-clear')){
+      try { await api('/api/matches/'+mid+'/evaluate', { method:'POST', body: JSON.stringify({ status:'scheduled' }) });
+        row.classList.remove('done','canceled');
+        updateRoundProgress(row); updateGlobalProgress();
+        var st = row.querySelector('.m-state'); if (st) st.textContent='';
+        row.querySelectorAll('.winner-pick button').forEach(function(b){ b.classList.remove('sel'); });
+        var sh=row.querySelector('.sc-home'), sa=row.querySelector('.sc-away'); if(sh)sh.value=''; if(sa)sa.value='';
+        toast('Výsledok vymazaný.');
+      } catch(err){ toast(err.message, true); }
+      return;
+    }
+  });
+</script>
+
+<%- include('partials/footer') %>

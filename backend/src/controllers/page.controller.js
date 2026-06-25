@@ -13,6 +13,20 @@ const { cloneTemplateInto } = require('../utils/league-clone.util');
 const { asyncHandler } = require('../middleware/error.middleware');
 const { leagueDetailPage, manageLeaguePage } = require('./leaguePage.controller');
 
+// where klauzula pre DOSTUPNÉ šablóny: now musí byť v okne [availableFrom, availableTo]
+// (prázdne hranice = bez obmedzenia). Použité pri ponuke šablón v tvorbe ligy.
+function availableTemplateWhere() {
+  const now = new Date();
+  const Op = Sequelize.Op;
+  return {
+    isTemplate: true,
+    [Op.and]: [
+      { [Op.or]: [{ availableFrom: null }, { availableFrom: { [Op.lte]: now } }] },
+      { [Op.or]: [{ availableTo: null }, { availableTo: { [Op.gte]: now } }] },
+    ],
+  };
+}
+
 const generateInviteCode = () => uuidv4().substring(0, 6).toUpperCase();
 const SEASON_LIMITS = { player: 1, vip: 2 };
 
@@ -259,7 +273,7 @@ const seasonDetailPage = asyncHandler(async (req, res) => {
 const createSeasonPage = asyncHandler(async (req, res) => {
   // šablóny (oficiálne ligy označené ako isTemplate) — ponúkajú sa pri samostatnej lige
   const templates = await League.findAll({
-    where: { isTemplate: true },
+    where: availableTemplateWhere(),
     attributes: ['id', 'name', 'description'],
     order: [['name', 'ASC']],
   });
@@ -275,7 +289,7 @@ const createSeasonSubmit = asyncHandler(async (req, res) => {
 
   const back = async (error) => {
     const templates = await League.findAll({
-      where: { isTemplate: true },
+      where: availableTemplateWhere(),
       attributes: ['id', 'name', 'description'],
       order: [['name', 'ASC']],
     });
@@ -317,7 +331,7 @@ const createSeasonSubmit = asyncHandler(async (req, res) => {
     // šablóna (voliteľná) — over, že existuje a je to platná šablóna
     let template = null;
     if (req.body.templateId) {
-      template = await League.findOne({ where: { id: req.body.templateId, isTemplate: true } });
+      template = await League.findOne({ where: { id: req.body.templateId, ...availableTemplateWhere() } });
       if (!template) return await back('Vybraná šablóna neexistuje.');
     }
 

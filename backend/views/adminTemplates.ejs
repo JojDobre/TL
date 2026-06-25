@@ -1,0 +1,97 @@
+<%- include('partials/head', { title: 'Šablóny', page: 'admin', active: 'admin', pageStyle: `
+  .ad-head { padding:26px 0 18px; }
+  .tpl-row { display:grid; grid-template-columns:1fr auto auto; gap:16px; align-items:center; padding:16px 18px; border-radius:var(--r-md); background:var(--surface-2); border:1px solid var(--line); margin-bottom:10px; }
+  .tpl-meta { display:flex; flex-wrap:wrap; gap:14px; margin-top:6px; font-size:var(--fs-sm); color:var(--text-3); }
+  .tpl-meta .n { font-family:var(--num); font-weight:700; color:var(--text-2); }
+  .tpl-actions { display:flex; gap:8px; flex-wrap:wrap; }
+  .scrim { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:200; padding:18px; }
+  .dialog { background:var(--surface-1); border:1px solid var(--line-strong); border-radius:var(--r-lg,16px); padding:24px; width:100%; max-width:460px; }
+  .dialog-title { font-size:var(--fs-h4); font-weight:700; color:var(--text-1); }
+  .field-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:700px){ .tpl-row { grid-template-columns:1fr; } .tpl-actions { justify-content:flex-start; } .field-row { grid-template-columns:1fr; } }
+` }) %>
+
+<%- include('partials/admin-subnav', { active: 'templates' }) %>
+
+<div class="wrap ad-head">
+  <div class="between wrap-gap" style="gap:16px;align-items:flex-end">
+    <div>
+      <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Šablóny líg</h1>
+      <p class="muted" style="margin-top:6px;max-width:62ch">Vopred pripravené ligy (kolá, zápasy, tímy), ktoré si používatelia môžu vybrať pri tvorbe vlastnej ligy alebo turnaja. Výsledok zadaný v šablóne sa automaticky prejaví vo všetkých vytvorených ligách.</p>
+    </div>
+    <button class="btn btn-primary" data-open-create>+ Vytvoriť šablónu</button>
+  </div>
+</div>
+
+<div class="wrap" style="padding-bottom:64px">
+  <% if (typeof query !== 'undefined' && query && query.err) { %>
+  <div class="card card-pad" style="border-color:rgba(240,71,106,.4);margin-bottom:16px;color:var(--danger)"><%= query.err %></div>
+  <% } %>
+
+  <% if (templates.length === 0) { %>
+    <div class="card card-pad" style="text-align:center;padding:46px 20px">
+      <div style="font-size:34px;margin-bottom:10px">🧩</div>
+      <b class="hi" style="display:block;margin-bottom:4px">Zatiaľ žiadne šablóny</b>
+      <p class="muted" style="font-size:var(--fs-sm);margin-bottom:16px">Vytvor prvú šablónu a priprav v nej kolá a zápasy.</p>
+      <button class="btn btn-primary" data-open-create>+ Vytvoriť šablónu</button>
+    </div>
+  <% } %>
+
+  <% templates.forEach(function(t){ %>
+  <div class="tpl-row">
+    <div>
+      <div class="row g-2 wrap-gap">
+        <b class="hi" style="font-size:var(--fs-h4)"><%= t.name %></b>
+        <% if (t.status === 'active') { %><span class="tag tag-success"><span class="dot"></span>Dostupná</span>
+        <% } else if (t.status === 'upcoming') { %><span class="tag tag-info">Pripravená</span>
+        <% } else { %><span class="tag tag-muted">Po dostupnosti</span><% } %>
+      </div>
+      <div class="tpl-meta">
+        <span><span class="n"><%= t.roundsCount %></span> kôl</span>
+        <span><span class="n"><%= t.matchesCount %></span> zápasov</span>
+        <span><span class="n"><%= t.finishedCount %></span> vyhodnotených</span>
+        <span><span class="n"><%= t.clonesCount %></span> použití (ligy)</span>
+      </div>
+      <div class="tpl-meta">
+        <span>Dostupná: <%= t.availableFrom ? new Date(t.availableFrom).toLocaleDateString('sk-SK') : '—' %> → <%= t.availableTo ? new Date(t.availableTo).toLocaleDateString('sk-SK') : '—' %></span>
+      </div>
+    </div>
+    <div class="tpl-actions">
+      <a href="/admin/templates/<%= t.id %>/edit" class="btn btn-secondary btn-sm">Upraviť</a>
+      <a href="/admin/templates/<%= t.id %>/evaluate" class="btn btn-primary btn-sm">Vyhodnotiť</a>
+    </div>
+    <form method="POST" action="/admin/templates/<%= t.id %>/delete" onsubmit="return confirm('Naozaj vymazať šablónu „<%= t.name %>“? Kolá a zápasy šablóny sa odstránia. Už vytvorené ligy ostanú, len stratia zdroj výsledkov.')">
+      <button type="submit" class="btn btn-ghost btn-icon" title="Vymazať" style="color:var(--danger)">🗑</button>
+    </form>
+  </div>
+  <% }); %>
+</div>
+
+<!-- CREATE MODAL -->
+<div class="scrim" data-create hidden>
+  <form class="dialog" method="POST" action="/admin/templates/create">
+    <div class="between" style="margin-bottom:6px"><div class="dialog-title">Nová šablóna</div><button type="button" class="btn btn-ghost btn-icon" data-close-create>✕</button></div>
+    <p class="muted" style="font-size:var(--fs-sm);margin-bottom:18px">Zadaj názov a okno dostupnosti. Kolá a zápasy doplníš v ďalšom kroku.</p>
+    <div class="field" style="margin-bottom:14px">
+      <label class="label">Názov šablóny</label>
+      <input class="input" name="name" placeholder="napr. MS v hokeji 2026" required autofocus>
+    </div>
+    <div class="field-row">
+      <div class="field"><label class="label">Dostupná od <span class="faint">(voliteľné)</span></label><input class="input" type="date" name="availableFrom"></div>
+      <div class="field"><label class="label">Dostupná do <span class="faint">(voliteľné)</span></label><input class="input" type="date" name="availableTo"></div>
+    </div>
+    <p class="muted" style="font-size:var(--fs-xs);margin-top:8px">Mimo tohto okna sa šablóna nebude dať vybrať pri tvorbe ligy. Prázdne = bez obmedzenia.</p>
+    <div class="row g-2" style="justify-content:flex-end;margin-top:20px"><button type="button" class="btn btn-secondary" data-close-create>Zrušiť</button><button type="submit" class="btn btn-primary">Vytvoriť a upraviť →</button></div>
+  </form>
+</div>
+
+<script>
+  document.addEventListener('click', function(e){
+    var dlg = document.querySelector('[data-create]');
+    if (!dlg) return;
+    if (e.target.closest('[data-open-create]')) dlg.removeAttribute('hidden');
+    else if (e.target.closest('[data-close-create]') || e.target === dlg) dlg.setAttribute('hidden','');
+  });
+</script>
+
+<%- include('partials/footer') %>

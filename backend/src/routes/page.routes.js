@@ -16,6 +16,10 @@ const {
   forgotPasswordPage, forgotPasswordSubmit, resetPasswordPage, resetPasswordSubmit,
 } = require('../controllers/authPage.controller');
 const { adminDashboardPage, adminUsersPage, adminCompetitionsPage } = require('../controllers/adminPage.controller');
+const {
+  templatesListPage, templateCreate, templateEditPage,
+  templateUpdateMeta, templateDelete, templateEvaluatePage,
+} = require('../controllers/adminTemplate.controller');
 const { leagueDetailPage, joinLeagueSubmit, createLeaguePage, createLeagueSubmit, editLeaguePage, editLeagueSubmit, deleteLeagueSubmit, leaveLeagueSubmit, leagueMembersPage, leagueMemberAction, endLeagueSubmit, manageLeaguePage } = require('../controllers/leaguePage.controller');
 const { roundDetailPage, roundResultsPage } = require('../controllers/roundPage.controller');
 const { createRoundPage, createRoundSubmit, editRoundPage } = require('../controllers/roundPageCreate.controller');
@@ -128,6 +132,14 @@ router.get('/admin', requireAdmin, adminDashboardPage);
 router.get('/admin/users', requireAdmin, adminUsersPage);
 router.get('/admin/competitions', requireAdmin, adminCompetitionsPage);
 router.get('/admin/teams', requireAdmin, teamsAdminPage);
+
+// Admin — šablóny líg
+router.get('/admin/templates', requireAdmin, templatesListPage);
+router.post('/admin/templates/create', requireAdmin, templateCreate);
+router.get('/admin/templates/:id/edit', requireAdmin, templateEditPage);
+router.post('/admin/templates/:id/meta', requireAdmin, templateUpdateMeta);
+router.post('/admin/templates/:id/delete', requireAdmin, templateDelete);
+router.get('/admin/templates/:id/evaluate', requireAdmin, templateEvaluatePage);
 
 // Admin API — tímy (JSON, cez session admin)
 router.get('/api/admin/teams', apiRequireAdmin, listTeams);

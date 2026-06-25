@@ -75,6 +75,15 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
       },
+      // Šablóna: okno dostupnosti pri tvorbe ligy (nullable = bez obmedzenia).
+      availableFrom: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      availableTo: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
       // Ak je táto liga KLON šablóny, odkaz na zdrojovú (oficiálnu) ligu
       templateId: {
         type: DataTypes.INTEGER,
