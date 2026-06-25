@@ -22,6 +22,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('official', 'community'),  // Typ sezóny: oficiálna alebo komunitná
       defaultValue: 'community',
     },
+    mode: {
+      type: DataTypes.ENUM('classic', 'standalone'),  // classic = sezóna s ligami; standalone = samostatná liga (turnaj)
+      defaultValue: 'classic',
+    },
     inviteCode: {
       type: DataTypes.STRING,  // Jedinečný kód na prihlásenie do sezóny
       allowNull: false,

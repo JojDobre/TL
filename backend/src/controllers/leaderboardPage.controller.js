@@ -78,6 +78,7 @@ const seasonLeaderboardPage = asyncHandler(async (req, res) => {
     myRank,
     meId,
     leagues: leagues.map((l) => l.toJSON()),
+    isStandalone: season.mode === 'standalone',
   });
 });
 

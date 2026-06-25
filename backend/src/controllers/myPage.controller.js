@@ -81,7 +81,7 @@ const myPage = asyncHandler(async (req, res) => {
   const lMems = await UserLeague.findAll({ where: { userId: meId } });
   const myLeagueIds = lMems.map((m) => m.leagueId);
   const leaguesRaw = myLeagueIds.length
-    ? await League.findAll({ where: { id: { [Op.in]: myLeagueIds } }, include: [{ model: Season, attributes: ['id', 'name', 'endDate', 'ended'] }], order: [['createdAt', 'DESC']] })
+    ? await League.findAll({ where: { id: { [Op.in]: myLeagueIds } }, include: [{ model: Season, attributes: ['id', 'name', 'endDate', 'ended', 'mode'] }], order: [['createdAt', 'DESC']] })
     : [];
 
   const myLeagues = [];
@@ -104,6 +104,8 @@ const myPage = asyncHandler(async (req, res) => {
     myLeagues.push({
       id: l.id, name: l.name, type: l.type, hasPassword: l.hasPassword,
       seasonName: l.Season ? l.Season.name : null,
+      seasonId: l.Season ? l.Season.id : null,
+      seasonMode: l.Season ? l.Season.mode : null,
       ended: !!l.ended || sEnded, rank, myPoints,
     });
   }

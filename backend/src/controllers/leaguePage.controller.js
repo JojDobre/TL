@@ -29,7 +29,7 @@ const leagueDetailPage = asyncHandler(async (req, res) => {
   const league = await League.findByPk(req.params.id, {
     include: [
       { model: Season, attributes: ['id', 'name'] },
-      { model: Round, attributes: ['id', 'name', 'description', 'startDate', 'endDate', 'active'] },
+      { model: Round, attributes: ['id', 'name', 'description', 'startDate', 'endDate', 'active', 'createdAt'] },
     ],
   });
   if (!league) return res.status(404).render('error-page', { message: 'Liga nebola nájdená.' });
@@ -77,6 +77,43 @@ const leagueDetailPage = asyncHandler(async (req, res) => {
 
   const playedRounds = rounds.filter((r) => r.status === 'finished').length;
 
+  // ===== STANDALONE EXTRAS (len pre turnaj): meta sezóny + aktuality =====
+  let standaloneSeason = null;
+  let news = [];
+  if (req._standaloneView) {
+    const s = await Season.findByPk(league.seasonId);
+    if (s) {
+      standaloneSeason = { ...s.toJSON(), status: seasonStatus(s) };
+    }
+    // aktuality odvodené z kôl turnaja (vytvorené / otvorené / vyhodnotené kolo)
+    const now = new Date();
+    const roundIds = rounds.map((r) => r.id);
+    let evalCounts = {};
+    if (roundIds.length) {
+      const ms = await Match.findAll({
+        where: { roundId: { [Sequelize.Op.in]: roundIds } },
+        attributes: ['id', 'roundId', 'status'],
+      });
+      ms.forEach((m) => {
+        if (!evalCounts[m.roundId]) evalCounts[m.roundId] = { total: 0, finished: 0 };
+        evalCounts[m.roundId].total += 1;
+        if (m.status === 'finished') evalCounts[m.roundId].finished += 1;
+      });
+    }
+    rounds.forEach((r) => {
+      news.push({ title: (r.name || 'Kolo') + ' pridané', desc: 'Pribudlo nové kolo do turnaja.', tagText: 'Nové kolo', tagClass: 'tag-info', at: r.createdAt });
+      if (r.startDate && new Date(r.startDate) <= now) {
+        news.push({ title: (r.name || 'Kolo') + ' otvorené', desc: 'Kolo je otvorené na tipovanie.', tagText: 'Tipovanie', tagClass: 'tag-warning', at: r.startDate });
+      }
+      const c = evalCounts[r.id];
+      if (c && c.total > 0 && c.finished === c.total) {
+        news.push({ title: (r.name || 'Kolo') + ' vyhodnotené', desc: 'Body boli pridelené hráčom.', tagText: 'Vyhodnotené', tagClass: 'tag-success', at: r.startDate || r.createdAt });
+      }
+    });
+    news.sort((a, b) => new Date(b.at) - new Date(a.at));
+    news = news.slice(0, 6);
+  }
+
   // môže prihlásený spravovať ligu? (tvorca ligy/sezóny, admin sezóny, glob. admin)
   let canManage = false;
   let isSeasonMember = false;
@@ -89,7 +126,7 @@ const leagueDetailPage = asyncHandler(async (req, res) => {
       || (sRole && sRole.role === 'admin');
   }
 
-  res.render('leagueDetail', {
+  res.render(req._standaloneView ? 'standaloneDetail' : 'leagueDetail', {
     league: { ...league.toJSON(), membersCount, scoringSystem: league.scoringSystem || DEFAULT_SCORING },
     rounds,
     leaderboard,
@@ -101,6 +138,8 @@ const leagueDetailPage = asyncHandler(async (req, res) => {
     myPoints,
     playedRounds,
     canManage,
+    standaloneSeason,
+    news,
   });
 });
 
@@ -296,7 +335,7 @@ const editLeagueSubmit = asyncHandler(async (req, res) => {
   const { name, description, type, password, removePassword, exactScore, correctWinner, goalDifference, correctGoals } = req.body;
 
   const league = await League.findByPk(req.params.id, {
-    include: [{ model: Season, attributes: ['id', 'name', 'creatorId'] }],
+    include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'mode'] }],
   });
   if (!league) return res.redirect('/seasons');
 
@@ -349,6 +388,10 @@ const editLeagueSubmit = asyncHandler(async (req, res) => {
   }
 
   await league.save();
+  // standalone turnaj: späť na detail turnaja (/seasons/:id), bežná liga na ligu
+  if (league.Season && league.Season.mode === 'standalone') {
+    return res.redirect('/seasons/' + league.seasonId);
+  }
   res.redirect('/leagues/' + league.id);
 });
 
@@ -457,7 +500,7 @@ const endLeagueSubmit = asyncHandler(async (req, res) => {
 const manageLeaguePage = asyncHandler(async (req, res) => {
   const userId = Number(req.session.userId);
   const league = await League.findByPk(req.params.id, {
-    include: [{ model: Season, attributes: ['id', 'name', 'creatorId'] }],
+    include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'description', 'image', 'startDate', 'endDate', 'inviteCode', 'hasPassword', 'hidden', 'mode', 'ended', 'active'] }],
   });
   if (!league) return res.status(404).render('error-page', { message: 'Liga nebola nájdená.' });
   if (!(await isLeagueManager(league, userId))) {
@@ -496,9 +539,10 @@ const manageLeaguePage = asyncHandler(async (req, res) => {
   const owner = await User.findByPk(league.creatorId, { attributes: ['username', 'firstName', 'lastName'] });
   const ownerName = owner ? ([owner.firstName, owner.lastName].filter(Boolean).join(' ') || owner.username) : '—';
 
-  res.render('manageLeague', {
+  res.render(req._standaloneManageView ? 'manageStandalone' : 'manageLeague', {
     league: { ...league.toJSON(), scoringSystem: league.scoringSystem || DEFAULT_SCORING, scoringLocked },
     seasonName: league.Season ? league.Season.name : '',
+    season: league.Season ? league.Season.toJSON() : null,
     members,
     summary: {
       membersCount: members.length,

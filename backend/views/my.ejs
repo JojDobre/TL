@@ -150,11 +150,11 @@
       <% } else { %>
       <div class="ml-list">
         <% myLeagues.forEach(function(l){ %>
-        <a href="/leagues/<%= l.id %>" class="card card-hover ml-row"<%= l.ended ? ' style="opacity:.72"' : '' %>>
+        <a href="<%= l.seasonMode === 'standalone' ? ('/seasons/' + l.seasonId) : ('/leagues/' + l.id) %>" class="card card-hover ml-row"<%= l.ended ? ' style="opacity:.72"' : '' %>>
           <span class="ml-logo" style="background:linear-gradient(<%= grad(l.id) %>)"><%= abbr(l.name) %></span>
           <div style="min-width:0">
-            <div class="row g-2 wrap-gap"><b class="hi"><%= l.name %></b><span class="tag <%= l.type === 'official' ? 'tag-brand' : 'tag-gold' %>"><%= l.type === 'official' ? 'Oficiálna' : 'Custom' %></span><% if (l.hasPassword) { %><span class="tag tag-muted">🔒 Heslo</span><% } %></div>
-            <div class="muted" style="font-size:var(--fs-sm)"><%= l.seasonName || '—' %></div>
+            <div class="row g-2 wrap-gap"><b class="hi"><%= l.name %></b><% if (l.seasonMode === 'standalone') { %><span class="tag tag-gold">Samostatná liga</span><% } else { %><span class="tag <%= l.type === 'official' ? 'tag-brand' : 'tag-gold' %>"><%= l.type === 'official' ? 'Oficiálna' : 'Custom' %></span><% } %><% if (l.hasPassword) { %><span class="tag tag-muted">🔒 Heslo</span><% } %></div>
+            <div class="muted" style="font-size:var(--fs-sm)"><%= l.seasonMode === 'standalone' ? 'Samostatný turnaj' : (l.seasonName || '—') %></div>
           </div>
           <div class="ml-status"><% if (l.ended) { %><span class="tag tag-muted">Ukončená</span><% } else { %><span class="tag tag-live"><span class="dot"></span>Prebieha</span><% } %></div>
           <div style="text-align:right"><div class="ml-pos <%= l.rank === 1 ? 'gold' : 'brand' %>"><%= l.rank ? '#' + l.rank : '—' %></div><div class="l" style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-4);font-weight:700"><%= l.myPoints %> b</div></div>

@@ -4,12 +4,14 @@
 // Logika načítania dát je rovnaká ako v API controlleroch — líši sa len tým,
 // že na konci je res.render(...) namiesto res.json(...).
 
-const { Season, User, League, Round, Match, Tip, Team, UserSeason, UserLeague, Sequelize } = require('../models');
+const { Season, User, League, Round, Match, Tip, Team, UserSeason, UserLeague, Sequelize, sequelize } = require('../models');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcrypt');
 const { seasonStatus, isSeasonLocked, canViewSeasonContent } = require('../utils/season.utils');
 const { deleteSeason } = require('../utils/delete.util');
+const { cloneTemplateInto } = require('../utils/league-clone.util');
 const { asyncHandler } = require('../middleware/error.middleware');
+const { leagueDetailPage, manageLeaguePage } = require('./leaguePage.controller');
 
 const generateInviteCode = () => uuidv4().substring(0, 6).toUpperCase();
 const SEASON_LIMITS = { player: 1, vip: 2 };
@@ -50,6 +52,18 @@ const seasonDetailPage = asyncHandler(async (req, res) => {
     include: [{ model: User, as: 'creator', attributes: ['id', 'username', 'firstName', 'lastName'] }],
   });
   if (!season) return res.status(404).render('error-page', { message: 'Sezóna nebola nájdená.' });
+
+  // STANDALONE (samostatná liga / turnaj): sezóna je len obal pre jednu ligu.
+  // Detail vykreslíme cez leagueDetailPage so šablónou standaloneDetail.
+  if (season.mode === 'standalone') {
+    const league = await League.findOne({ where: { seasonId: season.id }, order: [['createdAt', 'ASC']] });
+    if (league) {
+      req.params.id = String(league.id);
+      req._standaloneView = true;
+      return leagueDetailPage(req, res);
+    }
+    // ak by liga chýbala (nemalo by nastať), pokračuj klasickým detailom sezóny
+  }
 
   const meId = req.userId ? Number(req.userId) : null;
 
@@ -242,9 +256,15 @@ const seasonDetailPage = asyncHandler(async (req, res) => {
 });
 
 // GET /seasons/create
-const createSeasonPage = (req, res) => {
-  res.render('createSeason', { error: null });
-};
+const createSeasonPage = asyncHandler(async (req, res) => {
+  // šablóny (oficiálne ligy označené ako isTemplate) — ponúkajú sa pri samostatnej lige
+  const templates = await League.findAll({
+    where: { isTemplate: true },
+    attributes: ['id', 'name', 'description'],
+    order: [['name', 'ASC']],
+  });
+  res.render('createSeason', { error: null, templates: templates.map((t) => t.toJSON()) });
+});
 
 // POST /seasons/create
 const createSeasonSubmit = asyncHandler(async (req, res) => {
@@ -253,7 +273,14 @@ const createSeasonSubmit = asyncHandler(async (req, res) => {
   const user = await User.findByPk(userId);
   if (!user) return res.redirect('/login');
 
-  const back = (error) => res.status(400).render('createSeason', { error });
+  const back = async (error) => {
+    const templates = await League.findAll({
+      where: { isTemplate: true },
+      attributes: ['id', 'name', 'description'],
+      order: [['name', 'ASC']],
+    });
+    return res.status(400).render('createSeason', { error, templates: templates.map((t) => t.toJSON()) });
+  };
 
   if (!name || !name.trim()) return await back('Názov sezóny je povinný.');
 
@@ -280,6 +307,72 @@ const createSeasonSubmit = asyncHandler(async (req, res) => {
   if (end && isNaN(end)) end = null;
   if (start && end && end <= start) return await back('Koniec sezóny musí byť po jej začiatku.');
   if (end && end <= new Date()) return await back('Dátum ukončenia musí byť v budúcnosti (alebo nechaj prázdne pre sezónu bez konca).');
+
+  // ===== SAMOSTATNÁ LIGA (TURNAJ) =====
+  // Vytvoríme sezónu mode='standalone' + práve jednu ligu v nej (transakčne).
+  // Detail aj správa potom bežia cez ligu (pozri seasonDetailPage / manageSeasonPage).
+  if (req.body.mode === 'standalone') {
+    const leagueType = (req.body.leagueType === 'official' && user.role === 'admin') ? 'official' : 'custom';
+
+    // šablóna (voliteľná) — over, že existuje a je to platná šablóna
+    let template = null;
+    if (req.body.templateId) {
+      template = await League.findOne({ where: { id: req.body.templateId, isTemplate: true } });
+      if (!template) return await back('Vybraná šablóna neexistuje.');
+    }
+
+    // heslo LIGY (pripojenie do turnaja ide cez ID ligy)
+    let leaguePwHash = null;
+    const lgPw = req.body.leaguePassword;
+    if (lgPw && lgPw.trim()) leaguePwHash = await bcrypt.hash(lgPw.trim(), 10);
+
+    // unikátny join kód ligy
+    let joinCode;
+    for (let i = 0; i < 10; i++) {
+      const code = uuidv4().substring(0, 6).toUpperCase();
+      if (!(await League.findOne({ where: { joinCode: code } }))) { joinCode = code; break; }
+    }
+
+    let newSeasonId = null;
+    let newLeague = null;
+    try {
+      await sequelize.transaction(async (t) => {
+        const season = await Season.create({
+          name: name.trim(), description: description || null, image: image || null,
+          type: seasonType, mode: 'standalone', inviteCode: generateInviteCode(),
+          creatorId: userId, active: true, participantLimit,
+          startDate: start, endDate: end, ended: false,
+          password: null, hasPassword: false, hidden: false,
+        }, { transaction: t });
+
+        const league = await League.create({
+          name: name.trim(), description: description || null,
+          type: leagueType, joinCode, password: leaguePwHash, hasPassword: !!leaguePwHash,
+          seasonId: season.id, creatorId: userId,
+          scoringSystem: { exactScore: 10, correctWinner: 3, goalDifference: 2, correctGoals: 1 },
+          scoringLocked: false, active: true, isTemplate: false,
+          templateId: template ? template.id : null,
+        }, { transaction: t });
+
+        // zakladateľ = admin v lige aj v sezóne
+        await UserLeague.create({ userId, leagueId: league.id, role: 'admin', joinedAt: new Date() }, { transaction: t });
+        await UserSeason.create({ userId, seasonId: season.id, role: 'admin', joinedAt: new Date() }, { transaction: t });
+
+        newSeasonId = season.id;
+        newLeague = league;
+      });
+    } catch (e) {
+      return await back('Nepodarilo sa vytvoriť samostatnú ligu. Skús to znova.');
+    }
+
+    // klonovanie zo šablóny — až po commite (rovnako ako pri tvorbe ligy).
+    // Ak klon zlyhá, turnaj ostane bez kôl a používateľ ich doplní v správe.
+    if (template && newLeague) {
+      try { await cloneTemplateInto(template, newLeague); } catch (e) { /* ticho — turnaj ostane prázdny */ }
+    }
+
+    return res.redirect('/seasons/' + newSeasonId);
+  }
 
   // heslo + súkromie — len pre community (oficiálne sú vždy verejné)
   let passwordHash = null;
@@ -314,6 +407,38 @@ const joinSeasonSubmit = asyncHandler(async (req, res) => {
   let season = null;
   if (seasonId) season = await Season.findByPk(seasonId);
   if (!season && inviteCode) season = await Season.findOne({ where: { inviteCode: (inviteCode || '').toUpperCase() } });
+
+  // FALLBACK: zadaný kód nie je sezóna → skús ho ako join kód LIGY.
+  // Toto rieši standalone turnaje (zobrazené ID je ID ligy) aj bežné ligy.
+  if (!season && inviteCode) {
+    const league = await League.findOne({ where: { joinCode: (inviteCode || '').trim().toUpperCase() } });
+    if (league && league.active) {
+      if (league.hasPassword) {
+        const ok = password && await bcrypt.compare(password, league.password || '');
+        if (!ok) return res.redirect('/leagues/' + league.id);
+      }
+      const [, created] = await UserLeague.findOrCreate({
+        where: { userId, leagueId: league.id },
+        defaults: { userId, leagueId: league.id, role: 'player', joinedAt: new Date() },
+      });
+      await UserSeason.findOrCreate({
+        where: { userId, seasonId: league.seasonId },
+        defaults: { userId, seasonId: league.seasonId, role: 'player', joinedAt: new Date() },
+      });
+      if (created) {
+        try {
+          const notify = require('../utils/notification.service');
+          const joiner = await User.findByPk(userId, { attributes: ['username'] });
+          await notify.memberJoined(league, userId, joiner ? joiner.username : null);
+        } catch (e) { /* notifikácia nesmie zhodiť pripojenie */ }
+      }
+      // standalone → na detail turnaja (/seasons/:id), bežná liga → na ligu
+      const parent = await Season.findByPk(league.seasonId, { attributes: ['id', 'mode'] });
+      if (parent && parent.mode === 'standalone') return res.redirect('/seasons/' + league.seasonId);
+      return res.redirect('/leagues/' + league.id);
+    }
+  }
+
   if (!season) return res.redirect('/seasons');
 
   // ukončená sezóna — nedá sa pripojiť
@@ -344,6 +469,16 @@ const manageSeasonPage = asyncHandler(async (req, res) => {
   const userId = Number(req.session.userId);
   const season = await Season.findByPk(req.params.id);
   if (!season) return res.status(404).render('error-page', { message: 'Sezóna nebola nájdená.' });
+
+  // STANDALONE: správa beží cez manageLeague (manageStandalone view) tej jednej ligy.
+  if (season.mode === 'standalone') {
+    const league = await League.findOne({ where: { seasonId: season.id }, order: [['createdAt', 'ASC']] });
+    if (league) {
+      req.params.id = String(league.id);
+      req._standaloneManageView = true;
+      return manageLeaguePage(req, res);
+    }
+  }
 
   const u = await User.findByPk(userId);
   const allowed = season.creatorId === userId || (u && u.role === 'admin');
@@ -433,6 +568,16 @@ const manageSeasonSubmit = asyncHandler(async (req, res) => {
     } else {
       // odškrtnuté súkromie = verejná
       season.password = null; season.hasPassword = false; season.hidden = false;
+    }
+  }
+
+  // STANDALONE: drž názov a popis ligy zhodné so sezónou (turnaj = jedna liga)
+  if (season.mode === 'standalone') {
+    const lg = await League.findOne({ where: { seasonId: season.id }, order: [['createdAt', 'ASC']] });
+    if (lg) {
+      lg.name = season.name;
+      lg.description = season.description;
+      await lg.save();
     }
   }
 

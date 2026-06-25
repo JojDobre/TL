@@ -36,6 +36,24 @@
 <form class="wrap form-layout" action="/seasons/create" method="POST">
   <main>
     <div class="card form-card">
+      <h3>Druh súťaže</h3>
+      <p class="sub">Vyber, či zakladáš klasickú sezónu s viacerými ligami, alebo jednoduchý samostatný turnaj.</p>
+      <div class="type-pick">
+        <label class="type-opt sel" data-mode="classic"><input type="radio" name="mode" value="classic" hidden checked><div class="t-ic">📚</div><b>Klasická sezóna</b><span class="muted" style="font-size:var(--fs-sm)">Zastrešuje viacero líg a kôl. Hráči si vyberajú ligy v rámci sezóny.</span></label>
+        <label class="type-opt" data-mode="standalone"><input type="radio" name="mode" value="standalone" hidden><div class="t-ic">🎯</div><b>Samostatná liga</b><span class="muted" style="font-size:var(--fs-sm)">Jeden turnaj bez líg — rovno kolá a tipovanie. Jednoduchšie pre malé partie.</span></label>
+      </div>
+
+      <!-- info blok: prepína sa podľa zvoleného druhu -->
+      <div class="card" id="modeInfo" style="background:var(--surface-2);padding:13px 15px;margin-top:16px;display:flex;gap:10px;align-items:flex-start">
+        <span style="font-size:16px" id="modeInfoIcon">📚</span>
+        <div>
+          <b class="hi" id="modeInfoTitle" style="display:block;margin-bottom:3px">Klasická sezóna</b>
+          <p class="muted" id="modeInfoText" style="font-size:var(--fs-sm)">Sezóna je zastrešujúca súťaž, ktorá obsahuje jednu alebo viac líg, každú s vlastnými kolami a bodovaním. Hodí sa, keď chceš mať pod jednou strechou viac samostatných tipovačiek (napr. rôzne skupiny kamošov) a spoločný prehľad. Po vytvorení do sezóny pridávaš ligy a v nich kolá.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card form-card">
       <h3>Základné údaje</h3>
       <p class="sub">Ako sa sezóna volá a o čo v nej ide.</p>
       <div class="stack g-4">
@@ -70,6 +88,36 @@
       <h3>Obrázok sezóny</h3>
       <p class="sub">Odkaz na cover obrázok zobrazený na kartách sezóny (voliteľné).</p>
       <div class="field"><label class="label">URL obrázka</label><input class="input" type="url" name="image" placeholder="https://… odkaz na obrázok" oninput="var p=document.querySelector('.preview-cover'); if(p){ if(this.value){p.style.backgroundImage='url(\''+this.value+'\')';p.style.backgroundSize='cover';p.style.backgroundPosition='center';}else{p.style.backgroundImage='';} }"></div>
+    </div>
+
+    <!-- STANDALONE: nastavenia ligy (zobrazí sa len pri samostatnej lige) -->
+    <div class="card form-card" id="leagueCard" hidden>
+      <h3>Nastavenia ligy</h3>
+      <p class="sub">Samostatná liga je rovno tipovací turnaj. Tieto nastavenia sa použijú pre jej ligu. Bodovanie a tímy doplníš neskôr v správe.</p>
+      <% if (currentUserRole === 'admin') { %>
+      <div class="type-pick" style="margin-bottom:18px">
+        <label class="type-opt sel" data-ltype="custom"><input type="radio" name="leagueType" value="custom" hidden checked><div class="t-ic">⚙️</div><b>Custom</b><span class="muted" style="font-size:var(--fs-sm)">Vlastné bodovanie a kolá, ktoré si spravuješ sám.</span></label>
+        <label class="type-opt" data-ltype="official"><input type="radio" name="leagueType" value="official" hidden><div class="t-ic">🏆</div><b>Oficiálna</b><span class="muted" style="font-size:var(--fs-sm)">Overený turnaj. Iba admin.</span></label>
+      </div>
+      <% } else { %>
+      <input type="hidden" name="leagueType" value="custom">
+      <% } %>
+      <label class="check" style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><input type="checkbox" id="lgPwToggle"> <span>Chrániť ligu heslom</span></label>
+      <div class="field" id="lgPwField" hidden><label class="label">Heslo ligy</label><input class="input" type="text" name="leaguePassword" placeholder="napr. kava2026"><span class="hint">Hráči ho budú musieť zadať pri pripojení cez ID.</span></div>
+
+      <% if (typeof templates !== 'undefined' && templates.length > 0) { %>
+      <div style="margin-top:18px;border-top:1px solid var(--line);padding-top:18px">
+        <label class="label">Šablóna <span class="faint">(voliteľné)</span></label>
+        <p class="muted" style="font-size:var(--fs-sm);margin:2px 0 10px">Vyber oficiálnu šablónu — skopírujú sa jej kolá a zápasy. Výsledky spravuje admin a prejavia sa automaticky. Bez šablóny si kolá vytvoríš sám.</p>
+        <select class="select" name="templateId">
+          <option value="">— Bez šablóny (vlastný turnaj) —</option>
+          <% templates.forEach(function(t){ %><option value="<%= t.id %>"><%= t.name %></option><% }); %>
+        </select>
+        <div class="card" style="background:var(--surface-2);padding:11px 14px;margin-top:12px;display:flex;gap:9px;align-items:flex-start">
+          <span style="font-size:15px">ℹ️</span><span style="font-size:var(--fs-sm);color:var(--text-2)">Pri turnaji zo šablóny nemôžeš meniť výsledky zápasov — riadi ich admin. Bodovanie a názov ostávajú tvoje.</span>
+        </div>
+      </div>
+      <% } %>
     </div>
 
     <div class="card form-card" id="privacyCard"<%= currentUserRole === 'admin' ? ' hidden' : '' %>>
@@ -131,6 +179,64 @@
   if (pt) pt.addEventListener('change', function () {
     document.getElementById('privFields').toggleAttribute('hidden', !this.checked);
   });
+</script>
+
+<script>
+  // ===== prepínanie Klasická / Samostatná liga =====
+  (function () {
+    var infoMap = {
+      classic: {
+        icon: '📚', title: 'Klasická sezóna',
+        text: 'Sezóna je zastrešujúca súťaž, ktorá obsahuje jednu alebo viac líg, každú s vlastnými kolami a bodovaním. Hodí sa, keď chceš mať pod jednou strechou viac samostatných tipovačiek (napr. rôzne skupiny kamošov) a spoločný prehľad. Po vytvorení do sezóny pridávaš ligy a v nich kolá.'
+      },
+      standalone: {
+        icon: '🎯', title: 'Samostatná liga (turnaj)',
+        text: 'Samostatná liga je jeden turnaj bez medzistupňa líg — vytvorí sa rovno tipovacia liga, do ktorej hneď pridávaš kolá a zápasy. Hráči sa pripoja cez jedno ID a rovno tipujú. Ideálne, keď chceš len jednu tipovačku a nepotrebuješ sa preklikávať cez sezóny a ligy.'
+      }
+    };
+    var icon = document.getElementById('modeInfoIcon');
+    var title = document.getElementById('modeInfoTitle');
+    var text = document.getElementById('modeInfoText');
+    var leagueCard = document.getElementById('leagueCard');
+    var submitBtn = document.querySelector('.sticky-side .btn-primary');
+
+    function applyMode(mode) {
+      var info = infoMap[mode] || infoMap.classic;
+      if (icon) icon.textContent = info.icon;
+      if (title) title.textContent = info.title;
+      if (text) text.textContent = info.text;
+      if (leagueCard) leagueCard.toggleAttribute('hidden', mode !== 'standalone');
+      if (submitBtn) submitBtn.textContent = mode === 'standalone' ? 'Vytvoriť samostatnú ligu' : 'Vytvoriť sezónu';
+    }
+
+    document.querySelectorAll('.type-opt[data-mode]').forEach(function (opt) {
+      opt.addEventListener('click', function (e) {
+        e.preventDefault();
+        document.querySelectorAll('.type-opt[data-mode]').forEach(function (o) { o.classList.remove('sel'); });
+        opt.classList.add('sel');
+        var r = opt.querySelector('input[type=radio]'); if (r) r.checked = true;
+        applyMode(opt.getAttribute('data-mode'));
+      });
+    });
+
+    // typ ligy (custom/official) — len vizuálny výber pre admina
+    document.querySelectorAll('.type-opt[data-ltype]').forEach(function (opt) {
+      opt.addEventListener('click', function (e) {
+        e.preventDefault();
+        document.querySelectorAll('.type-opt[data-ltype]').forEach(function (o) { o.classList.remove('sel'); });
+        opt.classList.add('sel');
+        var r = opt.querySelector('input[type=radio]'); if (r) r.checked = true;
+      });
+    });
+
+    // heslo ligy toggle
+    var lgPwToggle = document.getElementById('lgPwToggle');
+    var lgPwField = document.getElementById('lgPwField');
+    if (lgPwToggle) lgPwToggle.addEventListener('change', function () {
+      lgPwField.toggleAttribute('hidden', !this.checked);
+      if (!this.checked) { var i = lgPwField.querySelector('input'); if (i) i.value = ''; }
+    });
+  })();
 </script>
 
 <%- include('partials/footer') %>
