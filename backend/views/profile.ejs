@@ -34,7 +34,7 @@
   <div class="pf-cover"></div>
   <div class="pf-head">
     <div class="pf-head-top">
-      <span class="avatar avatar-xl" style="width:104px;height:104px;font-size:38px;background:linear-gradient(135deg,#7c5cff,#5b3fd6);color:#fff"><%= profile.initials %></span>
+      <%- include('partials/avatar', { image: profile.profileImage, initials: profile.initials, cls: 'avatar-xl', grad: 'linear-gradient(135deg,#7c5cff,#5b3fd6)' }) %>
     </div>
     <div class="pf-id-row">
       <div class="pf-id">

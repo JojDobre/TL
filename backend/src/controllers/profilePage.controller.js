@@ -102,6 +102,7 @@ const profilePage = asyncHandler(async (req, res) => {
       email: user.email || '',
       role: user.role,
       initials: ([user.firstName, user.lastName].filter(Boolean).map((x) => x[0]).join('') || user.username[0] || '?').toUpperCase(),
+      profileImage: user.profileImage || '',
       createdAt: user.createdAt,
     },
     summary: { totalPoints, accuracy, tipsCount: allTips.length, evaluated },

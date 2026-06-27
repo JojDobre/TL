@@ -41,7 +41,7 @@ const seasonsPage = asyncHandler(async (req, res) => {
   }
 
   const seasons = await Season.findAll({
-    include: [{ model: User, as: 'creator', attributes: ['id', 'username', 'firstName', 'lastName'] }],
+    include: [{ model: User, as: 'creator', attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] }],
     order: [['createdAt', 'DESC']],
   });
   const withCounts = await Promise.all(seasons.map(async (season) => {
@@ -63,7 +63,7 @@ const seasonsPage = asyncHandler(async (req, res) => {
 // GET /seasons/:id
 const seasonDetailPage = asyncHandler(async (req, res) => {
   const season = await Season.findByPk(req.params.id, {
-    include: [{ model: User, as: 'creator', attributes: ['id', 'username', 'firstName', 'lastName'] }],
+    include: [{ model: User, as: 'creator', attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] }],
   });
   if (!season) return res.status(404).render('error-page', { message: 'Sezóna nebola nájdená.' });
 
@@ -126,7 +126,7 @@ const seasonDetailPage = asyncHandler(async (req, res) => {
         // required:true na celej reťazi → INNER JOIN, takže where {seasonId}
         // skutočne odfiltruje tipy z iných sezón (inak LEFT JOIN vráti všetky tipy).
         { model: Match, required: true, include: [{ model: Round, required: true, include: [{ model: League, required: true, where: { seasonId: season.id } }] }] },
-        { model: User, attributes: ['id', 'username', 'firstName', 'lastName'] },
+        { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] },
       ],
     });
     const byUser = {};
@@ -502,7 +502,7 @@ const manageSeasonPage = asyncHandler(async (req, res) => {
   const memberships = await UserSeason.findAll({ where: { seasonId: season.id } });
   const members = [];
   for (const m of memberships) {
-    const mu = await User.findByPk(m.userId, { attributes: ['id', 'username', 'firstName', 'lastName'] });
+    const mu = await User.findByPk(m.userId, { attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] });
     if (mu) members.push({ ...mu.toJSON(), role: m.role, isCreator: mu.id === season.creatorId, joinedAt: m.createdAt });
   }
   members.sort((a, b) => (b.isCreator - a.isCreator) || (a.username || '').localeCompare(b.username || ''));
@@ -535,7 +535,7 @@ const manageSeasonSubmit = asyncHandler(async (req, res) => {
     const memberships = await UserSeason.findAll({ where: { seasonId: season.id } });
     const members = [];
     for (const m of memberships) {
-      const mu = await User.findByPk(m.userId, { attributes: ['id', 'username', 'firstName', 'lastName'] });
+      const mu = await User.findByPk(m.userId, { attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] });
       if (mu) members.push({ ...mu.toJSON(), role: m.role, isCreator: mu.id === season.creatorId, joinedAt: m.createdAt });
     }
     members.sort((a, b) => (b.isCreator - a.isCreator) || (a.username || '').localeCompare(b.username || ''));
@@ -700,7 +700,7 @@ const seasonMembersPage = asyncHandler(async (req, res) => {
   const memberships = await UserSeason.findAll({ where: { seasonId: season.id } });
   const members = [];
   for (const m of memberships) {
-    const u = await User.findByPk(m.userId, { attributes: ['id', 'username', 'firstName', 'lastName'] });
+    const u = await User.findByPk(m.userId, { attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] });
     if (u) members.push({ ...u.toJSON(), role: m.role, isCreator: u.id === season.creatorId });
   }
   members.sort((a, b) => (b.isCreator - a.isCreator) || (a.username || '').localeCompare(b.username || ''));

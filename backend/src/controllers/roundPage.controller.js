@@ -82,7 +82,7 @@ const roundDetailPage = asyncHandler(async (req, res) => {
     const allTips = await Tip.findAll({
       include: [
         { model: Match, where: { roundId: round.id }, required: true, attributes: ['id'] },
-        { model: User, attributes: ['id', 'username', 'firstName', 'lastName'] },
+        { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] },
       ],
     });
     allTips.forEach((t) => {
@@ -116,7 +116,7 @@ const roundDetailPage = asyncHandler(async (req, res) => {
   const lbTips = await Tip.findAll({
     include: [
       { model: Match, where: { roundId: round.id }, required: true, attributes: ['id'] },
-      { model: User, attributes: ['id', 'username', 'firstName', 'lastName'] },
+      { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] },
     ],
   });
   const byUser = {};
@@ -195,7 +195,7 @@ const roundResultsPage = asyncHandler(async (req, res) => {
   const allTips = await Tip.findAll({
     include: [
       { model: Match, where: { roundId: round.id }, required: true, attributes: ['id'] },
-      { model: User, attributes: ['id', 'username', 'firstName', 'lastName'] },
+      { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] },
     ],
   });
   const othersByMatch = {};

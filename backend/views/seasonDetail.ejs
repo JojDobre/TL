@@ -248,7 +248,7 @@
           <p class="muted" style="font-size:var(--fs-sm)">Rebríček je zatiaľ prázdny.</p>
         <% } %>
         <% leaderboard.slice(0,8).forEach(function (entry, i) { var u = entry.user || entry; var meRow = (typeof currentUserId !== 'undefined' && currentUserId && u.id === currentUserId); %>
-        <div class="lb-row" data-player-link="<%= u.id %>" data-me="<%= meRow ? '1' : '0' %>"><span class="lb-rank <%= i===0?'top1':i===1?'top2':i===2?'top3':'' %>"><%= i+1 %></span><div class="lb-user"><span class="avatar avatar-sm" style="background:linear-gradient(<%= GR[i % GR.length] %>);color:<%= i===0?'var(--gold-ink)':'#fff' %>"><%= initials(u) %></span><span class="lb-name"><%= fmtName(u) %></span></div><span class="lb-pts <%= i===0?'gold':'' %>"><%= entry.totalPoints != null ? entry.totalPoints : 0 %></span></div>
+        <div class="lb-row" data-player-link="<%= u.id %>" data-me="<%= meRow ? '1' : '0' %>"><span class="lb-rank <%= i===0?'top1':i===1?'top2':i===2?'top3':'' %>"><%= i+1 %></span><div class="lb-user"><%- include('partials/avatar', { image: u.profileImage || '', initials: initials(u), cls: 'avatar-sm', grad: 'linear-gradient('+GR[i % GR.length]+')', ink: (i===0?'var(--gold-ink)':'#fff') }) %><span class="lb-name"><%= fmtName(u) %></span></div><span class="lb-pts <%= i===0?'gold':'' %>"><%= entry.totalPoints != null ? entry.totalPoints : 0 %></span></div>
         <% }); %>
       </div>
     </div>

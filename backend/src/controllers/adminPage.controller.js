@@ -96,7 +96,7 @@ const adminDashboardPage = asyncHandler(async (req, res) => {
   });
   const tipperIds = topTippers.map((t) => t.userId).filter(Boolean);
   const tipperUsers = tipperIds.length
-    ? await User.findAll({ where: { id: { [Op.in]: tipperIds } }, attributes: ['id', 'username', 'firstName', 'lastName'] })
+    ? await User.findAll({ where: { id: { [Op.in]: tipperIds } }, attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] })
     : [];
   const tipperById = {};
   tipperUsers.forEach((u) => { tipperById[u.id] = u; });

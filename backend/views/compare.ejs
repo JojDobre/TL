@@ -54,7 +54,7 @@
   <!-- VERSUS -->
   <div class="vs-banner">
     <div class="vs-side">
-      <span class="avatar avatar-xl avatar-ring" style="background:linear-gradient(135deg,#7c5cff,#5b3fd6);color:#fff"><%= me.initials %></span>
+      <%- include('partials/avatar', { image: me.profileImage, initials: me.initials, cls: 'avatar-xl avatar-ring', grad: 'linear-gradient(135deg,#7c5cff,#5b3fd6)' }) %>
       <div><div class="vs-name"><%= me.name %></div><div class="vs-handle">@<%= me.username %> · Ty</div></div>
       <div class="vs-rank brand"><%= fmtRank(me.vsRank) %></div>
     </div>
@@ -63,7 +63,7 @@
       <span class="vs-lead" style="<%= lead.style %>"><%= lead.label %></span>
     </div>
     <div class="vs-side">
-      <span class="avatar avatar-xl" style="background:linear-gradient(135deg,#3a7bd5,#1b3f72);color:#fff"><%= other.initials %></span>
+      <%- include('partials/avatar', { image: other.profileImage, initials: other.initials, cls: 'avatar-xl', grad: 'linear-gradient(135deg,#3a7bd5,#1b3f72)' }) %>
       <div><div class="vs-name"><%= other.name %></div><div class="vs-handle">@<%= other.username %></div></div>
       <div class="vs-rank" style="color:#6cabdd"><%= fmtRank(other.vsRank) %></div>
     </div>

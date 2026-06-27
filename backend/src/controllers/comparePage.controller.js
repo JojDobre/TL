@@ -168,8 +168,8 @@ const comparePage = asyncHandler(async (req, res) => {
   }
 
   res.render('compare', {
-    me: { name: nameOf(me), username: me.username, initials: initials(me), vsRank: myVsRank },
-    other: { id: other.id, name: nameOf(other), username: other.username, initials: initials(other), vsRank: otherVsRank },
+    me: { name: nameOf(me), username: me.username, initials: initials(me), profileImage: me.profileImage || '', vsRank: myVsRank },
+    other: { id: other.id, name: nameOf(other), username: other.username, initials: initials(other), profileImage: other.profileImage || '', vsRank: otherVsRank },
     lead: { label: leadLabel, style: leadStyle },
     metrics: [
       { label: 'Celkové body', a: meStats.totalPoints, b: otherStats.totalPoints, split: split(meStats.totalPoints, otherStats.totalPoints) },

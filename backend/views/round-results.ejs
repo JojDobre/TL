@@ -151,7 +151,7 @@
         %>
           <div class="lb-row <%= isMe ? 'me' : '' %>">
             <span class="lb-rank <%= rankCls %>"><%= i+1 %></span>
-            <div class="lb-user"><span class="avatar avatar-sm <%= isMe ? 'avatar-ring' : '' %>" style="background:<%= avColor(name) %>;color:#fff"><%= ab %></span><span class="lb-name"><a class="player-link" href="/player/<%= row.user.id %>"><%= isMe ? 'Ty ('+name+')' : name %></a></span></div>
+            <div class="lb-user"><%- include('partials/avatar', { image: (row.user && row.user.profileImage) || '', initials: ab, cls: 'avatar-sm' + (isMe ? ' avatar-ring' : ''), grad: avColor(name) }) %><span class="lb-name"><a class="player-link" href="/player/<%= row.user.id %>"><%= isMe ? 'Ty ('+name+')' : name %></a></span></div>
             <span class="lb-pts <%= i===0 ? 'gold' : '' %>">+<%= row.totalPoints %></span>
           </div>
         <% }); %>

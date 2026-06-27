@@ -196,6 +196,7 @@ const playerPage = asyncHandler(async (req, res) => {
       username: user.username,
       role: user.role,
       initials: ([user.firstName, user.lastName].filter(Boolean).map((x) => x[0]).join('') || user.username[0] || '?').toUpperCase(),
+      profileImage: user.profileImage || '',
       createdAt: user.createdAt,
     },
     stats: { totalPoints, bestRank, accuracy, bestStreak },

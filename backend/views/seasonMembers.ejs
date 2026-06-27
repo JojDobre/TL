@@ -18,7 +18,7 @@
 <div class="wrap" style="padding-bottom:56px;max-width:720px">
   <% members.forEach(function(m){ %>
   <div class="mem-row">
-    <span class="mem-av"><%= initials(m) %></span>
+    <%- include('partials/avatar', { image: m.profileImage || '', initials: initials(m), cls: 'avatar-md' }) %>
     <div class="mem-name">
       <b><a class="player-link" href="/player/<%= m.id %>"><%= [m.firstName, m.lastName].filter(Boolean).join(' ') || m.username %></a></b>
       <div class="muted" style="font-size:var(--fs-xs)"><a class="player-link" href="/player/<%= m.id %>">@<%= m.username %></a></div>

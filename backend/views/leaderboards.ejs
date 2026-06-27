@@ -79,7 +79,7 @@
     <% if (p2) { %>
     <div class="pod pod2" data-uid="<%= p2.userId %>" data-player-link="<%= p2.userId %>" data-me="<%= (meId && p2.userId === meId) ? '1' : '0' %>">
       <span class="pod-rank top2">2</span>
-      <span class="avatar avatar-xl" style="background:linear-gradient(<%= grad(p2.userId) %>);color:#fff"><%= p2.initials %></span>
+      <%- include('partials/avatar', { image: p2.profileImage, initials: p2.initials, cls: 'avatar-xl', grad: 'linear-gradient('+grad(p2.userId)+')' }) %>
       <div class="pod-name"><%= p2.name %></div>
       <div class="pod-sub">@<%= p2.username %> · <%= p2.evaluated %> tipov</div>
       <div class="pod-pts" style="color:#cdd6e6"><%= p2.totalPoints %></div>
@@ -90,7 +90,7 @@
     <div class="pod pod1" data-uid="<%= p1.userId %>" data-player-link="<%= p1.userId %>" data-me="<%= (meId && p1.userId === meId) ? '1' : '0' %>">
       <span class="pod-crown">👑</span>
       <span class="pod-rank top1">1</span>
-      <span class="avatar avatar-xl avatar-ring" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-dim));color:var(--gold-ink)"><%= p1.initials %></span>
+      <%- include('partials/avatar', { image: p1.profileImage, initials: p1.initials, cls: 'avatar-xl avatar-ring', grad: 'linear-gradient(135deg,var(--gold-bright),var(--gold-dim))', ink: 'var(--gold-ink)' }) %>
       <div class="pod-name"><%= p1.name %></div>
       <div class="pod-sub">@<%= p1.username %> · <%= p1.evaluated %> tipov</div>
       <div class="pod-pts"><%= p1.totalPoints %></div>
@@ -100,7 +100,7 @@
     <% if (p3) { %>
     <div class="pod pod3" data-uid="<%= p3.userId %>" data-player-link="<%= p3.userId %>" data-me="<%= (meId && p3.userId === meId) ? '1' : '0' %>">
       <span class="pod-rank top3">3</span>
-      <span class="avatar avatar-xl" style="background:linear-gradient(<%= grad(p3.userId) %>);color:#fff"><%= p3.initials %></span>
+      <%- include('partials/avatar', { image: p3.profileImage, initials: p3.initials, cls: 'avatar-xl', grad: 'linear-gradient('+grad(p3.userId)+')' }) %>
       <div class="pod-name"><%= p3.name %></div>
       <div class="pod-sub">@<%= p3.username %> · <%= p3.evaluated %> tipov</div>
       <div class="pod-pts" style="color:#e0935a"><%= p3.totalPoints %></div>
@@ -140,7 +140,7 @@
           <div class="lb-row<%= (meId && r.userId === meId) ? ' me' : '' %>" data-uid="<%= r.userId %>" data-player-link="<%= r.userId %>" data-me="<%= (meId && r.userId === meId) ? '1' : '0' %>" data-name="<%= (r.name + ' @' + r.username).toLowerCase() %>" data-points="<%= r.totalPoints %>" data-accuracy="<%= r.accuracy || 0 %>">
             <span class="lb-rank<%= r.rank === 1 ? ' top1' : (r.rank === 2 ? ' top2' : (r.rank === 3 ? ' top3' : '')) %>"><%= r.rank %></span>
             <div class="lb-user">
-              <span class="avatar avatar-md" style="background:linear-gradient(<%= r.rank === 1 ? '135deg,var(--gold-bright),var(--gold-dim)' : grad(r.userId) %>);color:<%= r.rank === 1 ? 'var(--gold-ink)' : '#fff' %>"><%= r.initials %></span>
+              <%- include('partials/avatar', { image: r.profileImage, initials: r.initials, cls: 'avatar-md', grad: 'linear-gradient('+(r.rank === 1 ? '135deg,var(--gold-bright),var(--gold-dim)' : grad(r.userId))+')', ink: (r.rank === 1 ? 'var(--gold-ink)' : '#fff') }) %>
               <div style="min-width:0"><div class="lb-name"><%= r.name %> <%- roleTag(r.role) %><% if (meId && r.userId === meId) { %> <span class="tag tag-brand" style="vertical-align:middle;padding:1px 6px">Ty</span><% } %></div><div class="lb-sub">@<%= r.username %> · <%= r.evaluated %> tipov</div></div>
             </div>
             <span class="col-hide num" style="font-weight:700;color:<%= (r.accuracy||0) >= 60 ? 'var(--success)' : 'var(--text-2)' %>"><%= r.accuracy != null ? r.accuracy + ' %' : '—' %></span>
@@ -178,7 +178,7 @@
         <% movers.forEach(function(m){ %>
           <div class="row between" style="padding:8px 4px">
             <span class="row g-2" style="min-width:0">
-              <span class="avatar avatar-sm" style="background:linear-gradient(<%= grad(m.userId) %>);color:#fff"><%= m.initials %></span>
+              <%- include('partials/avatar', { image: m.profileImage, initials: m.initials, cls: 'avatar-sm', grad: 'linear-gradient('+grad(m.userId)+')' }) %>
               <span style="min-width:0"><span style="font-weight:700;color:var(--text-1);font-size:var(--fs-sm);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><%= m.name %></span><span class="muted" style="font-size:var(--fs-xs)">+<%= m.gained %> b za týždeň · teraz #<%= m.rank %></span></span>
             </span>
             <% if (m.climb > 0) { %><span class="tag tag-success" style="flex:none">▲ <%= m.climb %></span><% } else { %><span class="muted" style="font-size:var(--fs-xs);flex:none">—</span><% } %>

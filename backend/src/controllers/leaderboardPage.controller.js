@@ -37,7 +37,7 @@ const seasonLeaderboardPage = asyncHandler(async (req, res) => {
       // required:true na celej reťazi → INNER JOIN, takže where {seasonId}
       // skutočne odfiltruje tipy z iných sezón (inak LEFT JOIN vráti všetky tipy).
       { model: Match, required: true, include: [{ model: Round, required: true, include: [{ model: League, required: true, where: { seasonId: season.id }, attributes: ['id'] }], attributes: ['id'] }], attributes: ['id', 'status', 'tipType', 'homeScore', 'awayScore'] },
-      { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'role'] },
+      { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'role', 'profileImage'] },
     ],
   });
 
@@ -124,7 +124,7 @@ const globalLeaderboardPage = asyncHandler(async (req, res) => {
         include: [
           { model: Match, attributes: ['id', 'status', 'tipType', 'homeScore', 'awayScore'], where: { status: 'finished', roundId: { [Op.in]: roundIds } }, required: true,
             include: [{ model: Round, attributes: ['id', 'endDate'] }] },
-          { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'role'] },
+          { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'role', 'profileImage'] },
         ],
       });
 
@@ -152,6 +152,7 @@ const globalLeaderboardPage = asyncHandler(async (req, res) => {
           username: b.user.username,
           role: b.user.role,
           initials: ([b.user.firstName, b.user.lastName].filter(Boolean).map((x) => x[0]).join('') || (b.user.username || '?')[0]).toUpperCase(),
+          profileImage: b.user.profileImage || '',
           totalPoints: b.totalPoints,
           evaluated: b.evaluated,
           accuracy: b.evaluated > 0 ? Math.round((b.weightSum / b.evaluated) * 100) : null,
@@ -176,7 +177,7 @@ const globalLeaderboardPage = asyncHandler(async (req, res) => {
           const then = rankThen[r.userId];
           const gained = r.totalPoints - (pointsWeekAgo[r.userId] || 0); // body za posledný týždeň
           const climb = (then != null) ? (then - r.rank) : 0;            // o koľko miest hore
-          return { userId: r.userId, name: r.name, username: r.username, initials: r.initials, rank: r.rank, climb, gained };
+          return { userId: r.userId, name: r.name, username: r.username, initials: r.initials, profileImage: r.profileImage, rank: r.rank, climb, gained };
         })
         .filter((m) => m.gained > 0)                 // niečo získal za týždeň
         .sort((a, b) => b.climb - a.climb || b.gained - a.gained)
