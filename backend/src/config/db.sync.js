@@ -3,7 +3,7 @@ const db = require('../models');
 const seedInitialData = require('../seeds/initial-data.seed');
 const { seedAchievements } = require('../seeds/achievements.seed');
 const { seedArticles } = require('../seeds/articles.seed');
-const seedTeams = require('../seeds/teams.seed');
+//const seedTeams = require('../seeds/teams.seed');
 
 
 // Synchronizácia databázy a vloženie počiatočných dát.
@@ -51,7 +51,7 @@ const syncDatabase = async () => {
       console.log('Začínam testovací seed...');
       await seedInitialData();
       await seedArticles();
-      await seedTeams();
+      //await seedTeams();
       await seedAchievements();
       console.log('Testovacie dáta boli vložené.');
     } else {

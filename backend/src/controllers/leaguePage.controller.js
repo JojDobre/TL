@@ -69,7 +69,7 @@ const leagueDetailPage = asyncHandler(async (req, res) => {
   const tips = await Tip.findAll({
     include: [
       { model: Match, required: true, include: [{ model: Round, where: { leagueId: league.id }, required: true }] },
-      { model: User, attributes: ['id', 'username', 'firstName', 'lastName'] },
+      { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] },
     ],
   });
   const byUser = {};
@@ -464,7 +464,7 @@ const leagueMembersPage = asyncHandler(async (req, res) => {
   const memberships = await UserLeague.findAll({ where: { leagueId: league.id } });
   const members = [];
   for (const m of memberships) {
-    const u = await User.findByPk(m.userId, { attributes: ['id', 'username', 'firstName', 'lastName'] });
+    const u = await User.findByPk(m.userId, { attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] });
     if (u) members.push({ ...u.toJSON(), role: m.role, isCreator: u.id === league.creatorId });
   }
   members.sort((a, b) => (b.isCreator - a.isCreator) || (a.username || '').localeCompare(b.username || ''));
@@ -524,7 +524,7 @@ const manageLeaguePage = asyncHandler(async (req, res) => {
   const memberships = await UserLeague.findAll({ where: { leagueId: league.id } });
   const members = [];
   for (const m of memberships) {
-    const mu = await User.findByPk(m.userId, { attributes: ['id', 'username', 'firstName', 'lastName'] });
+    const mu = await User.findByPk(m.userId, { attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] });
     if (mu) members.push({ ...mu.toJSON(), role: m.role, isCreator: mu.id === league.creatorId, joinedAt: m.createdAt });
   }
   members.sort((a, b) => (b.isCreator - a.isCreator) || (a.username || '').localeCompare(b.username || ''));

@@ -45,19 +45,25 @@
     <div class="card card-pad set-card" id="account">
       <div class="sc-head"><div><h3>Účet</h3><p>Tvoje základné prihlasovacie a kontaktné údaje.</p></div></div>
       <div class="row g-4 wrap-gap" style="margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--line)">
-        <span class="avatar" style="width:72px;height:72px;font-size:26px;background:linear-gradient(135deg,#7c5cff,#5b3fd6);color:#fff"><%= account.initials %></span>
-        <div><div class="label" style="margin-bottom:6px">Profilová fotka</div><div class="row g-2"><button type="button" class="btn btn-secondary btn-sm">Nahrať fotku</button><button type="button" class="btn btn-ghost btn-sm">Odstrániť</button></div></div>
+        <span class="avatar" id="avatarPreview" style="width:72px;height:72px;font-size:26px;background:<%= account.profileImage ? 'transparent' : 'linear-gradient(135deg,#7c5cff,#5b3fd6)' %>;color:#fff;overflow:hidden;display:flex;align-items:center;justify-content:center"><% if (account.profileImage) { %><img src="<%= account.profileImage %>" alt="" style="width:100%;height:100%;object-fit:cover"><% } else { %><%= account.initials %><% } %></span>
+        <div style="flex:1;min-width:220px">
+          <div class="label" style="margin-bottom:6px">Profilová fotka</div>
+          <div class="field" style="margin-bottom:8px"><input class="input" id="avatarUrl" type="url" placeholder="https://… (URL obrázka)" value="<%= account.profileImage %>"><span class="hint">Vlož odkaz na obrázok (napr. z imgur). Zobrazí sa v rebríčkoch a na profile.</span></div>
+          <div class="row g-2"><button type="button" class="btn btn-secondary btn-sm" id="saveAvatar">Uložiť fotku</button><button type="button" class="btn btn-ghost btn-sm" id="removeAvatar">Odstrániť</button></div>
+        </div>
       </div>
       <div class="stack g-4">
         <div class="field-row">
           <div class="field"><label class="label">Prezývka (nick)</label><input class="input" id="acc-username" value="<%= account.username %>"></div>
           <div class="field"><label class="label">Zobrazované meno</label><input class="input" id="acc-name" value="<%= account.name %>"></div>
         </div>
-        <div class="field"><label class="label">E-mailová adresa</label><input class="input" id="acc-email" type="email" value="<%= account.email %>"><span class="hint">Na túto adresu chodia notifikácie a obnova hesla.</span></div>
+        <div class="field"><label class="label">E-mailová adresa</label><input class="input" id="acc-email" type="email" value="<%= account.email %>"><span class="hint">Na túto adresu chodí obnova hesla.</span></div>
+        <%# Jazyk a časové pásmo dočasne zakomentované — zatiaľ nie sú funkčné
         <div class="field-row">
-          <div class="field"><label class="label">Jazyk</label><select class="select"><option>Slovenčina</option><option>Čeština</option><option>English</option></select></div>
-          <div class="field"><label class="label">Časové pásmo</label><select class="select"><option>Bratislava (GMT+1)</option><option>Praha (GMT+1)</option><option>Londýn (GMT+0)</option></select></div>
+          <div class="field"><label class="label">Jazyk</label><select class="select"><option>Slovenčina</option></select></div>
+          <div class="field"><label class="label">Časové pásmo</label><select class="select"><option>Bratislava</option></select></div>
         </div>
+        %>
         <div><button class="btn btn-primary btn-sm" id="saveAccount">Uložiť zmeny</button></div>
       </div>
     </div>
@@ -77,28 +83,27 @@
 
     <!-- NOTIFICATIONS (vizuál — zatiaľ netrackujeme) -->
     <div class="card card-pad set-card" id="notifications">
-      <div class="sc-head"><div><h3>Notifikácie</h3><p>Vyber si, o čom chceš dostávať upozornenia.</p></div></div>
-      <div class="notif-row"><div class="nr-tx"><b>Otvorenie nového kola</b><span>Keď sa otvorí kolo na tipovanie v tvojej súťaži.</span></div><label class="switch"><input type="checkbox" checked><span class="track"></span></label></div>
-      <div class="notif-row"><div class="nr-tx"><b>Blížiaca sa uzávierka</b><span>2 hodiny pred koncom tipovania, ak máš nevyplnené tipy.</span></div><label class="switch"><input type="checkbox" checked><span class="track"></span></label></div>
-      <div class="notif-row"><div class="nr-tx"><b>Pridelené výsledky a body</b><span>Keď sa vyhodnotí kolo a získaš body.</span></div><label class="switch"><input type="checkbox" checked><span class="track"></span></label></div>
-      <div class="notif-row"><div class="nr-tx"><b>Posun v rebríčku</b><span>Keď sa zmení tvoja pozícia v lige alebo sezóne.</span></div><label class="switch"><input type="checkbox"><span class="track"></span></label></div>
-      <div class="notif-row"><div class="nr-tx"><b>Pozvánky do líg</b><span>Keď ťa niekto pozve do súkromnej ligy.</span></div><label class="switch"><input type="checkbox" checked><span class="track"></span></label></div>
-      <div class="notif-row"><div class="nr-tx"><b>Novinky a tipy z Tiperligy</b><span>Občasný e-mail s novinkami (max. 1× mesačne).</span></div><label class="switch"><input type="checkbox"><span class="track"></span></label></div>
-      <div class="row g-3 wrap-gap" style="margin-top:16px">
-        <span class="stat-label" style="margin:0;align-self:center">Doručovať cez:</span>
-        <label class="check" style="font-size:var(--fs-sm)"><input type="checkbox" checked> E-mail</label>
-        <label class="check" style="font-size:var(--fs-sm)"><input type="checkbox" checked> Push v aplikácii</label>
+      <div class="sc-head"><div><h3>Notifikácie</h3><p>Upozornenia v aplikácii (zvonček v hlavičke).</p></div></div>
+      <div class="notif-row"><div class="nr-tx"><b>Notifikácie v aplikácii</b><span>Hlavný prepínač. Keď je vypnutý, nebudeš dostávať žiadne upozornenia.</span></div><label class="switch"><input type="checkbox" id="notifyInApp" <%= prefs.notifyInApp ? 'checked' : '' %>><span class="track"></span></label></div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+        <span class="stat-label" style="display:block;margin-bottom:8px">Budeš dostávať upozornenia, keď:</span>
+        <ul style="list-style:none;padding:0;margin:0;color:var(--text-3);font-size:var(--fs-sm);line-height:1.9">
+          <li>• sa otvorí nové kolo na tipovanie,</li>
+          <li>• sa vyhodnotí kolo a pripíšu sa ti body,</li>
+          <li>• sa zruší zápas,</li>
+          <li>• pribudne nový člen do tvojej ligy,</li>
+          <li>• získaš nový odznak.</li>
+        </ul>
       </div>
-      <div style="margin-top:16px"><button class="btn btn-primary btn-sm" data-soon>Uložiť</button></div>
+      <div style="margin-top:16px"><button class="btn btn-primary btn-sm" id="saveNotifications">Uložiť</button></div>
     </div>
 
     <!-- PRIVACY (vizuál — zatiaľ netrackujeme) -->
     <div class="card card-pad set-card" id="privacy">
       <div class="sc-head"><div><h3>Súkromie</h3><p>Ovládaj, čo o tebe vidia ostatní hráči.</p></div></div>
-      <div class="notif-row"><div class="nr-tx"><b>Verejný profil</b><span>Ostatní môžu vidieť tvoje štatistiky a odznaky cez rebríček.</span></div><label class="switch"><input type="checkbox" checked><span class="track"></span></label></div>
-      <div class="notif-row"><div class="nr-tx"><b>Zobrazovať mesto</b><span>Tvoje mesto sa zobrazí na verejnom profile.</span></div><label class="switch"><input type="checkbox" checked><span class="track"></span></label></div>
-      <div class="notif-row"><div class="nr-tx"><b>Povoliť porovnávanie</b><span>Hráči ťa môžu porovnať so svojimi výsledkami.</span></div><label class="switch"><input type="checkbox" checked><span class="track"></span></label></div>
-      <div style="margin-top:16px"><button class="btn btn-primary btn-sm" data-soon>Uložiť</button></div>
+      <div class="notif-row"><div class="nr-tx"><b>Verejný profil</b><span>Ostatní môžu vidieť tvoje štatistiky a odznaky cez rebríček.</span></div><label class="switch"><input type="checkbox" id="profilePublic" <%= prefs.profilePublic ? 'checked' : '' %>><span class="track"></span></label></div>
+      <div class="notif-row"><div class="nr-tx"><b>Povoliť porovnávanie</b><span>Hráči ťa môžu porovnať so svojimi výsledkami.</span></div><label class="switch"><input type="checkbox" id="allowCompare" <%= prefs.allowCompare ? 'checked' : '' %>><span class="track"></span></label></div>
+      <div style="margin-top:16px"><button class="btn btn-primary btn-sm" id="savePrivacy">Uložiť</button></div>
     </div>
 
     <!-- APPEARANCE -->
@@ -113,12 +118,14 @@
     <!-- DANGER ZONE (vizuál — akcie zatiaľ neaktívne) -->
     <div class="card card-pad set-card danger-card" id="danger">
       <div class="sc-head"><div><h3 style="color:var(--danger)">Nebezpečná zóna</h3><p>Tieto akcie sú nezvratné. Postupuj opatrne.</p></div></div>
+      <%# Resetovať štatistiky — dočasne zakomentované
       <div class="danger-row">
-        <div class="nr-tx"><b>Resetovať štatistiky</b><span style="color:var(--text-3);display:block;font-size:var(--fs-xs);margin-top:2px">Vynuluje body, presnosť a série. História tipov ostane.</span></div>
+        <div class="nr-tx"><b>Resetovať štatistiky</b><span>Vynuluje body, presnosť a série.</span></div>
         <button class="btn btn-danger btn-sm" data-confirm="reset">Resetovať</button>
       </div>
+      %>
       <div class="danger-row">
-        <div class="nr-tx"><b>Opustiť všetky súťaže</b><span style="color:var(--text-3);display:block;font-size:var(--fs-xs);margin-top:2px">Odhlásiš sa zo všetkých líg a sezón naraz.</span></div>
+        <div class="nr-tx"><b>Opustiť všetky súťaže</b><span style="color:var(--text-3);display:block;font-size:var(--fs-xs);margin-top:2px">Odhlásiš sa zo všetkých líg a sezón naraz. Tvoje tipy a história ostanú zachované.</span></div>
         <button class="btn btn-danger btn-sm" data-confirm="leave-all">Opustiť všetky</button>
       </div>
       <div class="danger-row">
@@ -193,8 +200,43 @@
     }).catch(function(){ sp.disabled=false; toast('Chyba','Skús znova.',true); });
   });
 
-  // zatiaľ neaktívne sekcie
-  document.querySelectorAll('[data-soon]').forEach(function(b){ b.addEventListener('click',function(){ toast('Zatiaľ neaktívne','Táto sekcia bude čoskoro funkčná.'); }); });
+  // Profilová fotka — URL
+  var avSave=document.getElementById('saveAvatar'), avRemove=document.getElementById('removeAvatar');
+  function renderAvatar(url){
+    var box=document.getElementById('avatarPreview');
+    if(url){ box.style.background='transparent'; box.innerHTML='<img src="'+url+'" alt="" style="width:100%;height:100%;object-fit:cover">'; }
+    else { box.style.background='linear-gradient(135deg,#7c5cff,#5b3fd6)'; box.textContent='<%= account.initials %>'; }
+  }
+  function saveAvatar(url, btn){
+    btn.disabled=true;
+    fetch('/api/profile/avatar',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileImage:url})})
+      .then(function(r){return r.json();}).then(function(res){
+        btn.disabled=false;
+        if(res.success===false){ toast('Nepodarilo sa',res.message||'Skús znova.',true); return; }
+        renderAvatar(res.data&&res.data.profileImage);
+        toast('Hotovo',res.message||'Uložené.');
+      }).catch(function(){ btn.disabled=false; toast('Chyba','Skús znova.',true); });
+  }
+  if(avSave) avSave.addEventListener('click',function(){ saveAvatar(document.getElementById('avatarUrl').value.trim(), avSave); });
+  if(avRemove) avRemove.addEventListener('click',function(){ document.getElementById('avatarUrl').value=''; saveAvatar('', avRemove); });
+
+  // Notifikácie
+  var snBtn=document.getElementById('saveNotifications');
+  if(snBtn) snBtn.addEventListener('click',function(){
+    snBtn.disabled=true;
+    fetch('/api/profile/notifications',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({notifyInApp:document.getElementById('notifyInApp').checked})})
+      .then(function(r){return r.json();}).then(function(res){ snBtn.disabled=false; if(res.success===false){ toast('Nepodarilo sa',res.message||'Skús znova.',true); return; } toast('Uložené','Nastavenia notifikácií boli uložené.'); })
+      .catch(function(){ snBtn.disabled=false; toast('Chyba','Skús znova.',true); });
+  });
+
+  // Súkromie
+  var spvBtn=document.getElementById('savePrivacy');
+  if(spvBtn) spvBtn.addEventListener('click',function(){
+    spvBtn.disabled=true;
+    fetch('/api/profile/privacy',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({profilePublic:document.getElementById('profilePublic').checked,allowCompare:document.getElementById('allowCompare').checked})})
+      .then(function(r){return r.json();}).then(function(res){ spvBtn.disabled=false; if(res.success===false){ toast('Nepodarilo sa',res.message||'Skús znova.',true); return; } toast('Uložené','Nastavenia súkromia boli uložené.'); })
+      .catch(function(){ spvBtn.disabled=false; toast('Chyba','Skús znova.',true); });
+  });
 
   // theme buttons
   document.querySelectorAll('[data-theme-set]').forEach(function(b){ b.addEventListener('click',function(){ var t=b.dataset.themeSet; document.documentElement.setAttribute('data-theme',t); }); });
@@ -214,9 +256,20 @@
   var confField=document.getElementById('confConfirmField'), confInput=document.getElementById('confInput'), confOk=document.getElementById('confOk');
   var action=null;
   var CONF={
-    'delete':{ t:'Vymazať účet natrvalo?', m:'Tým sa nezvratne odstráni tvoj profil, história tipov, body a odznaky.', typed:true, ok:'Vymazať účet', done:function(){ toast('Zatiaľ neaktívne','Mazanie účtu bude čoskoro dostupné.',true); } },
-    'reset':{ t:'Resetovať štatistiky?', m:'Vynuluje sa tvoje skóre, presnosť a pozície. História tipov ostane.', typed:false, ok:'Resetovať štatistiky', done:function(){ toast('Zatiaľ neaktívne','Reset štatistík bude čoskoro dostupný.',true); } },
-    'leave-all':{ t:'Opustiť všetky súťaže?', m:'Odhlásiš sa zo všetkých líg a sezón.', typed:false, ok:'Opustiť všetky', done:function(){ toast('Zatiaľ neaktívne','Hromadné opustenie bude čoskoro dostupné.',true); } }
+    'delete':{ t:'Vymazať účet natrvalo?', m:'Tým sa nezvratne odstráni tvoj profil, história tipov, body a odznaky. Napíš VYMAZAŤ pre potvrdenie.', typed:true, ok:'Vymazať účet', done:function(){
+      fetch('/api/profile',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({})})
+        .then(function(r){return r.json();}).then(function(res){
+          if(res.success===false){ toast('Nepodarilo sa',res.message||'Skús znova.',true); return; }
+          toast('Účet vymazaný','Presmerúvam…'); setTimeout(function(){ window.location.href='/'; },1200);
+        }).catch(function(){ toast('Chyba','Skús znova.',true); });
+    } },
+    'leave-all':{ t:'Opustiť všetky súťaže?', m:'Odhlásiš sa zo všetkých líg a sezón. Tvoje tipy a história ostanú zachované.', typed:false, ok:'Opustiť všetky', done:function(){
+      fetch('/api/profile/leave-all',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})})
+        .then(function(r){return r.json();}).then(function(res){
+          if(res.success===false){ toast('Nepodarilo sa',res.message||'Skús znova.',true); return; }
+          toast('Hotovo','Opustil si všetky súťaže.'); setTimeout(function(){ window.location.href='/my'; },1000);
+        }).catch(function(){ toast('Chyba','Skús znova.',true); });
+    } }
   };
   function openD(key){ action=CONF[key]; if(!action) return; confTitle.textContent=action.t; confMsg.textContent=action.m; confOk.textContent=action.ok; confField.hidden=!action.typed; confInput.value=''; confOk.disabled=!!action.typed; scrim.hidden=false; }
   function closeD(){ scrim.hidden=true; action=null; }

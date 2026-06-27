@@ -64,7 +64,7 @@
   <div id="teamList">
     <% teams.forEach(function(t){ %>
     <div class="team-row" data-team-id="<%= t.id %>" data-name="<%= t.name %>" data-type="<%= t.teamType %>" data-sport="<%= t.sport || '' %>" data-country="<%= t.country || '' %>" data-logo="<%= t.logo || '' %>">
-      <span class="team-logo-sm"><% if (t.logo) { %><img src="<%= t.logo %>" alt=""><% } else { %><%= (t.name||'?').substring(0,3).toUpperCase() %><% } %></span>
+      <% if (t.logo) { %><span class="team-logo-sm" style="background:none !important"><img src="<%= t.logo %>" alt=""></span><% } else { %><span class="team-logo-sm"><%=  (t.name||'?').substring(0,3).toUpperCase() %></span><% } %>
       <div><b><%= t.name %></b></div>
       <span class="tag <%= t.teamType === 'national' ? 'tag-info' : 'tag-muted' %> tcol-hide"><%= t.teamType === 'national' ? 'Národný' : 'Klub' %></span>
       <span class="muted tcol-hide" style="font-size:var(--fs-sm)"><%= t.sport || '—' %> <%= t.country ? '· ' + t.country : '' %></span>

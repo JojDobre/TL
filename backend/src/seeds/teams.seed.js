@@ -1,572 +1,597 @@
-// backend/src/seeds/teams.seed.js
-//
-// Naplní DB základnými GLOBÁLNYMI tímami (národné + vybrané kluby).
-// Spúšťa sa idempotentne — tím sa pridá len ak rovnaké meno+scope global ešte nie je.
-// Pri existujúcom tíme bez loga sa logo doplní (ak je v zozname uvedené).
-// Použitie: zavolaj seedTeams() (napr. z db.sync.js alebo samostatným skriptom).
+'use strict';
 
-const { Team } = require('../models');
+const https = require('https');
 
-// národné tímy: [názov, krajina, logo]
-const NATIONAL = [
-  ['Afganistan', 'AF', 'https://flagcdn.com/af.svg'],
-  ['Albánsko', 'AL', 'https://flagcdn.com/al.svg'],
-  ['Alžírsko', 'DZ', 'https://flagcdn.com/dz.svg'],
-  ['Andorra', 'AD', 'https://flagcdn.com/ad.svg'],
-  ['Angola', 'AO', 'https://flagcdn.com/ao.svg'],
-  ['Antigua a Barbuda', 'AG', 'https://flagcdn.com/ag.svg'],
-  ['Argentína', 'AR', 'https://flagcdn.com/ar.svg'],
-  ['Arménsko', 'AM', 'https://flagcdn.com/am.svg'],
-  ['Austrália', 'AU', 'https://flagcdn.com/au.svg'],
-  ['Azerbajdžan', 'AZ', 'https://flagcdn.com/az.svg'],
-  ['Bahamy', 'BS', 'https://flagcdn.com/bs.svg'],
-  ['Bahrajn', 'BH', 'https://flagcdn.com/bh.svg'],
-  ['Bangladéš', 'BD', 'https://flagcdn.com/bd.svg'],
-  ['Barbados', 'BB', 'https://flagcdn.com/bb.svg'],
-  ['Belgicko', 'BE', 'https://flagcdn.com/be.svg'],
-  ['Belize', 'BZ', 'https://flagcdn.com/bz.svg'],
-  ['Benin', 'BJ', 'https://flagcdn.com/bj.svg'],
-  ['Bhután', 'BT', 'https://flagcdn.com/bt.svg'],
-  ['Bielorusko', 'BY', 'https://flagcdn.com/by.svg'],
-  ['Bolívia', 'BO', 'https://flagcdn.com/bo.svg'],
-  ['Bosna a Hercegovina', 'BA', 'https://flagcdn.com/ba.svg'],
-  ['Botswana', 'BW', 'https://flagcdn.com/bw.svg'],
-  ['Brazília', 'BR', 'https://flagcdn.com/br.svg'],
-  ['Brunej', 'BN', 'https://flagcdn.com/bn.svg'],
-  ['Bulharsko', 'BG', 'https://flagcdn.com/bg.svg'],
-  ['Burkina Faso', 'BF', 'https://flagcdn.com/bf.svg'],
-  ['Burundi', 'BI', 'https://flagcdn.com/bi.svg'],
-  ['Cyprus', 'CY', 'https://flagcdn.com/cy.svg'],
-  ['Čad', 'TD', 'https://flagcdn.com/td.svg'],
-  ['Čierna Hora', 'ME', 'https://flagcdn.com/me.svg'],
-  ['Česko', 'CZ', 'https://flagcdn.com/cz.svg'],
-  ['Čile', 'CL', 'https://flagcdn.com/cl.svg'],
-  ['Čína', 'CN', 'https://flagcdn.com/cn.svg'],
-  ['Dánsko', 'DK', 'https://flagcdn.com/dk.svg'],
-  ['Dominika', 'DM', 'https://flagcdn.com/dm.svg'],
-  ['Dominikánska republika', 'DO', 'https://flagcdn.com/do.svg'],
-  ['Džibutsko', 'DJ', 'https://flagcdn.com/dj.svg'],
-  ['Egypt', 'EG', 'https://flagcdn.com/eg.svg'],
-  ['Ekvádor', 'EC', 'https://flagcdn.com/ec.svg'],
-  ['Eritrea', 'ER', 'https://flagcdn.com/er.svg'],
-  ['Estónsko', 'EE', 'https://flagcdn.com/ee.svg'],
-  ['Eswatini', 'SZ', 'https://flagcdn.com/sz.svg'],
-  ['Etiópia', 'ET', 'https://flagcdn.com/et.svg'],
-  ['Fidži', 'FJ', 'https://flagcdn.com/fj.svg'],
-  ['Filipíny', 'PH', 'https://flagcdn.com/ph.svg'],
-  ['Fínsko', 'FI', 'https://flagcdn.com/fi.svg'],
-  ['Francúzsko', 'FR', 'https://flagcdn.com/fr.svg'],
-  ['Gabon', 'GA', 'https://flagcdn.com/ga.svg'],
-  ['Gambia', 'GM', 'https://flagcdn.com/gm.svg'],
-  ['Ghana', 'GH', 'https://flagcdn.com/gh.svg'],
-  ['Grécko', 'GR', 'https://flagcdn.com/gr.svg'],
-  ['Grenada', 'GD', 'https://flagcdn.com/gd.svg'],
-  ['Gruzínsko', 'GE', 'https://flagcdn.com/ge.svg'],
-  ['Guatemala', 'GT', 'https://flagcdn.com/gt.svg'],
-  ['Guinea', 'GN', 'https://flagcdn.com/gn.svg'],
-  ['Guinea-Bissau', 'GW', 'https://flagcdn.com/gw.svg'],
-  ['Guyana', 'GY', 'https://flagcdn.com/gy.svg'],
-  ['Haiti', 'HT', 'https://flagcdn.com/ht.svg'],
-  ['Holandsko', 'NL', 'https://flagcdn.com/nl.svg'],
-  ['Honduras', 'HN', 'https://flagcdn.com/hn.svg'],
-  ['Chorvátsko', 'HR', 'https://flagcdn.com/hr.svg'],
-  ['India', 'IN', 'https://flagcdn.com/in.svg'],
-  ['Indonézia', 'ID', 'https://flagcdn.com/id.svg'],
-  ['Irak', 'IQ', 'https://flagcdn.com/iq.svg'],
-  ['Irán', 'IR', 'https://flagcdn.com/ir.svg'],
-  ['Írsko', 'IE', 'https://flagcdn.com/ie.svg'],
-  ['Island', 'IS', 'https://flagcdn.com/is.svg'],
-  ['Izrael', 'IL', 'https://flagcdn.com/il.svg'],
-  ['Jamajka', 'JM', 'https://flagcdn.com/jm.svg'],
-  ['Japonsko', 'JP', 'https://flagcdn.com/jp.svg'],
-  ['Jemen', 'YE', 'https://flagcdn.com/ye.svg'],
-  ['Jordánsko', 'JO', 'https://flagcdn.com/jo.svg'],
-  ['Južná Afrika', 'ZA', 'https://flagcdn.com/za.svg'],
-  ['Južný Sudán', 'SS', 'https://flagcdn.com/ss.svg'],
-  ['Južná Kórea', 'KR', 'https://flagcdn.com/kr.svg'],
-  ['Kambodža', 'KH', 'https://flagcdn.com/kh.svg'],
-  ['Kamerun', 'CM', 'https://flagcdn.com/cm.svg'],
-  ['Kanada', 'CA', 'https://flagcdn.com/ca.svg'],
-  ['Kapverdy', 'CV', 'https://flagcdn.com/cv.svg'],
-  ['Katar', 'QA', 'https://flagcdn.com/qa.svg'],
-  ['Kazachstan', 'KZ', 'https://flagcdn.com/kz.svg'],
-  ['Keňa', 'KE', 'https://flagcdn.com/ke.svg'],
-  ['Kirgizsko', 'KG', 'https://flagcdn.com/kg.svg'],
-  ['Kiribati', 'KI', 'https://flagcdn.com/ki.svg'],
-  ['Kolumbia', 'CO', 'https://flagcdn.com/co.svg'],
-  ['Komory', 'KM', 'https://flagcdn.com/km.svg'],
-  ['Kongo (Dem. rep.)', 'CD', 'https://flagcdn.com/cd.svg'],
-  ['Kongo (Rep.)', 'CG', 'https://flagcdn.com/cg.svg'],
-  ['Kostarika', 'CR', 'https://flagcdn.com/cr.svg'],
-  ['Kuba', 'CU', 'https://flagcdn.com/cu.svg'],
-  ['Kuvajt', 'KW', 'https://flagcdn.com/kw.svg'],
-  ['Laos', 'LA', 'https://flagcdn.com/la.svg'],
-  ['Lotyšsko', 'LV', 'https://flagcdn.com/lv.svg'],
-  ['Libanon', 'LB', 'https://flagcdn.com/lb.svg'],
-  ['Libéria', 'LR', 'https://flagcdn.com/lr.svg'],
-  ['Líbya', 'LY', 'https://flagcdn.com/ly.svg'],
-  ['Lichtenštajnsko', 'LI', 'https://flagcdn.com/li.svg'],
-  ['Litva', 'LT', 'https://flagcdn.com/lt.svg'],
-  ['Luxembursko', 'LU', 'https://flagcdn.com/lu.svg'],
-  ['Madagaskar', 'MG', 'https://flagcdn.com/mg.svg'],
-  ['Maďarsko', 'HU', 'https://flagcdn.com/hu.svg'],
-  ['Malajzia', 'MY', 'https://flagcdn.com/my.svg'],
-  ['Malawi', 'MW', 'https://flagcdn.com/mw.svg'],
-  ['Maledivy', 'MV', 'https://flagcdn.com/mv.svg'],
-  ['Mali', 'ML', 'https://flagcdn.com/ml.svg'],
-  ['Malta', 'MT', 'https://flagcdn.com/mt.svg'],
-  ['Maroko', 'MA', 'https://flagcdn.com/ma.svg'],
-  ['Marshallove ostrovy', 'MH', 'https://flagcdn.com/mh.svg'],
-  ['Maurícius', 'MU', 'https://flagcdn.com/mu.svg'],
-  ['Mauritánia', 'MR', 'https://flagcdn.com/mr.svg'],
-  ['Mexiko', 'MX', 'https://flagcdn.com/mx.svg'],
-  ['Mikronézia', 'FM', 'https://flagcdn.com/fm.svg'],
-  ['Mjanmarsko', 'MM', 'https://flagcdn.com/mm.svg'],
-  ['Moldavsko', 'MD', 'https://flagcdn.com/md.svg'],
-  ['Monako', 'MC', 'https://flagcdn.com/mc.svg'],
-  ['Mongolsko', 'MN', 'https://flagcdn.com/mn.svg'],
-  ['Mozambik', 'MZ', 'https://flagcdn.com/mz.svg'],
-  ['Namíbia', 'NA', 'https://flagcdn.com/na.svg'],
-  ['Nauru', 'NR', 'https://flagcdn.com/nr.svg'],
-  ['Nemecko', 'DE', 'https://flagcdn.com/de.svg'],
-  ['Nepál', 'NP', 'https://flagcdn.com/np.svg'],
-  ['Niger', 'NE', 'https://flagcdn.com/ne.svg'],
-  ['Nigéria', 'NG', 'https://flagcdn.com/ng.svg'],
-  ['Nikaragua', 'NI', 'https://flagcdn.com/ni.svg'],
-  ['Niue', 'NU', 'https://flagcdn.com/nu.svg'],
-  ['Nórsko', 'NO', 'https://flagcdn.com/no.svg'],
-  ['Nový Zéland', 'NZ', 'https://flagcdn.com/nz.svg'],
-  ['Omán', 'OM', 'https://flagcdn.com/om.svg'],
-  ['Pakistan', 'PK', 'https://flagcdn.com/pk.svg'],
-  ['Palau', 'PW', 'https://flagcdn.com/pw.svg'],
-  ['Palestína', 'PS', 'https://flagcdn.com/ps.svg'],
-  ['Panama', 'PA', 'https://flagcdn.com/pa.svg'],
-  ['Papua-Nová Guinea', 'PG', 'https://flagcdn.com/pg.svg'],
-  ['Paraguaj', 'PY', 'https://flagcdn.com/py.svg'],
-  ['Peru', 'PE', 'https://flagcdn.com/pe.svg'],
-  ['Pobrežie Slonoviny', 'CI', 'https://flagcdn.com/ci.svg'],
-  ['Poľsko', 'PL', 'https://flagcdn.com/pl.svg'],
-  ['Portugalsko', 'PT', 'https://flagcdn.com/pt.svg'],
-  ['Rakúsko', 'AT', 'https://flagcdn.com/at.svg'],
-  ['Rovníková Guinea', 'GQ', 'https://flagcdn.com/gq.svg'],
-  ['Rumunsko', 'RO', 'https://flagcdn.com/ro.svg'],
-  ['Rusko', 'RU', 'https://flagcdn.com/ru.svg'],
-  ['Rwanda', 'RW', 'https://flagcdn.com/rw.svg'],
-  ['Salvádor', 'SV', 'https://flagcdn.com/sv.svg'],
-  ['Samoa', 'WS', 'https://flagcdn.com/ws.svg'],
-  ['San Maríno', 'SM', 'https://flagcdn.com/sm.svg'],
-  ['Saudská Arábia', 'SA', 'https://flagcdn.com/sa.svg'],
-  ['Senegal', 'SN', 'https://flagcdn.com/sn.svg'],
-  ['Severná Kórea', 'KP', 'https://flagcdn.com/kp.svg'],
-  ['Severné Macedónsko', 'MK', 'https://flagcdn.com/mk.svg'],
-  ['Seychely', 'SC', 'https://flagcdn.com/sc.svg'],
-  ['Sierra Leone', 'SL', 'https://flagcdn.com/sl.svg'],
-  ['Singapur', 'SG', 'https://flagcdn.com/sg.svg'],
-  ['Slovensko', 'SK', 'https://flagcdn.com/sk.svg'],
-  ['Slovinsko', 'SI', 'https://flagcdn.com/si.svg'],
-  ['Somálsko', 'SO', 'https://flagcdn.com/so.svg'],
-  ['Spojené arabské emiráty', 'AE', 'https://flagcdn.com/ae.svg'],
-  ['Spojené kráľovstvo', 'GB', 'https://flagcdn.com/gb.svg'],
-  ['Spojené štáty americké', 'US', 'https://flagcdn.com/us.svg'],
-  ['Srbsko', 'RS', 'https://flagcdn.com/rs.svg'],
-  ['Srí Lanka', 'LK', 'https://flagcdn.com/lk.svg'],
-  ['Stredoafrická republika', 'CF', 'https://flagcdn.com/cf.svg'],
-  ['Sudán', 'SD', 'https://flagcdn.com/sd.svg'],
-  ['Surinam', 'SR', 'https://flagcdn.com/sr.svg'],
-  ['Svätá Lucia', 'LC', 'https://flagcdn.com/lc.svg'],
-  ['Svätý Krištof a Nevis', 'KN', 'https://flagcdn.com/kn.svg'],
-  ['Svätý Tomáš a Princov ostrov', 'ST', 'https://flagcdn.com/st.svg'],
-  ['Svätý Vincent a Grenadíny', 'VC', 'https://flagcdn.com/vc.svg'],
-  ['Sýria', 'SY', 'https://flagcdn.com/sy.svg'],
-  ['Šalamúnove ostrovy', 'SB', 'https://flagcdn.com/sb.svg'],
-  ['Španielsko', 'ES', 'https://flagcdn.com/es.svg'],
-  ['Švajčiarsko', 'CH', 'https://flagcdn.com/ch.svg'],
-  ['Švédsko', 'SE', 'https://flagcdn.com/se.svg'],
-  ['Tadžikistan', 'TJ', 'https://flagcdn.com/tj.svg'],
-  ['Taliansko', 'IT', 'https://flagcdn.com/it.svg'],
-  ['Tanzánia', 'TZ', 'https://flagcdn.com/tz.svg'],
-  ['Thajsko', 'TH', 'https://flagcdn.com/th.svg'],
-  ['Togo', 'TG', 'https://flagcdn.com/tg.svg'],
-  ['Tonga', 'TO', 'https://flagcdn.com/to.svg'],
-  ['Trinidad a Tobago', 'TT', 'https://flagcdn.com/tt.svg'],
-  ['Tunisko', 'TN', 'https://flagcdn.com/tn.svg'],
-  ['Turecko', 'TR', 'https://flagcdn.com/tr.svg'],
-  ['Turkménsko', 'TM', 'https://flagcdn.com/tm.svg'],
-  ['Tuvalu', 'TV', 'https://flagcdn.com/tv.svg'],
-  ['Uganda', 'UG', 'https://flagcdn.com/ug.svg'],
-  ['Ukrajina', 'UA', 'https://flagcdn.com/ua.svg'],
-  ['Uruguaj', 'UY', 'https://flagcdn.com/uy.svg'],
-  ['Uzbekistan', 'UZ', 'https://flagcdn.com/uz.svg'],
-  ['Vanuatu', 'VU', 'https://flagcdn.com/vu.svg'],
-  ['Vatikán', 'VA', 'https://flagcdn.com/va.svg'],
-  ['Venezuela', 'VE', 'https://flagcdn.com/ve.svg'],
-  ['Vietnam', 'VN', 'https://flagcdn.com/vn.svg'],
-  ['Východný Timor', 'TL', 'https://flagcdn.com/tl.svg'],
-  ['Zambia', 'ZM', 'https://flagcdn.com/zm.svg'],
-  ['Zimbabwe', 'ZW', 'https://flagcdn.com/zw.svg'],
+const API_KEY = process.env.TSDB_API_KEY || '123';
+const DELAY_MS = parseInt(process.env.TSDB_DELAY_MS || '2200', 10);
+const BASE_URL = `https://www.thesportsdb.com/api/v1/json/${API_KEY}`;
+
+/**
+ * Názvy líg zladené podľa browse stránky TheSportsDB Soccer:
+ * https://www.thesportsdb.com/sport.php?all=1&s=Soccer
+ *
+ * Pozn:
+ * - držím sa primárne mužských seniorských európskych líg
+ * - sú tam top ligy + viaceré 2./3./4. úrovne, ktoré sú na stránke viditeľné
+ * - "names" = [primárny canonical názov, fallback aliasy]
+ */
+const EUROPEAN_LEAGUES = [
+  // England
+  { country: 'EN', names: ['English Premier League'] },
+  { country: 'EN', names: ['English League Championship'] },
+  { country: 'EN', names: ['English League 1'] },
+  { country: 'EN', names: ['English League 2'] },
+
+  // Scotland
+  { country: 'SC', names: ['Scottish Premier League'] },
+  { country: 'SC', names: ['Scottish Championship'] },
+  { country: 'SC', names: ['Scottish League 1', 'Scottish League One'] },
+  { country: 'SC', names: ['Scottish League 2', 'Scottish League Two'] },
+
+  // Spain
+  { country: 'ES', names: ['Spanish La Liga'] },
+  { country: 'ES', names: ['Spanish Segunda División', 'Spanish Segunda Division'] },
+  { country: 'ES', names: ['Primera División RFEF Group 1'] },
+  { country: 'ES', names: ['Primera División RFEF Group 2'] },
+  { country: 'ES', names: ['Spanish Segunda RFEF Group 1'] },
+  { country: 'ES', names: ['Spanish Segunda RFEF Group 2'] },
+  { country: 'ES', names: ['Spanish Segunda RFEF Group 3'] },
+  { country: 'ES', names: ['Spanish Segunda RFEF Group 4'] },
+  { country: 'ES', names: ['Spanish Segunda RFEF Group 5'] },
+
+  // Germany
+  { country: 'DE', names: ['German Bundesliga'] },
+  { country: 'DE', names: ['German 2. Bundesliga'] },
+  { country: 'DE', names: ['German 3. Liga'] },
+  { country: 'DE', names: ['German Regionalliga Bayern'] },
+  { country: 'DE', names: ['German Regionalliga Nord'] },
+  { country: 'DE', names: ['German Regionalliga Nordost'] },
+  { country: 'DE', names: ['German Regionalliga SudWest'] },
+  { country: 'DE', names: ['German Regionalliga West'] },
+
+  // Italy
+  { country: 'IT', names: ['Italian Serie A'] },
+  { country: 'IT', names: ['Italian Serie B'] },
+  { country: 'IT', names: ['Italian Serie C'] },
+  { country: 'IT', names: ['Italy Serie D Girone A'] },
+  { country: 'IT', names: ['Italy Serie D Girone B'] },
+  { country: 'IT', names: ['Italy Serie D Girone C'] },
+  { country: 'IT', names: ['Italy Serie D Girone D'] },
+  { country: 'IT', names: ['Italy Serie D Girone E'] },
+  { country: 'IT', names: ['Italy Serie D Girone F'] },
+  { country: 'IT', names: ['Italy Serie D Girone G'] },
+  { country: 'IT', names: ['Italy Serie D Girone H'] },
+  { country: 'IT', names: ['Italy Serie D Girone I'] },
+
+  // France
+  { country: 'FR', names: ['French Ligue 1'] },
+  { country: 'FR', names: ['French Ligue 2'] },
+  { country: 'FR', names: ['French National'] },
+  { country: 'FR', names: ['French National 2 Group A'] },
+  { country: 'FR', names: ['French National 2 Group B'] },
+  { country: 'FR', names: ['French National 2 Group C'] },
+
+  // Netherlands
+  { country: 'NL', names: ['Dutch Eredivisie'] },
+  { country: 'NL', names: ['Dutch Eerste Divisie'] },
+  { country: 'NL', names: ['Dutch Tweede Divisie'] },
+  { country: 'NL', names: ['Netherlands Derde Divisie Saturday'] },
+  { country: 'NL', names: ['Netherlands Derde Divisie Sunday'] },
+
+  // Belgium
+  { country: 'BE', names: ['Belgian Pro League'] },
+
+  // Portugal
+  { country: 'PT', names: ['Portuguese Primeira Liga'] },
+  { country: 'PT', names: ['Portuguese Liga de Honra'] },
+  { country: 'PT', names: ['Portugal Liga 3'] },
+  { country: 'PT', names: ['Campeonato de Portugal Serie A'] },
+  { country: 'PT', names: ['Campeonato de Portugal Serie B'] },
+  { country: 'PT', names: ['Campeonato de Portugal Serie C'] },
+  { country: 'PT', names: ['Campeonato de Portugal Serie D'] },
+
+  // Turkey
+  { country: 'TR', names: ['Turkish Super Lig'] },
+  { country: 'TR', names: ['Turkish 1. Lig'] },
+  { country: 'TR', names: ['Turkish 3 Lig Group 1'] },
+  { country: 'TR', names: ['Turkish 3 Lig Group 2'] },
+  { country: 'TR', names: ['Turkish 3 Lig Group 3'] },
+
+  // Greece
+  { country: 'GR', names: ['Greek Superleague Greece'] },
+  { country: 'GR', names: ['Greek Super League 2'] },
+  { country: 'GR', names: ['Greek Gamma Ethniki Group 1'] },
+  { country: 'GR', names: ['Greek Gamma Ethniki Group 2'] },
+  { country: 'GR', names: ['Greek Gamma Ethniki Group 3'] },
+  { country: 'GR', names: ['Greek Gamma Ethniki Group 4'] },
+  { country: 'GR', names: ['Greek Gamma Ethniki Group 5'] },
+  { country: 'GR', names: ['Greek Gamma Ethniki Group 6'] },
+
+  // Austria
+  { country: 'AT', names: ['Austrian Bundesliga'] },
+  { country: 'AT', names: ['Austrian 2. Liga'] },
+
+  // Switzerland
+  { country: 'CH', names: ['Swiss Super League'] },
+  { country: 'CH', names: ['Swiss Challenge League'] },
+
+  // Czechia
+  { country: 'CZ', names: ['Czech First League'] },
+  { country: 'CZ', names: ['Czech National Football League'] },
+  { country: 'CZ', names: ['Czech Bohemian Football League'] },
+  { country: 'CZ', names: ['Czech Moravian-Silesian Football League'] },
+
+  // Slovakia
+  { country: 'SK', names: ['Slovak First Football League', 'Slovak Super Liga'] },
+
+  // Poland
+  { country: 'PL', names: ['Polish Ekstraklasa'] },
+  { country: 'PL', names: ['Polish I Liga'] },
+  { country: 'PL', names: ['Polish II liga'] },
+  { country: 'PL', names: ['Polish III liga Group I'] },
+  { country: 'PL', names: ['Polish III liga Group II'] },
+  { country: 'PL', names: ['Polish III liga Group III'] },
+  { country: 'PL', names: ['Polish III liga Group IV'] },
+
+  // Hungary
+  { country: 'HU', names: ['Hungarian NB I'] },
+  { country: 'HU', names: ['Hungarian NB II'] },
+
+  // Croatia
+  { country: 'HR', names: ['Croatian First Football League'] },
+  { country: 'HR', names: ['Croatian Second Football League'] },
+
+  // Serbia
+  { country: 'RS', names: ['Serbian Super Liga', 'Serbian SuperLiga'] },
+  { country: 'RS', names: ['Serbian Prva Liga'] },
+
+  // Slovenia
+  { country: 'SI', names: ['Slovenian 1. SNL', 'Slovenian PrvaLiga'] },
+
+  // Romania
+  { country: 'RO', names: ['Romanian Liga I'] },
+  { country: 'RO', names: ['Romanian Liga II'] },
+  { country: 'RO', names: ['Romanian Liga III Seria I'] },
+  { country: 'RO', names: ['Romanian Liga III Seria II'] },
+  { country: 'RO', names: ['Romanian Liga III Seria III'] },
+  { country: 'RO', names: ['Romanian Liga III Seria IV'] },
+  { country: 'RO', names: ['Romanian Liga III Seria V'] },
+  { country: 'RO', names: ['Romanian Liga III Seria VI'] },
+  { country: 'RO', names: ['Romanian Liga III Seria VII'] },
+  { country: 'RO', names: ['Romanian Liga III Seria VIII'] },
+
+  // Bulgaria
+  { country: 'BG', names: ['Bulgarian First League'] },
+
+  // Denmark
+  { country: 'DK', names: ['Danish Superliga'] },
+  { country: 'DK', names: ['Danish 1st Division'] },
+  { country: 'DK', names: ['Danish 2nd Division'] },
+  { country: 'DK', names: ['Denmark 3 Division'] },
+  { country: 'DK', names: ['Denmark Series Group 1'] },
+  { country: 'DK', names: ['Denmark Series Group 2'] },
+  { country: 'DK', names: ['Denmark Series Group 3'] },
+  { country: 'DK', names: ['Denmark Series Group 4'] },
+
+  // Sweden
+  { country: 'SE', names: ['Swedish Allsvenskan'] },
+  { country: 'SE', names: ['Swedish Superettan'] },
+
+  // Norway
+  { country: 'NO', names: ['Norwegian Eliteserien'] },
+  { country: 'NO', names: ['Norwegian First Division'] },
+  { country: 'NO', names: ['Norwegian Second Division Group 1'] },
+  { country: 'NO', names: ['Norwegian Second Division Group 2'] },
+
+  // Finland
+  { country: 'FI', names: ['Finnish Veikkausliiga'] },
+  { country: 'FI', names: ['Finnish Ykkösliiga', 'Finnish Ykkonen'] },
+
+  // Ireland
+  { country: 'IE', names: ['Irish Premier Division'] },
+
+  // Wales
+  { country: 'WL', names: ['Welsh Premier League'] },
+  { country: 'WL', names: ['Welsh Cymru North-South'] },
+
+  // Northern Ireland
+  { country: 'NIR', names: ['Northern Irish Premiership', 'NIFL Premiership'] },
+
+  // Iceland
+  { country: 'IS', names: ['Icelandic Úrvalsdeild karla', 'Icelandic Premier League'] },
+
+  // Estonia
+  { country: 'EE', names: ['Estonian Meistriliiga'] },
+  { country: 'EE', names: ['Estonian Esiliiga'] },
+
+  // Faroe Islands
+  { country: 'FO', names: ['Faroe Islands 1. deild'] },
+
+  // Lithuania
+  { country: 'LT', names: ['Lithuanian TOPLYGA', 'Lithuanian A Lyga'] },
+
+  // Ukraine
+  { country: 'UA', names: ['Ukrainian Premier League'] },
+  { country: 'UA', names: ['Ukrainian First League'] },
+
+  // Russia
+  { country: 'RU', names: ['Russian Football Premier League', 'Russian Premier League'] },
+  { country: 'RU', names: ['Russia FNL 2 Division A Gold Group'] },
+  { country: 'RU', names: ['Russia FNL 2 Division A Silver Group'] },
+  { country: 'RU', names: ['Russia FNL 2 Group 1'] },
+  { country: 'RU', names: ['Russia FNL 2 Group 2'] },
+  { country: 'RU', names: ['Russia FNL 2 Group 3'] },
+
+  // Bosnia and Herzegovina
+  { country: 'BA', names: ['Bosnian Premier Liga'] },
+
+  // Montenegro
+  { country: 'ME', names: ['Montenegrin First League'] },
+
+  // North Macedonia
+  { country: 'MK', names: ['Macedonian First League'] },
+
+  // Albania
+  { country: 'AL', names: ['Albanian Superliga'] },
+
+  // Kosovo
+  { country: 'XK', names: ['Kosovan Superleague'] },
+
+  // Cyprus
+  { country: 'CY', names: ['Cypriot First Division'] },
+
+  // Malta
+  { country: 'MT', names: ['Maltese Premier League'] },
+
+  // Luxembourg
+  { country: 'LU', names: ['Luxembourg National Division'] },
+
+  // Moldova
+  { country: 'MD', names: ['Moldovan National Division'] },
+
+  // Georgia
+  { country: 'GE', names: ['Georgian Erovnuli Liga'] },
+  { country: 'GE', names: ['Georgian Erovnuli Liga 2'] },
+
+  // Armenia
+  { country: 'AM', names: ['Armenian Premier League'] },
+
+  // Azerbaijan
+  { country: 'AZ', names: ['Azerbaijani Premier League'] },
+
+  // Kazakhstan
+  { country: 'KZ', names: ['Kazakhstan Premier League'] },
+
+  // Gibraltar
+  { country: 'GI', names: ['Gibraltarian National League'] },
+
+  // Andorra
+  { country: 'AD', names: ['Andorran 1a Divisió'] },
+
+  // San Marino
+  { country: 'SM', names: ['San-Marino Campionato', 'Campionato Sammarinese di Calcio'] },
 ];
 
-// kluby: [názov, šport, krajina, logo]
-const CLUBS = [
-  // --- PREMIER LEAGUE (1. liga) ---
-  ['Arsenal', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg'],
-  ['Aston Villa', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/f/f9/Aston_Villa_FC_crest_2024.svg'],
-  ['Bournemouth', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/e/e5/AFC_Bournemouth_%282013%29.svg'],
-  ['Brentford', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/2/2a/Brentford_FC_crest.svg'],
-  ['Brighton & Hove Albion', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/f/fd/Brighton_%26_Hove_Albion_logo.svg'],
-  ['Chelsea', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg'],
-  ['Crystal Palace', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/a/a2/Crystal_Palace_FC_logo_%282022%29.svg'],
-  ['Everton', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/7/7c/Everton_FC_logo.svg'],
-  ['Fulham', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/3/3f/Fulham_FC_%282001%29.svg'],
-  ['Ipswich Town', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/4/43/Ipswich_Town.svg'],
-  ['Leicester City', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/2/2d/Leicester_City_crest.svg'],
-  ['Liverpool', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'],
-  ['Manchester City', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg'],
-  ['Manchester United', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/7/7a/Manchester_United_FC_crest.svg'],
-  ['Newcastle United', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/5/56/Newcastle_United_Logo.svg'],
-  ['Nottingham Forest', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/e/e5/Nottingham_Forest_F.C._logo.svg'],
-  ['Southampton', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/c/c9/Southampton_FC.svg'],
-  ['Tottenham Hotspur', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/b/b4/Tottenham_Hotspur.svg'],
-  ['West Ham United', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/c/c2/West_Ham_United_FC_logo.svg'],
-  ['Wolverhampton Wanderers', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/f/fc/Wolverhampton_Wanderers.svg'],
+function fetchJson(url) {
+  return new Promise((resolve, reject) => {
+    https.get(
+      url,
+      {
+        headers: {
+          'User-Agent': 'clubs-seed/1.0',
+          Accept: 'application/json',
+        },
+      },
+      (res) => {
+        let raw = '';
 
-  // --- CHAMPIONSHIP (2. liga) ---
-  ['Blackburn Rovers', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/0/0f/Blackburn_Rovers.svg'],
-  ['Bristol City', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/f/f5/Bristol_City_crest.svg'],
-  ['Burnley', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/6/62/Burnley_F.C._Logo.svg'],
-  ['Cardiff City', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/3/3c/Cardiff_City_crest.svg'],
-  ['Coventry City', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/9/94/Coventry_City_F.C.logo.svg'],
-  ['Derby County', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/4/4a/Derby_County_crest.svg'],
-  ['Hull City', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/5/54/Hull_City_AFC_crest.svg'],
-  ['Leeds United', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/5/54/Leeds_United_F.C._logo.svg'],
-  ['Luton Town', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/9/9d/Luton_Town_FC_logo.svg'],
-  ['Middlesbrough', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/2/2c/Middlesbrough_FC_crest.svg'],
-  ['Millwall', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/c/c9/Millwall_F.C._logo.svg'],
-  ['Norwich City', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/1/17/Norwich_City_FC_logo.svg'],
-  ['Oxford United', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/a/af/Oxford_United_FC_logo.svg'],
-  ['Plymouth Argyle', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/a/a8/Plymouth_Argyle_F.C._logo.svg'],
-  ['Portsmouth', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/3/38/Portsmouth_FC_crest.svg'],
-  ['Preston North End', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/a/a8/Preston_North_End_FC.svg'],
-  ['Queens Park Rangers', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/3/31/Queens_Park_Rangers_crest.svg'],
-  ['Sheffield United', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/9/9c/Sheffield_United_FC_logo.svg'],
-  ['Sheffield Wednesday', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/d/d2/Sheffield_Wednesday_badge.svg'],
-  ['Stoke City', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/2/29/Stoke_City_FC.svg'],
-  ['Sunderland', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/7/77/Logo_Sunderland_AFC.svg'],
-  ['Swansea City', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/f/f9/Swansea_City_AFC_logo.svg'],
-  ['Watford', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/e/e2/Watford.svg'],
-  ['West Bromwich Albion', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/8/8b/West_Bromwich_Albion.svg'],
+        res.on('data', (chunk) => {
+          raw += chunk;
+        });
 
-  // --- LEAGUE ONE (3. liga) ---
-  ['Barnsley', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/c/c9/Barnsley_FC.svg'],
-  ['Birmingham City', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/6/68/Birmingham_City_FC_logo.svg'],
-  ['Blackpool', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/d/df/Blackpool_FC_logo.svg'],
-  ['Bolton Wanderers', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/d/d3/Bolton_Wanderers_FC_logo.svg'],
-  ['Bristol Rovers', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/4/4b/Bristol_Rovers_F.C._logo.svg'],
-  ['Burton Albion', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/5/53/Burton_Albion_FC_logo.svg'],
-  ['Cambridge United', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/b/bd/Cambridge_United_FC.svg'],
-  ['Charlton Athletic', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/5/5b/Charlton_Athletic.svg'],
-  ['Crawley Town', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/1/1a/Crawley_Town_FC_logo.svg'],
-  ['Exeter City', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/7/71/Exeter_City_FC_logo.svg'],
-  ['Huddersfield Town', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/7/7d/Huddersfield_Town_A.F.C._logo.svg'],
-  ['Leyton Orient', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/1/1e/Leyton_Orient_FC_logo.svg'],
-  ['Lincoln City', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/b/b3/Lincoln_City_FC_logo.svg'],
-  ['Mansfield Town', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/7/7d/Mansfield_Town_FC_logo.svg'],
-  ['Northampton Town', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/e/e0/Northampton_Town_FC_logo.svg'],
-  ['Peterborough United', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/d/d4/Peterborough_United.svg'],
-  ['Reading', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/1/11/Reading_FC.svg'],
-  ['Rotherham United', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/c/c0/Rotherham_United_FC_logo.svg'],
-  ['Shrewsbury Town', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/5/5d/Shrewsbury_Town_FC_logo.svg'],
-  ['Stevenage', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/0/02/Stevenage_FC_logo.svg'],
-  ['Stockport County', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/3/30/Stockport_County_FC_logo_2023.svg'],
-  ['Wigan Athletic', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/4/43/Wigan_Athletic.svg'],
-  ['Wrexham', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/3/3d/Wrexham_AFC_logo.svg'],
-  ['Wycombe Wanderers', 'football', 'EN', 'https://upload.wikimedia.org/wikipedia/en/f/fb/Wycombe_Wanderers_FC_logo.svg'],
+        res.on('end', () => {
+          if (res.statusCode === 429) {
+            return reject(new Error('Rate limit (429) – zvýš TSDB_DELAY_MS alebo počkaj minútu.'));
+          }
 
-    // --- LA LIGA (1. liga) ---
-  ['Real Madrid', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/5/56/Real_Madrid_CF.svg'],
-  ['FC Barcelona', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/4/47/FC_Barcelona_%28crest%29.svg'],
-  ['Atlético Madrid', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/f/f4/Atletico_Madrid_2017_logo.svg'],
-  ['Real Sociedad', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/f/f1/Real_Sociedad_logo.svg'],
-  ['Athletic Bilbao', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/9/98/Club_Athletic_Bilbao_logo.svg'],
-  ['Girona FC', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/9/90/Girona_FC_logo.svg'],
-  ['Real Betis', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/1/13/Real_Betis_Balompie_%282022%29.svg'],
-  ['Villarreal CF', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/7/70/Villarreal_CF_logo.svg'],
-  ['Valencia CF', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/c/ce/Valenciacf.svg'],
-  ['Sevilla FC', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/3/3b/Sevilla_FC_logo.svg'],
-  ['CA Osasuna', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/d/db/CA_Osasuna_logo.svg'],
-  ['Getafe CF', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/7/7f/Getafe_CF_logo.svg'],
-  ['Celta Vigo', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/1/12/RC_Celta_de_Vigo_logo.svg'],
-  ['RCD Mallorca', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/e/e0/Rcd_mallorca.svg'],
-  ['Deportivo Alavés', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/f/f8/Deportivo_Alaves_logo_%282020%29.svg'],
-  ['UD Las Palmas', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/2/20/UD_Las_Palmas_logo.svg'],
-  ['Rayo Vallecano', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/d/d2/Rayo_Vallecano_logo.svg'],
-  ['RCD Espanyol', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/d/d6/Rcd_espanyol_logo.svg'],
-  ['Real Valladolid', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/6/6e/Real_Valladolid_Logo.svg'],
-  ['CD Leganés', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/0/02/Club_Deportivo_Legan%C3%A9s.svg'],
+          if (res.statusCode >= 400) {
+            return reject(new Error(`HTTP ${res.statusCode} pre URL: ${url}`));
+          }
 
-  // --- SEGUNDA DIVISIÓN (2. liga - výber najznámejších) ---
-  ['Levante UD', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/7/7b/Levante_Uni%C3%B3_Esportiva_logo.svg'],
-  ['Cádiz CF', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/5/58/C%C3%A1diz_CF_logo.svg'],
-  ['Granada CF', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/d/d5/Granada_CF.svg'],
-  ['UD Almería', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/c/c5/UD_Almer%C3%ADa_logo.svg'],
-  ['Real Zaragoza', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/e/e1/Real_Zaragoza_logo.svg'],
-  ['Real Oviedo', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/0/07/Real_Oviedo_logo.svg'],
-  ['Sporting Gijón', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/e/e4/Real_Sporting_de_Gij%C3%B3n_logo.svg'],
-  ['Racing Santander', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/4/4b/Racing_de_Santander_logo.svg'],
-  ['SD Eibar', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/3/3a/SD_Eibar_logo.svg'],
-  ['CD Tenerife', 'football', 'ES', 'https://upload.wikimedia.org/wikipedia/en/d/d6/CD_Tenerife_logo.svg'],
-
-    // --- BUNDESLIGA (1. liga) ---
-  ['Bayer Leverkusen', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/en/5/59/Bayer_04_Leverkusen_logo.svg'],
-  ['Bayern Mníchov', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/commons/1/1b/FC_Bayern_München_logo_%282017%29.svg'],
-  ['Borussia Dortmund', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/commons/6/67/Borussia_Dortmund_logo.svg'],
-  ['RB Leipzig', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/en/0/04/RB_Leipzig_2014_logo.svg'],
-  ['VfB Stuttgart', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/commons/e/eb/VfB_Stuttgart_1893_Logo.svg'],
-  ['Eintracht Frankfurt', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/commons/3/32/Eintracht_Frankfurt_Logo.svg'],
-  ['TSG Hoffenheim', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/commons/e/e7/Logo_TSG_Hoffenheim.svg'],
-  ['SC Freiburg', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/en/6/6d/SC_Freiburg_logo.svg'],
-  ['Heidenheim', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/en/e/e0/1._FC_Heidenheim_1846_logo.svg'],
-  ['Werder Bremen', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/commons/b/be/SV-Werder-Bremen-Logo.svg'],
-  ['FC Augsburg', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/en/c/c5/FC_Augsburg_logo.svg'],
-  ['VfL Wolfsburg', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/commons/f/f3/Logo_VfL_Wolfsburg.svg'],
-  ['Mainz 05', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/commons/9/9e/Mainz_05_Logo.svg'],
-  ['Borussia Mönchengladbach', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/commons/8/81/Borussia_Mönchengladbach_logo.svg'],
-  ['Union Berlin', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/en/4/44/1._FC_Union_Berlin_logo.svg'],
-  ['VfL Bochum', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/commons/7/72/VfL_Bochum_logo.svg'],
-  ['FC St. Pauli', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/en/d/d4/FC_St._Pauli_logo.svg'],
-  ['Holstein Kiel', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/en/a/a1/Holstein_Kiel_logo.svg'],
-
-  // --- 2. BUNDESLIGA (2. liga) ---
-  ['FC Schalke 04', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/commons/6/6d/FC_Schalke_04_Logo.svg'],
-  ['Hamburger SV', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/commons/6/66/HSV-Logo.svg'],
-  ['Hertha BSC', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/commons/8/81/Hertha_BSC_Logo_2012.svg'],
-  ['FC Köln', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/en/5/53/FC_Koeln_logo.svg'],
-  ['Fortuna Düsseldorf', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/commons/9/94/Fortuna_Düsseldorf_1895_logo.svg'],
-  ['Hannover 96', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/commons/c/cd/Hannover_96_Logo.svg'],
-  ['1. FC Nürnberg', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/commons/f/fa/1._FC_Nürnberg_logo.svg'],
-  ['Kaiserslautern', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/commons/d/d5/1_FC_Kaiserslautern_Logo.svg'],
-  ['Darmstadt 98', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/commons/c/cf/SV_Darmstadt_98_Logo.svg'],
-  ['Paderborn 07', 'football', 'DE', 'https://upload.wikimedia.org/wikipedia/en/b/b3/SC_Paderborn_07_logo.svg'],
-
-  // --- SERIE A (1. liga) ---
-  ['AC Milan', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/commons/d/d0/Logo_of_AC_Milan.svg'],
-  ['Inter Miláno', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/commons/0/05/FC_Internazionale_Milano_2021.svg'],
-  ['Juventus', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/commons/b/bc/Juventus_FC_2017_icon_%28black%29.svg'],
-  ['SSC Neapol', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/commons/2/2d/SSC_Napoli_2024.svg'],
-  ['AS Rím', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/f/f7/AS_Roma_logo_%282017%29.svg'],
-  ['SS Lazio', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/c/ce/S.S._Lazio_badge.svg'],
-  ['Atalanta BC', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/6/66/AtalantaBC.svg'],
-  ['ACF Fiorentina', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/commons/7/79/ACF_Fiorentina_2022_logo.svg'],
-  ['Bologna FC', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/5/5b/Bologna_F.C._1909_logo.svg'],
-  ['Turín FC', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/2/2e/Torino_FC_Logo.svg'],
-  ['Udinese Calcio', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/c/ce/Udinese_Calcio_logo.svg'],
-  ['Genoa CFC', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/6/6c/Genoa_C.F.C._logo.svg'],
-  ['Hellas Verona', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/9/92/Hellas_Verona_FC_logo_%282020%29.svg'],
-  ['AC Monza', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/d/d0/AC_Monza_logo.svg'],
-  ['Cagliari Calcio', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/6/61/Cagliari_Calcio_1970_logo.svg'],
-  ['Lecce', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/2/24/US_Lecce_logo.svg'],
-  ['Empoli FC', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/7/7c/Empoli_F.C._logo.svg'],
-  ['Parma Calcio', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/e/e0/Parma_Calcio_1913_logo.svg'],
-  ['Como 1907', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/0/03/Como_1907_logo.svg'],
-  ['Venezia FC', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/3/36/Venezia_FC_logo_%282022%29.svg'],
-
-  // --- SERIE B (2. liga) ---
-  ['Sassuolo', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/1/1c/US_Sassuolo_Calcio_logo.svg'],
-  ['Salernitana', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/1/1c/US_Salernitana_1919_logo.svg'],
-  ['Frosinone', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/6/64/Frosinone_Calcio_logo.svg'],
-  ['Palermo FC', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/e/e3/Palermo_F.C._logo.svg'],
-  ['Sampdoria', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/d/d2/U.C._Sampdoria_logo.svg'],
-  ['Cremonese', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/e/e0/US_Cremonese_logo.svg'],
-  ['Catanzaro', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/1/14/US_Catanzaro_1929_logo.svg'],
-  ['Spezia', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/1/11/Spezia_Calcio_logo_%282023%29.svg'],
-  ['Pisa SC', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/4/4c/Pisa_Sporting_Club_logo.svg'],
-  ['Bari', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/e/e4/SSC_Bari_logo.svg'],
-  ['Brescia', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/1/17/Brescia_Calcio_2017_logo.svg'],
-  ['Modena FC', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/b/b5/Modena_FC_2022_logo.svg'],
-  ['Reggiana', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/4/43/AC_Reggiana_1919_logo.svg'],
-  ['Cosenza', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/8/82/Cosenza_Calcio_logo.svg'],
-  ['Cesena FC', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/a/ad/Cesena_FC_logo.svg'],
-  ['Mantova 1911', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/d/d7/Mantova_1911_logo.svg'],
-  ['Juve Stabia', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/a/a2/SS_Juve_Stabia_logo.svg'],
-  ['Carrarese Calcio', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/9/91/Carrarese_Calcio_logo.svg'],
-  ['FC Südtirol', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/c/c5/FC_S%C3%BCdtirol_logo.svg'],
-  ['Cittadella', 'football', 'IT', 'https://upload.wikimedia.org/wikipedia/en/0/0a/AS_Cittadella_logo.svg'],
-
-  // --- FRANCÚZSKO (Ligue 1 & Ligue 2) ---
-  ['Paris Saint-Germain', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg'],
-  ['AS Monaco', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/b/ba/AS_Monaco_FC.svg'],
-  ['Olympique Marseille', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/commons/d/d8/Olympique_Marseille_logo.svg'],
-  ['Lille OSC', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/3/3f/Lille_OSC_2018_logo.svg'],
-  ['OGC Nice', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/2/2e/OGC_Nice_logo.svg'],
-  ['Olympique Lyon', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/e/e2/Olympique_Lyonnais_logo.svg'],
-  ['RC Lens', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/c/cc/RC_Lens_logo.svg'],
-  ['Stade Reims', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/0/02/Stade_de_Reims_logo.svg'],
-  ['Stade Rennes', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/9/9e/Stade_Rennais_FC.svg'],
-  ['Toulouse FC', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/8/8b/Toulouse_FC_2018_logo.svg'],
-  ['Montpellier HSC', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/a/a8/Montpellier_HSC_logo.svg'],
-  ['RC Strasbourg', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/8/80/Racing_Club_de_Strasbourg_logo.svg'],
-  ['Le Havre AC', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/9/9e/Le_Havre_AC_logo.svg'],
-  ['FC Nantes', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/1/15/FC_Nantes_logo.svg'],
-  ['Stade Brestois', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/0/05/Stade_Brestois_29_logo.svg'],
-  ['AJ Auxerre', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/6/62/AJ_Auxerre_logo.svg'],
-  ['Angers SCO', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/d/d4/Angers_SCO_logo.svg'],
-  ['AS Saint-Étienne', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/commons/2/2c/AS_Saint-Étienne_logo.svg'],
-  ['FC Lorient', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/2/21/FC_Lorient_logo.svg'],
-  ['FC Metz', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/4/4a/FC_Metz_2021_logo.svg'],
-  ['Clermont Foot', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/d/d4/Clermont_Foot_logo.svg'],
-  ['Paris FC', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/e/e0/Paris_FC_logo.svg'],
-  ['Rodez AF', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/b/b3/Rodez_AF_logo.svg'],
-  ['Stade Lavallois', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/d/d0/Stade_Lavallois_logo.svg'],
-  ['SM Caen', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/a/a9/SM_Caen_logo.svg'],
-  ['EA Guingamp', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/5/56/En_Avant_de_Guingamp_logo.svg'],
-  ['Amiens SC', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/f/f6/Amiens_SC_Logo.svg'],
-  ['Pau FC', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/a/a2/Pau_FC_logo.svg'],
-  ['Grenoble Foot 38', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/7/76/Grenoble_Foot_38_logo.svg'],
-  ['AC Ajaccio', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/b/b5/AC_Ajaccio_logo.svg'],
-  ['SC Bastia', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/3/33/SC_Bastia_logo.svg'],
-  ['Annecy FC', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/fr/5/50/FC_Annecy_logo.svg'],
-  ['Dunkerque', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/1/1a/US_Litoral_Dunkerque_logo.svg'],
-  ['ESTAC Troyes', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/en/b/bf/ESTAC_Troyes_logo.svg'],
-  ['Red Star FC', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/fr/0/03/Red_Star_FC_logo.svg'],
-  ['FC Martigues', 'football', 'FR', 'https://upload.wikimedia.org/wikipedia/fr/4/4c/FC_Martigues_logo.svg'],
-
-  // --- ČESKO (Chance Liga & Chance Národní Liga) ---
-  ['Sparta Praha', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/commons/5/52/AC_Sparta_Praha_logo_2021.svg'],
-  ['Slavia Praha', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/0/09/SK_Slavia_Prague_logo.svg'],
-  ['Viktoria Plzeň', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/1/12/FC_Viktoria_Plzeň_logo.svg'],
-  ['Baník Ostrava', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/2/2d/FC_Ban%C3%ADk_Ostrava_logo.svg'],
-  ['Mladá Boleslav', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/a/a2/FK_Mlad%C3%A1_Boleslav_logo.svg'],
-  ['Slovan Liberec', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/3/30/FC_Slovan_Liberec_logo.svg'],
-  ['Sigma Olomouc', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/b/b8/SK_Sigma_Olomouc_logo.svg'],
-  ['FK Jablonec', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/c/c2/FK_Jablonec_logo.svg'],
-  ['Hradec Králové', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/4/41/FC_Hradec_Kr%C3%A1lov%C3%A9_logo.svg'],
-  ['Teplice', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/4/4d/FK_Teplice_logo.svg'],
-  ['Slovácko', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/e/e0/1._FC_Slov%C3%A1cko_logo.svg'],
-  ['Bohemians 1905', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/6/6b/Bohemians_1905_logo.svg'],
-  ['Karviná', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/e/ef/MFK_Karvin%C3%A1_logo.svg'],
-  ['Pardubice', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/0/0d/FK_Pardubice_logo.svg'],
-  ['České Budějovice', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/f/f6/SK_Dynamo_České_Budějovice_logo.svg'],
-  ['Dukla Praha', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/6/66/FK_Dukla_Prague_logo.svg'],
-  ['Zbrojovka Brno', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/1/14/FC_Zbrojovka_Brno_logo.svg'],
-  ['Vysočina Jihlava', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/7/7b/FC_Vyso%C3%8Dina_Jihlava_logo.svg'],
-  ['SFC Opava', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/1/17/SFC_Opava_logo.svg'],
-  ['Fastav Zlín', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/e/e4/FC_Trinity_Zl%C3%ADn_logo.svg'],
-  ['Viktoria Žižkov', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/1/17/FK_Viktoria_%C5%BDi%C5%BEkov_logo.svg'],
-  ['Silon Táborsko', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/commons/d/d7/FC_Silon_T%C3%A1borsko_logo.svg'],
-  ['Chrudim', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/1/11/MFK_Chrudim_logo.svg'],
-  ['Vlašim', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/c/c5/FC_Sellier_%26_Bellot_Vla%C5%A1im_logo.svg'],
-  ['SK Líšeň', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/commons/e/ee/SK_L%C3%AD%C5%A1e%C5%88_logo.svg'],
-  ['Prostějov', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/a/a2/1._SK_Prost%C4%9Bjov_logo.svg'],
-  ['Varnsdorf', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/c/c3/FK_Varnsdorf_logo.svg'],
-  ['Vyškov', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/7/73/MFK_Vy%C5%A1kov_logo.svg'],
-  ['Baník Ostrava B', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/2/2d/FC_Ban%C3%ADk_Ostrava_logo.svg'],
-  ['Sigma Olomouc B', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/b/b8/SK_Sigma_Olomouc_logo.svg'],
-  ['Slavia Praha B', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/en/0/09/SK_Slavia_Prague_logo.svg'],
-  ['Sparta Praha B', 'football', 'CZ', 'https://upload.wikimedia.org/wikipedia/commons/5/52/AC_Sparta_Praha_logo_2021.svg'],
-
-  // --- SLOVENSKO (Niké Liga & MONACObet Liga) ---
-  ['Slovan Bratislava', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/f/f3/ŠK_Slovan_Bratislava_logo.svg'],
-  ['MŠK Žilina', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/e/ec/MŠK_Žilina_logo.svg'],
-  ['Spartak Trnava', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/e/e3/FC_Spartak_Trnava_logo.svg'],
-  ['DAC Dunajská Streda', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/d/d4/FC_DAC_1904_Dunajská_Streda_logo.svg'],
-  ['MFK Ružomberok', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/1/1b/MFK_Ružomberok_logo.svg'],
-  ['Železiarne Podbrezová', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/commons/e/ea/FK_Železiarne_Podbrezová_logo.svg'],
-  ['AS Trenčín', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/9/90/AS_Trenčín_logo.svg'],
-  ['Dukla Banská Bystrica', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/5/5a/MFK_Dukla_Banská_Bystrica_logo.svg'],
-  ['FC Košice', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/b/b5/FC_Košice_logo.svg'],
-  ['Zemplín Michalovce', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/9/9a/MFK_Zempl%C3%ADn_Michalovce_logo.svg'],
-  ['MFK Skalica', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/1/14/MFK_Skalica_logo.svg'],
-  ['KFC Komárno', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/a/ad/KFC_Komárno_logo.svg'],
-  ['Tatran Prešov', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/1/13/1._FC_Tatran_Prešov_logo.svg'],
-  ['FC Petržalka', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/4/41/FC_Petržalka_logo.svg'],
-  ['ViOn Zlaté Moravce', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/e/eb/FC_ViOn_Zlaté_Moravce_logo.svg'],
-  ['MŠK Púchov', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/c/c9/MŠK_Púchov_logo.svg'],
-  ['FK Humenné', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/5/57/FK_Humenné_logo.svg'],
-  ['Považská Bystrica', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/commons/e/eb/M%C5%A0K_Pova%C5%BEsk%C3%A1_Bystrica_logo.png'],
-  ['STK Šamorín', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/a/a2/FC_%C5%A0TK_1914_%C5%A0amor%C3%ADn_logo.svg'],
-  ['Liptovský Mikuláš', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/1/18/MFK_Tatran_Liptovsk%C3%BD_Mikul%C3%A1%C5%A1_logo.svg'],
-  ['FK Pohronie', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/a/a2/FK_Pohronie_logo.svg'],
-  ['Malženice', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/commons/8/87/OFK_Mal%C5%BEenice_logo.png'],
-  ['Zvolen', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/commons/5/59/MFK_Zvolen_logo.png'],
-  ['Stará Ľubovňa', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/commons/4/4b/MFK_Goral_Star%C3%A1_%C4%BDubov%C5%88a_logo.png'],
-  ['Slovan Bratislava B', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/f/f3/ŠK_Slovan_Bratislava_logo.svg'],
-  ['Žilina B', 'football', 'SK', 'https://upload.wikimedia.org/wikipedia/en/e/ec/MŠK_Žilina_logo.svg'],
-
-  // --- POĽSKO (Ekstraklasa & I liga) ---
-  ['Jagiellonia Białystok', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/commons/2/25/Jagiellonia_Bialystok_logo.svg'],
-  ['Śląsk Wrocław', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/en/0/03/WKS_Śląsk_Wrocław_logo.svg'],
-  ['Legia Warszawa', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/commons/b/b9/Legia_Warszawa_logo.svg'],
-  ['Lech Poznań', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/commons/1/11/Lech_Poznań_logo.svg'],
-  ['Raków Częstochowa', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/en/3/34/Raków_Częstochowa_logo.svg'],
-  ['Pogoń Szczecin', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/en/0/05/Pogoń_Szczecin_logo.svg'],
-  ['Górnik Zabrze', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/en/2/2e/Górnik_Zabrze_logo.svg'],
-  ['Cracovia', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/en/4/45/KS_Cracovia_logo.svg'],
-  ['Widzew Łódź', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/commons/a/a2/Widzew_Łódź_logo.svg'],
-  ['Piast Gliwice', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/en/9/90/Piast_Gliwice_logo.svg'],
-  ['Lechia Gdańsk', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/en/7/77/Lechia_Gdańsk_logo.svg'],
-  ['GKS Katowice', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/en/4/43/GKS_Katowice_logo.svg'],
-  ['Zagłębie Lubin', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/en/e/e0/Zag%C5%82%C4%99bie_Lubin_logo.svg'],
-  ['Radomiak Radom', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/commons/c/c1/Radomiak_Radom_logo.svg'],
-  ['Stal Mielec', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/commons/b/bc/FKS_Stal_Mielec_logo.svg'],
-  ['Puszcza Niepołomice', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/en/1/14/Puszcza_Niepo%C5%82omice_logo.svg'],
-  ['Korona Kielce', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Korona_Kielce_logo.svg'],
-  ['Motor Lublin', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/commons/9/9f/Motor_Lublin_logo.svg'],
-  ['Arka Gdynia', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/en/b/b3/Arka_Gdynia_logo.svg'],
-  ['Wisła Kraków', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/commons/d/d4/Wisła_Kraków_logo.svg'],
-  ['Miedź Legnica', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/en/3/36/Miedź_Legnica_logo.svg'],
-  ['GKS Tychy', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/en/4/44/GKS_Tychy_logo.svg'],
-  ['Wisła Płock', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/commons/6/60/Wis%C5%82a_P%C5%82ock_logo.svg'],
-  ['ŁKS Łódź', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/commons/d/d4/%C5%81KS_%C5%81%C3%B3dz_logo.svg'],
-  ['Ruch Chorzów', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/commons/a/a2/Ruch_Chorz%C3%B3w_logo.svg'],
-  ['Warta Poznań', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/commons/b/b5/Warta_Pozna%C5%84_logo.svg'],
-  ['Odra Opole', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/en/2/29/Odra_Opole_logo.svg'],
-  ['Górnik Łęczna', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/en/0/07/G%C3%B3rnik_%C5%81%C4%99czna_logo.svg'],
-  ['Bruk-Bet Termalica', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/en/0/0d/Bruk-Bet_Termalica_Nieciecza_logo.svg'],
-  ['Stal Rzeszów', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/en/7/7f/Stal_Rzesz%C3%B3w_logo.svg'],
-  ['Znicz Pruszków', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/commons/c/c7/Znicz_Pruszk%C3%B3w_logo.svg'],
-  ['Chrobry Głogów', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/en/d/df/Chrobry_G%C5%82og%C3%B3w_logo.svg'],
-  ['Polonia Warszawa', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/commons/d/d3/Polonia_Warszawa_logo.svg'],
-  ['Kotwica Kołobrzeg', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/commons/0/09/Kotwica_Kolobrzeg_logo.png'],
-  ['Pogoń Siedlce', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/commons/0/01/Pogo%C5%84_Siedlce_logo.svg'],
-  ['Stal Stalowa Wola', 'football', 'PL', 'https://upload.wikimedia.org/wikipedia/commons/3/30/Stal_Stalowa_Wola_logo.svg'],
-
-  // hokej Slovensko
-  ['HC Košice', 'hockey', 'SK', ''], ['HC Slovan Bratislava', 'hockey', 'SK', ''],
-  ['HK Nitra', 'hockey', 'SK', ''], ['HKM Zvolen', 'hockey', 'SK', ''],
-  // hokej Česko
-  ['HC Sparta Praha', 'hockey', 'CZ', ''], ['HC Oceláři Třinec', 'hockey', 'CZ', ''],
-];
-
-async function seedTeams() {
-  let added = 0;
-  for (const [name, country, logo] of NATIONAL) {
-    const exists = await Team.findOne({ where: { name, scope: 'global', teamType: 'national' } });
-    if (!exists) {
-      await Team.create({ name, scope: 'global', teamType: 'national', sport: null, country, logo: logo || null, creatorId: null });
-      added += 1;
-    } else if (logo && !exists.logo) {
-      await exists.update({ logo });
-    }
-  }
-  for (const [name, sport, country, logo] of CLUBS) {
-    const exists = await Team.findOne({ where: { name, scope: 'global', teamType: 'club', sport } });
-    if (!exists) {
-      await Team.create({ name, scope: 'global', teamType: 'club', sport, country, logo: logo || null, creatorId: null });
-      added += 1;
-    } else if (logo && !exists.logo) {
-      await exists.update({ logo });
-    }
-  }
-  return added;
+          try {
+            resolve(JSON.parse(raw));
+          } catch (e) {
+            reject(new Error(`JSON parse error: ${e.message}\nRaw: ${raw.slice(0, 300)}`));
+          }
+        });
+      }
+    ).on('error', reject);
+  });
 }
 
-module.exports = seedTeams;
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-// ak sa spustí priamo: node src/seeds/teams.seed.js
+async function fetchTeamsForLeague(leagueName) {
+  const url = `${BASE_URL}/search_all_teams.php?l=${encodeURIComponent(leagueName)}`;
+  const data = await fetchJson(url);
+  return Array.isArray(data.teams) ? data.teams : [];
+}
+
+function getBadgeUrl(team) {
+  return team.strBadge || team.strTeamBadge || team.strLogo || null;
+}
+
+function mapTeam(team, fallbackCountry) {
+  return {
+    name: team.strTeam ? team.strTeam.trim() : null,
+    sport: 'football',
+    scope: 'global',
+    teamType: 'club',
+    country: fallbackCountry || null,
+    logo: getBadgeUrl(team),
+    externalId: team.idTeam || null,
+    creatorId: null,
+  };
+}
+
+async function resolveLeagueTeams(leagueDef) {
+  for (const leagueName of leagueDef.names) {
+    const teams = await fetchTeamsForLeague(leagueName);
+    if (teams.length > 0) {
+      return {
+        leagueNameUsed: leagueName,
+        teams,
+      };
+    }
+    await sleep(350);
+  }
+
+  return {
+    leagueNameUsed: null,
+    teams: [],
+  };
+}
+
+async function seedClubs({
+  dryRun = false,
+  updateLogos = false,
+  verbose = false,
+  listLeagues = false,
+} = {}) {
+  const { Team } = require('../models');
+
+  if (listLeagues) {
+    console.log('\nEurópske futbalové ligy pripravené na import:\n');
+    EUROPEAN_LEAGUES.forEach((l, i) => {
+      console.log(
+        `${String(i + 1).padStart(3, ' ')}. ${l.names[0]} | ${l.country} | aliasy: ${l.names.join(' / ')}`
+      );
+    });
+    console.log(`\nSpolu: ${EUROPEAN_LEAGUES.length}\n`);
+    return { leagues: EUROPEAN_LEAGUES.length };
+  }
+
+  console.log('\n🏟️  Seed európskych futbalových klubov (TheSportsDB)');
+  console.log(`   API kľúč      : ${API_KEY === '123' ? '123 (free)' : '*** (custom)'}`);
+  console.log(`   Ligy          : ${EUROPEAN_LEAGUES.length}`);
+  console.log(`   Dry-run       : ${dryRun}`);
+  console.log(`   Update logos  : ${updateLogos}`);
+  console.log(`   Delay         : ${DELAY_MS}ms\n`);
+
+  let totalAdded = 0;
+  let totalUpdated = 0;
+  let totalSkipped = 0;
+  let totalErrors = 0;
+
+  const emptyLeagues = [];
+  const failedLeagues = [];
+  const suspiciousLeagues = [];
+  const successLeagues = [];
+
+  const seenExternalIds = new Set();
+  const seenNames = new Set();
+
+  for (const league of EUROPEAN_LEAGUES) {
+    process.stdout.write(`  📋 ${league.names[0]} … `);
+
+    let resolved;
+    try {
+      resolved = await resolveLeagueTeams(league);
+    } catch (err) {
+      console.log('ERROR');
+      failedLeagues.push({
+        league: league.names[0],
+        aliases: league.names,
+        error: err.message,
+      });
+      totalErrors++;
+      await sleep(DELAY_MS * 2);
+      continue;
+    }
+
+    const { leagueNameUsed, teams } = resolved;
+
+    if (!teams.length) {
+      console.log('0 tímov');
+      emptyLeagues.push({
+        league: league.names[0],
+        aliasesTried: league.names,
+      });
+      await sleep(DELAY_MS);
+      continue;
+    }
+
+    console.log(`${teams.length} tímov${leagueNameUsed ? ` [match: ${leagueNameUsed}]` : ''}`);
+
+    successLeagues.push({
+      league: league.names[0],
+      used: leagueNameUsed,
+      count: teams.length,
+    });
+
+    if (teams.length <= 10) {
+      suspiciousLeagues.push({
+        league: league.names[0],
+        used: leagueNameUsed,
+        count: teams.length,
+      });
+    }
+
+    if (verbose) {
+      const preview = teams.slice(0, 5).map((t) => ({
+        idTeam: t.idTeam,
+        strTeam: t.strTeam,
+        strLeague: t.strLeague,
+      }));
+      console.log('     preview:', preview);
+    }
+
+    for (const raw of teams) {
+      const mapped = mapTeam(raw, league.country);
+
+      if (!mapped.name) {
+        totalSkipped++;
+        continue;
+      }
+
+      const extKey = mapped.externalId ? `id:${mapped.externalId}` : null;
+      const nameKey = `${mapped.name.toLowerCase()}::football`;
+
+      if ((extKey && seenExternalIds.has(extKey)) || seenNames.has(nameKey)) {
+        if (verbose) console.log(`     [skip-dup] ${mapped.name}`);
+        totalSkipped++;
+        continue;
+      }
+
+      if (extKey) seenExternalIds.add(extKey);
+      seenNames.add(nameKey);
+
+      if (dryRun) {
+        totalAdded++;
+        if (verbose) {
+          console.log(`     [dry] ${mapped.name} | logo: ${mapped.logo ? '✓' : '✗'}`);
+        }
+        continue;
+      }
+
+      try {
+        const exists = await Team.findOne({
+          where: {
+            name: mapped.name,
+            scope: 'global',
+            teamType: 'club',
+            sport: 'football',
+          },
+        });
+
+        if (!exists) {
+          const { externalId, ...dataToCreate } = mapped;
+          await Team.create(dataToCreate);
+          if (verbose) console.log(`     [+] ${mapped.name}`);
+          totalAdded++;
+        } else {
+          const patch = {};
+
+          if (mapped.logo && (!exists.logo || updateLogos)) {
+            patch.logo = mapped.logo;
+          }
+
+          if (!exists.country && mapped.country) {
+            patch.country = mapped.country;
+          }
+
+          if (Object.keys(patch).length > 0) {
+            await exists.update(patch);
+            if (verbose) console.log(`     [upd] ${mapped.name}`);
+            totalUpdated++;
+          } else {
+            totalSkipped++;
+          }
+        }
+      } catch (dbErr) {
+        console.error(`\n     ❌ DB chyba pri ${mapped.name}: ${dbErr.message}`);
+        totalErrors++;
+      }
+    }
+
+    await sleep(DELAY_MS);
+  }
+
+  console.log('\n──────────────────────────────────────');
+  console.log('✅ Hotovo!');
+  console.log(`   Pridaných          : ${totalAdded}`);
+  console.log(`   Aktualizovaných    : ${totalUpdated}`);
+  console.log(`   Preskočených       : ${totalSkipped}`);
+  console.log(`   Chýb               : ${totalErrors}`);
+  console.log(`   Úspešné ligy       : ${successLeagues.length}`);
+  console.log(`   Prázdne ligy       : ${emptyLeagues.length}`);
+  console.log(`   Failed ligy        : ${failedLeagues.length}`);
+  console.log(`   Podozrivo malé     : ${suspiciousLeagues.length}`);
+  console.log('──────────────────────────────────────\n');
+
+  if (emptyLeagues.length) {
+    console.log('Ligy bez výsledkov:');
+    emptyLeagues.forEach((x) => {
+      console.log(` - ${x.league} | skúšané: ${x.aliasesTried.join(' | ')}`);
+    });
+    console.log('');
+  }
+
+  if (failedLeagues.length) {
+    console.log('Ligy s chybou:');
+    failedLeagues.forEach((x) => {
+      console.log(` - ${x.league}: ${x.error}`);
+    });
+    console.log('');
+  }
+
+  if (suspiciousLeagues.length) {
+    console.log('Ligy s podozrivo malým počtom tímov (<= 10):');
+    suspiciousLeagues.forEach((x) => {
+      console.log(` - ${x.league} | použité: ${x.used} | tímy: ${x.count}`);
+    });
+    console.log('');
+  }
+
+  return {
+    added: totalAdded,
+    updated: totalUpdated,
+    skipped: totalSkipped,
+    errors: totalErrors,
+    emptyLeagues,
+    failedLeagues,
+    suspiciousLeagues,
+    successLeagues,
+  };
+}
+
+module.exports = seedClubs;
+
 if (require.main === module) {
+  const args = process.argv.slice(2);
+
+  const dryRun = args.includes('--dry-run');
+  const updateLogos = args.includes('--update-logos');
+  const verbose = args.includes('--verbose');
+  const listLeagues = args.includes('--list-leagues');
+
   const db = require('../models');
-  db.sequelize.authenticate()
-    .then(() => seedTeams())
-    .then((n) => { console.log(`Pridaných ${n} globálnych tímov.`); process.exit(0); })
-    .catch((e) => { console.error('Seed zlyhal:', e.message); process.exit(1); });
+
+  db.sequelize
+    .authenticate()
+    .then(() =>
+      seedClubs({
+        dryRun,
+        updateLogos,
+        verbose,
+        listLeagues,
+      })
+    )
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error('❌ Seed zlyhal:', err.message);
+      process.exit(1);
+    });
 }

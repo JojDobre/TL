@@ -47,6 +47,19 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.BOOLEAN,           // Typ stlpca - boolean
         defaultValue: true,                // Predvolená hodnota
       },
+      // Preferencie nastavení (/settings)
+      notifyInApp: {
+        type: DataTypes.BOOLEAN,           // Dostávať notifikácie v aplikácii
+        defaultValue: true,
+      },
+      profilePublic: {
+        type: DataTypes.BOOLEAN,           // Verejný profil (vidia ho ostatní cez rebríček)
+        defaultValue: true,
+      },
+      allowCompare: {
+        type: DataTypes.BOOLEAN,           // Povoliť porovnávanie s inými hráčmi
+        defaultValue: true,
+      },
     }, {
       tableName: 'users',                  // Explicitné nastavenie názvu tabuľky v databáze
       timestamps: true,                    // Automatické pridanie stĺpcov createdAt a updatedAt

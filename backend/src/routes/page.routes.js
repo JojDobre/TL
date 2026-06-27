@@ -35,7 +35,11 @@ const { seasonMatchesPage } = require('../controllers/seasonMatchesPage.controll
 const { myPage } = require('../controllers/myPage.controller');
 const { statsPage } = require('../controllers/statsPage.controller');
 const { profilePage } = require('../controllers/profilePage.controller');
-const { settingsPage, updateProfile, changePassword } = require('../controllers/settingsPage.controller');
+const {
+  settingsPage, updateProfile, changePassword,
+  updateAvatar, updateNotifications, updatePrivacy,
+  leaveAllCompetitions, deleteAccount,
+} = require('../controllers/settingsPage.controller');
 const { requireLogin, requireAdmin, apiRequireAdmin, apiRequireLogin, attachUser } = require('../middleware/page-auth.middleware');
 const { homePage } = require('../controllers/homePage.controller');
 const { aboutPage, kontaktPage, kontaktSubmit, navodyPage, logoIdentityPage, podmienkyPage, sukromiePage } = require('../controllers/staticPage.controller');
@@ -83,6 +87,11 @@ router.get('/profile', requireLogin, profilePage);
 router.get('/settings', requireLogin, settingsPage);
 router.put('/api/profile', apiRequireLogin, updateProfile);
 router.put('/api/profile/password', apiRequireLogin, changePassword);
+router.put('/api/profile/avatar', apiRequireLogin, updateAvatar);
+router.put('/api/profile/notifications', apiRequireLogin, updateNotifications);
+router.put('/api/profile/privacy', apiRequireLogin, updatePrivacy);
+router.post('/api/profile/leave-all', apiRequireLogin, leaveAllCompetitions);
+router.delete('/api/profile', apiRequireLogin, deleteAccount);
 router.get('/seasons', attachUser, seasonsPage);
 router.get('/seasons/create', requireLogin, createSeasonPage);
 router.post('/seasons/create', requireLogin, createSeasonSubmit);

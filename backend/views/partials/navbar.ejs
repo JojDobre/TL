@@ -48,7 +48,7 @@
       </div>
       <div style="position:relative">
         <button class="row g-2" data-avatar style="background:none;border:none;padding:2px;border-radius:99px">
-          <span class="avatar avatar-md avatar-ring" style="background:linear-gradient(135deg,#7c5cff,#5b3fd6);color:#fff"><%= (currentUserName || 'U').substring(0,2).toUpperCase() %></span>
+          <%- include('avatar', { image: (typeof currentUserImage !== 'undefined' ? currentUserImage : ''), initials: (currentUserName || 'U').substring(0,2).toUpperCase(), cls: 'avatar-md avatar-ring' }) %>
         </button>
         <div class="dropdown" data-avatar-panel hidden style="right:0">
           <div class="dd-head"><%= currentUserName || 'Účet' %></div>

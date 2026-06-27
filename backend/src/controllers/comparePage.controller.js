@@ -92,6 +92,11 @@ const comparePage = asyncHandler(async (req, res) => {
   ]);
   if (!other) return res.status(404).render('error-page', { message: 'Hráč sa nenašiel.' });
 
+  // súkromie: hráč si môže porovnávanie vypnúť (alebo mať súkromný profil)
+  if (other.allowCompare === false || other.profilePublic === false) {
+    return res.status(403).render('error-page', { message: 'Tento hráč nemá povolené porovnávanie.' });
+  }
+
   const [meStats, otherStats] = await Promise.all([playerStats(meId), playerStats(otherId)]);
 
   // odznaky oboch (počet)

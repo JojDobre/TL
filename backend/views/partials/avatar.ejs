@@ -1,0 +1,14 @@
+<%
+  // Zdielany avatar. Parametre (locals):
+  //   image    – URL profilovej fotky (alebo prazdne)
+  //   initials – initerialy na fallback
+  //   cls      – extra triedy (napr. 'avatar-md avatar-ring')
+  //   grad     – CSS background pre fallback (gradient/farba); default fialovy
+  //   ink      – farba textu inicialok (default #fff)
+  var _img = (typeof image !== 'undefined' && image) ? String(image) : '';
+  var _ini = (typeof initials !== 'undefined' && initials) ? initials : '?';
+  var _cls = (typeof cls !== 'undefined' && cls) ? cls : 'avatar-md';
+  var _grad = (typeof grad !== 'undefined' && grad) ? grad : 'linear-gradient(135deg,#7c5cff,#5b3fd6)';
+  var _ink = (typeof ink !== 'undefined' && ink) ? ink : '#fff';
+%>
+<% if (_img) { %><span class="avatar <%= _cls %>" style="background:var(--surface-2);color:<%= _ink %>"><img src="<%= _img %>" alt="" loading="lazy"></span><% } else { %><span class="avatar <%= _cls %>" style="background:<%= _grad %>;color:<%= _ink %>"><%= _ini %></span><% } %>

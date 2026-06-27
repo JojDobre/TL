@@ -1,11 +1,12 @@
 // backend/src/controllers/settingsPage.controller.js
 //
-// Nastavenia účtu (/settings). Šablóna prenesená 1:1. Funkčné sú sekcie, pre
-// ktoré máme backend: Účet (nick/meno/email) a Zmena hesla. Notifikácie,
-// súkromie, vzhľad a nebezpečná zóna sú zatiaľ vizuálne (netrackujeme / neskôr).
+// Nastavenia účtu (/settings). Funkčné sekcie: Účet (nick/meno/email),
+// Profilová fotka (URL), Zmena hesla, Notifikácie (in-app prepínač),
+// Súkromie (verejný profil, povoliť porovnávanie), a Nebezpečná zóna
+// (opustiť všetky súťaže, vymazať účet).
 
 const bcrypt = require('bcrypt');
-const { User } = require('../models');
+const { User, UserLeague, UserSeason, sequelize } = require('../models');
 const { ApiError, asyncHandler } = require('../middleware/error.middleware');
 
 // GET /settings
@@ -18,7 +19,13 @@ const settingsPage = asyncHandler(async (req, res) => {
       username: user.username,
       name: [user.firstName, user.lastName].filter(Boolean).join(' '),
       email: user.email || '',
+      profileImage: user.profileImage || '',
       initials: ([user.firstName, user.lastName].filter(Boolean).map((x) => x[0]).join('') || (user.username || '?')[0] || '?').toUpperCase(),
+    },
+    prefs: {
+      notifyInApp: user.notifyInApp !== false,
+      profilePublic: user.profilePublic !== false,
+      allowCompare: user.allowCompare !== false,
     },
   });
 });
@@ -36,12 +43,10 @@ const updateProfile = asyncHandler(async (req, res) => {
   if (!username) throw new ApiError(400, 'Prezývka je povinná.');
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new ApiError(400, 'Neplatný e-mail.');
 
-  // kolízia username/email s iným používateľom
   const { Op } = require('../models').Sequelize;
   const clash = await User.findOne({ where: { id: { [Op.ne]: meId }, [Op.or]: [{ username }, ...(email ? [{ email }] : [])] } });
   if (clash) throw new ApiError(409, 'Prezývka alebo e-mail už používa iný účet.');
 
-  // rozdelenie mena na krstné/priezvisko
   const parts = fullName.split(/\s+/).filter(Boolean);
   user.firstName = parts.length ? parts[0] : null;
   user.lastName = parts.length > 1 ? parts.slice(1).join(' ') : null;
@@ -52,7 +57,24 @@ const updateProfile = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: 'Údaje uložené.' });
 });
 
-// PUT /api/profile/password  { currentPassword, newPassword, confirmPassword }
+// PUT /api/profile/avatar  { profileImage }  (URL alebo prázdne = odstrániť)
+const updateAvatar = asyncHandler(async (req, res) => {
+  const meId = Number(req.session.userId);
+  const user = await User.findByPk(meId);
+  if (!user) throw new ApiError(404, 'Používateľ nenájdený.');
+
+  const url = (req.body.profileImage || '').trim();
+  if (url) {
+    if (!/^https?:\/\/.+/i.test(url)) throw new ApiError(400, 'Zadaj platnú URL adresu obrázka (http/https).');
+    if (url.length > 1000) throw new ApiError(400, 'URL je príliš dlhá.');
+  }
+  user.profileImage = url || null;
+  await user.save();
+
+  res.status(200).json({ success: true, message: url ? 'Profilová fotka uložená.' : 'Profilová fotka odstránená.', data: { profileImage: user.profileImage } });
+});
+
+// PUT /api/profile/password
 const changePassword = asyncHandler(async (req, res) => {
   const meId = Number(req.session.userId);
   const user = await User.findByPk(meId);
@@ -72,4 +94,78 @@ const changePassword = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: 'Heslo zmenené.' });
 });
 
-module.exports = { settingsPage, updateProfile, changePassword };
+// PUT /api/profile/notifications  { notifyInApp }
+const updateNotifications = asyncHandler(async (req, res) => {
+  const meId = Number(req.session.userId);
+  const user = await User.findByPk(meId);
+  if (!user) throw new ApiError(404, 'Používateľ nenájdený.');
+
+  user.notifyInApp = !!req.body.notifyInApp;
+  await user.save();
+
+  res.status(200).json({ success: true, message: 'Nastavenia notifikácií uložené.' });
+});
+
+// PUT /api/profile/privacy  { profilePublic, allowCompare }
+const updatePrivacy = asyncHandler(async (req, res) => {
+  const meId = Number(req.session.userId);
+  const user = await User.findByPk(meId);
+  if (!user) throw new ApiError(404, 'Používateľ nenájdený.');
+
+  user.profilePublic = !!req.body.profilePublic;
+  user.allowCompare = !!req.body.allowCompare;
+  await user.save();
+
+  res.status(200).json({ success: true, message: 'Nastavenia súkromia uložené.' });
+});
+
+// POST /api/profile/leave-all — odhlásenie zo všetkých líg a sezón
+const leaveAllCompetitions = asyncHandler(async (req, res) => {
+  const meId = Number(req.session.userId);
+  const user = await User.findByPk(meId);
+  if (!user) throw new ApiError(404, 'Používateľ nenájdený.');
+
+  // tipy ostávajú zachované (historický rebríček); rušíme len členstvá.
+  await sequelize.transaction(async (t) => {
+    await UserLeague.destroy({ where: { userId: meId }, transaction: t });
+    await UserSeason.destroy({ where: { userId: meId }, transaction: t });
+  });
+
+  res.status(200).json({ success: true, message: 'Opustil si všetky súťaže.' });
+});
+
+// DELETE /api/profile — vymazanie účtu
+const deleteAccount = asyncHandler(async (req, res) => {
+  const meId = Number(req.session.userId);
+  const user = await User.findByPk(meId);
+  if (!user) throw new ApiError(404, 'Používateľ nenájdený.');
+
+  // bezpečnostné overenie heslom (ak ho frontend pošle)
+  if (req.body && req.body.password) {
+    const ok = await bcrypt.compare(req.body.password, user.password);
+    if (!ok) throw new ApiError(403, 'Heslo nie je správne.');
+  }
+
+  const { Tip } = require('../models');
+  await sequelize.transaction(async (t) => {
+    await Tip.destroy({ where: { userId: meId }, transaction: t });
+    await UserLeague.destroy({ where: { userId: meId }, transaction: t });
+    await UserSeason.destroy({ where: { userId: meId }, transaction: t });
+    await user.destroy({ transaction: t });
+  });
+
+  req.session.destroy(() => {});
+  res.clearCookie('connect.sid');
+  res.status(200).json({ success: true, message: 'Účet bol vymazaný.' });
+});
+
+module.exports = {
+  settingsPage,
+  updateProfile,
+  updateAvatar,
+  changePassword,
+  updateNotifications,
+  updatePrivacy,
+  leaveAllCompetitions,
+  deleteAccount,
+};

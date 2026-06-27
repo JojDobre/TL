@@ -9,14 +9,27 @@
 //   const notify = require('../utils/notification.service');
 //   await notify.roundCreated(round, league);
 
-const { Notification, UserLeague, Round, League, Sequelize } = require('../models');
+const { Notification, UserLeague, Round, League, User, Sequelize } = require('../models');
 const { Op } = Sequelize;
+
+// Odfiltruje príjemcov, ktorí majú vypnuté notifikácie v aplikácii (notifyInApp=false).
+async function filterOptedIn(rows) {
+  if (!rows || !rows.length) return [];
+  const ids = [...new Set(rows.map((r) => Number(r.userId)).filter(Boolean))];
+  if (!ids.length) return rows;
+  const optedOut = await User.findAll({ where: { id: { [Op.in]: ids }, notifyInApp: false }, attributes: ['id'] });
+  if (!optedOut.length) return rows;
+  const block = new Set(optedOut.map((u) => u.id));
+  return rows.filter((r) => !block.has(Number(r.userId)));
+}
 
 // Bezpečné vytvorenie viacerých notifikácií naraz.
 async function createMany(rows) {
   if (!rows || !rows.length) return;
   try {
-    await Notification.bulkCreate(rows);
+    const allowed = await filterOptedIn(rows);
+    if (!allowed.length) return;
+    await Notification.bulkCreate(allowed);
   } catch (e) {
     // zámerne nehádžeme ďalej — notifikácie sú vedľajší efekt
     console.error('[notify] bulkCreate zlyhalo:', e.message);
@@ -26,7 +39,9 @@ async function createMany(rows) {
 // Bezpečné vytvorenie jednej notifikácie.
 async function createOne(row) {
   try {
-    await Notification.create(row);
+    const allowed = await filterOptedIn([row]);
+    if (!allowed.length) return;
+    await Notification.create(allowed[0]);
   } catch (e) {
     console.error('[notify] create zlyhalo:', e.message);
   }

@@ -44,6 +44,14 @@ const playerPage = asyncHandler(async (req, res) => {
   const user = await User.findByPk(targetId, { attributes: { exclude: ['password', 'email'] } });
   if (!user) return res.status(404).render('error-page', { message: 'Hráč sa nenašiel.' });
 
+  // súkromie: ak má hráč vypnutý verejný profil, nezobrazuj ho ostatným
+  // (admin a sám používateľ majú prístup vždy)
+  const viewer = meId ? await User.findByPk(meId, { attributes: ['role'] }) : null;
+  const isAdmin = viewer && viewer.role === 'admin';
+  if (user.profilePublic === false && !isAdmin) {
+    return res.status(403).render('error-page', { message: 'Tento hráč má súkromný profil.' });
+  }
+
   // všetky tipy hráča s kontextom (kolo, liga) — pre štatistiky, formu, momenty
   const tips = await Tip.findAll({
     where: { userId: targetId },
