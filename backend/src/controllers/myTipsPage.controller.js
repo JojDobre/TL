@@ -103,7 +103,7 @@ const myTipsPage = asyncHandler(async (req, res) => {
       }
       const mj = m.toJSON();
       const my = myTips[m.id] || null;
-      const isWinner = mj.tipType === 'winner';
+      const isWinner = (mj.tipType === 'winner' || mj.tipType === 'winner_no_draw');
       const tipped = my && (isWinner ? my.winner : my.homeScore != null);
       if (!tipped) unfilled += 1;
 

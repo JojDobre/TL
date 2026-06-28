@@ -71,6 +71,9 @@ const updateAvatar = asyncHandler(async (req, res) => {
   user.profileImage = url || null;
   await user.save();
 
+  // aktualizuj cache fotky v session, aby ju navbar hneď zobrazil
+  if (req.session) req.session.userImage = user.profileImage;
+
   res.status(200).json({ success: true, message: url ? 'Profilová fotka uložená.' : 'Profilová fotka odstránená.', data: { profileImage: user.profileImage } });
 });
 

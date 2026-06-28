@@ -30,11 +30,11 @@
   function scoreStr(h,a){ return (h!=null && a!=null) ? (h+' : '+a) : '—'; }
   function tipStr(t, tipType){
     if(!t) return '—';
-    if(tipType === 'winner') return t.winner==='home'?'1':t.winner==='away'?'2':t.winner==='draw'?'X':'—';
+    if(tipType === 'winner' || tipType === 'winner_no_draw') return t.winner==='home'?'1':t.winner==='away'?'2':t.winner==='draw'?'X':'—';
     return (t.homeScore!=null && t.awayScore!=null) ? (t.homeScore+':'+t.awayScore) : '—';
   }
   function otherStr(o, tipType){
-    if(tipType === 'winner') return o.winner==='home'?'1':o.winner==='away'?'2':o.winner==='draw'?'X':'—';
+    if(tipType === 'winner' || tipType === 'winner_no_draw') return o.winner==='home'?'1':o.winner==='away'?'2':o.winner==='draw'?'X':'—';
     return (o.homeScore!=null && o.awayScore!=null) ? (o.homeScore+':'+o.awayScore) : '—';
   }
   // farba avatara z mena (deterministicky)

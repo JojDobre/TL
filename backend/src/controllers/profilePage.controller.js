@@ -44,7 +44,8 @@ const profilePage = asyncHandler(async (req, res) => {
     const m = t.Match;
     const home = m && m.homeTeam ? m.homeTeam.name : '—';
     const away = m && m.awayTeam ? m.awayTeam.name : '—';
-    const tipStr = m && m.tipType === 'winner'
+    const _isWin = m && (m.tipType === 'winner' || m.tipType === 'winner_no_draw');
+    const tipStr = _isWin
       ? (t.winner === 'home' ? '1' : t.winner === 'draw' ? 'X' : t.winner === 'away' ? '2' : '–')
       : ((t.homeScore != null ? t.homeScore : '–') + ':' + (t.awayScore != null ? t.awayScore : '–'));
     return {

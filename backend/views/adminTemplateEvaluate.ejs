@@ -68,13 +68,13 @@
     <div class="ev-match <%= done ? 'done' : '' %> <%= canc ? 'canceled' : '' %>" data-match="<%= m.id %>" data-type="<%= m.tipType %>">
       <div>
         <div class="ev-teams"><%= m.homeTeam %> <span class="faint">vs</span> <%= m.awayTeam %></div>
-        <div class="ev-when"><%= new Date(m.matchTime).toLocaleString('sk-SK') %> · <%= m.tipType === 'winner' ? 'tip na víťaza' : 'tip na skóre' %><span class="m-state"><%= canc ? ' · zrušený' : (done ? ' · vyhodnotený' : '') %></span></div>
+        <div class="ev-when"><%= new Date(m.matchTime).toLocaleString('sk-SK') %> · <%= (m.tipType === 'winner' || m.tipType === 'winner_no_draw') ? 'tip na víťaza' : 'tip na skóre' %><span class="m-state"><%= canc ? ' · zrušený' : (done ? ' · vyhodnotený' : '') %></span></div>
       </div>
 
-      <% if (m.tipType === 'winner') { %>
+      <% if (m.tipType === 'winner' || m.tipType === 'winner_no_draw') { %>
       <div class="winner-pick">
         <button data-w="home" class="<%= (done && m.homeScore > m.awayScore) ? 'sel' : '' %>">Domáci</button>
-        <button data-w="draw" class="<%= (done && m.homeScore === m.awayScore && m.homeScore != null) ? 'sel' : '' %>">Remíza</button>
+        <% if (m.tipType === 'winner') { %><button data-w="draw" class="<%= (done && m.homeScore === m.awayScore && m.homeScore != null) ? 'sel' : '' %>">Remíza</button><% } %>
         <button data-w="away" class="<%= (done && m.awayScore > m.homeScore) ? 'sel' : '' %>">Hosť</button>
       </div>
       <% } else { %>
@@ -140,9 +140,9 @@
     // uložiť výsledok
     if (e.target.closest('.btn-save')){
       var payload;
-      if (type === 'winner'){
+      if (type === 'winner' || type === 'winner_no_draw'){
         var sel = row.querySelector('.winner-pick button.sel');
-        if (!sel){ toast('Vyber víťaza alebo remízu.', true); return; }
+        if (!sel){ toast('Vyber víťaza.', true); return; }
         var wv = sel.getAttribute('data-w');
         // víťaz reprezentovaný ako skóre 1:0 / 0:1 / 0:0 (rozhodujúci je výsledok)
         payload = { homeScore: wv==='home'?1:0, awayScore: wv==='away'?1:0, status:'finished' };

@@ -90,7 +90,8 @@
         </div>
         <div class="match-list">
           <% g.matches.forEach(function (m) {
-               var isWinner = m.tipType === 'winner';
+               var isWinner = (m.tipType === 'winner' || m.tipType === 'winner_no_draw');
+             var noDraw = m.tipType === 'winner_no_draw';
                var tipped = m.myTip && (isWinner ? m.myTip.winner : m.myTip.homeScore != null);
           %>
           <div class="card match match-row<%= tipped ? ' tipped' : '' %>" data-match data-match-id="<%= m.id %>" data-type="<%= isWinner ? 'winner' : 'exact' %>">
@@ -103,7 +104,7 @@
               <% if (isWinner) { %>
                 <div class="onex2-pick" role="group">
                   <button type="button" class="onex2-btn<%= m.myTip && m.myTip.winner === 'home' ? ' sel' : '' %>" data-w="home">1</button>
-                  <button type="button" class="onex2-btn<%= m.myTip && m.myTip.winner === 'draw' ? ' sel' : '' %>" data-w="draw">X</button>
+                  <% if (!noDraw) { %><button type="button" class="onex2-btn<%= m.myTip && m.myTip.winner === 'draw' ? ' sel' : '' %>" data-w="draw">X</button><% } %>
                   <button type="button" class="onex2-btn<%= m.myTip && m.myTip.winner === 'away' ? ' sel' : '' %>" data-w="away">2</button>
                 </div>
               <% } else { %>

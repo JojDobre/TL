@@ -75,7 +75,7 @@
         <button class="btn btn-brand" style="margin-bottom:0" id="addMatch">+ Pridať</button>
       </div>
       <div class="row g-4 wrap-gap" style="margin-top:16px">
-        <div class="field" style="max-width:240px"><label class="label">Typ tipovania</label><select class="select" id="tipType"><option value="exact_score">Presný výsledok</option><option value="winner">Iba víťaz</option></select></div>
+        <div class="field" style="max-width:240px"><label class="label">Typ tipovania</label><select class="select" id="tipType"><option value="exact_score">Presný výsledok</option><option value="winner">Iba víťaz (1/X/2)</option><option value="winner_no_draw">Víťaz bez remízy (1/2)</option></select></div>
       </div>
     </div>
 
@@ -87,7 +87,7 @@
         <span class="faint" id="csvChevron">▾</span>
       </button>
       <div id="csvPanel" hidden style="margin-top:16px">
-        <p class="sub" style="margin-bottom:10px">Jeden zápas na riadok vo formáte: <code>Domáci tím; Hosťujúci tím; RRRR-MM-DD HH:MM; typ</code><br>Typ je voliteľný (<code>winner</code> = iba víťaz, inak presný výsledok). Názvy tímov musia byť zo súpisky ligy.</p>
+        <p class="sub" style="margin-bottom:10px">Jeden zápas na riadok vo formáte: <code>Domáci tím; Hosťujúci tím; RRRR-MM-DD HH:MM; typ</code><br>Typ je voliteľný (<code>winner</code> = víťaz 1/X/2, <code>winner_no_draw</code> = víťaz bez remízy 1/2, inak presný výsledok). Názvy tímov musia byť zo súpisky ligy.</p>
         <textarea class="textarea" id="csvText" rows="6" placeholder="Slovensko; Nemecko; 2026-06-20 18:00&#10;Česko; Švédsko; 2026-06-20 21:00; winner"></textarea>
         <div class="row g-2" style="margin-top:10px"><button type="button" class="btn btn-secondary" id="csvImport">Importovať zápasy</button></div>
         <div id="csvResult" style="margin-top:12px"></div>

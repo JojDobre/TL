@@ -152,7 +152,7 @@ function tipQuality(myTip, match, exactPts) {
   if (match.status !== 'finished') return 'pending';
   if (!myTip) return 'none';
   const pts = myTip.points || 0;
-  if (match.tipType !== 'winner' && pts >= exactPts) return 'exact';
+  if (match.tipType !== 'winner' && match.tipType !== 'winner_no_draw' && pts >= exactPts) return 'exact';
   if (pts > 0) return 'partial';
   return 'zero';
 }
@@ -221,7 +221,7 @@ const roundResultsPage = asyncHandler(async (req, res) => {
       name: [t.User.firstName, t.User.lastName].filter(Boolean).join(' ') || t.User.username || 'Hráč',
       abbr: teamAbbr([t.User.firstName, t.User.lastName].filter(Boolean).join(' ') || t.User.username),
       homeScore: t.homeScore, awayScore: t.awayScore, winner: t.winner,
-      exact: (mj.tipType !== 'winner' && (t.points || 0) >= exactPts),
+      exact: (mj.tipType !== 'winner' && mj.tipType !== 'winner_no_draw' && (t.points || 0) >= exactPts),
     }));
     return {
       id: mj.id,

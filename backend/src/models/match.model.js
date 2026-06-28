@@ -35,7 +35,9 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 'scheduled',
       },
       tipType: {
-        type: DataTypes.ENUM('winner', 'exact_score'),  // Typ tipovania: víťaz alebo presný výsledok
+        // winner = víťaz 1/X/2 (možná remíza), winner_no_draw = víťaz 1/2 (bez remízy,
+        // pre tenis/šípky a pod.), exact_score = presný výsledok
+        type: DataTypes.ENUM('winner', 'winner_no_draw', 'exact_score'),
         defaultValue: 'exact_score',
       },
       // Ak je tento zápas v KLONOVANEJ lige, odkaz na zdrojový zápas v oficiálnej

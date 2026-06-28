@@ -33,7 +33,7 @@
     <div id="paneSingle">
       <div class="add-grid">
         <div class="field"><label class="label">Názov tímu</label><input class="input" id="sName" placeholder="napr. Arsenal"></div>
-        <div class="field"><label class="label">Typ</label><select class="select" id="sType"><option value="club">Klub (šport + krajina)</option><option value="national">Národný tím (bez športu)</option></select></div>
+        <div class="field"><label class="label">Typ</label><select class="select" id="sType"><option value="club">Klub (šport + krajina)</option><option value="national">Národný tím (bez športu)</option><option value="individual">Jednotlivec (osoba)</option></select></div>
         <div class="field" data-club><label class="label">Šport</label><select class="select" id="sSport"><% sports.forEach(function(s){ %><option value="<%= s.code %>"><%= s.label %></option><% }); %></select></div>
         <div class="field"><label class="label">Krajina</label><select class="select" id="sCountry"><% countries.forEach(function(c){ %><option value="<%= c.code %>"><%= c.label %></option><% }); %></select></div>
         <div class="field" style="grid-column:1/-1"><label class="label">URL loga <span class="faint">(voliteľné)</span></label><input class="input" id="sLogo" type="url" placeholder="https://… odkaz na obrázok"></div>
@@ -56,7 +56,7 @@
   <!-- FILTER + ZOZNAM -->
   <div class="filters">
     <input class="input search" id="fSearch" placeholder="Hľadať tím…">
-    <select class="select" id="fType" style="width:auto"><option value="">Všetky typy</option><option value="club">Kluby</option><option value="national">Národné</option></select>
+    <select class="select" id="fType" style="width:auto"><option value="">Všetky typy</option><option value="club">Kluby</option><option value="national">Národné</option><option value="individual">Jednotlivci</option></select>
     <select class="select" id="fSport" style="width:auto"><option value="">Všetky športy</option><% sports.forEach(function(s){ %><option value="<%= s.code %>"><%= s.label %></option><% }); %></select>
     <select class="select" id="fCountry" style="width:auto"><option value="">Všetky krajiny</option><% countries.forEach(function(c){ %><option value="<%= c.code %>"><%= c.label %></option><% }); %></select>
   </div>
@@ -66,7 +66,7 @@
     <div class="team-row" data-team-id="<%= t.id %>" data-name="<%= t.name %>" data-type="<%= t.teamType %>" data-sport="<%= t.sport || '' %>" data-country="<%= t.country || '' %>" data-logo="<%= t.logo || '' %>">
       <% if (t.logo) { %><span class="team-logo-sm" style="background:none !important"><img src="<%= t.logo %>" alt=""></span><% } else { %><span class="team-logo-sm"><%=  (t.name||'?').substring(0,3).toUpperCase() %></span><% } %>
       <div><b><%= t.name %></b></div>
-      <span class="tag <%= t.teamType === 'national' ? 'tag-info' : 'tag-muted' %> tcol-hide"><%= t.teamType === 'national' ? 'Národný' : 'Klub' %></span>
+      <span class="tag <%= t.teamType === 'national' ? 'tag-info' : (t.teamType === 'individual' ? 'tag-gold' : 'tag-muted') %> tcol-hide"><%= t.teamType === 'national' ? 'Národný' : (t.teamType === 'individual' ? 'Jednotlivec' : 'Klub') %></span>
       <span class="muted tcol-hide" style="font-size:var(--fs-sm)"><%= t.sport || '—' %> <%= t.country ? '· ' + t.country : '' %></span>
       <span style="display:flex;gap:4px"><button class="btn btn-ghost btn-icon" style="width:34px;height:34px" data-edit title="Upraviť">✎</button><button class="btn btn-ghost btn-icon" style="width:34px;height:34px" data-del title="Zmazať">✕</button></span>
     </div>

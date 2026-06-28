@@ -80,19 +80,15 @@ app.use(async (req, res, next) => {
   res.locals.currentUserId = req.session.userId || null;
   res.locals.currentUserRole = req.session.userRole || null;
   res.locals.currentUserName = req.session.userName || null;
-  // profilová fotka prihláseného (cache v session; updateAvatar ju invaliduje)
+  // profilová fotka prihláseného — načítava sa z DB (lacný select podľa PK),
+  // aby bola vždy aktuálna bez ohľadu na to, kedy bola nastavená.
   res.locals.currentUserImage = null;
   if (req.session.userId) {
-    if (req.session.userImage !== undefined) {
-      res.locals.currentUserImage = req.session.userImage;
-    } else {
-      try {
-        const { User } = require('./src/models');
-        const u = await User.findByPk(req.session.userId, { attributes: ['profileImage'] });
-        req.session.userImage = u ? (u.profileImage || null) : null;
-        res.locals.currentUserImage = req.session.userImage;
-      } catch (e) { /* ignoruj — avatar je vedľajší */ }
-    }
+    try {
+      const { User } = require('./src/models');
+      const u = await User.findByPk(req.session.userId, { attributes: ['profileImage'] });
+      res.locals.currentUserImage = u ? (u.profileImage || null) : null;
+    } catch (e) { /* ignoruj — avatar je vedľajší */ }
   }
   next();
 });

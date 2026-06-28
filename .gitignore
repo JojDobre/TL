@@ -56,3 +56,6 @@ Thumbs.db
 
 # Dodatocne subory, ktoré nechceme verzionovat
 struktura.txt
+
+# ai
+/backend/CLAUDE.md

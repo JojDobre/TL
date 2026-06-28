@@ -80,7 +80,7 @@ const playerPage = asyncHandler(async (req, res) => {
     if (m.status === 'finished') {
       evaluated += 1;
       weightSum += tipQualityWeight(t, m);
-      if (m.tipType !== 'winner' && (t.points || 0) >= exactPts) exactCount += 1;
+      if (m.tipType !== 'winner' && m.tipType !== 'winner_no_draw' && (t.points || 0) >= exactPts) exactCount += 1;
     }
     if (round) {
       if (!roundAgg[round.id]) roundAgg[round.id] = { name: round.name, leagueName: league ? league.name : '', start: round.startDate || null, points: 0 };

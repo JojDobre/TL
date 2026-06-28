@@ -17,7 +17,7 @@ function tipQuality(tip, match, exactPts) {
   if (match.status === 'canceled') return 'canceled';
   if (match.status !== 'finished') return 'pending';
   const pts = tip.points || 0;
-  if (match.tipType !== 'winner' && pts >= exactPts) return 'exact';
+  if (match.tipType !== 'winner' && match.tipType !== 'winner_no_draw' && pts >= exactPts) return 'exact';
   if (pts > 0) return 'partial';
   return 'zero';
 }
@@ -98,7 +98,8 @@ const tipHistoryPage = asyncHandler(async (req, res) => {
     if (fResult === 'zero' && quality !== 'zero') continue;
 
     // formát tipu a výsledku
-    const tipStr = (m && m.tipType === 'winner')
+    const _isWin = m && (m.tipType === 'winner' || m.tipType === 'winner_no_draw');
+    const tipStr = _isWin
       ? (t.winner === 'home' ? '1' : t.winner === 'away' ? '2' : t.winner === 'draw' ? 'X' : '—')
       : ((t.homeScore != null && t.awayScore != null) ? `${t.homeScore}:${t.awayScore}` : '—');
     const resStr = (m && m.homeScore != null && m.awayScore != null) ? `${m.homeScore}:${m.awayScore}` : '—';

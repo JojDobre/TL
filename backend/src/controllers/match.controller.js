@@ -20,6 +20,9 @@ const DEFAULT_SCORING = { exactScore: 10, correctGoals: 1, correctWinner: 3, goa
 // výsledok zápasu z dvoch skóre: 'home' | 'away' | 'draw'
 const outcome = (home, away) => (home > away ? 'home' : home < away ? 'away' : 'draw');
 
+// typy, kde sa tipuje len víťaz (1/X/2 alebo 1/2 bez remízy)
+const isWinnerType = (t) => t === 'winner' || t === 'winner_no_draw';
+
 /**
  * Vypočíta body za JEDEN tip podľa skutočného výsledku a bodovacieho systému.
  * Jediné miesto pravdy pre bodovanie. Vracia celé číslo bodov.
@@ -42,7 +45,7 @@ function calculatePoints(tip, match, scoring) {
   }
   const actual = outcome(homeScore, awayScore);
 
-  if (tipType === 'winner') {
+  if (isWinnerType(tipType)) {
     return tip.winner && tip.winner === actual ? s.correctWinner : 0;
   }
 
@@ -161,7 +164,7 @@ const createMatch = asyncHandler(async (req, res) => {
   const newMatch = await Match.create({
     roundId, homeTeamId, awayTeamId,
     matchTime: when,
-    tipType: tipType === 'winner' ? 'winner' : 'exact_score',
+    tipType: ['winner', 'winner_no_draw', 'exact_score'].includes(tipType) ? tipType : 'exact_score',
     status: 'scheduled',
   });
 
@@ -192,7 +195,7 @@ const updateMatch = asyncHandler(async (req, res) => {
     match.matchTime = when;
   }
   if (status) match.status = status;
-  if (tipType) match.tipType = tipType === 'winner' ? 'winner' : 'exact_score';
+  if (tipType) match.tipType = ['winner', 'winner_no_draw', 'exact_score'].includes(tipType) ? tipType : 'exact_score';
 
   await match.save();
   res.status(200).json({
@@ -271,6 +274,11 @@ const evaluateMatch = asyncHandler(async (req, res) => {
   // inak vyžadujeme platné skóre
   if (!validScore(homeScore) || !validScore(awayScore)) {
     throw new ApiError(400, 'Zadaj platné skóre (celé nezáporné čísla).');
+  }
+
+  // zápas bez remízy (tenis, šípky…) nesmie skončiť nerozhodne
+  if (match.tipType === 'winner_no_draw' && Number(homeScore) === Number(awayScore)) {
+    throw new ApiError(400, 'Tento zápas nemôže skončiť remízou — musí mať víťaza.');
   }
 
   match.homeScore = homeScore;
@@ -360,7 +368,8 @@ const bulkCreateMatches = asyncHandler(async (req, res) => {
     if (home.id === away.id) { errors.push(`Riadok ${i + 1}: tímy sú rovnaké.`); continue; }
     const when = new Date(timeStr.replace(' ', 'T'));
     if (isNaN(when)) { errors.push(`Riadok ${i + 1}: neplatný čas „${timeStr}".`); continue; }
-    const tipType = /^(winner|víťaz|vitaz|1x2)$/i.test(typeStr || '') ? 'winner' : 'exact_score';
+    const tt = (typeStr || '').trim().toLowerCase();
+    const tipType = /^(winner_no_draw|no_draw|1x2_nodraw|bez_remizy)$/.test(tt) ? 'winner_no_draw' : (/^(winner|víťaz|vitaz|1x2)$/i.test(tt) ? 'winner' : 'exact_score');
     await Match.create({ roundId: round.id, homeTeamId: home.id, awayTeamId: away.id, matchTime: when, tipType, status: 'scheduled' });
     added += 1;
   }

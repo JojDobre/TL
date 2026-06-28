@@ -93,6 +93,10 @@ const createOrUpdateTip = asyncHandler(async (req, res) => {
     if (!['home', 'away', 'draw'].includes(winner)) {
       throw new ApiError(400, 'Zadaj platného víťaza (home/away/draw).');
     }
+  } else if (match.tipType === 'winner_no_draw') {
+    if (!['home', 'away'].includes(winner)) {
+      throw new ApiError(400, 'Zadaj víťaza (home/away) — remíza tu nie je možná.');
+    }
   }
 
   // priprav hodnoty

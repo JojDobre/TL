@@ -19,6 +19,12 @@
 
 const DEFAULT_SCORING = { exactScore: 10, correctWinner: 3, goalDifference: 2, correctGoals: 1 };
 
+// Typy tipovania, kde sa tipuje len víťaz (1/X/2 alebo 1/2) — nie presné skóre.
+// winner = s možnou remízou, winner_no_draw = bez remízy (tenis, šípky…).
+function isWinnerType(tipType) {
+  return tipType === 'winner' || tipType === 'winner_no_draw';
+}
+
 // Váha priamo z tipu a výsledku zápasu (0 / 0.25 / 0.5 / 1).
 function tipQualityWeight(tip, match) {
   if (!match) return 0;
@@ -27,8 +33,8 @@ function tipQualityWeight(tip, match) {
   if (hs == null || as == null) return 0;
   const actual = hs > as ? 'home' : (hs < as ? 'away' : 'draw');
 
-  if (match.tipType === 'winner') {
-    // tip len na víťaza (1/X/2): existuje len správne/nesprávne → 1.0 alebo 0
+  if (isWinnerType(match.tipType)) {
+    // tip len na víťaza (1/X/2 alebo 1/2): existuje len správne/nesprávne → 1.0 alebo 0
     return tip && tip.winner && tip.winner === actual ? 1.0 : 0;
   }
   if (!tip || tip.homeScore == null || tip.awayScore == null) return 0;
@@ -50,7 +56,7 @@ function weightFromPoints(points, tipType, scoring) {
   const p = points || 0;
   if (p <= 0) return 0;
   // tip na víťaza vie získať len "correctWinner" body; trafený = plný úspech (1.0)
-  if (tipType === 'winner') {
+  if (isWinnerType(tipType)) {
     return p >= (s.correctWinner || 3) ? 1.0 : 0;
   }
   if (p >= (s.exactScore || 10)) return 1.0;
@@ -76,6 +82,7 @@ function accuracyFromTipsWithScores(tips, getMatch) {
 
 module.exports = {
   DEFAULT_SCORING,
+  isWinnerType,
   tipQualityWeight,
   weightFromPoints,
   accuracyFromTipsWithScores,

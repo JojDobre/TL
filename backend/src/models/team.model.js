@@ -22,8 +22,9 @@ module.exports = (sequelize, DataTypes) => {
     },
     // national = národný tím (bez športu, naprieč športmi)
     // club = klub (so športom + krajinou)
+    // individual = jednotlivec (osoba — tenis, šípky, box…); súťaží sám za seba
     teamType: {
-      type: DataTypes.ENUM('national', 'club'),
+      type: DataTypes.ENUM('national', 'club', 'individual'),
       defaultValue: 'club',
     },
     // šport (kód z číselníka) — len pre kluby

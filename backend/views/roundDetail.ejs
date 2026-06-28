@@ -137,7 +137,8 @@
       <% } %>
       <div class="match-list" id="matchList">
         <% matches.forEach(function (m) {
-             var isWinner = m.tipType === 'winner';
+             var isWinner = (m.tipType === 'winner' || m.tipType === 'winner_no_draw');
+             var noDraw = m.tipType === 'winner_no_draw';
              var tipped = m.myTip && (isWinner ? m.myTip.winner : m.myTip.homeScore != null);
              var started = new Date(m.matchTime) <= new Date();
              var evaluated = m.status === 'finished';
@@ -148,7 +149,7 @@
         %>
         <div class="match match-row<%= tipped ? ' tipped' : '' %><%= locked ? ' locked' : '' %>" data-match data-match-id="<%= m.id %>" data-type="<%= isWinner ? 'winner' : 'exact' %>"<%= locked ? ' data-locked' : '' %>>
           <div class="match-head">
-            <span class="match-meta"><%= fmtDT(m.matchTime) %><%= isWinner ? ' · tip: víťaz (1 X 2)' : '' %></span>
+            <span class="match-meta"><%= fmtDT(m.matchTime) %><%= isWinner ? (noDraw ? ' · tip: víťaz (1 2)' : ' · tip: víťaz (1 X 2)') : '' %></span>
             <% if (evaluated) { %><span class="tag tag-success"><span class="dot"></span>Vyhodnotené</span>
             <% } else if (canceled) { %><span class="tag tag-muted"><span class="dot"></span>Zrušený</span>
             <% } else if (locked) { %><span class="tag tag-warning"><span class="dot"></span>Uzavretý</span>
@@ -159,7 +160,7 @@
             <% if (isWinner) { %>
               <div class="onex2-pick" role="group">
                 <button type="button" class="onex2-btn<%= m.myTip && m.myTip.winner === 'home' ? ' sel' : '' %>" data-w="home"<%= disabled ? ' disabled' : '' %>>1</button>
-                <button type="button" class="onex2-btn<%= m.myTip && m.myTip.winner === 'draw' ? ' sel' : '' %>" data-w="draw"<%= disabled ? ' disabled' : '' %>>X</button>
+                <% if (!noDraw) { %><button type="button" class="onex2-btn<%= m.myTip && m.myTip.winner === 'draw' ? ' sel' : '' %>" data-w="draw"<%= disabled ? ' disabled' : '' %>>X</button><% } %>
                 <button type="button" class="onex2-btn<%= m.myTip && m.myTip.winner === 'away' ? ' sel' : '' %>" data-w="away"<%= disabled ? ' disabled' : '' %>>2</button>
               </div>
             <% } else {
@@ -198,7 +199,7 @@
       </div>
       <div class="match-list">
         <% matches.forEach(function (m) { var canceled = m.status === 'canceled'; var done = m.status === 'finished';
-             var isWin = m.tipType === 'winner';
+             var isWin = (m.tipType === 'winner' || m.tipType === 'winner_no_draw');
              var hitHome = done && !isWin && m.myTip && m.myTip.homeScore != null && m.myTip.homeScore === m.homeScore;
              var hitAway = done && !isWin && m.myTip && m.myTip.awayScore != null && m.myTip.awayScore === m.awayScore;
         %>
@@ -213,7 +214,7 @@
           </div>
           <div class="between" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
             <% var winLbl = function(w){ return w==='home'?'1 (domáci)':w==='draw'?'X (remíza)':w==='away'?'2 (hosť)':'—'; };
-               var isWin = m.tipType === 'winner';
+               var isWin = (m.tipType === 'winner' || m.tipType === 'winner_no_draw');
                var hasMy = m.myTip && (isWin ? m.myTip.winner : m.myTip.homeScore != null);
                var full = m.myTip && m.myTip.points >= (isWin ? (s.correctWinner||3) : (s.exactScore||10)); %>
             <% if (canceled) { %>
@@ -234,7 +235,7 @@
             <% } %>
             <div data-others-list>
             <% m.others.forEach(function (o) { %>
-            <div class="other-tip" data-name="<%= (o.name||'').toLowerCase() %>"><span class="avatar avatar-sm" style="background:var(--surface-3)"><%= initials(o.name) %></span><span class="nm"><% if (o.userId) { %><a class="player-link" href="/player/<%= o.userId %>"><%= o.name %></a><% } else { %><%= o.name %><% } %></span><b class="<%= o.points >= (m.tipType === 'winner' ? (s.correctWinner||3) : (s.exactScore||10)) ? 'tip-correct' : 'hi' %>"><%= m.tipType === 'winner' ? (o.winner==='home'?'1':o.winner==='draw'?'X':o.winner==='away'?'2':'–') : ((o.homeScore != null ? o.homeScore : '–') + ' : ' + (o.awayScore != null ? o.awayScore : '–')) %></b><span class="pts-pill<%= o.points >= (m.tipType === 'winner' ? (s.correctWinner||3) : (s.exactScore||10)) ? ' max' : (o.points ? '' : ' zero') %>">+<%= o.points || 0 %></span></div>
+            <div class="other-tip" data-name="<%= (o.name||'').toLowerCase() %>"><span class="avatar avatar-sm" style="background:var(--surface-3)"><%= initials(o.name) %></span><span class="nm"><% if (o.userId) { %><a class="player-link" href="/player/<%= o.userId %>"><%= o.name %></a><% } else { %><%= o.name %><% } %></span><% var oIsWin = (m.tipType === 'winner' || m.tipType === 'winner_no_draw'); %><b class="<%= o.points >= (oIsWin ? (s.correctWinner||3) : (s.exactScore||10)) ? 'tip-correct' : 'hi' %>"><%= oIsWin ? (o.winner==='home'?'1':o.winner==='draw'?'X':o.winner==='away'?'2':'–') : ((o.homeScore != null ? o.homeScore : '–') + ' : ' + (o.awayScore != null ? o.awayScore : '–')) %></b><span class="pts-pill<%= o.points >= (oIsWin ? (s.correctWinner||3) : (s.exactScore||10)) ? ' max' : (o.points ? '' : ' zero') %>">+<%= o.points || 0 %></span></div>
             <% }); %>
             </div>
             <div class="others-pager" data-others-pager style="display:none;align-items:center;justify-content:center;gap:14px;margin-top:10px">

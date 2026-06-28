@@ -41,7 +41,7 @@ const availableTeams = asyncHandler(async (req, res) => {
       { scope: 'custom', creatorId: userId },
     ],
   };
-  if (req.query.teamType === 'national' || req.query.teamType === 'club') where.teamType = req.query.teamType;
+  if (['national', 'club', 'individual'].includes(req.query.teamType)) where.teamType = req.query.teamType;
   if (req.query.sport && SPORT_CODES.includes(req.query.sport)) where.sport = req.query.sport;
   if (req.query.country && COUNTRY_CODES.includes(req.query.country)) where.country = req.query.country;
   if (req.query.search) where.name = { [Op.like]: `%${req.query.search}%` };
@@ -107,10 +107,11 @@ const createCustomTeam = asyncHandler(async (req, res) => {
 
   const name = (req.body.name || '').trim();
   if (!name) throw new ApiError(400, 'Názov tímu je povinný.');
-  const teamType = req.body.teamType === 'national' ? 'national' : 'club';
+  const teamType = ['national', 'club', 'individual'].includes(req.body.teamType) ? req.body.teamType : 'club';
   let sport = null;
   let country = req.body.country && COUNTRY_CODES.includes(req.body.country) ? req.body.country : null;
-  if (teamType === 'club') {
+  // klub aj jednotlivec môžu mať šport (tenis, šípky…); národný tím nie
+  if (teamType === 'club' || teamType === 'individual') {
     sport = req.body.sport && SPORT_CODES.includes(req.body.sport) ? req.body.sport : null;
   }
   const logo = (req.body.logo || '').trim() || null;

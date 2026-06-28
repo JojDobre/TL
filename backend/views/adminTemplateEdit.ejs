@@ -95,7 +95,7 @@
         <label class="mini-label">Založiť nový tím</label>
         <input class="input" id="ntName" placeholder="Názov tímu" style="margin-bottom:8px">
         <div class="row g-2" style="margin-bottom:8px">
-          <select class="select" id="ntType" style="flex:1"><option value="club">Klub</option><option value="national">Národný tím</option></select>
+          <select class="select" id="ntType" style="flex:1"><option value="club">Klub</option><option value="national">Národný tím</option><option value="individual">Jednotlivec (osoba)</option></select>
           <select class="select" id="ntSport" style="flex:1"><% sports.forEach(function(s){ %><option value="<%= s.code %>"><%= s.label %></option><% }); %></select>
         </div>
         <select class="select" id="ntCountry" style="width:100%;margin-bottom:8px"><option value="">— krajina (voliteľné) —</option><% countries.forEach(function(c){ %><option value="<%= c.code %>"><%= c.label %></option><% }); %></select>
@@ -136,7 +136,7 @@
             <div class="match-line" data-match="<%= m.id %>">
               <span class="match-teams"><%= m.homeTeam %> <span class="faint">vs</span> <%= m.awayTeam %></span>
               <span class="muted"><%= new Date(m.matchTime).toLocaleString('sk-SK',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}) %></span>
-              <span class="tag <%= m.tipType === 'winner' ? 'tag-muted' : 'tag-info' %>"><%= m.tipType === 'winner' ? 'Víťaz' : 'Skóre' %></span>
+              <% var _wt = (m.tipType === 'winner' || m.tipType === 'winner_no_draw'); %><span class="tag <%= _wt ? 'tag-muted' : 'tag-info' %>"><%= m.tipType === 'winner_no_draw' ? 'Víťaz (1/2)' : (m.tipType === 'winner' ? 'Víťaz (1/X/2)' : 'Skóre') %></span>
               <button class="btn btn-ghost btn-icon" title="Vymazať" data-del-match="<%= m.id %>" style="color:var(--danger)">✕</button>
             </div>
             <% }); %>
@@ -146,7 +146,7 @@
             <div><span class="mini-label">Domáci</span><select class="select sel-home"></select></div>
             <div><span class="mini-label">Hosť</span><select class="select sel-away"></select></div>
             <div><span class="mini-label">Čas</span><input class="input inp-time" type="datetime-local"></div>
-            <div><span class="mini-label">Typ</span><select class="select sel-type"><option value="exact_score">Skóre</option><option value="winner">Víťaz</option></select></div>
+            <div><span class="mini-label">Typ</span><select class="select sel-type"><option value="exact_score">Skóre</option><option value="winner">Víťaz (1/X/2)</option><option value="winner_no_draw">Víťaz bez remízy (1/2)</option></select></div>
             <button class="btn btn-secondary btn-sm btn-add-match">+ Zápas</button>
           </div>
         </div>
@@ -285,7 +285,7 @@
         line.className='match-line'; line.setAttribute('data-match', j.data.id);
         line.innerHTML = '<span class="match-teams">'+hName+' <span class="faint">vs</span> '+aName+'</span>'
           + '<span class="muted">'+d.toLocaleString('sk-SK',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})+'</span>'
-          + '<span class="tag '+(type==='winner'?'tag-muted':'tag-info')+'">'+(type==='winner'?'Víťaz':'Skóre')+'</span>'
+          + '<span class="tag '+((type==='winner'||type==='winner_no_draw')?'tag-muted':'tag-info')+'">'+(type==='winner_no_draw'?'Víťaz (1/2)':(type==='winner'?'Víťaz (1/X/2)':'Skóre'))+'</span>'
           + '<button class="btn btn-ghost btn-icon" title="Vymazať" data-del-match="'+j.data.id+'" style="color:var(--danger)">✕</button>';
         list.appendChild(line);
         updateRoundCount(rid2);
@@ -333,7 +333,7 @@
         + '<div><span class="mini-label">Domáci</span><select class="select sel-home">'+teamOptions()+'</select></div>'
         + '<div><span class="mini-label">Hosť</span><select class="select sel-away">'+teamOptions()+'</select></div>'
         + '<div><span class="mini-label">Čas</span><input class="input inp-time" type="datetime-local"></div>'
-        + '<div><span class="mini-label">Typ</span><select class="select sel-type"><option value="exact_score">Skóre</option><option value="winner">Víťaz</option></select></div>'
+        + '<div><span class="mini-label">Typ</span><select class="select sel-type"><option value="exact_score">Skóre</option><option value="winner">Víťaz (1/X/2)</option><option value="winner_no_draw">Víťaz bez remízy (1/2)</option></select></div>'
         + '<button class="btn btn-secondary btn-sm btn-add-match">+ Zápas</button></div></div>';
       document.getElementById('roundsWrap').appendChild(block);
       document.getElementById('rName').value=''; document.getElementById('rStart').value=''; document.getElementById('rEnd').value='';
