@@ -101,7 +101,7 @@ const loadMatchWithContext = (id, withTips = false) => {
 };
 
 // validácia skóre: celé nezáporné číslo
-const validScore = (v) => Number.isInteger(v) && v >= 0;
+const validScore = (v) => Number.isInteger(v) && v >= 0 && v <= 99;
 
 // GET /api/matches?roundId=
 const getAllMatches = asyncHandler(async (req, res) => {

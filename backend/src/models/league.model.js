@@ -39,7 +39,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       seasonId: {
         type: DataTypes.INTEGER,  // Odkaz na sezónu, do ktorej liga patrí
-        allowNull: false,
+        allowNull: true,          // null = šablóna (isTemplate:true), ktorá nepatrí do sezóny
       },
       // Kto ligu vytvoril (pre limity a oprávnenia)
       creatorId: {

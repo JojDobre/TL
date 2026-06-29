@@ -75,7 +75,7 @@
         <% } else { %><span class="tag tag-warning" data-status><span class="dot"></span>Čaká na výsledok</span><% } %>
       </div>
       <div class="ev-teams">
-        <div class="ev-team"><span class="team-logo" style="width:42px;height:42px;font-size:13px;background:var(--surface-3)"><%= m.homeAbbr %></span><span class="nm"><%= m.homeTeam ? m.homeTeam.name : '—' %></span></div>
+        <div class="ev-team"><% if (m.homeTeam && m.homeTeam.logo) { %><span class="team-logo" style="width:42px;height:42px;background:none;border:none"><img src="<%= m.homeTeam.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="width:42px;height:42px;font-size:13px;background:var(--surface-3)"><%= m.homeAbbr %></span><% } %><span class="nm"><%= m.homeTeam ? m.homeTeam.name : '—' %></span></div>
         <% if (done) { %>
           <div class="ev-score"><span class="num" style="font-size:1.9rem;font-weight:700;color:var(--success)" data-hs><%= m.homeScore %></span><span class="ev-colon">:</span><span class="num" style="font-size:1.9rem;font-weight:700;color:var(--text-1)" data-as><%= m.awayScore %></span></div>
         <% } else if (canceled) { %>
@@ -83,7 +83,7 @@
         <% } else { %>
           <div class="ev-score"><input class="input" inputmode="numeric" placeholder="0" data-home><span class="ev-colon">:</span><input class="input" inputmode="numeric" placeholder="0" data-away></div>
         <% } %>
-        <div class="ev-team r"><span class="team-logo" style="width:42px;height:42px;font-size:13px;background:var(--surface-3)"><%= m.awayAbbr %></span><span class="nm"><%= m.awayTeam ? m.awayTeam.name : '—' %></span></div>
+        <div class="ev-team r"><% if (m.awayTeam && m.awayTeam.logo) { %><span class="team-logo" style="width:42px;height:42px;background:none;border:none"><img src="<%= m.awayTeam.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="width:42px;height:42px;font-size:13px;background:var(--surface-3)"><%= m.awayAbbr %></span><% } %><span class="nm"><%= m.awayTeam ? m.awayTeam.name : '—' %></span></div>
       </div>
       <div class="ev-actions">
         <% if (done) { %>

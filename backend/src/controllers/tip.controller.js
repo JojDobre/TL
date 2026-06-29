@@ -12,7 +12,7 @@ const { Op } = Sequelize;
 const { ApiError, asyncHandler } = require('../middleware/error.middleware');
 const { isLeagueLocked } = require('../utils/league.utils');
 
-const validScore = (v) => Number.isInteger(v) && v >= 0;
+const validScore = (v) => Number.isInteger(v) && v >= 0 && v <= 99;
 
 // GET /api/tips/match/:matchId — vlastný tip pre zápas
 const getUserTipForMatch = asyncHandler(async (req, res) => {

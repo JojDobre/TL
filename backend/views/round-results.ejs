@@ -68,7 +68,7 @@
     %>
       <div class="card res-match" style="<%= border %>">
         <div class="res-top">
-          <div class="res-team"><span class="team-logo" style="width:40px;height:40px;font-size:12px;background:linear-gradient(135deg,#3a7bd5,#1b3f72)"><%= m.homeAbbr %></span><span class="nm"><%= m.home %></span></div>
+          <div class="res-team"><% if (m.homeLogo) { %><span class="team-logo" style="width:40px;height:40px;background:none;border:none"><img src="<%= m.homeLogo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="width:40px;height:40px;font-size:12px;background:linear-gradient(135deg,#3a7bd5,#1b3f72)"><%= m.homeAbbr %></span><% } %><span class="nm"><%= m.home %></span></div>
           <div class="res-scoreline">
             <% if (m.status === 'finished') { %>
               <div class="res-score" <%= m.quality==='exact' ? 'style="color:var(--success)"' : '' %>><%= scoreStr(m.homeScore, m.awayScore) %></div>
@@ -79,7 +79,7 @@
               <div class="res-score muted">vs</div><div class="res-final">nehrané</div>
             <% } %>
           </div>
-          <div class="res-team r"><span class="team-logo" style="width:40px;height:40px;font-size:12px;background:linear-gradient(135deg,#d52b1e,#8a1610)"><%= m.awayAbbr %></span><span class="nm"><%= m.away %></span></div>
+          <div class="res-team r"><% if (m.awayLogo) { %><span class="team-logo" style="width:40px;height:40px;background:none;border:none"><img src="<%= m.awayLogo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="width:40px;height:40px;font-size:12px;background:linear-gradient(135deg,#d52b1e,#8a1610)"><%= m.awayAbbr %></span><% } %><span class="nm"><%= m.away %></span></div>
         </div>
 
         <!-- môj tip -->

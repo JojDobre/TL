@@ -227,6 +227,8 @@ const roundResultsPage = asyncHandler(async (req, res) => {
       id: mj.id,
       home: mj.homeTeam ? mj.homeTeam.name : '—',
       away: mj.awayTeam ? mj.awayTeam.name : '—',
+      homeLogo: mj.homeTeam ? (mj.homeTeam.logo || null) : null,
+      awayLogo: mj.awayTeam ? (mj.awayTeam.logo || null) : null,
       homeAbbr: teamAbbr(mj.homeTeam && mj.homeTeam.name),
       awayAbbr: teamAbbr(mj.awayTeam && mj.awayTeam.name),
       homeScore: mj.homeScore, awayScore: mj.awayScore, status: mj.status, tipType: mj.tipType,

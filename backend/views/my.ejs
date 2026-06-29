@@ -173,7 +173,7 @@
         <% } else { %>
         <% upcoming.forEach(function(u){ %>
         <div class="nm">
-          <div class="nm-team"><span class="team-logo" style="background:linear-gradient(135deg,#0b4ea2,#06306a)"><%= u.homeAbbr %></span><span class="nm-vs"><%= u.home %></span></div>
+          <div class="nm-team"><% if (u.homeLogo) { %><span class="team-logo" style="background:none;border:none"><img src="<%= u.homeLogo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="background:linear-gradient(135deg,#0b4ea2,#06306a)"><%= u.homeAbbr %></span><% } %><span class="nm-vs"><%= u.home %></span></div>
           <span class="nm-vs">vs <%= u.away %></span>
           <span class="nm-when"><%= fmtTime(u.time) %></span>
         </div>

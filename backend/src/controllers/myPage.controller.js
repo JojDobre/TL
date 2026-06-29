@@ -156,6 +156,7 @@ const myPage = asyncHandler(async (req, res) => {
         home: m.homeTeam ? m.homeTeam.name : '—',
         away: m.awayTeam ? m.awayTeam.name : '—',
         homeAbbr: abbr(m.homeTeam ? m.homeTeam.name : ''),
+        homeLogo: m.homeTeam ? (m.homeTeam.logo || null) : null,
         time: m.matchTime,
         seasonId: m.Round && m.Round.League ? m.Round.League.seasonId : null,
         leagueId: m.Round ? m.Round.leagueId : null,

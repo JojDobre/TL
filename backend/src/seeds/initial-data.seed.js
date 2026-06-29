@@ -179,7 +179,7 @@ async function seedInitialData() {
     name: 'MS 2026 — hlavná', description: 'Hlavná oficiálna liga MS.',
     type: 'official', joinCode: code6(), password: null, hasPassword: false,
     seasonId: sMS.id, creatorId: admin.id, scoringSystem: DEF_SCORING, scoringLocked: true,
-    active: true, isTemplate: true, templateId: null,
+    active: true, isTemplate: false, templateId: null,
   });
   await joinLeague(lMSmain, admin, 'admin');
   for (const u of players) await joinLeague(lMSmain, u);
@@ -297,18 +297,45 @@ async function seedInitialData() {
   await joinSeason(sKam, peter);
   await joinSeason(sKam, jana);
  
+  // ============================================================
+  // ŠABLÓNA (samostatná, mimo sezóny) — zdroj pre klonovanie
+  // isTemplate:true, seasonId:null, žiadni hráči. Oddelená od živej ligy lMSmain.
+  // ============================================================
+  console.log('  → šablóna: MS 2026 (oficiálna predloha)');
+  const tplMS = await db.League.create({
+    name: 'MS 2026 — oficiálna šablóna', description: 'Predpripravená predloha MS, z ktorej si môžu hráči vytvoriť vlastnú ligu.',
+    type: 'official', joinCode: code6(), password: null, hasPassword: false,
+    seasonId: null, creatorId: admin.id, scoringSystem: DEF_SCORING, scoringLocked: false,
+    active: true, isTemplate: true, templateId: null,
+  });
+  // skopíruj kolá a zápasy zo živej ligy lMSmain do šablóny (bez tipov a hráčov)
+  {
+    const liveRounds = await db.Round.findAll({ where: { leagueId: lMSmain.id }, include: [{ model: db.Match }], order: [['startDate', 'ASC']] });
+    for (const r of liveRounds) {
+      const tr = await db.Round.create({ name: r.name, description: r.description, leagueId: tplMS.id, startDate: r.startDate, endDate: r.endDate, active: r.active });
+      for (const m of (r.Matches || [])) {
+        await db.Match.create({
+          roundId: tr.id, homeTeamId: m.homeTeamId, awayTeamId: m.awayTeamId, matchTime: m.matchTime,
+          tipType: m.tipType, homeScore: m.homeScore, awayScore: m.awayScore, status: m.status, sourceMatchId: null,
+        });
+        await db.LeagueTeam.findOrCreate({ where: { leagueId: tplMS.id, teamId: m.homeTeamId }, defaults: { leagueId: tplMS.id, teamId: m.homeTeamId } });
+        await db.LeagueTeam.findOrCreate({ where: { leagueId: tplMS.id, teamId: m.awayTeamId }, defaults: { leagueId: tplMS.id, teamId: m.awayTeamId } });
+      }
+    }
+  }
+
   // KLON ligy zo šablóny lMSmain (živé prepojenie výsledkov)
   const lKamClone = await db.League.create({
     name: 'Naše MS 2026', description: 'Klon oficiálneho MS, súťažíme len my.',
     type: 'custom', joinCode: code6(), password: null, hasPassword: false,
     seasonId: sKam.id, creatorId: vip.id, scoringSystem: { exactScore: 12, correctGoals: 1, correctWinner: 4, goalDifference: 2 },
-    scoringLocked: false, active: true, isTemplate: false, templateId: lMSmain.id,
+    scoringLocked: false, active: true, isTemplate: false, templateId: tplMS.id,
   });
   await joinLeague(lKamClone, vip, 'admin');
   await joinLeague(lKamClone, peter);
   await joinLeague(lKamClone, jana);
   // naklonuj kolá+zápasy zo šablóny (rovnaká logika ako league-clone.util)
-  const tplRounds = await db.Round.findAll({ where: { leagueId: lMSmain.id }, include: [{ model: db.Match }], order: [['startDate', 'ASC']] });
+  const tplRounds = await db.Round.findAll({ where: { leagueId: tplMS.id }, include: [{ model: db.Match }], order: [['startDate', 'ASC']] });
   for (const r of tplRounds) {
     const nr = await db.Round.create({ name: r.name, description: r.description, leagueId: lKamClone.id, startDate: r.startDate, endDate: r.endDate, active: r.active });
     for (const m of (r.Matches || [])) {

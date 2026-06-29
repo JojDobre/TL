@@ -18,7 +18,7 @@ const listTeams = asyncHandler(async (req, res) => {
   const where = {};
   // admin vidí primárne globálne; ak chce, môže filtrovať aj custom
   if (req.query.scope === 'global' || req.query.scope === 'custom') where.scope = req.query.scope;
-  if (req.query.teamType === 'national' || req.query.teamType === 'club') where.teamType = req.query.teamType;
+  if (['national', 'club', 'individual'].includes(req.query.teamType)) where.teamType = req.query.teamType;
   if (req.query.sport && SPORT_CODES.includes(req.query.sport)) where.sport = req.query.sport;
   if (req.query.country && COUNTRY_CODES.includes(req.query.country)) where.country = req.query.country;
   if (req.query.search) where.name = { [Op.like]: `%${req.query.search}%` };
@@ -38,13 +38,16 @@ const listTeams = asyncHandler(async (req, res) => {
 function normalizeTeam(body) {
   const name = (body.name || '').trim();
   if (!name) throw new ApiError(400, 'Názov tímu je povinný.');
-  const teamType = body.teamType === 'national' ? 'national' : 'club';
+  const teamType = ['national', 'club', 'individual'].includes(body.teamType) ? body.teamType : 'club';
   let sport = null;
   let country = body.country && COUNTRY_CODES.includes(body.country) ? body.country : null;
   if (teamType === 'club') {
     sport = body.sport && SPORT_CODES.includes(body.sport) ? body.sport : null;
     if (!sport) throw new ApiError(400, 'Klub musí mať platný šport.');
     if (!country) throw new ApiError(400, 'Klub musí mať platnú krajinu.');
+  } else if (teamType === 'individual') {
+    // jednotlivec (tenista, šípkar…): šport aj krajina sú voliteľné
+    sport = body.sport && SPORT_CODES.includes(body.sport) ? body.sport : null;
   }
   const logo = (body.logo || '').trim() || null;
   return { name, teamType, sport, country, logo };
@@ -65,8 +68,9 @@ const bulkCreateTeams = asyncHandler(async (req, res) => {
   const { teamType, sport, country, names } = req.body;
   if (!names || !names.trim()) throw new ApiError(400, 'Zadaj aspoň jeden tím.');
 
-  const type = teamType === 'national' ? 'national' : 'club';
-  const sp = type === 'club' ? (SPORT_CODES.includes(sport) ? sport : null) : null;
+  const type = ['national', 'club', 'individual'].includes(teamType) ? teamType : 'club';
+  // klub aj jednotlivec môžu mať šport; len pri klube je povinný spolu s krajinou
+  const sp = (type === 'club' || type === 'individual') ? (SPORT_CODES.includes(sport) ? sport : null) : null;
   const co = COUNTRY_CODES.includes(country) ? country : null;
   if (type === 'club' && (!sp || !co)) throw new ApiError(400, 'Pri kluboch zvoľ platný šport aj krajinu.');
 
