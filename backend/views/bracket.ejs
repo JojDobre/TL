@@ -1,0 +1,146 @@
+<%- include('partials/head', { title: 'Pavúk play-off', page: 'seasons', active: 'seasons', pageStyle: `
+  .bk-head { padding:26px 0 16px; }
+  .crumb { font-size:var(--fs-sm); color:var(--text-4); margin-bottom:12px; }
+  .crumb a { color:var(--text-3); } .crumb a:hover { color:var(--brand-bright); }
+
+  .bk-summary { display:flex; align-items:center; gap:20px; flex-wrap:wrap; padding:16px 20px; margin-top:20px; }
+  .bk-summary .seg { display:flex; flex-direction:column; gap:4px; }
+  .bk-summary .lbl { font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.1em; font-weight:700; color:var(--text-4); }
+  .bk-prog { display:flex; align-items:center; gap:12px; }
+  .bk-prog .progress { width:160px; }
+  .bk-prog .n { font-family:var(--num); font-weight:700; color:var(--text-1); font-variant-numeric:tabular-nums; }
+  .champ-now { display:flex; align-items:center; gap:11px; }
+  .champ-now .tr { width:30px; height:30px; color:var(--gold); flex:none; }
+  .champ-team { display:inline-flex; align-items:center; gap:9px; font-weight:700; color:var(--text-1); }
+  .champ-team .lg { width:30px; height:30px; border-radius:8px; flex:none; display:flex; align-items:center; justify-content:center;
+    font-family:var(--num); font-weight:700; font-size:11px; color:#fff; box-shadow:inset 0 0 0 1px rgba(255,255,255,.14); }
+  .champ-empty { color:var(--text-4); font-weight:600; }
+  .bk-summary .spacer { flex:1; }
+
+  .bracket-scroll { overflow-x:auto; overflow-y:hidden; padding:10px 4px 22px; -webkit-overflow-scrolling:touch; }
+  .scroll-hint { display:none; }
+  .bracket { position:relative; width:max-content; margin:0 auto; }
+
+  svg.connectors { position:absolute; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; overflow:visible; }
+  svg.connectors path { fill:none; stroke:var(--line-strong); stroke-width:2; }
+  svg.connectors path.on { stroke:var(--brand); stroke-width:2.5; }
+
+  .round-labels, .bracket-cols { display:flex; gap:44px; position:relative; z-index:1; }
+  .round-labels { margin-bottom:12px; }
+  .rl-col { flex:0 0 198px; text-align:center; }
+  .rl-col .r { font-size:var(--fs-xs); font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-3); }
+  .rl-col .conf { font-size:9px; letter-spacing:.14em; color:var(--text-4); margin-top:3px; }
+  .rl-col.is-final .r { color:var(--gold); }
+
+  .bracket-col { flex:0 0 198px; display:flex; flex-direction:column; justify-content:space-around; gap:16px; }
+  .bracket-col.single { justify-content:center; }
+
+  .series { background:var(--surface-1); border:1px solid var(--line); border-radius:var(--r-md); overflow:hidden; box-shadow:var(--shadow-sm); }
+  .series-cap { font-size:9px; letter-spacing:.1em; text-transform:uppercase; font-weight:700; color:var(--text-4); padding:6px 11px 0; }
+  .series-team { display:flex; align-items:center; gap:9px; width:100%; padding:9px 11px; background:none; border:none;
+    cursor:pointer; font-family:inherit; text-align:left; color:var(--text-2); transition:background .14s, color .14s; border-left:3px solid transparent; }
+  .series-team + .series-team { border-top:1px solid var(--line); }
+  .series-team:hover:not(.empty) { background:var(--surface-2); color:var(--text-1); }
+  .series-team .lg { width:26px; height:26px; border-radius:7px; flex:none; display:flex; align-items:center; justify-content:center;
+    font-family:var(--num); font-weight:700; font-size:10px; color:#fff; box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); overflow:hidden; }
+  .series-team .lg img { width:100%; height:100%; object-fit:contain; }
+  .series-team .ab { font-weight:700; color:inherit; font-size:var(--fs-sm); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .series-team .seed { margin-left:auto; font-size:var(--fs-xs); color:var(--text-4); font-family:var(--num); font-weight:700; }
+  .series-team.win { background:var(--brand-soft); color:var(--brand-bright); border-left-color:var(--brand); }
+  .series-team.win .seed { color:var(--brand-bright); }
+  .series-team.empty { cursor:default; color:var(--text-4); }
+  .series-team.empty .lg { background:var(--surface-3); color:var(--text-4); box-shadow:inset 0 0 0 1px var(--line); font-size:13px; }
+
+  .series.mirror .series-team { flex-direction:row-reverse; text-align:right; border-left:none; border-right:3px solid transparent; }
+  .series.mirror .series-team .seed { margin-left:0; margin-right:auto; }
+  .series.mirror .series-team.win { border-right-color:var(--brand); }
+
+  .col-final { align-items:center; justify-content:center; gap:14px; }
+  .cup-emblem { width:46px; height:46px; color:var(--gold); }
+  .series.final { border-color:var(--brand-line); box-shadow:0 0 0 1px var(--brand-line), var(--glow-brand); min-width:198px; }
+  .series.final .series-cap { color:var(--gold); }
+  .champ-card { text-align:center; padding:14px 16px; border:1px dashed var(--line-strong); border-radius:var(--r-md);
+    background:color-mix(in srgb, var(--gold) 7%, var(--surface-1)); min-width:198px; }
+  .champ-card .k { font-size:9px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; color:var(--gold); }
+  .champ-card .v { margin-top:8px; font-weight:700; color:var(--text-1); display:flex; align-items:center; justify-content:center; gap:9px; }
+  .champ-card .v .lg { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    font-family:var(--num); font-weight:700; font-size:11px; color:#fff; box-shadow:inset 0 0 0 1px rgba(255,255,255,.14); }
+  .champ-card.empty .v { color:var(--text-4); }
+
+  .savebar { position:sticky; bottom:0; z-index:30; margin-top:18px;
+    background: color-mix(in srgb, var(--surface-1) 92%, transparent); backdrop-filter:blur(12px);
+    border:1px solid var(--line-strong); border-radius: var(--r-lg); padding:14px 18px;
+    display:flex; align-items:center; justify-content:space-between; gap:14px; box-shadow:var(--shadow-lg); }
+
+  .toast-wrap { position:fixed; bottom:24px; right:24px; z-index:200; display:flex; flex-direction:column; gap:10px; }
+
+  @media (max-width: 1120px){
+    .scroll-hint { display:flex; align-items:center; gap:8px; justify-content:center; margin:0 0 6px;
+      font-size:var(--fs-xs); color:var(--text-4); font-weight:600; }
+    .bracket { margin:0; }
+  }
+  @media (max-width: 900px){
+    .savebar { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); flex-direction:column; align-items:stretch; gap:10px; }
+    .savebar .row.g-2 { width:100%; } .savebar .row.g-2 .btn { flex:1; }
+    .toast-wrap { bottom: calc(74px + env(safe-area-inset-bottom, 0px)); right:12px; left:12px; }
+    .bk-head { padding-top:16px; }
+    .bk-summary { gap:16px; }
+    .bk-summary .spacer { display:none; }
+  }
+` }) %>
+
+<div class="wrap bk-head">
+  <div class="crumb"><a href="/seasons">Sezóny</a> › Pavúk</div>
+  <div class="between wrap-gap" style="gap:16px">
+    <div>
+      <div class="row g-3 wrap-gap" style="margin-bottom:10px">
+        <h1 style="font-size:clamp(1.9rem,3vw,2.5rem)"><%= typeof title !== 'undefined' ? title : 'Pavúk play-off' %></h1>
+        <span class="tag tag-warning"><span class="dot"></span>Otvorené na tipovanie</span>
+      </div>
+      <p class="muted" style="margin:0">Klikni na tím, ktorý podľa teba postúpi — víťaz sa posunie do ďalšieho kola až po finále.</p>
+    </div>
+  </div>
+
+  <div class="card bk-summary">
+    <div class="seg">
+      <span class="lbl">Tvoj postup</span>
+      <div class="bk-prog">
+        <div class="progress"><i id="progBar" style="width:0%"></i></div>
+        <span class="n"><span id="progN">0</span> / <span id="progTotal">0</span> sérií</span>
+      </div>
+    </div>
+    <div class="seg">
+      <span class="lbl">Tvoj šampión</span>
+      <div class="champ-now">
+        <svg class="tr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 0 12 0V4H6v5Z"/><path d="M6 5H3v2a3 3 0 0 0 3 3M18 5h3v2a3 3 0 0 1-3 3"/><path d="M12 15v4M8 21h8M9 21v-1.5h6V21"/></svg>
+        <span id="champNow" class="champ-empty">Zatiaľ nevybraný</span>
+      </div>
+    </div>
+    <span class="spacer"></span>
+    <button class="btn btn-ghost btn-sm" id="resetBtn">Vyčistiť pavúk</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="scroll-hint">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7l-4 5 4 5M16 7l4 5-4 5"/></svg>
+    Potiahni do strán pre celý pavúk
+  </div>
+  <div class="bracket-scroll">
+    <div class="bracket" id="bracket">
+      <svg class="connectors" id="connectors" preserveAspectRatio="none"></svg>
+      <div class="round-labels" id="roundLabels"></div>
+      <div class="bracket-cols" id="cols"></div>
+    </div>
+  </div>
+
+  <div class="savebar">
+    <span class="muted" style="font-size:var(--fs-sm)">Pavúk môžeš meniť až do uzávierky. <b class="hi"><span id="saveN">0</span>/<span id="saveTotal">0</span></b> sérií vytipovaných</span>
+    <div class="row g-2"><button class="btn btn-ghost btn-sm" id="resetBtn2">Vyčistiť</button><button class="btn btn-primary" id="saveBtn">Uložiť pavúk</button></div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<%- include('partials/footer') %>
+<script src="/js/bracket.js"></script>

@@ -21,6 +21,8 @@
 .env.production.local
 /backend/.env
 /frontend/.env
+/backend/.reset-pwd.js
+/backend/reset-pwd.js
 
 # Logy
 npm-debug.log*
