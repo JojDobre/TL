@@ -93,7 +93,10 @@ const globalLeaderboardPage = asyncHandler(async (req, res) => {
   const yearAgo = new Date(); yearAgo.setFullYear(yearAgo.getFullYear() - 1);
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const officialLeagues = await League.findAll({ where: { type: 'official' }, attributes: ['id', 'name', 'seasonId'] });
+  const officialLeagues = await League.findAll({
+    where: { type: 'official', isTemplate: false },
+    attributes: ['id', 'name', 'seasonId'],
+  });
 
   // voliteľný filter podľa sezóny (?season=ID) — obmedzí na ligy danej sezóny
   const seasonFilter = req.query.season ? Number(req.query.season) : null;
@@ -188,9 +191,14 @@ const globalLeaderboardPage = asyncHandler(async (req, res) => {
   const myRow = meId ? board.find((r) => r.userId === meId) : null;
 
   // zoznam sezón pre filter (unikátne podľa seasonId)
-  const seasonOpts = [];
-  const seenSeason = {};
-  officialLeagues.forEach((l) => { if (!seenSeason[l.seasonId]) { seenSeason[l.seasonId] = 1; seasonOpts.push({ id: l.seasonId, name: l.name }); } });
+  // Zoznam oficiálnych sezón pre filter a odkazy "podľa sezóny".
+  // Preskakujeme ligy bez sezóny (seasonId null — napr. staré dáta) a názvy
+  // berieme zo SEZÓN, nie z prvej ligy (sezóna môže mať viac líg).
+  const seasonIds = [...new Set(officialLeagues.map((l) => l.seasonId).filter(Boolean))];
+  const seasonRows = seasonIds.length
+    ? await Season.findAll({ where: { id: { [Op.in]: seasonIds } }, attributes: ['id', 'name'] })
+    : [];
+  const seasonOpts = seasonRows.map((s) => ({ id: s.id, name: s.name }));
 
   res.render('leaderboards', {
     board,
