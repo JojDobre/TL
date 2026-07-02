@@ -60,6 +60,7 @@ const playerPage = asyncHandler(async (req, res) => {
         initials: ([user.firstName, user.lastName].filter(Boolean).map((x) => x[0]).join('') || user.username[0] || '?').toUpperCase(),
         profileImage: user.profileImage || '',
         createdAt: user.createdAt,
+        allowCompare: user.allowCompare !== false,
       },
       isPrivate: true,
       // prázdne hodnoty, aby šablóna mohla bezpečne zdieľať rovnaký kód
@@ -215,6 +216,7 @@ const playerPage = asyncHandler(async (req, res) => {
       initials: ([user.firstName, user.lastName].filter(Boolean).map((x) => x[0]).join('') || user.username[0] || '?').toUpperCase(),
       profileImage: user.profileImage || '',
       createdAt: user.createdAt,
+      allowCompare: user.allowCompare !== false,
     },
     stats: { totalPoints, bestRank, accuracy, bestStreak },
     form,

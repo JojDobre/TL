@@ -116,7 +116,9 @@ const updatePrivacy = asyncHandler(async (req, res) => {
   if (!user) throw new ApiError(404, 'Používateľ nenájdený.');
 
   user.profilePublic = !!req.body.profilePublic;
-  user.allowCompare = !!req.body.allowCompare;
+  // Porovnávanie má zmysel len pri verejnom profile — pri súkromnom ho vždy vypneme,
+  // aj keby klient poslal true (poistka voči obídeniu UI).
+  user.allowCompare = user.profilePublic ? !!req.body.allowCompare : false;
   await user.save();
 
   res.status(200).json({ success: true, message: 'Nastavenia súkromia uložené.' });

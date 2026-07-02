@@ -69,7 +69,7 @@
       </div>
       <div class="row g-2 wrap-gap">
         <a href="/leaderboards" class="btn btn-ghost btn-sm">Späť na rebríček</a>
-        <% if (isLoggedIn) { %><a href="/compare?with=<%= player.id %>" class="btn btn-secondary btn-sm">Porovnať s tebou</a><% } %>
+        <% if (isLoggedIn && player.allowCompare !== false && !(typeof isPrivate !== 'undefined' && isPrivate)) { %><a href="/compare?with=<%= player.id %>" class="btn btn-secondary btn-sm">Porovnať s tebou</a><% } %>
       </div>
     </div>
   </div>

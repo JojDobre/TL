@@ -92,9 +92,24 @@ const comparePage = asyncHandler(async (req, res) => {
   ]);
   if (!other) return res.status(404).render('error-page', { message: 'Hráč sa nenašiel.' });
 
-  // súkromie: hráč si môže porovnávanie vypnúť (alebo mať súkromný profil)
+  // súkromie: hráč si môže porovnávanie vypnúť (alebo mať súkromný profil).
+  // Namiesto 404/error-page zobrazíme bežnú compare stránku s VS bannerom
+  // a oznamom, že tento hráč porovnávanie nepovolil (rovnako ako súkromný profil).
   if (other.allowCompare === false || other.profilePublic === false) {
-    return res.status(403).render('error-page', { message: 'Tento hráč nemá povolené porovnávanie.' });
+    const isPrivateProfile = other.profilePublic === false;
+    return res.render('compare', {
+      me: { name: nameOf(me), username: me.username, initials: initials(me), profileImage: me.profileImage || '', vsRank: null },
+      other: { id: other.id, name: nameOf(other), username: other.username, initials: initials(other), profileImage: other.profileImage || '', vsRank: null },
+      lead: { label: '—', style: 'background:var(--surface-3);color:var(--text-3)' },
+      restricted: true,
+      restrictedMessage: isPrivateProfile
+        ? `${nameOf(other)} má súkromný profil, preto sa s ním nedá porovnávať.`
+        : `${nameOf(other)} nemá povolené porovnávanie s ostatnými hráčmi.`,
+      // prázdne hodnoty, aby šablóna mohla bezpečne bežať s rovnakým kódom
+      metrics: [], sharedStandings: [], sharedRounds: [],
+      roundWins: { me: 0, other: 0, total: 0 },
+      hasShared: false,
+    });
   }
 
   const [meStats, otherStats] = await Promise.all([playerStats(meId), playerStats(otherId)]);
@@ -182,6 +197,7 @@ const comparePage = asyncHandler(async (req, res) => {
     sharedRounds: sharedRoundsTop,
     roundWins: { me: myRoundWins, other: otherRoundWins, total: sharedRounds.length },
     hasShared: commonIds.length > 0,
+    restricted: false,
   });
 });
 

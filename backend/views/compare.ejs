@@ -47,7 +47,7 @@
   <div class="crumb"><a href="/leaderboards">Rebríčky</a> › <a href="/player/<%= other.id %>"><%= other.name %></a> › Porovnanie</div>
   <div class="eyebrow">Hlava na hlavu</div>
   <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Ty vs <%= other.name %></h1>
-  <p class="muted" style="margin-top:6px"><% if (hasShared) { %>Porovnanie vašich výsledkov naprieč <%= sharedStandings.length %> spoločnými súťažami.<% } else { %>Porovnanie celkových výsledkov — spoločné súťaže zatiaľ nemáte.<% } %></p>
+  <p class="muted" style="margin-top:6px"><% if (typeof restricted !== 'undefined' && restricted) { %>Porovnanie s týmto hráčom nie je dostupné.<% } else if (hasShared) { %>Porovnanie vašich výsledkov naprieč <%= sharedStandings.length %> spoločnými súťažami.<% } else { %>Porovnanie celkových výsledkov — spoločné súťaže zatiaľ nemáte.<% } %></p>
 </div>
 
 <div class="wrap" style="padding-bottom:64px">
@@ -68,6 +68,18 @@
       <div class="vs-rank" style="color:#6cabdd"><%= fmtRank(other.vsRank) %></div>
     </div>
   </div>
+
+  <% if (typeof restricted !== 'undefined' && restricted) { %>
+  <div class="card card-pad" style="text-align:center;max-width:520px;margin:24px auto 0">
+    <div style="width:64px;height:64px;border-radius:50%;background:var(--surface-2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px">🔒</div>
+    <h3 style="font-size:var(--fs-h4);margin-bottom:8px">Porovnanie nie je dostupné</h3>
+    <p class="muted" style="font-size:var(--fs-sm);max-width:400px;margin:0 auto 18px"><%= restrictedMessage %></p>
+    <div class="row g-2 center wrap-gap">
+      <a href="/player/<%= other.id %>" class="btn btn-ghost">Späť na profil <%= other.name.split(' ')[0] %></a>
+      <a href="/leaderboards" class="btn btn-secondary">Celý rebríček</a>
+    </div>
+  </div>
+  <% } else { %>
 
   <!-- STAT COMPARISON -->
   <div class="card card-pad cmp-table">
@@ -131,6 +143,7 @@
     <a href="/player/<%= other.id %>" class="btn btn-ghost">Späť na profil <%= other.name.split(' ')[0] %></a>
     <a href="/leaderboards" class="btn btn-secondary">Celý rebríček</a>
   </div>
+  <% } %>
 </div>
 
 <%- include('partials/footer') %>

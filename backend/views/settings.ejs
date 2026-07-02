@@ -231,9 +231,23 @@
 
   // Súkromie
   var spvBtn=document.getElementById('savePrivacy');
+  // Porovnávanie má zmysel len pri verejnom profile — keď je profil súkromný,
+  // prepínač porovnávania vypneme a zablokujeme.
+  var ppEl=document.getElementById('profilePublic');
+  var acEl=document.getElementById('allowCompare');
+  function syncCompareToggle(){
+    if(!ppEl||!acEl) return;
+    if(!ppEl.checked){ acEl.checked=false; acEl.disabled=true; }
+    else { acEl.disabled=false; }
+  }
+  if(ppEl){ ppEl.addEventListener('change', syncCompareToggle); }
+  syncCompareToggle(); // počiatočný stav pri načítaní
+
   if(spvBtn) spvBtn.addEventListener('click',function(){
     spvBtn.disabled=true;
-    fetch('/api/profile/privacy',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({profilePublic:document.getElementById('profilePublic').checked,allowCompare:document.getElementById('allowCompare').checked})})
+    // ak je profil súkromný, porovnávanie posielame vždy ako false
+    var allowCompare = (ppEl && ppEl.checked) ? document.getElementById('allowCompare').checked : false;
+    fetch('/api/profile/privacy',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({profilePublic:document.getElementById('profilePublic').checked,allowCompare:allowCompare})})
       .then(function(r){return r.json();}).then(function(res){ spvBtn.disabled=false; if(res.success===false){ toast('Nepodarilo sa',res.message||'Skús znova.',true); return; } toast('Uložené','Nastavenia súkromia boli uložené.'); })
       .catch(function(){ spvBtn.disabled=false; toast('Chyba','Skús znova.',true); });
   });
