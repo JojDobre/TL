@@ -44,12 +44,29 @@ const playerPage = asyncHandler(async (req, res) => {
   const user = await User.findByPk(targetId, { attributes: { exclude: ['password', 'email'] } });
   if (!user) return res.status(404).render('error-page', { message: 'Hráč sa nenašiel.' });
 
-  // súkromie: ak má hráč vypnutý verejný profil, nezobrazuj ho ostatným
-  // (admin a sám používateľ majú prístup vždy)
+  // súkromie: ak má hráč vypnutý verejný profil, nezobrazujeme ostatným jeho
+  // obsah — ale ZOBRAZÍME bežnú profilovú stránku s oznamom, že je súkromná
+  // (nie 404/error-page). Admin a sám používateľ majú prístup vždy.
   const viewer = meId ? await User.findByPk(meId, { attributes: ['role'] }) : null;
   const isAdmin = viewer && viewer.role === 'admin';
   if (user.profilePublic === false && !isAdmin) {
-    return res.status(403).render('error-page', { message: 'Tento hráč má súkromný profil.' });
+    const name = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username;
+    return res.render('player', {
+      player: {
+        id: user.id,
+        name,
+        username: user.username,
+        role: user.role,
+        initials: ([user.firstName, user.lastName].filter(Boolean).map((x) => x[0]).join('') || user.username[0] || '?').toUpperCase(),
+        profileImage: user.profileImage || '',
+        createdAt: user.createdAt,
+      },
+      isPrivate: true,
+      // prázdne hodnoty, aby šablóna mohla bezpečne zdieľať rovnaký kód
+      stats: { totalPoints: 0, bestRank: null, accuracy: null, bestStreak: 0 },
+      form: [], badges: [], badgeCount: 0, shared: [], moments: [],
+      isLoggedIn: !!meId,
+    });
   }
 
   // všetky tipy hráča s kontextom (kolo, liga) — pre štatistiky, formu, momenty
@@ -204,6 +221,7 @@ const playerPage = asyncHandler(async (req, res) => {
     badges, badgeCount,
     shared,
     moments,
+    isPrivate: false,
     isLoggedIn: !!meId,
   });
 });

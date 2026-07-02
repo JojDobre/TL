@@ -30,7 +30,9 @@
   .wp-photo { width:84px; aspect-ratio:1/1.12; border-radius:14px; overflow:hidden; flex:none;
     display:flex; align-items:center; justify-content:center; font-family:var(--num); font-weight:700;
     font-size:1.7rem; color:#fff; background:var(--surface-3); box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); }
-  .wp-photo img { width:100%; height:100%; object-fit:cover; }
+  /* keď je vnútri logo (img), zobrazíme ho celé (contain) a zrušíme rámik aj pozadie */
+  .wp-photo:has(img) { background:none; box-shadow:none; }
+  .wp-photo img { width:100%; height:100%; object-fit:contain; }
   .wp-card .nm { font-weight:700; color:var(--text-1); font-size:var(--fs-base); line-height:1.2; }
   .wp-card.sel { background:var(--brand-soft); border-color:var(--brand);
     box-shadow:0 0 0 3px var(--brand-soft), var(--glow-brand); }
@@ -213,12 +215,12 @@
             <!-- víťaz · jednotlivci: fotka hore, meno dole (bez popisov domáci/hostia) -->
             <div class="winner-people" role="group" aria-label="Víťaz zápasu">
               <button type="button" class="wp-card pick-w<%= m.myTip && m.myTip.winner === 'home' ? ' sel' : '' %>" data-w="home"<%= disabled ? ' disabled' : '' %>>
-                <span class="wp-photo"<% if (m.homeTeam && m.homeTeam.logo) { %> style="background:none"<% } %>><% if (m.homeTeam && m.homeTeam.logo) { %><img src="<%= m.homeTeam.logo %>" alt=""><% } else { %><%= m.homeAbbr %><% } %></span>
+                <span class="wp-photo"<% if (m.homeTeam && m.homeTeam.logo) { %> style="background:none;box-shadow:none"<% } %>><% if (m.homeTeam && m.homeTeam.logo) { %><img src="<%= m.homeTeam.logo %>" alt=""><% } else { %><%= m.homeAbbr %><% } %></span>
                 <span class="nm"><%= m.homeTeam ? m.homeTeam.name : '—' %></span>
               </button>
               <span class="vs-pill">VS</span>
               <button type="button" class="wp-card pick-w<%= m.myTip && m.myTip.winner === 'away' ? ' sel' : '' %>" data-w="away"<%= disabled ? ' disabled' : '' %>>
-                <span class="wp-photo"<% if (m.awayTeam && m.awayTeam.logo) { %> style="background:none"<% } %>><% if (m.awayTeam && m.awayTeam.logo) { %><img src="<%= m.awayTeam.logo %>" alt=""><% } else { %><%= m.awayAbbr %><% } %></span>
+                <span class="wp-photo"<% if (m.awayTeam && m.awayTeam.logo) { %> style="background:none;box-shadow:none"<% } %>><% if (m.awayTeam && m.awayTeam.logo) { %><img src="<%= m.awayTeam.logo %>" alt=""><% } else { %><%= m.awayAbbr %><% } %></span>
                 <span class="nm"><%= m.awayTeam ? m.awayTeam.name : '—' %></span>
               </button>
             </div>

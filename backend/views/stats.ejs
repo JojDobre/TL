@@ -67,11 +67,13 @@
     <div class="card card-pad">
       <div class="stat-label" style="margin-bottom:18px">Rozloženie tipov</div>
       <div class="donut-wrap">
-        <% var ev = stats.evaluated || 1; var pE = Math.round(stats.exact/ev*100); var pP = Math.round(stats.partial/ev*100); %>
+        <% var ev = stats.evaluated || 1; var pE = Math.round(stats.exact/ev*100); var pP = Math.round(stats.partial/ev*100); var pZ = Math.max(0, 100 - pE - pP); %>
         <svg width="132" height="132" viewBox="0 0 42 42" style="flex:none">
-          <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--danger)" stroke-width="6"  stroke-dashoffset="<%= 25 - pE %>" stroke-linecap="round"/>
-          <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--success)" stroke-width="6" stroke-dasharray="<%= pE %> <%= 100-pE %>" stroke-dashoffset="25" stroke-linecap="round"/>
-          <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--brand)" stroke-width="6" stroke-dasharray="<%= pP %> <%= 100-pP %>" stroke-dashoffset="<%= 25 - pE %>" stroke-linecap="round"/>
+          <!-- podkladový prstenec, aby kruh nebol prázdny ani pri 0 hodnotách -->
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--surface-3)" stroke-width="6"/>
+          <% if (pZ > 0) { %><circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--danger)" stroke-width="6" stroke-dasharray="<%= pZ %> <%= 100-pZ %>" stroke-dashoffset="<%= 25 - pE - pP %>"<% if (pZ < 100) { %> stroke-linecap="round"<% } %>/><% } %>
+          <% if (pE > 0) { %><circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--success)" stroke-width="6" stroke-dasharray="<%= pE %> <%= 100-pE %>" stroke-dashoffset="25"<% if (pE < 100) { %> stroke-linecap="round"<% } %>/><% } %>
+          <% if (pP > 0) { %><circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--brand)" stroke-width="6" stroke-dasharray="<%= pP %> <%= 100-pP %>" stroke-dashoffset="<%= 25 - pE %>"<% if (pP < 100) { %> stroke-linecap="round"<% } %>/><% } %>
           <text x="21" y="20" text-anchor="middle" style="font:700 7px var(--num);fill:var(--text-1)"><%= stats.evaluated %></text>
           <text x="21" y="26" text-anchor="middle" style="font:600 3px var(--font-body);fill:var(--text-4)">tipov</text>
         </svg>

@@ -45,7 +45,7 @@
     <% official.forEach(function (s) { %>
     <a href="/seasons/<%= s.id %>" class="card card-hover" style="overflow:hidden">
       <div class="season-cover<% if (s.image) { %> has-img<% } %>" style="background:linear-gradient(<%= grad(s.id) %>)<% if (s.image) { %>;background-image:url('<%= s.image %>');background-size:cover;background-position:center<% } %>"><span class="tag tag-brand">Oficiálna</span><% if (s.status === 'ended') { %><span class="tag tag-muted" style="position:absolute;top:12px;right:12px">Ukončená</span><% } else if (s.status === 'upcoming') { %><span class="tag tag-info" style="position:absolute;top:12px;right:12px">Pripravovaná</span><% } else { %><span class="tag tag-live" style="position:absolute;top:12px;right:12px"><span class="dot"></span>Live</span><% } %></div>
-      <div class="card-pad"><h4 style="margin-bottom:6px"><%= s.name %></h4><p class="muted" style="font-size:var(--fs-sm);margin-bottom:14px"><%= s.description || '' %></p><div class="season-meta"><span><b><%= s.participantsCount != null ? s.participantsCount : '—' %></b> hráčov</span><span><b><%= s.leaguesCount != null ? s.leaguesCount : '—' %></b> líg</span><span><b>—</b> zápasov</span></div></div>
+      <div class="card-pad"><h4 style="margin-bottom:6px"><%= s.name %></h4><p class="muted" style="font-size:var(--fs-sm);margin-bottom:14px"><%= s.description || '' %></p><div class="season-meta"><span><b><%= s.participantsCount != null ? s.participantsCount : '—' %></b> hráčov</span><span><b><%= s.leaguesCount != null ? s.leaguesCount : '—' %></b> líg</span><span><b><%= s.matchesCount != null ? s.matchesCount : '—' %></b> zápasov</span></div></div>
     </a>
     <% }); %>
   </div>

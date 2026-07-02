@@ -70,8 +70,8 @@
       <div class="u-row" data-uid="<%= u.id %>"<% if(!active){ %> style="opacity:.6"<% } %>>
         <div class="u-user"><span class="avatar avatar-md" style="background:<%= gradFor(u.username || fullName(u)) %>;color:#fff"><%= initials(u) %></span><div style="min-width:0"><div class="u-name"><%= fullName(u) %></div><div class="u-email"><%= u.email || '' %></div></div></div>
         <span><span class="chip-role role-<%= u.role || 'player' %>"><%= roleLabel(u.role) %></span></span>
-        <span class="u-num u-col-hide">—</span>
-        <span class="u-num u-col-hide">—</span>
+        <span class="u-num u-col-hide"><%= u.totalPoints != null ? u.totalPoints : '—' %></span>
+        <span class="u-num u-col-hide"><%= u.tipsCount != null ? u.tipsCount : '—' %></span>
         <span class="status-dot" style="color:<%= active ? 'var(--success)' : 'var(--danger)' %>"><span class="d" style="background:<%= active ? 'var(--success)' : 'var(--danger)' %>"></span><%= active ? 'Aktívny' : 'Zablokovaný' %></span>
         <div class="row-menu"><button class="row-menu-btn" data-menu>⋯</button></div>
       </div>
@@ -106,7 +106,7 @@
     return '<div class="u-row" data-uid="'+u.id+'"'+(active?'':' style="opacity:.6"')+'>'+
       '<div class="u-user"><span class="avatar avatar-md" style="background:'+gradFor(u.username||fullName(u))+';color:#fff">'+esc(initials(u))+'</span><div style="min-width:0"><div class="u-name">'+esc(fullName(u))+'</div><div class="u-email">'+esc(u.email)+'</div></div></div>'+
       '<span><span class="chip-role role-'+(u.role||'player')+'">'+roleLabel(u.role)+'</span></span>'+
-      '<span class="u-num u-col-hide">—</span><span class="u-num u-col-hide">—</span>'+
+      '<span class="u-num u-col-hide">'+(u.totalPoints!=null?u.totalPoints:'—')+'</span><span class="u-num u-col-hide">'+(u.tipsCount!=null?u.tipsCount:'—')+'</span>'+
       '<span class="status-dot" style="color:'+col+'"><span class="d" style="background:'+col+'"></span>'+(active?'Aktívny':'Zablokovaný')+'</span>'+
       '<div class="row-menu"><button class="row-menu-btn" data-menu>⋯</button></div></div>';
   }
@@ -150,8 +150,8 @@
   [roleF,statusF].forEach(function(el){if(el)el.addEventListener('change',function(){page=1;load();});});
   prevBtn.addEventListener('click',function(){if(page>1){page--;load();}});
   nextBtn.addEventListener('click',function(){if(page<pages){page++;load();}});
-  addBtn.addEventListener('click',function(){var u=prompt('Prezývka:');if(!u)return;var e=prompt('E-mail:');if(!e)return;var p=prompt('Heslo (min. 8 znakov):');if(!p)return;
-    fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,email:e,password:p})}).then(function(r){return r.json();}).then(function(){page=1;load();}).catch(function(){alert('Nepodarilo sa pridať.');});});
+  addBtn.addEventListener('click',function(){var u=prompt('Prezývka:');if(!u)return;var e=prompt('E-mail:');if(!e)return;var p=prompt('Heslo (min. 6 znakov):');if(!p)return;
+    fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,email:e,password:p})}).then(function(r){return r.json();}).then(function(res){if(res&&res.success){page=1;load();}else{alert((res&&res.message)||'Nepodarilo sa pridať.');}}).catch(function(){alert('Nepodarilo sa pridať.');});});
 
   // prvotné dáta sú už vykreslené serverom; current naplníme až pri prvej akcii/filtri
   // aby 3-bodky fungovali hneď, načítame current na pozadí:

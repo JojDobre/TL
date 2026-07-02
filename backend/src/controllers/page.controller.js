@@ -48,7 +48,16 @@ const seasonsPage = asyncHandler(async (req, res) => {
     const leaguesCount = await League.count({ where: { seasonId: season.id } });
     let participantsCount = 0;
     try { participantsCount = await season.countParticipants(); } catch { /* nič */ }
-    return { ...season.toJSON(), leaguesCount, participantsCount, status: seasonStatus(season) };
+    // Počet zápasov v sezóne = zápasy vo všetkých kolách líg patriacich sezóne.
+    let matchesCount = 0;
+    try {
+      const leagueIds = (await League.findAll({ where: { seasonId: season.id }, attributes: ['id'] })).map((l) => l.id);
+      if (leagueIds.length) {
+        const roundIds = (await Round.findAll({ where: { leagueId: leagueIds }, attributes: ['id'] })).map((r) => r.id);
+        if (roundIds.length) matchesCount = await Match.count({ where: { roundId: roundIds } });
+      }
+    } catch { /* počet zápasov je vedľajší — pri chybe necháme 0 */ }
+    return { ...season.toJSON(), leaguesCount, participantsCount, matchesCount, status: seasonStatus(season) };
   }));
 
   // skryté sezóny zo zoznamu vypadnú — okrem tých, kde je užívateľ člen/tvorca

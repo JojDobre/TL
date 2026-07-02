@@ -150,8 +150,47 @@ const adminUsersPage = asyncHandler(async (req, res) => {
     offset: 0,
   });
 
+  // Body a počet tipov sa rátajú LEN z oficiálnych líg (type: 'official').
+  // Jeden agregačný dotaz cez tipy v kolách oficiálnych líg, zoskupený podľa usera.
+  const Op = Sequelize.Op;
+  const statsByUser = {};
+  try {
+    const offLeagueIds = (await League.findAll({ where: { type: 'official' }, attributes: ['id'] })).map((l) => l.id);
+    if (offLeagueIds.length) {
+      const roundIds = (await Round.findAll({ where: { leagueId: { [Op.in]: offLeagueIds } }, attributes: ['id'] })).map((r) => r.id);
+      if (roundIds.length) {
+        const userIds = rows.map((u) => u.id);
+        const agg = await Tip.findAll({
+          attributes: [
+            'userId',
+            [Sequelize.fn('SUM', Sequelize.col('points')), 'totalPoints'],
+            [Sequelize.fn('COUNT', Sequelize.col('Tip.id')), 'tipsCount'],
+          ],
+          where: { userId: { [Op.in]: userIds } },
+          include: [{ model: Match, attributes: [], required: true, where: { roundId: { [Op.in]: roundIds } } }],
+          group: ['userId'],
+          raw: true,
+        });
+        agg.forEach((r) => {
+          statsByUser[r.userId] = {
+            totalPoints: Number(r.totalPoints) || 0,
+            tipsCount: Number(r.tipsCount) || 0,
+          };
+        });
+      }
+    }
+  } catch (e) { /* štatistiky sú vedľajšie — pri chybe ostanú nuly */ }
+
+  const users = rows.map((u) => {
+    const obj = u.toJSON();
+    const s = statsByUser[u.id] || { totalPoints: 0, tipsCount: 0 };
+    obj.totalPoints = s.totalPoints;
+    obj.tipsCount = s.tipsCount;
+    return obj;
+  });
+
   res.render('adminUsers', {
-    users: rows.map((u) => u.toJSON()),
+    users,
     pagination: { total: count, page: 1, limit, pages: Math.ceil(count / limit) || 1 },
   });
 });

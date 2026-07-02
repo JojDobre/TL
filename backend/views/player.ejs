@@ -75,6 +75,20 @@
   </div>
 </div>
 
+<% if (typeof isPrivate !== 'undefined' && isPrivate) { %>
+<div class="wrap" style="padding:40px 0 64px">
+  <div class="card card-pad" style="text-align:center;max-width:520px;margin:0 auto">
+    <div style="width:64px;height:64px;border-radius:50%;background:var(--surface-2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px">🔒</div>
+    <h3 style="font-size:var(--fs-h4);margin-bottom:8px">Tento profil je súkromný</h3>
+    <p class="muted" style="font-size:var(--fs-sm);max-width:380px;margin:0 auto 18px">
+      <%= player.name %> sa rozhodol(la) skryť svoj profil. Štatistiky, forma a odznaky
+      tohto hráča nie sú verejne dostupné.
+    </p>
+    <a href="/leaderboards" class="btn btn-secondary btn-sm">Späť na rebríček</a>
+  </div>
+</div>
+<% } else { %>
+
 <div class="wrap pf-layout">
   <!-- LEFT: verejné štatistiky + forma + odznaky -->
   <aside class="stack g-4">
@@ -161,6 +175,7 @@
     </div>
   </main>
 </div>
+<% } %>
 
 <script>
 (function(){

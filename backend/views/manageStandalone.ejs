@@ -37,7 +37,7 @@
   .tm-toolbar .input, .tm-toolbar .select { height:40px; }
   .tm-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; }
   .tm-card { display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid var(--line); border-radius:var(--r-md); background:var(--surface-1); }
-  .tm-logo { width:38px; height:38px; border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; background:var(--surface-3); color:var(--text-2); background-size:cover; background-position:center; }
+  .tm-logo { width:38px; height:38px; border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; background:var(--surface-3); color:var(--text-2); background-size:contain; background-repeat:no-repeat; background-position:center; }
   .tm-body { min-width:0; flex:1; }
   .tm-name { font-weight:700; color:var(--text-1); font-size:var(--fs-sm); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .tm-meta { color:var(--text-4); font-size:var(--fs-xs); }
@@ -151,12 +151,12 @@
             <div class="field-row">
               <div class="field"><label class="label">Názov tímu</label><input class="input" id="ntName" placeholder="napr. FC Lokomotíva"></div>
               <div class="field"><label class="label">Šport</label>
-                <select class="select" id="ntSport"><% (sports||[]).forEach(function(sp){ %><option value="<%= sp.code || sp %>"><%= sp.name || sp %></option><% }); %></select>
+                <select class="select" id="ntSport"><% (sports||[]).forEach(function(sp){ %><option value="<%= sp.code || sp %>"><%= sp.label || sp.name || sp %></option><% }); %></select>
               </div>
             </div>
             <div class="field-row" style="margin-top:12px">
               <div class="field"><label class="label">Krajina</label>
-                <select class="select" id="ntCountry"><option value="">—</option><% (countries||[]).forEach(function(c){ %><option value="<%= c.code || c %>"><%= c.name || c %></option><% }); %></select>
+                <select class="select" id="ntCountry"><option value="">—</option><% (countries||[]).forEach(function(c){ %><option value="<%= c.code || c %>"><%= c.label || c.name || c %></option><% }); %></select>
               </div>
               <div class="field"><label class="label">Logo (URL, voliteľné)</label><input class="input" id="ntLogo" placeholder="https://…"></div>
             </div>
@@ -299,7 +299,7 @@
   if (teamsLocked) return; // zvyšok je len pre tímy
 
   // ---- TÍMY ----
-  function logoStyle(t){ return t.logo ? "background-image:url('"+t.logo+"')" : ''; }
+  function logoStyle(t){ return t.logo ? "background-image:url('"+t.logo+"');background-size:contain;background-repeat:no-repeat;background-position:center" : ''; }
   function abbr(name){ return (name||'?').replace(/[^A-Za-zÀ-ž0-9 ]/g,'').split(' ').map(function(w){return w[0];}).join('').substring(0,3).toUpperCase() || (name||'?').substring(0,3).toUpperCase(); }
 
   var rosterList=document.getElementById('rosterList');

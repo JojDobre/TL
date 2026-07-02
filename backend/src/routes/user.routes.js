@@ -5,7 +5,7 @@
 
 const express = require('express');
 const {
-  getAllUsers, getUserById, updateUser, changeUserPassword, deleteUser,
+  getAllUsers, getUserById, createUser, updateUser, changeUserPassword, deleteUser,
 } = require('../controllers/user.controller');
 const { apiRequireAdmin } = require('../middleware/page-auth.middleware');
 
@@ -15,6 +15,7 @@ const router = express.Router();
 router.use(apiRequireAdmin);
 
 router.get('/', getAllUsers);
+router.post('/', createUser);
 router.get('/:id', getUserById);
 router.put('/:id', updateUser);
 router.put('/:id/password', changeUserPassword);

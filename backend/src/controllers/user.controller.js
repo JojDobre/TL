@@ -50,9 +50,42 @@ const getAllUsers = asyncHandler(async (req, res) => {
     offset,
   });
 
+  // Body a počet tipov — LEN z oficiálnych líg (type: 'official'), konzistentne
+  // so serverovým renderom adminUsers a s globálnym rebríčkom.
+  const { League, Round, Match, Tip } = require('../models');
+  const statsByUser = {};
+  try {
+    const offLeagueIds = (await League.findAll({ where: { type: 'official' }, attributes: ['id'] })).map((l) => l.id);
+    if (offLeagueIds.length && rows.length) {
+      const roundIds = (await Round.findAll({ where: { leagueId: { [Op.in]: offLeagueIds } }, attributes: ['id'] })).map((r) => r.id);
+      if (roundIds.length) {
+        const agg = await Tip.findAll({
+          attributes: [
+            'userId',
+            [Sequelize.fn('SUM', Sequelize.col('points')), 'totalPoints'],
+            [Sequelize.fn('COUNT', Sequelize.col('Tip.id')), 'tipsCount'],
+          ],
+          where: { userId: { [Op.in]: rows.map((u) => u.id) } },
+          include: [{ model: Match, attributes: [], required: true, where: { roundId: { [Op.in]: roundIds } } }],
+          group: ['userId'],
+          raw: true,
+        });
+        agg.forEach((r) => { statsByUser[r.userId] = { totalPoints: Number(r.totalPoints) || 0, tipsCount: Number(r.tipsCount) || 0 }; });
+      }
+    }
+  } catch (e) { /* štatistiky sú vedľajšie */ }
+
+  const data = rows.map((u) => {
+    const obj = u.toJSON();
+    const s = statsByUser[u.id] || { totalPoints: 0, tipsCount: 0 };
+    obj.totalPoints = s.totalPoints;
+    obj.tipsCount = s.tipsCount;
+    return obj;
+  });
+
   res.status(200).json({
     success: true,
-    data: rows,
+    data,
     pagination: { total: count, page, limit, pages: Math.ceil(count / limit) || 1 },
   });
 });
@@ -148,9 +181,44 @@ const deleteUser = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: 'Používateľ bol úspešne vymazaný.' });
 });
 
+// POST /api/users — admin vytvorí používateľa (session-chránené cez apiRequireAdmin).
+// Nahrádza pôvodné admin-pridávanie cez verejný JWT endpoint /api/auth/register,
+// ktoré padalo, keď nebol nastavený JWT_SECRET.
+const createUser = asyncHandler(async (req, res) => {
+  const { username, email, password, firstName, lastName, role } = req.body;
+
+  if (!username || !email || !password) {
+    throw new ApiError(400, 'Používateľské meno, e-mail a heslo sú povinné.');
+  }
+  if (String(password).length < 6) {
+    throw new ApiError(400, 'Heslo musí mať aspoň 6 znakov.');
+  }
+  const newRole = VALID_ROLES.includes(role) ? role : 'player';
+
+  // kontrola duplicít (rovnaká logika ako pri registrácii)
+  const existing = await User.findOne({ where: { [Op.or]: [{ email }, { username }] } });
+  if (existing) {
+    throw new ApiError(400, 'Používateľ s týmto e-mailom alebo menom už existuje.');
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const user = await User.create({
+    username, email, password: hashedPassword,
+    firstName: firstName || null,
+    lastName: lastName || null,
+    role: newRole,
+    active: true,
+  });
+
+  // odpoveď bez hesla
+  const { password: _omit, ...safe } = user.toJSON();
+  res.status(201).json({ success: true, message: 'Používateľ bol vytvorený.', data: safe });
+});
+
 module.exports = {
   getAllUsers,
   getUserById,
+  createUser,
   updateUser,
   changeUserPassword,
   deleteUser,
