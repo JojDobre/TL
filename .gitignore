@@ -21,8 +21,6 @@
 .env.production.local
 /backend/.env
 /frontend/.env
-/backend/.reset-pwd.js
-/backend/reset-pwd.js
 
 # Logy
 npm-debug.log*
@@ -63,3 +61,7 @@ struktura.txt
 /backend/CLAUDE.md
 .claude
 .playwright-mcp
+
+# seed data
+/backend/src/seeds/achievements.check.js
+/backend/src/seeds/reset-pwd.js

@@ -40,9 +40,10 @@ const syncDatabase = async () => {
     }
     console.log(`Databáza synchronizovaná (režim: ${process.env.DB_SYNC || 'alter'}).`);
 
-    // Definičné dáta (odznaky, články) sa upsertujú VŽDY — sú idempotentné
-    // a nezávisia od toho, či je DB prázdna.
-    // await seedAchievements();
+    // Definičné dáta (odznaky) sa upsertujú VŽDY — sú idempotentné a nezávisia
+    // od toho, či je DB prázdna. Tým sa nové/zmenené odznaky doplnia aj v "alter"
+    // režime bez nutnosti wipe-nút databázu.
+    await seedAchievements();
 
     // Seed spustíme len pri "force" alebo keď je DB prázdna (žiadni používatelia).
     // Tým zabránime duplicitnému vkladaniu pri každom reštarte v "alter" režime.
@@ -52,7 +53,6 @@ const syncDatabase = async () => {
       await seedInitialData();
       await seedArticles();
       //await seedTeams();
-      await seedAchievements();
       console.log('Testovacie dáta boli vložené.');
     } else {
       console.log('Dáta už existujú, seeding preskočený.');
