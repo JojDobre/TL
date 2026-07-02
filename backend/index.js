@@ -7,6 +7,8 @@ const path = require('path');
 const syncDatabase = require('./src/config/db.sync');
 
 const { errorHandler, notFoundHandler } = require('./src/middleware/error.middleware');
+const { createSessionStore } = require('./src/config/session-store');
+const { provideCsrfToken, verifyCsrf } = require('./src/middleware/csrf.middleware');
 
 // API routes (vracajú JSON — pre akcie cez fetch z prehliadača)
 const authApi = require('./src/routes/auth.routes');
@@ -24,6 +26,17 @@ const pageRoutes = require('./src/routes/page.routes');
 const app = express();
 const PORT = process.env.PORT || 5000;
 const isProd = process.env.NODE_ENV === 'production';
+
+// ---- kontrola SESSION_SECRET ----
+// V produkcii MUSÍ byť nastavený silný tajný kľúč — inak by sa session cookie
+// podpisovala verejne známym fallbackom a dala by sa sfalšovať. Radšej spadnúť
+// pri štarte s jasnou hláškou než tíško bežať nebezpečne.
+if (isProd && (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === 'zmen-ma')) {
+  console.error('FATALNE: SESSION_SECRET nie je nastaveny (alebo ma predvolenu hodnotu). '
+    + 'Nastav ho v .env, napr.: node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'hex\'))"');
+  process.exit(1);
+}
+const SESSION_SECRET = process.env.SESSION_SECRET || 'zmen-ma';
 
 // za nginx reverse proxy — aby secure cookie a req.protocol fungovali správne
 app.set('trust proxy', 1);
@@ -63,8 +76,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ---- session (nahrádza JWT v localStorage) ----
+// Perzistentný store v MariaDB — sessions prežijú reštart servera a fungujú aj
+// pri viacerých inštanciách (na rozdiel od predvoleného MemoryStore).
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'zmen-ma',
+  secret: SESSION_SECRET,
+  store: createSessionStore(),
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -74,6 +90,10 @@ app.use(session({
     maxAge: 1000 * 60 * 60 * 24 * 7,
   }, // 7 dní
 }));
+
+// ---- CSRF: zabezpeč token v session a sprístupni ho šablónam ----
+// (samotné overenie tokenu je až na mutujúcich routes cez verifyCsrf)
+app.use(provideCsrfToken);
 
 // ---- sprístupnenie prihláseného používateľa všetkým šablónam ----
 app.use(async (req, res, next) => {
@@ -92,6 +112,11 @@ app.use(async (req, res, next) => {
   }
   next();
 });
+
+// ---- CSRF overenie ----
+// Kontroluje token pri POST/PUT/PATCH/DELETE (GET/HEAD/OPTIONS sa preskočia).
+// Umiestnené ZA parsermi tela a session, PRED routami. Platí pre API aj stránky.
+app.use(verifyCsrf);
 
 // ---- API (JSON) ----
 app.use('/api/auth', authApi);

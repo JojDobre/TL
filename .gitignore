@@ -65,3 +65,6 @@ struktura.txt
 # seed data
 /backend/src/seeds/achievements.check.js
 /backend/src/seeds/reset-pwd.js
+/backend/src/seeds/achievements.spec.js
+/backend/test
+

@@ -6,7 +6,7 @@
 // lebo canManageLeague() vracia pre rolu 'admin' true. Vyhodnotenie zdrojového
 // zápasu šablóny automaticky propaguje výsledok do všetkých klonov.
 
-const { League, Round, Match, Team, Tip, Sequelize } = require('../models');
+const { League, Round, Match, Team, Tip, LeagueTeam, UserLeague, Sequelize } = require('../models');
 const { Op } = Sequelize;
 const { asyncHandler } = require('../middleware/error.middleware');
 const { SPORTS, COUNTRIES, sportLabel, countryLabel } = require('../utils/team.constants');
@@ -171,9 +171,18 @@ const templateDelete = asyncHandler(async (req, res) => {
 
   const roundIds = (await Round.findAll({ where: { leagueId: tpl.id }, attributes: ['id'] })).map((r) => r.id);
   if (roundIds.length) {
-    await Match.destroy({ where: { roundId: { [Op.in]: roundIds } } });
+    const matchIds = (await Match.findAll({ where: { roundId: { [Op.in]: roundIds } }, attributes: ['id'] })).map((m) => m.id);
+    if (matchIds.length) {
+      // tipy na zápasy šablóny (bežne by nemali existovať, ale FK by mazanie zablokoval)
+      await Tip.destroy({ where: { matchId: { [Op.in]: matchIds } } });
+      await Match.destroy({ where: { id: { [Op.in]: matchIds } } });
+    }
     await Round.destroy({ where: { id: { [Op.in]: roundIds } } });
   }
+  // súpiska šablóny (league_teams má NOT NULL FK na leagues — bez tohto by
+  // tpl.destroy() spadol na constraint chybe) + prípadné členstvá
+  await LeagueTeam.destroy({ where: { leagueId: tpl.id } });
+  await UserLeague.destroy({ where: { leagueId: tpl.id } });
   await tpl.destroy();
 
   res.redirect('/admin/templates');

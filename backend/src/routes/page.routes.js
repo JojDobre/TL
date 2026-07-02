@@ -15,6 +15,7 @@ const {
   loginPage, loginSubmit, registerPage, registerSubmit, logout,
   forgotPasswordPage, forgotPasswordSubmit, resetPasswordPage, resetPasswordSubmit,
 } = require('../controllers/authPage.controller');
+const { loginLimiter, registerLimiter, passwordResetLimiter } = require('../middleware/rate-limit.middleware');
 const { adminDashboardPage, adminUsersPage, adminCompetitionsPage } = require('../controllers/adminPage.controller');
 const {
   templatesListPage, templateCreate, templateEditPage,
@@ -65,16 +66,16 @@ const { myTipsPage } = require('../controllers/myTipsPage.controller');
 // Domov 
 router.get('/', attachUser, homePage);
 
-// Auth
+// Auth (mutujúce POST-y majú rate limiting proti brute-force)
 router.get('/login', loginPage);
-router.post('/login', loginSubmit);
+router.post('/login', loginLimiter, loginSubmit);
 router.get('/register', registerPage);
-router.post('/register', registerSubmit);
+router.post('/register', registerLimiter, registerSubmit);
 router.get('/forgot-password', forgotPasswordPage);
-router.post('/forgot-password', forgotPasswordSubmit);
+router.post('/forgot-password', passwordResetLimiter, forgotPasswordSubmit);
 router.get('/logout', logout);
 router.get('/reset-password', resetPasswordPage);
-router.post('/reset-password', resetPasswordSubmit);
+router.post('/reset-password', passwordResetLimiter, resetPasswordSubmit);
 
 // Pripojenie cez ID/kód — samostatná stránka
 router.get('/join', requireLogin, joinPage);

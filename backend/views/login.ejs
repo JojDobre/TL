@@ -43,6 +43,7 @@
         <div class="tag tag-danger" style="display:block;padding:10px 12px;margin-bottom:16px"><%= error %></div>
       <% } %>
       <form action="/login" method="POST">
+        <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
         <div class="field" style="margin-bottom:16px"><label class="label">E-mail alebo prezývka</label><input class="input" type="text" name="email" placeholder="martin.novak@email.sk" value="<%= typeof oldEmail !== 'undefined' ? oldEmail : '' %>" required></div>
         <div class="field" style="margin-bottom:10px">
           <div class="between"><label class="label">Heslo</label><a href="/forgot-password" class="brand" style="font-size:var(--fs-sm)">Zabudol si heslo?</a></div>

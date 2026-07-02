@@ -10,6 +10,52 @@
      na bežné obsahové bloky a štatistiky, bez úprav HTML každej stránky.
    ===================================================================== */
 (function () {
+  /* ---- CSRF ochrana (globálne) --------------------------------------------
+     Token je v <meta name="csrf-token">. Automaticky ho pridáme:
+       1) do každého mutujúceho fetch() ako hlavičku 'x-csrf-token',
+       2) do každého odosielaného POST/PUT/... formulára ako skryté pole '_csrf'.
+     Vďaka tomu netreba upravovať jednotlivé stránky. */
+  (function () {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    var token = meta ? meta.getAttribute('content') : '';
+    if (!token) return;
+
+    // 1) fetch wrapper — doplní hlavičku pri mutujúcich metódach na rovnaký pôvod
+    if (window.fetch) {
+      var origFetch = window.fetch.bind(window);
+      window.fetch = function (input, init) {
+        init = init || {};
+        var method = (init.method || (typeof input !== 'string' && input && input.method) || 'GET').toUpperCase();
+        if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+          // len na náš pôvod (relatívne URL alebo rovnaká doména)
+          var url = (typeof input === 'string') ? input : (input && input.url) || '';
+          var sameOrigin = url.indexOf('http') !== 0 || url.indexOf(window.location.origin) === 0;
+          if (sameOrigin) {
+            var headers = new Headers(init.headers || (typeof input !== 'string' && input && input.headers) || {});
+            if (!headers.has('x-csrf-token')) headers.set('x-csrf-token', token);
+            init.headers = headers;
+          }
+        }
+        return origFetch(input, init);
+      };
+    }
+
+    // 2) formuláre — pri odoslaní doplň skryté pole _csrf, ak chýba
+    document.addEventListener('submit', function (e) {
+      var form = e.target;
+      if (!form || form.tagName !== 'FORM') return;
+      var method = (form.getAttribute('method') || 'GET').toUpperCase();
+      if (method === 'GET') return;
+      if (!form.querySelector('input[name="_csrf"]')) {
+        var inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = '_csrf';
+        inp.value = token;
+        form.appendChild(inp);
+      }
+    }, true);
+  })();
+
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var fine   = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var MANUAL = document.body && document.body.getAttribute('data-enhance') === 'manual';

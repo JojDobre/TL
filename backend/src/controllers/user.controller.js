@@ -177,7 +177,28 @@ const deleteUser = asyncHandler(async (req, res) => {
   const user = await User.findByPk(targetId);
   if (!user) throw new ApiError(404, 'Používateľ nenájdený.');
 
-  await user.destroy();
+  // Používateľ s vlastnými súťažami sa nedá zmazať naslepo — ligy/sezóny by
+  // ostali bez vlastníka (FK creatorId). Admin ich musí najprv zmazať alebo
+  // previesť. Jasná hláška namiesto kryptickej FK chyby z databázy.
+  const { League, Season, Tip, UserLeague, UserSeason, UserAchievement, Notification, sequelize } = require('../models');
+  const ownedLeagues = await League.count({ where: { creatorId: targetId } });
+  const ownedSeasons = await Season.count({ where: { creatorId: targetId } });
+  if (ownedLeagues + ownedSeasons > 0) {
+    throw new ApiError(400, `Používateľ vlastní ${ownedLeagues} líg a ${ownedSeasons} sezón. Najprv ich zmaž alebo prenes na iného správcu.`);
+  }
+
+  // Zmaž závislé záznamy v transakcii (tips.userId je NOT NULL s FK — bez
+  // upratania by user.destroy() spadol na constraint chybe v MariaDB).
+  await sequelize.transaction(async (t) => {
+    await Tip.destroy({ where: { userId: targetId }, transaction: t });
+    await UserLeague.destroy({ where: { userId: targetId }, transaction: t });
+    await UserSeason.destroy({ where: { userId: targetId }, transaction: t });
+    await UserAchievement.destroy({ where: { userId: targetId }, transaction: t });
+    await Notification.destroy({ where: { userId: targetId }, transaction: t });
+    // PasswordResetToken má onDelete:CASCADE — zmaže sa sám s userom
+    await user.destroy({ transaction: t });
+  });
+
   res.status(200).json({ success: true, message: 'Používateľ bol úspešne vymazaný.' });
 });
 

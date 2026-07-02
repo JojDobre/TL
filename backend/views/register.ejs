@@ -30,6 +30,7 @@
         <div class="tag tag-danger" style="display:block;padding:10px 12px;margin-bottom:16px"><%= error %></div>
       <% } %>
       <form action="/register" method="POST">
+        <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
         <div class="field-row" style="margin-bottom:16px">
           <div class="field"><label class="label">Meno</label><input class="input" name="firstName" placeholder="Martin"></div>
           <div class="field"><label class="label">Priezvisko</label><input class="input" name="lastName" placeholder="Novák"></div>
