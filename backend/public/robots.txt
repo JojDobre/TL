@@ -1,0 +1,21 @@
+# robots.txt pre tifo.sk
+# Verejné stránky indexovať, administráciu, API a súkromné sekcie nie.
+
+User-agent: *
+Allow: /
+
+# administrácia a API nie sú pre vyhľadávače
+Disallow: /admin
+Disallow: /api/
+Disallow: /settings
+Disallow: /notifications
+Disallow: /moje-tipy
+Disallow: /my
+Disallow: /tip-history
+Disallow: /compare
+Disallow: /logout
+Disallow: /reset-password
+Disallow: /forgot-password
+Disallow: /join
+
+Sitemap: https://tifo.sk/sitemap.xml

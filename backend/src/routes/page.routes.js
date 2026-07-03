@@ -66,6 +66,11 @@ const { myTipsPage } = require('../controllers/myTipsPage.controller');
 // Domov 
 router.get('/', attachUser, homePage);
 
+// SEO: dynamická sitemapa + AdSense ads.txt (robots.txt je statický v public/)
+const { sitemapXml, adsTxt } = require('../controllers/seo.controller');
+router.get('/sitemap.xml', sitemapXml);
+router.get('/ads.txt', adsTxt);
+
 // Auth (mutujúce POST-y majú rate limiting proti brute-force)
 router.get('/login', loginPage);
 router.post('/login', loginLimiter, loginSubmit);

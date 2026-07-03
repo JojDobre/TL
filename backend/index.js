@@ -60,12 +60,33 @@ app.use(helmet({
       'img-src': ["'self'", 'https:', 'data:', 'blob:'],
       // pre prípadné inline štýly v šablónach
       'style-src': ["'self'", "'unsafe-inline'", 'https:'],
-      'script-src': ["'self'", "'unsafe-inline'"],
+      // Google Analytics (gtag) + AdSense skripty
+      'script-src': [
+        "'self'", "'unsafe-inline'",
+        'https://www.googletagmanager.com',
+        'https://pagead2.googlesyndication.com',
+        'https://*.adtrafficquality.google',
+      ],
       // povoliť inline event handlery (onchange/onclick v šablónach);
       // helmet defaultne nastavuje script-src-attr na 'none', čo ich blokuje
       'script-src-attr': ["'unsafe-inline'"],
-      // formuláre/akcie len na náš pôvod
-      'connect-src': ["'self'"],
+      // fetch/beacon ciele: naše API + GA merania + AdSense
+      'connect-src': [
+        "'self'",
+        'https://*.google-analytics.com',
+        'https://*.analytics.google.com',
+        'https://www.googletagmanager.com',
+        'https://pagead2.googlesyndication.com',
+        'https://*.adtrafficquality.google',
+      ],
+      // AdSense renderuje reklamy v iframe z týchto domén
+      'frame-src': [
+        "'self'",
+        'https://googleads.g.doubleclick.net',
+        'https://tpc.googlesyndication.com',
+        'https://www.google.com',
+        'https://*.adtrafficquality.google',
+      ],
     },
   },
 }));
@@ -100,6 +121,13 @@ app.use(async (req, res, next) => {
   res.locals.currentUserId = req.session.userId || null;
   res.locals.currentUserRole = req.session.userRole || null;
   res.locals.currentUserName = req.session.userName || null;
+  // Analytics/Ads: šablóny vložia skripty len ak sú ID nastavené v .env
+  res.locals.gaMeasurementId = process.env.GA_MEASUREMENT_ID || '';
+  res.locals.adsenseClientId = process.env.ADSENSE_CLIENT_ID || '';
+  // canonical URL — absolútna adresa stránky bez query stringu (SEO: zabráni
+  // duplicitnému indexovaniu variantov ako /leaderboards?season=1)
+  const appBase = (process.env.APP_URL || 'https://tifo.sk').replace(/\/$/, '');
+  res.locals.canonicalUrl = appBase + (req.path === '/' ? '/' : req.path.replace(/\/$/, ''));
   // profilová fotka prihláseného — načítava sa z DB (lacný select podľa PK),
   // aby bola vždy aktuálna bez ohľadu na to, kedy bola nastavená.
   res.locals.currentUserImage = null;

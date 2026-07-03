@@ -12,6 +12,10 @@
 <link rel="stylesheet" href="/css/enhance.css">
 <link rel="stylesheet" href="/css/logo.css">
 <%- include('meta-head') %>
+<% if (typeof canonicalUrl !== 'undefined' && canonicalUrl) { %>
+<link rel="canonical" href="<%= canonicalUrl %>">
+<% } %>
+<%- include('analytics') %>
 <% if (typeof pageStyle !== 'undefined' && pageStyle) { %>
 <style><%- pageStyle %></style>
 <% } %>

@@ -1,0 +1,20 @@
+<%# views/partials/analytics.ejs
+    Google Analytics 4 + Google AdSense.
+    Skripty sa vložia LEN keď sú nastavené env premenné (GA_MEASUREMENT_ID /
+    ADSENSE_CLIENT_ID) — na lokálnom vývoji sa teda nenačíta nič a neposielajú
+    sa žiadne dáta. Hodnoty prichádzajú cez res.locals v index.js. %>
+<% if (typeof gaMeasurementId !== 'undefined' && gaMeasurementId) { %>
+<!-- Google Analytics 4 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=<%= gaMeasurementId %>"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  // anonymize_ip: IP adresy sa skracujú (GDPR-friendlier default)
+  gtag('config', '<%= gaMeasurementId %>', { anonymize_ip: true });
+</script>
+<% } %>
+<% if (typeof adsenseClientId !== 'undefined' && adsenseClientId) { %>
+<!-- Google AdSense (auto ads + overenie webu) -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=<%= adsenseClientId %>" crossorigin="anonymous"></script>
+<% } %>
