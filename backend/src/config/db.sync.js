@@ -47,13 +47,18 @@ const syncDatabase = async () => {
 
     // Seed spustíme len pri "force" alebo keď je DB prázdna (žiadni používatelia).
     // Tým zabránime duplicitnému vkladaniu pri každom reštarte v "alter" režime.
+    // V PRODUKCII sa testovací seed NIKDY nespúšťa — inak by prvý štart
+    // s prázdnou DB vytvoril testovacích hráčov s heslom password123.
+    const isProd = process.env.NODE_ENV === 'production';
     const userCount = await db.User.count();
-    if (isForce || userCount === 0) {
+    if (!isProd && (isForce || userCount === 0)) {
       console.log('Začínam testovací seed...');
       await seedInitialData();
       await seedArticles();
       //await seedTeams();
       console.log('Testovacie dáta boli vložené.');
+    } else if (isProd && userCount === 0) {
+      console.log('Produkcia s prázdnou DB — testovací seed preskočený. Prvého admina vytvor registráciou a povýš v DB (UPDATE users SET role=\'admin\' WHERE id=...).');
     } else {
       console.log('Dáta už existujú, seeding preskočený.');
     }
