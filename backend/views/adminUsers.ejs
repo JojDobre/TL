@@ -104,7 +104,7 @@
 
   function rowHtml(u){var active=u.active!==false;var col=active?'var(--success)':'var(--danger)';
     return '<div class="u-row" data-uid="'+u.id+'"'+(active?'':' style="opacity:.6"')+'>'+
-      '<div class="u-user"><span class="avatar avatar-md" style="background:'+gradFor(u.username||fullName(u))+';color:#fff">'+esc(initials(u))+'</span><div style="min-width:0"><div class="u-name">'+esc(fullName(u))+'</div><div class="u-email">'+esc(u.email)+'</div></div></div>'+
+      '<div class="u-user" data-profile="'+u.id+'" style="cursor:pointer" title="Otvoriť profil"><span class="avatar avatar-md" style="background:'+gradFor(u.username||fullName(u))+';color:#fff">'+esc(initials(u))+'</span><div style="min-width:0"><div class="u-name">'+esc(fullName(u))+'</div><div class="u-email">'+esc(u.email)+'</div></div></div>'+
       '<span><span class="chip-role role-'+(u.role||'player')+'">'+roleLabel(u.role)+'</span></span>'+
       '<span class="u-num u-col-hide">'+(u.totalPoints!=null?u.totalPoints:'—')+'</span><span class="u-num u-col-hide">'+(u.tipsCount!=null?u.tipsCount:'—')+'</span>'+
       '<span class="status-dot" style="color:'+col+'"><span class="d" style="background:'+col+'"></span>'+(active?'Aktívny':'Zablokovaný')+'</span>'+
@@ -143,7 +143,12 @@
     });
   }
 
-  table.addEventListener('click',function(e){if(e.target.closest('[data-menu]')){e.stopPropagation();var row=e.target.closest('.u-row');if(!row)return;var user=current.find(function(u){return String(u.id)===String(row.getAttribute('data-uid'));});if(user)showMenu(e.target.closest('.row-menu'),user);}});
+  table.addEventListener('click',function(e){
+    // preklik na profil (klik na meno/avatar, nie na ⋯ menu)
+    var prof=e.target.closest('[data-profile]');
+    if(prof && !e.target.closest('[data-menu]')){var pid=prof.getAttribute('data-profile');if(pid){window.location.href='/player/'+pid;}return;}
+    if(e.target.closest('[data-menu]')){e.stopPropagation();var row=e.target.closest('.u-row');if(!row)return;var user=current.find(function(u){return String(u.id)===String(row.getAttribute('data-uid'));});if(user)showMenu(e.target.closest('.row-menu'),user);}
+  });
   document.addEventListener('click',function(){document.querySelectorAll('[data-rowmenu]').forEach(function(p){p.remove();});});
 
   if(search)search.addEventListener('input',function(){clearTimeout(timer);timer=setTimeout(function(){page=1;load();},300);});

@@ -47,6 +47,29 @@ const leagueDetailPage = asyncHandler(async (req, res) => {
   });
   if (!league) return res.status(404).render('error-page', { message: 'Liga nebola nájdená.' });
 
+  // SÚKROMIE: obsah ligy (kolá, zápasy, rebríček) podlieha heslu jej SEZÓNY.
+  // Nečlen heslovanej sezóny sa cez priamu URL ligy k obsahu nedostane —
+  // presmerujeme ho na detail sezóny, kde je zamknutá obrazovka s poľom na heslo.
+  {
+    const seasonRow = await Season.findByPk(league.seasonId, { attributes: ['id', 'hasPassword', 'creatorId'] });
+    if (seasonRow && seasonRow.hasPassword) {
+      const uid = req.userId ? Number(req.userId) : null;
+      let allowed = false;
+      if (uid) {
+        if (seasonRow.creatorId === uid || league.creatorId === uid) allowed = true;
+        else {
+          const [sm, lm, u] = await Promise.all([
+            UserSeason.findOne({ where: { userId: uid, seasonId: seasonRow.id } }),
+            UserLeague.findOne({ where: { userId: uid, leagueId: league.id } }),
+            User.findByPk(uid, { attributes: ['role'] }),
+          ]);
+          allowed = !!(sm || lm || (u && u.role === 'admin'));
+        }
+      }
+      if (!allowed) return res.redirect(`/seasons/${seasonRow.id}`);
+    }
+  }
+
   const meId = req.userId || null;
 
   // kolá so stavom a počtom zápasov + (voliteľne) koľko hráč už tipol
@@ -156,23 +179,37 @@ const leagueDetailPage = asyncHandler(async (req, res) => {
   });
 });
 
-// POST /leagues/join — pripojenie do ligy z formulára (page)
+// POST /leagues/join — pripojenie do ligy z formulára (page) alebo fetch (modal)
 const joinLeagueSubmit = asyncHandler(async (req, res) => {
   const { joinCode, password } = req.body;
   const userId = Number(req.session.userId);
-  if (!userId) return res.redirect('/login');
+  // fetch z modalu posiela x-requested-with / accept: application/json → chceme JSON odpovede
+  const wantsJson = (req.headers['x-requested-with'] === 'fetch')
+    || (req.headers.accept || '').includes('application/json');
+  const fail = (status, message) => {
+    if (wantsJson) return res.status(status).json({ success: false, message });
+    return res.redirect('/leagues/' + (league ? league.id : ''));
+  };
+
+  if (!userId) {
+    if (wantsJson) return res.status(401).json({ success: false, message: 'Musíš byť prihlásený.' });
+    return res.redirect('/login');
+  }
 
   const league = await League.findOne({ where: { joinCode: (joinCode || '').trim().toUpperCase() } });
-  if (!league || !league.active) return res.redirect('/seasons');
+  if (!league || !league.active) {
+    if (wantsJson) return res.status(404).json({ success: false, message: 'Liga sa nenašla.' });
+    return res.redirect('/seasons');
+  }
 
-  // ak má heslo, over ho — pri zlom hesle naspäť na ligu
+  // ak má heslo, over ho — pri zlom hesle chyba do modalu (JSON) alebo redirect späť
   if (league.hasPassword) {
     const ok = password && await bcrypt.compare(password, league.password || '');
-    if (!ok) return res.redirect('/leagues/' + league.id);
+    if (!ok) return fail(401, 'Nesprávne heslo. Skús to znova.');
   }
 
   // findOrCreate: ak už členstvo existuje, nič nevytvára (žiadny duplicitný PRIMARY)
-    const [, leagueCreated] = await UserLeague.findOrCreate({
+  const [, leagueCreated] = await UserLeague.findOrCreate({
     where: { userId, leagueId: league.id },
     defaults: { userId, leagueId: league.id, role: 'player', joinedAt: new Date() },
   });
@@ -187,7 +224,8 @@ const joinLeagueSubmit = asyncHandler(async (req, res) => {
     const joiner = await User.findByPk(userId, { attributes: ['username'] });
     await notify.memberJoined(league, userId, joiner ? joiner.username : null);
   }
-  
+
+  if (wantsJson) return res.json({ success: true, redirect: '/leagues/' + league.id });
   res.redirect('/leagues/' + league.id);
 });
 

@@ -56,7 +56,7 @@ const sitemapXml = async (req, res) => {
   // dynamický obsah — pri chybe DB pokračujeme len so statickými stránkami
   try {
     const seasons = await Season.findAll({
-      where: { password: null },
+      where: { password: null, hidden: false },
       attributes: ['id', 'updatedAt'],
       order: [['updatedAt', 'DESC']],
       limit: 500,

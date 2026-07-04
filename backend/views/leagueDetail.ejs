@@ -179,17 +179,18 @@
 
 <!-- JOIN DIALOG -->
 <div class="scrim" data-join hidden>
-  <form class="dialog" action="/leagues/join" method="POST">
+  <form class="dialog" action="/leagues/join" method="POST" data-join-form>
     <div class="between" style="margin-bottom:6px"><div class="dialog-title">Pripojiť sa do ligy</div><button type="button" class="btn btn-ghost btn-icon" data-close-join>✕</button></div>
     <input type="hidden" name="joinCode" value="<%= league.joinCode %>">
     <% if (league.hasPassword) { %>
-    <div class="field" style="margin-bottom:22px">
+    <div class="field" style="margin-bottom:14px">
       <label class="label">Heslo ligy</label>
       <input class="input" type="password" name="password" placeholder="••••••" required>
     </div>
     <% } else { %>
-    <p class="muted" style="font-size:var(--fs-sm);margin-bottom:22px">Pripojíš sa do ligy „<%= league.name %>".</p>
+    <p class="muted" style="font-size:var(--fs-sm);margin-bottom:14px">Pripojíš sa do ligy „<%= league.name %>".</p>
     <% } %>
+    <div class="field-error" data-join-error hidden style="color:var(--danger);font-size:var(--fs-sm);margin-bottom:14px"></div>
     <div class="row g-2" style="justify-content:flex-end"><button type="button" class="btn btn-secondary" data-close-join>Zrušiť</button><button type="submit" class="btn btn-primary">Pripojiť sa</button></div>
   </form>
 </div>
@@ -211,6 +212,34 @@
     if (dlg && e.target.closest('[data-open-join]')) dlg.removeAttribute('hidden');
     if (dlg && e.target.closest('[data-close-join]')) dlg.setAttribute('hidden','');
   });
+
+  // Pripojenie cez fetch — zlé heslo zobrazí chybu priamo v modáli (bez refreshu).
+  (function () {
+    var form = document.querySelector('[data-join-form]');
+    if (!form) return;
+    var errBox = form.querySelector('[data-join-error]');
+    var submitBtn = form.querySelector('button[type="submit"]');
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (errBox) { errBox.setAttribute('hidden', ''); errBox.textContent = ''; }
+      if (submitBtn) submitBtn.disabled = true;
+      var body = new URLSearchParams(new FormData(form));
+      fetch('/leagues/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'fetch', 'Accept': 'application/json' },
+        body: body.toString(),
+      }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { status: r.status, d: d }; }); })
+        .then(function (res) {
+          if (submitBtn) submitBtn.disabled = false;
+          if (res.d && res.d.success) { window.location.href = res.d.redirect || window.location.href; return; }
+          if (errBox) { errBox.textContent = (res.d && res.d.message) || 'Nepodarilo sa pripojiť. Skús to znova.'; errBox.removeAttribute('hidden'); }
+        })
+        .catch(function () {
+          if (submitBtn) submitBtn.disabled = false;
+          if (errBox) { errBox.textContent = 'Chyba spojenia. Skús to znova.'; errBox.removeAttribute('hidden'); }
+        });
+    });
+  })();
 </script>
 
 <%- include('partials/footer') %>

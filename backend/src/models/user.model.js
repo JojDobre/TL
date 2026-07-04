@@ -35,6 +35,14 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,            // URL k profilovému obrázku
         allowNull: true,
       },
+      // Interný príznak simulovaného hráča (bot). Vo frontende sa nezobrazuje —
+      // slúži na správu: hromadné pozastavenie, vyfiltrovanie alebo odstránenie
+      // botov, keď platformu prevezme reálna komunita.
+      isBot: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
       bio: {
         type: DataTypes.TEXT,              // Typ stlpca - dlhší text
         allowNull: true,
@@ -80,10 +88,13 @@ module.exports = (sequelize, DataTypes) => {
         as: 'createdSeasons',
       });
       
-      // User môže byť členom viacerých sezón
+      // User môže byť členom viacerých sezón.
+      // through MUSÍ byť explicitný model (models.UserSeason → tabuľka user_seasons),
+      // nie reťazec 'UserSeasons' — ten by vytvoril druhú, neželanú through-tabuľku.
       User.belongsToMany(models.Season, {
-        through: 'UserSeasons',
+        through: models.UserSeason,
         foreignKey: 'userId',
+        otherKey: 'seasonId',
         as: 'participatedSeasons',
       });
       
@@ -96,12 +107,11 @@ module.exports = (sequelize, DataTypes) => {
       User.hasMany(models.Notification, {
         foreignKey: 'userId',
       });
-      
-      // User môže mať viacero achievementov
-      User.belongsToMany(models.Achievement, {
-        through: 'UserAchievements',
-        foreignKey: 'userId',
-      });
+
+      // POZN.: M:N väzbu User ↔ Achievement (through models.UserAchievement,
+      // as: 'achievements') definuje user-achievement.model.js. Tu ju zámerne
+      // NEDEFINUJEME znova cez reťazec 'UserAchievements' — vznikla by druhá,
+      // neželaná through-tabuľka a duplicitné aliasy.
     };
   
     return User;

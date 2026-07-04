@@ -45,7 +45,7 @@
   .quick-link b { color:var(--text-1); font-size:var(--fs-sm); }
   .quick-link .ar { color:var(--text-4); }
   @media (max-width:980px){ .my-layout { grid-template-columns:1fr; } .my-aside { position:static; } }
-  @media (max-width:680px){ .alert-banner { grid-template-columns:auto 1fr; } .my-cta { flex-wrap:nowrap; width:100%; } .my-cta .btn { flex:1 1 50%; } .alert-act { grid-column:1 / -1; flex-direction:row-reverse; align-items:center; justify-content:space-between; } .ms-grid { grid-template-columns:1fr; } .ml-row { grid-template-columns:auto 1fr auto; } .ml-row .ml-status { display:none; } }
+  @media (max-width:680px){ .mobile-button-lg { width:100%; } .alert-banner { grid-template-columns:auto 1fr; } .my-cta { flex-wrap:nowrap; width:100%; } .my-cta .btn { flex:1 1 50%; } .alert-act { grid-column:1 / -1; flex-direction:row-reverse; align-items:center; justify-content:space-between; } .ms-grid { grid-template-columns:1fr; } .ml-row { grid-template-columns:auto 1fr auto; } .ml-row .ml-status { display:none; } }
 ` }) %>
 
 <%
@@ -77,11 +77,11 @@
     <div class="alert-banner">
       <span class="alert-ic">⏳</span>
       <div class="alert-tx">
-        <div class="row g-2 wrap-gap" style="margin-bottom:5px"><h3>Máš <%= unfilledCount %> <%= unfilledCount === 1 ? 'nevyplnený tip' : (unfilledCount < 5 ? 'nevyplnené tipy' : 'nevyplnených tipov') %></h3><span class="tag tag-warning"><span class="dot"></span>Uzávierka čoskoro</span></div>
+        <span class="tag tag-warning" style="margin-bottom:12px"><span class="dot"></span>Uzávierka čoskoro</span><div class="row g-2 wrap-gap" style="margin-bottom:5px"><h3>Máš <%= unfilledCount %> <%= unfilledCount === 1 ? 'nevyplnený tip' : (unfilledCount < 5 ? 'nevyplnené tipy' : 'nevyplnených tipov') %></h3></div>
         <p class="muted" style="font-size:var(--fs-sm)">Najbližší zápas <%= upcoming[0].home %> – <%= upcoming[0].away %> o <%= fmtTime(upcoming[0].time) %>. Nezabudni natipovať.</p>
       </div>
       <div class="alert-act">
-        <a href="/moje-tipy" class="btn btn-primary btn-sm">Vyplniť tipy →</a>
+        <a href="/moje-tipy" class="btn btn-primary btn-sm mobile-button-lg">Vyplniť tipy →</a>
       </div>
     </div>
   </div>
@@ -91,11 +91,11 @@
     <div class="alert-banner ok">
       <span class="alert-ic">✅</span>
       <div class="alert-tx">
-        <div class="row g-2 wrap-gap" style="margin-bottom:5px"><h3>Máš všetko natipované</h3><span class="tag tag-success"><span class="dot"></span>Hotovo</span></div>
+        <span class="tag tag-success" style="margin-bottom:12px"><span class="dot"></span>Hotovo</span><div class="row g-2 wrap-gap" style="margin-bottom:5px"><h3>Máš všetko natipované</h3></div>
         <p class="muted" style="font-size:var(--fs-sm)">V otvorených kolách nemáš žiadne nevyplnené tipy. Sleduj výsledky a rebríček.</p>
       </div>
       <div class="alert-act">
-        <a href="/moje-tipy" class="btn btn-secondary btn-sm">Skontrolovať tipy →</a>
+        <a href="/moje-tipy" class="btn btn-secondary btn-sm mobile-button-lg">Skontrolovať tipy →</a>
       </div>
     </div>
   </div>
@@ -223,13 +223,14 @@
 
 <!-- ===== JOIN DIALOG ===== -->
 <div class="scrim" data-join hidden>
-  <form class="dialog" action="/seasons/join" method="POST">
+  <form class="dialog" action="/seasons/join" method="POST" data-join-form>
     <div class="between" style="margin-bottom:6px"><div class="dialog-title">Pripojiť sa do sezóny</div><button type="button" class="btn btn-ghost btn-icon" data-close-join>✕</button></div>
     <p class="muted" style="font-size:var(--fs-sm);margin-bottom:20px">Zadaj 6-miestne ID sezóny, ktoré ti poslal jej zakladateľ.</p>
-    <div class="field" style="margin-bottom:22px">
+    <div class="field" style="margin-bottom:14px">
       <label class="label">ID sezóny</label>
       <input class="input num" name="inviteCode" placeholder="napr. HK4F2X" style="letter-spacing:.3em;text-transform:uppercase;font-weight:700" maxlength="6" required>
     </div>
+    <div class="field-error" data-join-error hidden style="color:var(--danger);font-size:var(--fs-sm);margin-bottom:14px"></div>
     <div class="row g-2" style="justify-content:flex-end"><button type="button" class="btn btn-secondary" data-close-join>Zrušiť</button><button type="submit" class="btn btn-primary">Pripojiť sa</button></div>
   </form>
 </div>
@@ -240,6 +241,33 @@
     if (e.target.closest('[data-open-join]')) dlg.removeAttribute('hidden');
     else if (e.target.closest('[data-close-join]') || e.target === dlg) dlg.setAttribute('hidden','');
   });
+  // odoslanie join dialógu cez fetch — chyba (zlé ID/heslo/skončená) sa zobrazí v modáli
+  (function () {
+    var form = document.querySelector('[data-join-form]');
+    if (!form) return;
+    var errBox = form.querySelector('[data-join-error]');
+    var submitBtn = form.querySelector('button[type="submit"]');
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (errBox) { errBox.setAttribute('hidden', ''); errBox.textContent = ''; }
+      if (submitBtn) submitBtn.disabled = true;
+      var body = new URLSearchParams(new FormData(form));
+      fetch(form.getAttribute('action'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'fetch', 'Accept': 'application/json' },
+        body: body.toString(),
+      }).then(function (r) { return r.json().catch(function () { return {}; }); })
+        .then(function (d) {
+          if (submitBtn) submitBtn.disabled = false;
+          if (d && d.success) { window.location.href = d.redirect || window.location.href; return; }
+          if (errBox) { errBox.textContent = (d && d.message) || 'Nepodarilo sa pripojiť. Skús to znova.'; errBox.removeAttribute('hidden'); }
+        })
+        .catch(function () {
+          if (submitBtn) submitBtn.disabled = false;
+          if (errBox) { errBox.textContent = 'Chyba spojenia. Skús to znova.'; errBox.removeAttribute('hidden'); }
+        });
+    });
+  })();
 </script>
 
 <%- include('partials/footer') %>

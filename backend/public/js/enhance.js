@@ -56,6 +56,39 @@
     }, true);
   })();
 
+  /* ---- Fallback pre rozbité obrázky (logá tímov, avatary) -----------------
+     Logá sa často hotlinkujú z externých URL — keď odkaz zlyhá, ostalo by
+     prázdne miesto. Pri chybe načítania <img> vnútri .team-logo / .wp-photo /
+     .avatar skryjeme obrázok a necháme vyniknúť textový fallback (skratka
+     tímu / iniciály), ktorý je v tých kontajneroch už pripravený v HTML. */
+  (function () {
+    function handleBroken(img) {
+      var box = img.closest('.team-logo, .wp-photo, .avatar');
+      img.style.display = 'none';
+      if (box) {
+        box.style.boxShadow = 'none';
+        if (!box.style.background || box.style.background === 'none') box.style.background = 'var(--surface-3)';
+        var hasText = (box.textContent || '').trim().length > 0;
+        if (!hasText && !box.querySelector('[data-imgfallback]')) {
+          var s = document.createElement('span');
+          s.setAttribute('data-imgfallback', '');
+          s.textContent = box.getAttribute('data-abbr') || '?';
+          box.appendChild(s);
+        }
+      }
+    }
+    // capture=true: 'error' na <img> nebublinkuje, treba ho chytať v capture fáze
+    document.addEventListener('error', function (e) {
+      var t = e.target;
+      if (t && t.tagName === 'IMG') handleBroken(t);
+    }, true);
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('.team-logo img, .wp-photo img, .avatar img').forEach(function (img) {
+        if (img.complete && img.naturalWidth === 0) handleBroken(img);
+      });
+    });
+  })();
+
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var fine   = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var MANUAL = document.body && document.body.getAttribute('data-enhance') === 'manual';

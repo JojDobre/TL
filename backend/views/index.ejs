@@ -68,6 +68,7 @@
                  filter: grayscale(1); transition: opacity .18s var(--ease), filter .18s var(--ease); }
   .partner:hover { transform: translateY(-3px); border-color: var(--line-strong); background: var(--surface-2); }
   .partner:hover img { opacity: 1; filter: grayscale(0); }
+  .partner-popis { text-align:right; max-width:38ch; }
   @media (max-width: 960px){ .partners { grid-template-columns: repeat(3,1fr); } }
 
     /* ===== features ===== */
@@ -86,10 +87,18 @@
     .hero-card { order:0; display:flex; flex-wrap:wrap; gap:10px; }
     .hero-card > .card-glow { flex:1 1 100%; }
     .hero-card .float-pts { position:static; flex:1 1 0; min-width:150px; animation:none; }
-    .g3,.g4 { grid-template-columns: 1fr 1fr; }
+    .g3,.g4 { grid-template-columns: 1fr 1fr 1fr; }
     .vs { grid-template-columns: 1fr; }
     .vs-link { grid-template-columns: 1fr; gap: 20px; }
+    .partner-head-mobile { width:100%; }
+    .partner-popis { text-align:left; max-width:100%;}
+    .g-0 { gap:2px !important;}
   }
+
+  @media (max-width: 700px){
+    .g3 { grid-template-columns: 1fr; }
+  }
+  
   @media (max-width: 600px){
     .hero { padding: 30px 0 26px; }
     .hero h1 { font-size: clamp(2.15rem, 8.6vw, 2.9rem); }
@@ -222,7 +231,7 @@
       </div>
       <div class="row g-3 wrap-gap home-score">
         <div class="card stat" style="background:var(--surface-2);padding:12px 16px"><div class="stat-value max" style="font-size:1.5rem;color:var(--success)">+10</div><div class="stat-label">presný výsledok</div></div>
-        <div class="card stat" style="background:var(--surface-2);padding:12px 16px"><div class="stat-value" style="font-size:1.5rem">+3</div><div class="stat-label">víťaz / remíza</div></div>
+        <div class="card stat" style="background:var(--surface-2);padding:12px 16px"><div class="stat-value" style="font-size:1.5rem">+3</div><div class="stat-label">víťaz</div></div>
         <div class="card stat" style="background:var(--surface-2);padding:12px 16px"><div class="stat-value" style="font-size:1.5rem">+2</div><div class="stat-label">gólový rozdiel</div></div>
         <div class="card stat" style="background:var(--surface-2);padding:12px 16px"><div class="stat-value" style="font-size:1.5rem">+1</div><div class="stat-label">góly tímu</div></div>
       </div>
@@ -233,12 +242,12 @@
 <!-- ============================== SEZÓNA vs LIGA ============================== -->
 <section class="band sec" id="rozdiel" data-screen-label="Sezóna vs Liga">
   <div class="wrap">
-    <div class="section-head reveal">
-      <div>
+    <div class="section-head reveal g-0">
+      <div class="partner-head-mobile">
         <div class="eyebrow">Dôležité pre nováčikov</div>
         <h2>Sezóna alebo liga? Aký je rozdiel</h2>
       </div>
-      <p class="lead" style="max-width:42ch">Dva pojmy, ktoré spolu súvisia: <b class="hi">sezóna</b> zoskupuje ligy, <b class="hi">liga</b> rozhoduje čo tipuješ.</p>
+      <p class="lead partner-popis">Dva pojmy, ktoré spolu súvisia: <b class="hi">sezóna</b> zoskupuje ligy, <b class="hi">liga</b> rozhoduje čo tipuješ.</p>
     </div>
 
     <div class="vs">
@@ -390,12 +399,12 @@
 
 <!-- ============================== PARTNERI ============================== -->
 <section class="wrap sec" data-screen-label="Partneri">
-  <div class="section-head reveal">
-    <div>
+  <div class="section-head reveal g-0">
+    <div class="partner-head-mobile">
       <div class="eyebrow">Partneri</div>
       <h2>Spolu s nami tvoria hru</h2>
     </div>
-    <p class="lead" style="max-width:38ch">Značky a organizácie, ktoré podporujú férové tipovanie na tifo.sk.</p>
+    <p class="lead partner-popis">Značky a organizácie, ktoré podporujú férové tipovanie na tifo.sk.</p>
   </div>
   <div class="partners reveal" data-delay="60">
     <a class="partner" href="https://vedos.cz/wp-content/uploads/2025/03/VEDOS-Hosting-logo.svg" target="_blank" rel="noopener" aria-label="Wedos.sk"><img src="https://bytezone.jojdobre.eu/wp-content/uploads/2025/02/04.svg" alt="Wedos.sk"></a>
