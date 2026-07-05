@@ -209,8 +209,8 @@ router.get('/notifications', requireLogin, notificationsPage);
 router.post('/notifications/:id/read', requireLogin, markRead);
 router.post('/notifications/read-all', requireLogin, markAllRead);
 
-// API pre zvonček v navbare
-router.get('/api/notifications/unread-count', requireLogin, unreadCountApi);
-router.get('/api/notifications/recent', requireLogin, recentApi);
+// API pre zvonček v navbare (JSON 401 pre neprihláseného — konzistentné s ostatnými /api/*)
+router.get('/api/notifications/unread-count', apiRequireLogin, unreadCountApi);
+router.get('/api/notifications/recent', apiRequireLogin, recentApi);
 
 module.exports = router;

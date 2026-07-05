@@ -10,7 +10,13 @@
     "seed:teams": "node src/seeds/teams.seed.js",
     "bots:create": "node src/bots/run-bots.js create",
     "bots:tick": "node src/bots/run-bots.js tick",
-    "bots:status": "node src/bots/run-bots.js status"
+    "bots:status": "node src/bots/run-bots.js status",
+    "test:e2e": "playwright test",
+    "test:e2e:pc": "playwright test --project=pc",
+    "test:e2e:tablet": "playwright test --project=tablet",
+    "test:e2e:mobile": "playwright test --project=mobile",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report"
   },
   "keywords": [],
   "author": "",
@@ -35,6 +41,7 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "nodemon": "^2.0.20"
   }
 }

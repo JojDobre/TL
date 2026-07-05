@@ -68,3 +68,12 @@ struktura.txt
 /backend/src/seeds/achievements.spec.js
 /backend/test
 
+# Playwright artefakty
+tests/support/.auth/
+playwright-report/
+test-results.json
+/backend/test-results.json
+backend/playwright.config.js
+backend/package.playwright.json
+tests
+/backend/test-results/
