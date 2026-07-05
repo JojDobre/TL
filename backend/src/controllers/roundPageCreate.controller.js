@@ -4,7 +4,7 @@
 // uzávierka), patrí do ligy. Zápasy sa pridávajú až POTOM (create-matches),
 // lebo zápas potrebuje existujúce kolo.
 
-const { League, Season, Round, User, UserSeason } = require('../models');
+const { League, Season, Round, User, UserSeason, UserLeague } = require('../models');
 const { asyncHandler } = require('../middleware/error.middleware');
 const { isLeagueLocked } = require('../utils/league.utils');
 
@@ -16,6 +16,8 @@ async function canManageLeague(league, userId) {
   if (league.Season && league.Season.creatorId === userId) return true;
   const sRole = await UserSeason.findOne({ where: { userId, seasonId: league.seasonId } });
   if (sRole && sRole.role === 'admin') return true;
+  const lRole = await UserLeague.findOne({ where: { userId, leagueId: league.id, role: 'admin' } });
+  if (lRole) return true;
   return false;
 }
 

@@ -86,17 +86,20 @@ const seasonDetailPage = asyncHandler(async (req, res) => {
   // je prihlásený členom / tvorcom / globálnym adminom?
   let isMember = false;
   let isGlobalAdmin = false;
+  let isSeasonAdmin = false;
   if (meId) {
     const membership = await UserSeason.findOne({ where: { userId: meId, seasonId: season.id } });
     isMember = !!membership;
+    isSeasonAdmin = !!(membership && membership.role === 'admin');
     const u = await User.findByPk(meId);
     isGlobalAdmin = u && u.role === 'admin';
   }
   const isCreator = meId && season.creatorId === meId;
   const canManage = isCreator || isGlobalAdmin || false;
-  // tvorba ligy: v oficiálnej len správca/admin; v community ktorýkoľvek člen; nikdy ak ended
+  // tvorba ligy: rovnaké oprávnenie ako backend createLeagueSubmit —
+  // tvorca sezóny / season-admin / globálny admin; nikdy ak ended
   const ended = seasonStatus(season) === 'ended';
-  const canCreateLeague = !ended && (canManage || (season.type === 'community' && isMember));
+  const canCreateLeague = !ended && (canManage || isSeasonAdmin);
 
   const status = seasonStatus(season);
 

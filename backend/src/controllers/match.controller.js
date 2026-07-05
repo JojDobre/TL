@@ -9,7 +9,7 @@
 //  - jednotné oprávnenia (tvorca sezóny/ligy, admin sezóny, globálny admin)
 //  - validácia skóre (celé nezáporné čísla)
 
-const { Match, Round, Team, League, Season, User, UserSeason, Sequelize, Tip } = require('../models');
+const { Match, Round, Team, League, Season, User, UserSeason, Sequelize, Tip, UserLeague } = require('../models');
 const { Op } = Sequelize;
 const { ApiError, asyncHandler } = require('../middleware/error.middleware');
 const { isLeagueLocked } = require('../utils/league.utils');
@@ -80,6 +80,10 @@ const canManageMatch = async (match, userId) => {
   if (season) {
     const seasonRole = await UserSeason.findOne({ where: { userId, seasonId: season.id, role: 'admin' } });
     if (seasonRole) return true;
+  }
+  if (league) {
+    const lRole = await UserLeague.findOne({ where: { userId, leagueId: league.id, role: 'admin' } });
+    if (lRole) return true;
   }
   return false;
 };

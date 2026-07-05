@@ -9,7 +9,7 @@
 //  - zjednodušená validácia dátumov, validácia povinných polí
 //  - oprávnenia cez prehľadnú funkciu
 
-const { Round, League, Match, User, UserSeason, Season, Team, Tip, Sequelize } = require('../models');
+const { Round, League, Match, User, UserSeason, Season, Team, Tip, Sequelize, UserLeague } = require('../models');
 const { Op } = Sequelize;
 const { ApiError, asyncHandler } = require('../middleware/error.middleware');
 const { tipQualityWeight } = require('../utils/accuracy.util');
@@ -29,6 +29,8 @@ const canManageRound = async (round, userId) => {
   if (season && season.creatorId === userId) return true;
   const seasonRole = await UserSeason.findOne({ where: { userId, seasonId: league.seasonId } });
   if (seasonRole && seasonRole.role === 'admin') return true;
+  const lRole = await UserLeague.findOne({ where: { userId, leagueId: league.id, role: 'admin' } });
+  if (lRole) return true;
   return false;
 };
 

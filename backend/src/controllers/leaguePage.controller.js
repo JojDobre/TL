@@ -42,7 +42,7 @@ function roundStatus(round) {
 const leagueDetailPage = asyncHandler(async (req, res) => {
   const league = await League.findByPk(req.params.id, {
     include: [
-      { model: Season, attributes: ['id', 'name'] },
+      { model: Season, attributes: ['id', 'name', 'creatorId'] },
       { model: Round, attributes: ['id', 'name', 'description', 'startDate', 'endDate', 'active', 'createdAt'] },
     ],
   });
@@ -155,12 +155,11 @@ const leagueDetailPage = asyncHandler(async (req, res) => {
   let canManage = false;
   let isSeasonMember = false;
   if (meId) {
-    const u = await User.findByPk(meId);
     const sRole = await UserSeason.findOne({ where: { userId: meId, seasonId: league.seasonId } });
     isSeasonMember = !!sRole;
-    canManage = league.creatorId === meId
-      || (u && u.role === 'admin')
-      || (sRole && sRole.role === 'admin');
+    // rovnaké oprávnenie ako isLeagueManager (POST akcie) — tlačidlá správy
+    // vidí presne ten, kto ich smie použiť
+    canManage = await isLeagueManager(league, meId);
   }
 
   res.render(req._standaloneView ? 'standaloneDetail' : 'leagueDetail', {
@@ -234,8 +233,17 @@ const joinLeagueSubmit = asyncHandler(async (req, res) => {
 const createLeaguePage = asyncHandler(async (req, res) => {
   const seasonId = req.query.season;
   if (!seasonId) return res.redirect('/seasons');
-  const season = await Season.findByPk(seasonId, { attributes: ['id', 'name', 'type'] });
+  const season = await Season.findByPk(seasonId, { attributes: ['id', 'name', 'type', 'creatorId'] });
   if (!season) return res.status(404).render('error-page', { message: 'Sezóna nebola nájdená.' });
+
+  // oprávnenie ako pri POST /leagues/create: tvorca sezóny / season-admin / globálny admin
+  const userId = Number(req.session.userId);
+  const user = await User.findByPk(userId);
+  const seasonRole = await UserSeason.findOne({ where: { userId, seasonId } });
+  const isSeasonAdmin = seasonRole && seasonRole.role === 'admin';
+  if (season.creatorId !== userId && !isSeasonAdmin && (!user || user.role !== 'admin')) {
+    return res.status(403).render('error-page', { message: 'Nemáš oprávnenie vytvoriť ligu v tejto sezóne.' });
+  }
 
   // dostupné šablóny (oficiálne ligy označené ako šablóna) — na výber pri klonovaní
   const templates = await League.findAll({
