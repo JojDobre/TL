@@ -394,4 +394,16 @@ async function evaluateUser(userId) {
   return { items: out, earnedCount: earnedTotal, total: out.length };
 }
 
-module.exports = { evaluateUser, computeStats };
+// Vyhodnotenie achievementov na pozadí (setImmediate) — neblokuje HTTP odpoveď.
+// evaluateUser() pri novo udelených odznakoch sám vytvorí notifikáciu.
+function evaluateInBackground(userIds) {
+  const uniq = [...new Set((userIds || []).map(Number).filter(Boolean))];
+  if (!uniq.length) return;
+  setImmediate(async () => {
+    for (const uid of uniq) {
+      try { await evaluateUser(uid); } catch (e) { console.error('[achievements] evaluateUser', uid, e.message); }
+    }
+  });
+}
+
+module.exports = { evaluateUser, computeStats, evaluateInBackground };

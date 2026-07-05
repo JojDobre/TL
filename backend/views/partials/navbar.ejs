@@ -84,25 +84,50 @@
     if (list) list.innerHTML = '<div class="dd-link" style="color:var(--text-4)">Žiadne notifikácie</div>';
   }
 
-  // počiatočné načítanie badge počtu
-  fetch('/api/notifications/unread-count', { headers:{ 'Accept':'application/json' } })
-    .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(d){ if(d && d.count > 0 && badge){ badge.textContent = d.count > 99 ? '99+' : d.count; badge.hidden = false; } })
-    .catch(function(){});
-    
-  // počiatočné načítanie posledných notifikácií do dropdownu
-  fetch('/api/notifications/recent', { headers:{ 'Accept':'application/json' } })
-    .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(d){
-      if(!list) return;
-      if(!d || !d.items || !d.items.length){ renderEmpty(); return; }
-      list.innerHTML = d.items.map(function(n){
-        var href = n.link || '/notifications';
-        var dot = n.read ? '' : '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--brand);margin-right:6px;vertical-align:middle"></span>';
-        return '<a class="dd-link" data-notif-item data-notif-id="'+n.id+'" href="'+href+'" style="white-space:normal;line-height:1.4">'+dot+'<span style="margin-right:6px">'+icon(n.type)+'</span>'+esc(n.title||'Notifikácia')+'</a>';
-      }).join('');
-    })
-    .catch(function(){});
+  // Badge: načítanie + polling každých 60 s. Pri náraste počtu (vrátane prvého
+  // zobrazenia) animácia badge (pop) + zatrasenie zvončeka.
+  var bellBtn = document.querySelector('[data-bell]');
+  var lastCount = 0;
+  function animateArrival(){
+    if (badge){ badge.classList.remove('badge-pop'); void badge.offsetWidth; badge.classList.add('badge-pop'); }
+    if (bellBtn){ bellBtn.classList.remove('bell-shake'); void bellBtn.offsetWidth; bellBtn.classList.add('bell-shake'); }
+  }
+  function refreshBadge(){
+    fetch('/api/notifications/unread-count', { headers:{ 'Accept':'application/json' } })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        if(!d || !badge) return;
+        var n = d.count || 0;
+        if(n > 0){
+          badge.textContent = n > 99 ? '99+' : n;
+          badge.hidden = false;
+          if(n > lastCount){ animateArrival(); loadRecent(); }
+        } else {
+          badge.hidden = true; badge.textContent = '';
+        }
+        lastCount = n;
+      })
+      .catch(function(){});
+  }
+  refreshBadge();
+  setInterval(refreshBadge, 60000);
+
+  // posledné notifikácie do dropdownu (pri štarte + pri príchode novej)
+  function loadRecent(){
+    fetch('/api/notifications/recent', { headers:{ 'Accept':'application/json' } })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        if(!list) return;
+        if(!d || !d.items || !d.items.length){ renderEmpty(); return; }
+        list.innerHTML = d.items.map(function(n){
+          var href = n.link || '/notifications';
+          var dot = n.read ? '' : '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--brand);margin-right:6px;vertical-align:middle"></span>';
+          return '<a class="dd-link" data-notif-item data-notif-id="'+n.id+'" href="'+href+'" style="white-space:normal;line-height:1.4">'+dot+'<span style="margin-right:6px">'+icon(n.type)+'</span>'+esc(n.title||'Notifikácia')+'</a>';
+        }).join('');
+      })
+      .catch(function(){});
+  }
+  loadRecent();
 
     
   // Pri OTVORENÍ zvončeka: skry badge a označ všetky ako prečítané (trvalo).
@@ -117,6 +142,7 @@
         if (open && !markedOnOpen) {
           markedOnOpen = true;
           if (badge) { badge.hidden = true; badge.textContent = ''; }
+          lastCount = 0;
           fetch('/notifications/read-all', { method:'POST', headers:{ 'Accept':'application/json' } }).catch(function(){});
         }
       }, 0);

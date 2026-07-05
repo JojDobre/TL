@@ -10,6 +10,7 @@
 const { Tip, Match, User, Round, League, Team, UserLeague, Season, Sequelize } = require('../models');
 const { Op } = Sequelize;
 const { ApiError, asyncHandler } = require('../middleware/error.middleware');
+const achievements = require('../utils/achievement.engine');
 const { isLeagueLocked } = require('../utils/league.utils');
 
 const validScore = (v) => Number.isInteger(v) && v >= 0 && v <= 99;
@@ -119,6 +120,9 @@ const createOrUpdateTip = asyncHandler(async (req, res) => {
   } else {
     tip = await Tip.create({ ...values, points: 0 });
   }
+
+  // achievementy viazané na podanie tipu (prvý tip, počty, denná séria)
+  achievements.evaluateInBackground([userId]);
 
   res.status(200).json({ success: true, message: 'Tip bol úspešne uložený.', data: tip });
 });

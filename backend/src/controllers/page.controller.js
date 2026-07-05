@@ -12,6 +12,7 @@ const { deleteSeason } = require('../utils/delete.util');
 const { cloneTemplateInto } = require('../utils/league-clone.util');
 const { asyncHandler } = require('../middleware/error.middleware');
 const { leagueDetailPage, manageLeaguePage } = require('./leaguePage.controller');
+const achievements = require('../utils/achievement.engine');
 
 // where klauzula pre DOSTUPNÉ šablóny: now musí byť v okne [availableFrom, availableTo]
 // (prázdne hranice = bez obmedzenia). Použité pri ponuke šablón v tvorbe ligy.
@@ -400,6 +401,7 @@ const createSeasonSubmit = asyncHandler(async (req, res) => {
       try { await cloneTemplateInto(template, newLeague); } catch (e) { /* ticho — turnaj ostane prázdny */ }
     }
 
+    achievements.evaluateInBackground([userId]);
     return res.redirect('/seasons/' + newSeasonId);
   }
 
@@ -423,6 +425,7 @@ const createSeasonSubmit = asyncHandler(async (req, res) => {
   });
   try { await season.addParticipant(userId, { through: { role: 'admin' } }); } catch (e) { /* nič */ }
 
+  achievements.evaluateInBackground([userId]);
   res.redirect('/seasons/' + season.id);
 });
 
@@ -652,6 +655,10 @@ const endSeasonSubmit = asyncHandler(async (req, res) => {
     season.ended = true;
     season.active = false;
     await season.save();
+
+    // achievementy po ukončení sezóny (pódium v ligách sezóny) — všetci členovia
+    const members = await UserSeason.findAll({ where: { seasonId: season.id }, attributes: ['userId'] });
+    achievements.evaluateInBackground(members.map((m) => m.userId));
     return res.redirect('/seasons/' + season.id);
   }
 

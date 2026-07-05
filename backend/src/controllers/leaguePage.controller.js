@@ -11,6 +11,7 @@ const { deleteLeague } = require('../utils/delete.util');
 const { SPORTS, COUNTRIES } = require('../utils/team.constants');
 const { asyncHandler } = require('../middleware/error.middleware');
 const notify = require('../utils/notification.service');
+const achievements = require('../utils/achievement.engine');
 
 const DEFAULT_SCORING = { exactScore: 10, correctGoals: 1, correctWinner: 3, goalDifference: 2 };
 
@@ -337,10 +338,12 @@ const createLeagueSubmit = asyncHandler(async (req, res) => {
     try { await cloneTemplateInto(template, league); }
     catch (e) { /* ak klon zlyhá, liga ostane prázdna — používateľ dostane info v detaile */ }
     // klon má tímy/zápasy zo šablóny → rovno na detail
+    achievements.evaluateInBackground([userId]);
     return res.redirect('/leagues/' + league.id);
   }
 
   // klasická liga: na detail (upozornenie na chýbajúce tímy je v detaile)
+  achievements.evaluateInBackground([userId]);
   res.redirect('/leagues/' + league.id);
 });
 
@@ -543,6 +546,13 @@ const endLeagueSubmit = asyncHandler(async (req, res) => {
   // klon nemá zmysel ukončovať samostatne (riadi sa originálom), ale povolíme
   league.ended = !league.ended;
   await league.save();
+
+  // achievementy po UKONČENÍ ligy (pódium, víťaz ligy, ukončenie súťaže)
+  // — vyhodnoť všetkých členov ligy
+  if (league.ended) {
+    const members = await UserLeague.findAll({ where: { leagueId: league.id }, attributes: ['userId'] });
+    achievements.evaluateInBackground(members.map((m) => m.userId));
+  }
   res.redirect('/leagues/' + league.id);
 });
 

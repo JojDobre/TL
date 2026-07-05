@@ -8,6 +8,7 @@
 const bcrypt = require('bcrypt');
 const { User, UserLeague, UserSeason, sequelize } = require('../models');
 const { ApiError, asyncHandler } = require('../middleware/error.middleware');
+const achievements = require('../utils/achievement.engine');
 
 // GET /settings
 const settingsPage = asyncHandler(async (req, res) => {
@@ -54,6 +55,9 @@ const updateProfile = asyncHandler(async (req, res) => {
   if (email) user.email = email;
   await user.save();
 
+  // achievement: úprava profilu
+  achievements.evaluateInBackground([meId]);
+
   res.status(200).json({ success: true, message: 'Údaje uložené.' });
 });
 
@@ -73,6 +77,9 @@ const updateAvatar = asyncHandler(async (req, res) => {
 
   // aktualizuj cache fotky v session, aby ju navbar hneď zobrazil
   if (req.session) req.session.userImage = user.profileImage;
+
+  // achievement: nastavenie avatara
+  if (user.profileImage) achievements.evaluateInBackground([meId]);
 
   res.status(200).json({ success: true, message: url ? 'Profilová fotka uložená.' : 'Profilová fotka odstránená.', data: { profileImage: user.profileImage } });
 });

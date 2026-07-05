@@ -16,6 +16,7 @@ const { v4: uuidv4 } = require('uuid');
 const { ApiError, asyncHandler } = require('../middleware/error.middleware');
 const { tipQualityWeight } = require('../utils/accuracy.util');
 const notify = require('../utils/notification.service');
+const achievements = require('../utils/achievement.engine');
 
 const LEAGUE_LIMITS = { player: 5, vip: 10 }; // admin = bez limitu
 const DEFAULT_SCORING = { exactScore: 10, correctGoals: 1, correctWinner: 3, goalDifference: 2 };
@@ -166,6 +167,9 @@ const createLeague = asyncHandler(async (req, res) => {
   if (!inSeason) {
     await UserSeason.create({ userId, seasonId, role: 'player', joinedAt: new Date() });
   }
+
+  // achievement: vytvorenie ligy
+  achievements.evaluateInBackground([userId]);
 
   res.status(201).json({ success: true, message: 'Liga bola úspešne vytvorená.', data: sanitizeLeague(newLeague) });
 });

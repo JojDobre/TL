@@ -214,6 +214,7 @@ async function propagateToClones(sourceMatch) {
     where: { sourceMatchId: sourceMatch.id },
     include: [{ model: Tip }, { model: Round, include: [{ model: League, attributes: ['scoringSystem'] }] }],
   });
+  const tipperIds = [];
   for (const clone of clones) {
     clone.homeScore = sourceMatch.homeScore;
     clone.awayScore = sourceMatch.awayScore;
@@ -224,10 +225,15 @@ async function propagateToClones(sourceMatch) {
     for (const tip of clone.Tips || []) {
       tip.points = clone.status === 'canceled' ? 0 : calculatePoints(tip, clone, scoring);
       await tip.save();
+      tipperIds.push(tip.userId);
     }
   }
-  return clones.length;
+  return tipperIds;
 }
+
+// Automatické vyhodnotenie achievementov po vyhodnotení zápasu — zdieľaný
+// helper z achievement.engine (beží na pozadí, nesmie zhodiť HTTP odpoveď).
+const { evaluateInBackground: evaluateAchievementsInBackground } = require('../utils/achievement.engine');
 
 const evaluateMatch = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -297,7 +303,15 @@ const evaluateMatch = asyncHandler(async (req, res) => {
   }
 
   // prepíš výsledok aj do prípadných klonov a prepočítaj ich tipy
-  await propagateToClones(match);
+  const cloneTipperIds = await propagateToClones(match);
+
+  // achievementy: vyhodnoť na pozadí všetkých tipujúcich (originál + klony)
+  if (match.status === 'finished') {
+    evaluateAchievementsInBackground([
+      ...(match.Tips || []).map((t) => t.userId),
+      ...cloneTipperIds,
+    ]);
+  }
 
   res.status(200).json({
     success: true,
