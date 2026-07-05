@@ -262,6 +262,7 @@ const createLeaguePage = asyncHandler(async (req, res) => {
 // POST /leagues/create — vytvorenie ligy z formulára
 const createLeagueSubmit = asyncHandler(async (req, res) => {
   const { name, description, seasonId, type, password, exactScore, correctWinner, goalDifference, correctGoals } = req.body;
+  const image = (req.body.image || '').trim() || null;
   const userId = Number(req.session.userId);
   if (!userId) return res.redirect('/login');
 
@@ -325,7 +326,7 @@ const createLeagueSubmit = asyncHandler(async (req, res) => {
   }
 
   const league = await League.create({
-    name: name.trim(), description: description || null,
+    name: name.trim(), description: description || null, image,
     type: leagueType, joinCode, password: passwordHash, hasPassword: !!passwordHash,
     seasonId, creatorId: userId, scoringSystem, scoringLocked: false, active: true,
     templateId: template ? template.id : null,
@@ -414,6 +415,7 @@ const editLeagueSubmit = asyncHandler(async (req, res) => {
 
   league.name = name.trim();
   league.description = description || null;
+  if (req.body.image !== undefined) league.image = (req.body.image || '').trim() || null;
   if (type === 'official' && user.role === 'admin') league.type = 'official';
   else if (type === 'custom') league.type = 'custom';
 

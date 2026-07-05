@@ -60,7 +60,7 @@
 <div class="wrap lg-head">
   <div class="crumb"><a href="/seasons">Sezóny</a> › <a href="/seasons/<%= league.seasonId %>"><%= (league.Season && league.Season.name) || 'Sezóna' %></a> › <%= league.name %></div>
   <div class="lg-banner">
-    <span class="lg-cover" style="background:linear-gradient(135deg,#7c5cff,#3b1f8a)"><%= lgInit %></span>
+    <span class="lg-cover" style="background:linear-gradient(135deg,#7c5cff,#3b1f8a)<% if (league.image) { %>;background-image:url('<%= league.image %>');background-size:cover;background-position:center<% } %>"><% if (!league.image) { %><%= lgInit %><% } %></span>
     <div class="lg-head-text">
       <div class="row g-2 wrap-gap"><h1 style="font-size:clamp(1.8rem,3vw,2.4rem)"><%= league.name %></h1><span class="tag <%= league.type === 'official' ? 'tag-brand' : 'tag-gold' %>"><%= league.type === 'official' ? 'Oficiálna liga' : 'Custom liga' %></span><% if (league.hasPassword) { %><span class="tag tag-muted">🔒 Heslo</span><% } %><% if (league.ended) { %><span class="tag tag-muted">Ukončená</span><% } %></div>
     </div>

@@ -182,6 +182,7 @@
         <!-- skryté polia, aby edit endpoint nezmazal názov/typ ligy -->
         <input type="hidden" name="name" value="<%= league.name %>">
         <input type="hidden" name="description" value="<%= league.description || '' %>">
+        <input type="hidden" name="image" value="<%= league.image || '' %>">
         <input type="hidden" name="type" value="<%= league.type %>">
         <% if (league.scoringLocked) { %>
           <div class="tag tag-danger" style="display:block;padding:10px 12px;margin-bottom:14px">Bodovanie je uzamknuté — liga už má vyhodnotený zápas, pravidlá sa nedajú meniť.</div>
@@ -209,6 +210,7 @@
         <div class="stack g-4">
           <div class="field"><label class="label">Názov ligy</label><input class="input" name="name" value="<%= league.name %>" required></div>
           <div class="field"><label class="label">Popis</label><input class="input" name="description" value="<%= league.description || '' %>" placeholder="Krátky popis ligy"></div>
+          <div class="field"><label class="label">Obrázok ligy (URL)</label><input class="input" type="url" name="image" value="<%= league.image || '' %>" placeholder="https://…"><span class="hint">Zobrazí sa namiesto iniciálok na kartách ligy.</span></div>
           <input type="hidden" name="type" value="<%= league.type %>">
           <div class="field"><label class="label">Heslo ligy</label><input class="input" type="password" name="password" placeholder="<%= league.hasPassword ? 'Zmeniť heslo (nechaj prázdne = bez zmeny)' : 'Nastaviť heslo (voliteľné)' %>"></div>
           <% if (league.hasPassword) { %><label class="check"><input type="checkbox" name="removePassword"> Odstrániť heslo (liga bude verejná na pripojenie)</label><% } %>

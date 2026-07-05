@@ -151,7 +151,7 @@
       <div class="ml-list">
         <% myLeagues.forEach(function(l){ %>
         <a href="<%= l.seasonMode === 'standalone' ? ('/seasons/' + l.seasonId) : ('/leagues/' + l.id) %>" class="card card-hover ml-row"<%= l.ended ? ' style="opacity:.72"' : '' %>>
-          <span class="ml-logo" style="background:linear-gradient(<%= grad(l.id) %>)"><%= abbr(l.name) %></span>
+          <span class="ml-logo" style="background:linear-gradient(<%= grad(l.id) %>)<% if (l.image) { %>;background-image:url('<%= l.image %>');background-size:cover;background-position:center<% } %>"><% if (!l.image) { %><%= abbr(l.name) %><% } %></span>
           <div style="min-width:0">
             <div class="row g-2 wrap-gap"><b class="hi"><%= l.name %></b><% if (l.seasonMode === 'standalone') { %><span class="tag tag-gold">Samostatná liga</span><% } else { %><span class="tag <%= l.type === 'official' ? 'tag-brand' : 'tag-gold' %>"><%= l.type === 'official' ? 'Oficiálna' : 'Custom' %></span><% } %><% if (l.hasPassword) { %><span class="tag tag-muted">🔒 Heslo</span><% } %></div>
             <div class="muted" style="font-size:var(--fs-sm)"><%= l.seasonMode === 'standalone' ? 'Samostatný turnaj' : (l.seasonName || '—') %></div>

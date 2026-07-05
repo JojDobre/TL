@@ -102,7 +102,7 @@ const myPage = asyncHandler(async (req, res) => {
     }
     const sEnded = l.Season && seasonStatus(l.Season) === 'ended';
     myLeagues.push({
-      id: l.id, name: l.name, type: l.type, hasPassword: l.hasPassword,
+      id: l.id, name: l.name, type: l.type, hasPassword: l.hasPassword, image: l.image || null,
       seasonName: l.Season ? l.Season.name : null,
       seasonId: l.Season ? l.Season.id : null,
       seasonMode: l.Season ? l.Season.mode : null,

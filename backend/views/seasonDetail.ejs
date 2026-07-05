@@ -167,7 +167,7 @@
         <% var coverBg = ['135deg,#0b4ea2,#06306a','135deg,#7c5cff,#3b1f8a','135deg,#16a085,#0c5f4d','135deg,#d35400,#8a3700'][i % 4]; %>
         <% if (canOpen) { %>
         <a href="/leagues/<%= lg.id %>" class="card card-hover league-card">
-          <span class="league-cover" style="background:linear-gradient(<%= coverBg %>)"><span class="lc-init"><%= (lg.name||'L').substring(0,3).toUpperCase() %></span><span class="cover-tags"><span class="tag <%= lg.type === 'official' ? 'tag-brand' : 'tag-gold' %>"><%= lg.type === 'official' ? 'Oficiálna' : 'Custom' %></span></span></span>
+          <span class="league-cover" style="background:linear-gradient(<%= coverBg %>)<% if (lg.image) { %>;background-image:url('<%= lg.image %>');background-size:cover;background-position:center<% } %>"><% if (!lg.image) { %><span class="lc-init"><%= (lg.name||'L').substring(0,3).toUpperCase() %></span><% } %><span class="cover-tags"><span class="tag <%= lg.type === 'official' ? 'tag-brand' : 'tag-gold' %>"><%= lg.type === 'official' ? 'Oficiálna' : 'Custom' %></span></span></span>
           <div style="min-width:0">
             <div class="row g-2 wrap-gap"><span style="font-weight:800;color:var(--text-1);font-size:var(--fs-lg)"><%= lg.name %></span></div>
             <div class="league-meta"><span><b><%= lg.membersCount != null ? lg.membersCount : '—' %></b> hráčov</span><span>ID: <b><%= lg.joinCode || lg.inviteCode || '—' %></b></span></div>
@@ -176,7 +176,7 @@
         </a>
         <% } else { %>
         <div class="card league-card" style="opacity:.85">
-          <span class="league-cover" style="background:linear-gradient(<%= coverBg %>)"><span class="lc-init"><%= (lg.name||'L').substring(0,3).toUpperCase() %></span><span class="cover-tags"><span class="tag <%= lg.type === 'official' ? 'tag-brand' : 'tag-gold' %>"><%= lg.type === 'official' ? 'Oficiálna' : 'Custom' %></span></span></span>
+          <span class="league-cover" style="background:linear-gradient(<%= coverBg %>)<% if (lg.image) { %>;background-image:url('<%= lg.image %>');background-size:cover;background-position:center<% } %>"><% if (!lg.image) { %><span class="lc-init"><%= (lg.name||'L').substring(0,3).toUpperCase() %></span><% } %><span class="cover-tags"><span class="tag <%= lg.type === 'official' ? 'tag-brand' : 'tag-gold' %>"><%= lg.type === 'official' ? 'Oficiálna' : 'Custom' %></span></span></span>
           <div style="min-width:0">
             <div class="row g-2 wrap-gap"><span style="font-weight:800;color:var(--text-1);font-size:var(--fs-lg)"><%= lg.name %></span></div>
             <div class="league-meta"><span><b><%= lg.membersCount != null ? lg.membersCount : '—' %></b> hráčov</span><span>ID: <b><%= lg.joinCode || lg.inviteCode || '—' %></b></span></div>
