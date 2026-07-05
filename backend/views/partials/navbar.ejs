@@ -11,12 +11,12 @@
   <nav class="nav-links">
     <a class="nav-link <%= nav==='home'?'active':'' %>" href="/">Domov</a>
     <% if (currentUserId) { %>
-      <a class="nav-link <%= nav==='moje'?'active':'' %>" href="/my">Moje</a>
+      <a class="nav-link <%= nav==='moje'?'active':'' %>" href="/my">Centrum</a>
     <% } %>
     <a class="nav-link <%= nav==='seasons'?'active':'' %>" href="/seasons">Sezóny</a>
-    <a class="nav-link <%= nav==='leaderboards'?'active':'' %>" href="/leaderboards">Rebríčky</a>
+    <a class="nav-link <%= nav==='leaderboards'?'active':'' %>" href="/leaderboards">Rebríček</a>
     <a class="nav-link <%= nav==='blog'?'active':'' %>" href="/blog">Blog</a>
-    <a class="nav-link <%= nav==='navody'?'active':'' %>" href="/navody">Wiki</a>
+    <a class="nav-link <%= nav==='navody'?'active':'' %>" href="/navody">Návody</a>
     <% if (currentUserRole === 'admin') { %>
       <a class="nav-link admin <%= nav==='admin'?'active':'' %>" href="/admin">Admin</a>
     <% } %>
@@ -53,7 +53,9 @@
         <div class="dropdown" data-avatar-panel hidden style="right:0">
           <div class="dd-head"><%= currentUserName || 'Účet' %></div>
           <a class="dd-link" href="/profile">Profil</a>
-          <a class="dd-link" href="/my">Moje súťaže</a>
+          <a class="dd-link" href="/achievements">Achievementy</a>
+          <a class="dd-link" href="/stats">Štatistiky</a>
+          <a class="dd-link" href="/tip-history">História tipov</a>
           <a class="dd-link" href="/settings">Nastavenia</a>
           <% if (currentUserRole === 'admin') { %>
             <div class="dd-sep"></div>

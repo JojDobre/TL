@@ -342,7 +342,9 @@ const createSeasonSubmit = asyncHandler(async (req, res) => {
   // Vytvoríme sezónu mode='standalone' + práve jednu ligu v nej (transakčne).
   // Detail aj správa potom bežia cez ligu (pozri seasonDetailPage / manageSeasonPage).
   if (req.body.mode === 'standalone') {
-    const leagueType = (req.body.leagueType === 'official' && user.role === 'admin') ? 'official' : 'custom';
+    // typ ligy DEDÍ typ sezóny — standalone je jeden celok; nezávislý výber
+    // vytváral official sezónu s custom ligou (mimo globálneho rebríčka).
+    const leagueType = seasonType === 'official' ? 'official' : 'custom';
 
     // šablóna (voliteľná) — over, že existuje a je to platná šablóna
     let template = null;
@@ -510,6 +512,18 @@ const joinSeasonSubmit = asyncHandler(async (req, res) => {
     where: { userId, seasonId: season.id },
     defaults: { userId, seasonId: season.id, role: 'player', joinedAt: new Date() },
   });
+
+  // standalone: sezóna má práve jednu ligu — bez členstva v nej sa nedá tipovať,
+  // preto pripojenie cez kód SEZÓNY musí pridať aj členstvo v LIGE
+  if (season.mode === 'standalone') {
+    const lg = await League.findOne({ where: { seasonId: season.id } });
+    if (lg) {
+      await UserLeague.findOrCreate({
+        where: { userId, leagueId: lg.id },
+        defaults: { userId, leagueId: lg.id, role: 'player', joinedAt: new Date() },
+      });
+    }
+  }
   if (wantsJson) return res.json({ success: true, redirect: '/seasons/' + season.id });
   res.redirect('/seasons/' + season.id);
 });

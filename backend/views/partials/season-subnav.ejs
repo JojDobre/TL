@@ -1,8 +1,9 @@
 <!-- views/partials/season-subnav.ejs
-     Subnav pre detail sezóny (Prehľad/Pravidlá/Ligy/Rebríček/Aktuality + Admin).
-     Prenesené zo šablóny (shell.js buildSubnav). Parametre: seasonId, seasonName,
-     seasonInit (iniciály do loga), active (id aktívnej položky). Admin link len
-     pre admina (currentUserRole). -->
+     Subnav pre detail sezóny (Prehľad/Ligy/Rebríček/Pravidlá/Aktuality + Admin).
+     Sticky pod navbarom, na mobile horizontálne scrollovateľný (fade-mask v CSS).
+     Anchor odkazy (#leagues/#rules/#news) majú scroll-spy: aktívny stav sa mení
+     podľa scroll pozície (len na stránke, kde ciele existujú).
+     Parametre: seasonId, seasonName, active. Admin link len pre admina. -->
 <% const sa = typeof active !== 'undefined' ? active : 'overview';
    const sid = typeof seasonId !== 'undefined' ? seasonId : '';
    const sname = typeof seasonName !== 'undefined' && seasonName ? seasonName : 'Sezóna';
@@ -10,15 +11,41 @@
 <div class="subnav"><div class="wrap subnav-inner">
   <a href="/seasons/<%= sid %>" class="row g-2" style="font-weight:700;color:var(--text-1);white-space:nowrap;padding-right:8px">
     <span class="team-logo" style="width:26px;height:26px;font-size:11px;background:linear-gradient(135deg,#0b4ea2,#06306a)"><%= sinit %></span>
-    <%= sname %>
+    <span class="subnav-brand-name"><%= sname %></span>
   </a>
   <span style="width:1px;height:22px;background:var(--line)"></span>
-  <a class="subnav-link <%= sa==='overview'?'active':'' %>" href="/seasons/<%= sid %>">Prehľad</a>
-  <a class="subnav-link <%= sa==='leagues'?'active':'' %>" href="/seasons/<%= sid %>#leagues">Ligy</a>
+  <a class="subnav-link <%= sa==='overview'?'active':'' %>" data-spy="top" href="/seasons/<%= sid %>">Prehľad</a>
+  <a class="subnav-link <%= sa==='leagues'?'active':'' %>" data-spy="leagues" href="/seasons/<%= sid %>#leagues">Ligy</a>
   <a class="subnav-link <%= sa==='leaderboard'?'active':'' %>" href="/seasons/<%= sid %>/leaderboard">Rebríček</a>
-  <a class="subnav-link <%= sa==='rules'?'active':'' %>" href="/seasons/<%= sid %>#rules">Pravidlá</a>
-  <a class="subnav-link <%= sa==='news'?'active':'' %>" href="/seasons/<%= sid %>#news">Aktuality</a>
+  <a class="subnav-link <%= sa==='rules'?'active':'' %>" data-spy="rules" href="/seasons/<%= sid %>#rules">Pravidlá</a>
+  <a class="subnav-link <%= sa==='news'?'active':'' %>" data-spy="news" href="/seasons/<%= sid %>#news">Aktuality</a>
   <% if (currentUserRole === 'admin') { %>
     <a class="subnav-link admin" href="/admin/competitions">Admin</a>
   <% } %>
 </div></div>
+<script>
+(function(){
+  // Scroll-spy: beží len ak sú anchor ciele na stránke (detail sezóny).
+  var ids = ['leagues','rules','news'];
+  var targets = ids.map(function(i){ return document.getElementById(i); }).filter(Boolean);
+  if (!targets.length || !('IntersectionObserver' in window)) return;
+  var links = {};
+  document.querySelectorAll('.subnav-link[data-spy]').forEach(function(a){ links[a.getAttribute('data-spy')] = a; });
+  var current = null;
+  function setActive(key){
+    if (key === current) return;
+    current = key;
+    Object.keys(links).forEach(function(k){ links[k].classList.toggle('active', k === key); });
+    var el = links[key];
+    if (el && el.scrollIntoView) el.scrollIntoView({ block:'nearest', inline:'center', behavior:'smooth' });
+  }
+  var visible = new Map();
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){ visible.set(e.target.id, e.isIntersecting ? e.boundingClientRect.top : Infinity); });
+    var best = null, bestTop = Infinity;
+    visible.forEach(function(top, id){ if (top !== Infinity && Math.abs(top) < Math.abs(bestTop)) { best = id; bestTop = top; } });
+    setActive(best || 'top');
+  }, { rootMargin: '-120px 0px -55% 0px', threshold: 0 });
+  targets.forEach(function(t){ io.observe(t); });
+})();
+</script>

@@ -34,6 +34,7 @@
 <% } %>
 
 <form class="wrap form-layout" action="/seasons/create" method="POST">
+  <% if (currentUserRole !== 'admin') { %><input type="hidden" name="type" value="community"><% } %>
   <main>
     <div class="card form-card">
       <h3>Druh súťaže</h3>
@@ -71,8 +72,6 @@
         <label class="type-opt" data-type="community"><input type="radio" name="type" value="community" hidden><div class="t-ic">👥</div><b>Community</b><span class="muted" style="font-size:var(--fs-sm)">Vlastná sezóna pre tvoju partiu. Verejná alebo súkromná cez ID.</span></label>
       </div>
     </div>
-    <% } else { %>
-      <input type="hidden" class="card form-card" name="type" value="community">
     <% } %>
 
     <div class="card form-card">
@@ -94,14 +93,7 @@
     <div class="card form-card" id="leagueCard" hidden>
       <h3>Nastavenia ligy</h3>
       <p class="sub">Samostatná liga je rovno tipovací turnaj. Tieto nastavenia sa použijú pre jej ligu. Bodovanie a tímy doplníš neskôr v správe.</p>
-      <% if (currentUserRole === 'admin') { %>
-      <div class="type-pick" style="margin-bottom:18px">
-        <label class="type-opt sel" data-ltype="custom"><input type="radio" name="leagueType" value="custom" hidden checked><div class="t-ic">⚙️</div><b>Custom</b><span class="muted" style="font-size:var(--fs-sm)">Vlastné bodovanie a kolá, ktoré si spravuješ sám.</span></label>
-        <label class="type-opt" data-ltype="official"><input type="radio" name="leagueType" value="official" hidden><div class="t-ic">🏆</div><b>Oficiálna</b><span class="muted" style="font-size:var(--fs-sm)">Overený turnaj. Iba admin.</span></label>
-      </div>
-      <% } else { %>
-      <input type="hidden" name="leagueType" value="custom">
-      <% } %>
+      <!-- typ ligy sa NEVYBERÁ — dedí typ sezóny (official/community) -->
       <label class="check" style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><input type="checkbox" id="lgPwToggle"> <span>Chrániť ligu heslom</span></label>
       <div class="field" id="lgPwField" hidden><label class="label">Heslo ligy</label><input class="input" type="text" name="leaguePassword" placeholder="napr. kava2026"><span class="hint">Hráči ho budú musieť zadať pri pripojení cez ID.</span></div>
 
@@ -136,11 +128,11 @@
       <div class="stat-label" style="margin-bottom:12px">Náhľad</div>
       <div class="preview-cover" style="background:linear-gradient(135deg,#0b4ea2,#1a1340)"><span class="tag <%= currentUserRole === 'admin' ? 'tag-brand' : 'tag-gold' %>"><%= currentUserRole === 'admin' ? 'Oficiálna' : 'Community' %></span></div>
       <h4 id="pvName">Názov sezóny</h4>
-      <div class="row g-3" style="font-size:var(--fs-sm);color:var(--text-3);margin-top:8px"><span><b class="hi num">0</b> hráčov</span><span><b class="hi num">0</b> kôl</span><span><b class="hi num">1</b> liga</span></div>
+      <div class="row g-3" style="font-size:var(--fs-sm);color:var(--text-3);margin-top:8px"><span><b class="hi num">0</b> hráčov</span><span><b class="hi num">0</b> kôl</span><span id="pvLeagueStat"><b class="hi num">1</b> liga</span></div>
     </div>
     <div class="card card-pad" style="margin-top:18px;background:var(--surface-2)">
       <b class="hi" style="display:block;margin-bottom:6px">💡 Tip</b>
-      <p class="muted" style="font-size:var(--fs-sm)">Po vytvorení sezóny pridaj ligy a v nich kolá so zápasmi. Hráči sa do sezóny pripoja cez 6-miestne ID.</p>
+      <p class="muted" style="font-size:var(--fs-sm)" id="sideTip">Po vytvorení sezóny pridaj ligy a v nich kolá so zápasmi. Hráči sa do sezóny pripoja cez 6-miestne ID.</p>
     </div>
     <div class="card card-pad" style="margin-top:18px">
       <button type="submit" class="btn btn-primary btn-block">Vytvoriť sezónu</button>
@@ -163,11 +155,8 @@
       if (isCommunity) { tag.textContent = 'Community'; tag.className = 'tag tag-gold'; }
       else { tag.textContent = 'Oficiálna'; tag.className = 'tag tag-brand'; }
       // súkromie má zmysel len pre community (oficiálne sú vždy verejné)
-      var pc = document.getElementById('privacyCard');
-      if (pc) {
-        pc.toggleAttribute('hidden', !isCommunity);
-        if (!isCommunity) { var t = document.getElementById('privToggle'); if (t) { t.checked = false; document.getElementById('privFields').setAttribute('hidden',''); } }
-      }
+      // a len pre klasickú sezónu (standalone chráni heslo LIGY) — zdieľaná logika
+      if (window.updatePrivacyCard) window.updatePrivacyCard();
     });
   });
 </script>
@@ -200,6 +189,29 @@
     var leagueCard = document.getElementById('leagueCard');
     var submitBtn = document.querySelector('.sticky-side .btn-primary');
 
+    // Karta „Súkromie" (heslo SEZÓNY) sa zobrazuje len pre community + klasickú
+    // sezónu. Pri standalone ju backend ignoruje (heslo rieši LIGA) — zobrazenie
+    // oboch by znamenalo 2x heslo, z toho jedno nefunkčné.
+    window.updatePrivacyCard = function () {
+      var pc = document.getElementById('privacyCard');
+      if (!pc) return;
+      var typeRadio = document.querySelector('input[name=type]:checked');
+      var isCommunity = typeRadio ? typeRadio.value === 'community' : true; // neadmin = vždy community
+      var modeRadio = document.querySelector('input[name=mode]:checked');
+      var isStandalone = !!(modeRadio && modeRadio.value === 'standalone');
+      var show = isCommunity && !isStandalone;
+      pc.toggleAttribute('hidden', !show);
+      if (!show) {
+        var t = document.getElementById('privToggle'); if (t) t.checked = false;
+        var f = document.getElementById('privFields');
+        if (f) {
+          f.setAttribute('hidden', '');
+          var p = f.querySelector('input[name=password]'); if (p) p.value = '';
+          var h = f.querySelector('input[name=hidden]'); if (h) h.checked = false;
+        }
+      }
+    };
+
     function applyMode(mode) {
       var info = infoMap[mode] || infoMap.classic;
       if (icon) icon.textContent = info.icon;
@@ -207,6 +219,13 @@
       if (text) text.textContent = info.text;
       if (leagueCard) leagueCard.toggleAttribute('hidden', mode !== 'standalone');
       if (submitBtn) submitBtn.textContent = mode === 'standalone' ? 'Vytvoriť samostatnú ligu' : 'Vytvoriť sezónu';
+      var tip = document.getElementById('sideTip');
+      if (tip) tip.textContent = mode === 'standalone'
+        ? 'Po vytvorení turnaja pridaj rovno kolá so zápasmi. Hráči sa pripoja cez 6-miestne ID ligy.'
+        : 'Po vytvorení sezóny pridaj ligy a v nich kolá so zápasmi. Hráči sa do sezóny pripoja cez 6-miestne ID.';
+      var ls = document.getElementById('pvLeagueStat');
+      if (ls) ls.toggleAttribute('hidden', mode === 'standalone');
+      window.updatePrivacyCard();
     }
 
     document.querySelectorAll('.type-opt[data-mode]').forEach(function (opt) {
@@ -216,16 +235,6 @@
         opt.classList.add('sel');
         var r = opt.querySelector('input[type=radio]'); if (r) r.checked = true;
         applyMode(opt.getAttribute('data-mode'));
-      });
-    });
-
-    // typ ligy (custom/official) — len vizuálny výber pre admina
-    document.querySelectorAll('.type-opt[data-ltype]').forEach(function (opt) {
-      opt.addEventListener('click', function (e) {
-        e.preventDefault();
-        document.querySelectorAll('.type-opt[data-ltype]').forEach(function (o) { o.classList.remove('sel'); });
-        opt.classList.add('sel');
-        var r = opt.querySelector('input[type=radio]'); if (r) r.checked = true;
       });
     });
 

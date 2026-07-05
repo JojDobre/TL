@@ -642,12 +642,17 @@
   .avatar-ring { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--brand); }
 }
 
-/* ---- Season / league secondary nav: not needed on phones (single scroll
-        page). Hidden; admin entry point moves to the manage block. ---- */
+/* ---- Season / league secondary nav: on phones a sticky, horizontally
+        scrollable tab strip (edge fade above). Anchor targets clear the
+        sticky chrome via scroll-margin. ---- */
 .manage-block { display:none; }
 @media (max-width: 900px){
   .subnav:not(.admin-bar) { display:none !important; }
   .manage-block { display:block; margin: 18px 0 6px; }
+  .subnav-inner .subnav-brand-name { display:none; } /* šetrí šírku, iniciály stačia */
+}
+section[id], .blk-head[id], [data-anchor] {
+  scroll-margin-top: calc(var(--nav-h) + 64px);
 }
 .manage-card {
   display:flex; align-items:center; gap:14px;
@@ -667,6 +672,22 @@
 .manage-tx b { font-family:var(--font-display); color:var(--text-1); font-size:var(--fs-base); }
 .manage-tx span { font-size:var(--fs-xs); color:var(--text-3); }
 .manage-go { flex:none; color:var(--danger); font-size:1.3rem; font-weight:700; }
+
+/* ============ TABBAR „OSTATNÉ" BOTTOM SHEET ============ */
+.tab-more { background:none; border:none; }
+.more-sheet { padding: 14px 16px calc(18px + env(safe-area-inset-bottom, 0px)); max-height: 72vh; overflow-y: auto; }
+.more-grab { width:40px; height:4px; border-radius:99px; background: var(--surface-4); margin: 0 auto 14px; }
+.more-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.more-link {
+  display:flex; align-items:center; gap:10px;
+  padding: 13px 14px; border-radius: var(--r-md);
+  background: var(--surface-2); border:1px solid var(--line);
+  font-weight:600; font-size: var(--fs-sm); color: var(--text-1);
+  -webkit-tap-highlight-color: transparent;
+}
+.more-link:active { transform: scale(.97); background: var(--surface-3); }
+.more-ic { font-size: 17px; flex:none; }
+@media (min-width: 901px){ [data-more-sheet] { display:none !important; } }
 
 /* ---- Equal-size scoring tiles (rules / bodovanie blocks) ---- */
 .score-grid { display:grid; grid-template-columns:repeat(4,1fr); grid-auto-rows:1fr; gap:12px; }
