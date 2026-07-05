@@ -647,7 +647,6 @@
         sticky chrome via scroll-margin. ---- */
 .manage-block { display:none; }
 @media (max-width: 900px){
-  .subnav:not(.admin-bar) { display:none !important; }
   .manage-block { display:block; margin: 18px 0 6px; }
   .subnav-inner .subnav-brand-name { display:none; } /* šetrí šírku, iniciály stačia */
 }
