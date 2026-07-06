@@ -1,8 +1,8 @@
 // backend/src/controllers/discoverPage.controller.js
 //
-// Objavovanie verejných komunitných sezón (/discover). Hľadanie podľa názvu/ID,
-// triedenie (najviac hráčov / najnovšie). Zobrazujú sa len neskryté komunitné
-// sezóny (oficiálne majú vlastnú sekciu inde).
+// Objavovanie verejných sezón (/discover) — komunitných aj oficiálnych.
+// Hľadanie podľa názvu/ID, triedenie (najviac hráčov / najnovšie),
+// filter typu/prístupu/stavu. Zobrazujú sa len neskryté sezóny.
 
 const { Season, League, Sequelize } = require('../models');
 const { Op } = Sequelize;
@@ -22,6 +22,10 @@ const discoverPage = asyncHandler(async (req, res) => {
   const accVals = [].concat(req.query.access || []);
   const showPublic = filtersSubmitted ? accVals.includes('pub') : true;
   const showProtected = filtersSubmitted ? accVals.includes('pwd') : true;
+  // Typ: 'community' | 'official'
+  const tVals = [].concat(req.query.type || []);
+  const showCommunity = filtersSubmitted ? tVals.includes('community') : true;
+  const showOfficial = filtersSubmitted ? tVals.includes('official') : true;
   // Stav: 'active' | 'upcoming' | 'ended'
   const stVals = [].concat(req.query.status || []);
   const showActive = filtersSubmitted ? stVals.includes('active') : true;
@@ -29,8 +33,11 @@ const discoverPage = asyncHandler(async (req, res) => {
   // ukončené sa NEzobrazujú štandardne — len ak ich používateľ vo filtri zaškrtne
   const showEnded = filtersSubmitted ? stVals.includes('ended') : false;
 
-  // základ: neskryté komunitné sezóny
-  const where = { hidden: false, type: 'community' };
+  // základ: neskryté sezóny; typ podľa filtra
+  const types = [];
+  if (showCommunity) types.push('community');
+  if (showOfficial) types.push('official');
+  const where = { hidden: false, type: types.length ? types : ['community', 'official'] };
   if (q) {
     where[Op.or] = [
       { name: { [Op.like]: `%${q}%` } },
@@ -54,6 +61,7 @@ const discoverPage = asyncHandler(async (req, res) => {
       participantsCount: pc,
       leaguesCount: lc,
       hasPassword: !!s.hasPassword,
+      type: s.type,
       status: seasonStatus(s),
     };
   }));
@@ -75,7 +83,7 @@ const discoverPage = asyncHandler(async (req, res) => {
   res.render('discover', {
     seasons: withCounts,
     q, sort,
-    filters: { showPublic, showProtected, showActive, showUpcoming, showEnded },
+    filters: { showPublic, showProtected, showActive, showUpcoming, showEnded, showCommunity, showOfficial },
     total: withCounts.length,
   });
 });

@@ -292,7 +292,7 @@
     }
     var dlg = document.querySelector('[data-join]');
     if (!dlg) return;
-    if (e.target.closest('[data-open-join]')) { dlg.removeAttribute('hidden'); }
+    if (e.target.closest('[data-open-join]')) { dlg.removeAttribute('hidden'); var _je=dlg.querySelector('[data-join-error]'); if(_je){_je.setAttribute('hidden','');_je.textContent='';} var _jp=dlg.querySelector('input[type=password]'); if(_jp){_jp.value='';} }
     else if (e.target.closest('[data-close-join]')) { dlg.setAttribute('hidden',''); }
   });
   // odoslanie join dialógu cez fetch — chyba (zlé ID/heslo/skončená) sa zobrazí v modáli

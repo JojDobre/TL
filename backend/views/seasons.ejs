@@ -1,6 +1,10 @@
 <%- include('partials/head', { title: 'Sezóny', page: 'seasons', active: 'seasons', pageStyle: `
   .se-head { padding:34px 0 22px; }
   .se-search { display:grid; grid-template-columns:1fr auto auto; gap:12px; margin:22px 0 8px; }
+  .grid-cards, .blk-head { scroll-margin-top:84px; }
+  .page-in { animation:pageIn .45s cubic-bezier(.22,.61,.36,1) both; }
+  @keyframes pageIn { from { opacity:0; transform:translateY(14px) scale(.98); } to { opacity:1; transform:none; } }
+  @media (prefers-reduced-motion: reduce) { .page-in { animation:none; } }
   .grid-cards { display:grid; gap:18px; }
   .g3 { grid-template-columns:repeat(3,1fr); }
   .g4 { grid-template-columns:repeat(4,1fr); }
@@ -43,11 +47,16 @@
       <p class="muted" style="grid-column:1/-1">Zatiaľ tu nie sú žiadne oficiálne sezóny.</p>
     <% } %>
     <% official.forEach(function (s) { %>
-    <a href="/seasons/<%= s.id %>" class="card card-hover" style="overflow:hidden">
+    <a href="/seasons/<%= s.id %>" class="card card-hover official-card" style="overflow:hidden">
       <div class="season-cover<% if (s.image) { %> has-img<% } %>" style="background:linear-gradient(<%= grad(s.id) %>)<% if (s.image) { %>;background-image:url('<%= s.image %>');background-size:cover;background-position:center<% } %>"><span class="tag tag-brand">Oficiálna</span><% if (s.status === 'ended') { %><span class="tag tag-muted" style="position:absolute;top:12px;right:12px">Ukončená</span><% } else if (s.status === 'upcoming') { %><span class="tag tag-info" style="position:absolute;top:12px;right:12px">Pripravovaná</span><% } else { %><span class="tag tag-live" style="position:absolute;top:12px;right:12px"><span class="dot"></span>Live</span><% } %></div>
       <div class="card-pad"><h4 style="margin-bottom:6px"><%= s.name %></h4><p class="muted" style="font-size:var(--fs-sm);margin-bottom:14px"><%= s.description || '' %></p><div class="season-meta"><span><b><%= s.participantsCount != null ? s.participantsCount : '—' %></b> hráčov</span><span><b><%= s.leaguesCount != null ? s.leaguesCount : '—' %></b> líg</span><span><b><%= s.matchesCount != null ? s.matchesCount : '—' %></b> zápasov</span></div></div>
     </a>
     <% }); %>
+  </div>
+  <div class="row g-2" id="officialPager" hidden style="justify-content:center;margin-top:18px">
+    <button type="button" class="btn btn-secondary btn-sm" id="opPrev">← Predošlé</button>
+    <span class="muted" id="opInfo" style="font-size:var(--fs-sm);align-self:center"></span>
+    <button type="button" class="btn btn-secondary btn-sm" id="opNext">Ďalšie →</button>
   </div>
 
   <!-- COMMUNITY SEARCH -->
@@ -55,7 +64,7 @@
     <div class="eyebrow" style="color:var(--gold)">Komunitné sezóny</div>
     <h3 style="margin:6px 0 16px">Hľadaj verejné ligy alebo sa pripoj cez ID</h3>
     <div class="se-search" style="grid-template-columns:1fr auto">
-      <div class="input-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4" stroke-linecap="round"/></svg><input class="input" id="seasonSearch" placeholder="Hľadať podľa názvu sezóny…"></div>
+      <div class="input-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4" stroke-linecap="round"/></svg><input class="input" id="seasonSearch" placeholder="Hľadať podľa názvu alebo ID…"></div>
       <a href="/discover" class="btn btn-secondary">Objaviť všetky →</a>
     </div>
   </div>
@@ -66,8 +75,13 @@
       <p class="muted" style="grid-column:1/-1">Zatiaľ tu nie sú žiadne komunitné sezóny.</p>
     <% } %>
     <% community.forEach(function (s) { %>
-    <a href="/seasons/<%= s.id %>" class="card card-hover season-card" data-name="<%= (s.name || '').toLowerCase() %>" style="overflow:hidden"><div class="season-cover<% if (s.image) { %> has-img<% } %>" style="background:linear-gradient(<%= grad(s.id) %>);height:88px<% if (s.image) { %>;background-image:url('<%= s.image %>');background-size:cover;background-position:center<% } %>"><span class="tag tag-gold">Community</span><% if (s.status === 'ended') { %><span class="tag tag-muted" style="position:absolute;top:12px;right:12px">Ukončená</span><% } else if (s.status === 'upcoming') { %><span class="tag tag-info" style="position:absolute;top:12px;right:12px">Pripravovaná</span><% } else { %><span class="tag tag-live" style="position:absolute;top:12px;right:12px"><span class="dot"></span>Live</span><% } %></div><div class="card-pad"><h4 style="font-size:var(--fs-h4);margin-bottom:4px"><%= s.name %></h4><p class="muted" style="font-size:var(--fs-xs);margin-bottom:12px"><%= s.description || '' %></p><div class="row between"><span class="season-meta"><b><%= s.participantsCount != null ? s.participantsCount : '—' %></b> hráčov</span><span class="tag <%= s.hasPassword ? 'tag-gold' : 'tag-muted' %>"><%= s.hasPassword ? '🔒 Súkromná' : 'Verejná' %></span></div></div></a>
+    <a href="/seasons/<%= s.id %>" class="card card-hover season-card" data-name="<%= (s.name || '').toLowerCase() %>" data-code="<%= (s.inviteCode || '').toLowerCase() %>" style="overflow:hidden"><div class="season-cover<% if (s.image) { %> has-img<% } %>" style="background:linear-gradient(<%= grad(s.id) %>);height:88px<% if (s.image) { %>;background-image:url('<%= s.image %>');background-size:cover;background-position:center<% } %>"><span class="tag tag-gold">Community</span><% if (s.status === 'ended') { %><span class="tag tag-muted" style="position:absolute;top:12px;right:12px">Ukončená</span><% } else if (s.status === 'upcoming') { %><span class="tag tag-info" style="position:absolute;top:12px;right:12px">Pripravovaná</span><% } else { %><span class="tag tag-live" style="position:absolute;top:12px;right:12px"><span class="dot"></span>Live</span><% } %></div><div class="card-pad"><h4 style="font-size:var(--fs-h4);margin-bottom:4px"><%= s.name %></h4><p class="muted" style="font-size:var(--fs-xs);margin-bottom:12px"><%= s.description || '' %></p><div class="row between"><span class="season-meta"><b><%= s.participantsCount != null ? s.participantsCount : '—' %></b> hráčov</span><span class="tag <%= s.hasPassword ? 'tag-gold' : 'tag-muted' %>"><%= s.hasPassword ? '🔒 Súkromná' : 'Verejná' %></span></div></div></a>
     <% }); %>
+  </div>
+  <div class="row g-2" id="seasonPager" hidden style="justify-content:center;margin-top:18px">
+    <button type="button" class="btn btn-secondary btn-sm" id="spPrev">← Predošlé</button>
+    <span class="muted" id="spInfo" style="font-size:var(--fs-sm);align-self:center"></span>
+    <button type="button" class="btn btn-secondary btn-sm" id="spNext">Ďalšie →</button>
   </div>
 </div>
 
@@ -119,15 +133,86 @@
         });
     });
   })();
-  // search komunitných sezón podľa názvu
-  var ss = document.getElementById('seasonSearch');
-  if (ss) ss.addEventListener('input', function () {
-    var q = this.value.trim().toLowerCase();
-    document.querySelectorAll('.season-card').forEach(function (c) {
-      var name = c.getAttribute('data-name') || '';
-      c.style.display = (!q || name.indexOf(q) >= 0) ? '' : 'none';
-    });
-  });
+  // search komunitných sezón podľa názvu ALEBO ID + stránkovanie po 12
+  (function () {
+    var PAGE = 12;
+    var cards = Array.prototype.slice.call(document.querySelectorAll('.season-card'));
+    var pager = document.getElementById('seasonPager');
+    var info = document.getElementById('spInfo');
+    var prev = document.getElementById('spPrev');
+    var next = document.getElementById('spNext');
+    var ss = document.getElementById('seasonSearch');
+    var page = 1, q = '';
+
+    function matches(c) {
+      if (!q) return true;
+      return (c.getAttribute('data-name') || '').indexOf(q) >= 0
+          || (c.getAttribute('data-code') || '').indexOf(q) >= 0;
+    }
+    function render() {
+      var vis = cards.filter(matches);
+      var pages = Math.max(1, Math.ceil(vis.length / PAGE));
+      if (page > pages) page = pages;
+      cards.forEach(function (c) { c.style.display = 'none'; });
+      vis.slice((page - 1) * PAGE, page * PAGE).forEach(function (c, i) {
+        c.style.display = '';
+        c.classList.remove('page-in'); void c.offsetWidth;
+        c.style.animationDelay = (i * 40) + 'ms';
+        c.classList.add('page-in');
+      });
+      if (pager) {
+        pager.hidden = vis.length <= PAGE;
+        if (info) info.textContent = 'Strana ' + page + ' / ' + pages;
+        if (prev) prev.disabled = page <= 1;
+        if (next) next.disabled = page >= pages;
+      }
+    }
+    function scrollTop() {
+      var first = cards.find(matches);
+      var grid = first ? first.parentElement : null;
+      var target = grid && grid.previousElementSibling ? grid.previousElementSibling : grid;
+      if (target && target.getBoundingClientRect().top < 0) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    if (prev) prev.addEventListener('click', function () { if (page > 1) { page--; render(); scrollTop(); } });
+    if (next) next.addEventListener('click', function () { page++; render(); scrollTop(); });
+    if (ss) ss.addEventListener('input', function () { q = this.value.trim().toLowerCase(); page = 1; render(); });
+    render();
+  })();
+  // stránkovanie oficiálnych sezón po 6
+  (function () {
+    var PAGE = 6;
+    var cards = Array.prototype.slice.call(document.querySelectorAll('.official-card'));
+    var pager = document.getElementById('officialPager');
+    var info = document.getElementById('opInfo');
+    var prev = document.getElementById('opPrev');
+    var next = document.getElementById('opNext');
+    var page = 1;
+    function render() {
+      var pages = Math.max(1, Math.ceil(cards.length / PAGE));
+      if (page > pages) page = pages;
+      cards.forEach(function (c) { c.style.display = 'none'; });
+      cards.slice((page - 1) * PAGE, page * PAGE).forEach(function (c, i) {
+        c.style.display = '';
+        c.classList.remove('page-in'); void c.offsetWidth;
+        c.style.animationDelay = (i * 40) + 'ms';
+        c.classList.add('page-in');
+      });
+      if (pager) {
+        pager.hidden = cards.length <= PAGE;
+        if (info) info.textContent = 'Strana ' + page + ' / ' + pages;
+        if (prev) prev.disabled = page <= 1;
+        if (next) next.disabled = page >= pages;
+      }
+    }
+    function scrollTop() {
+      var grid = cards.length ? cards[0].parentElement : null;
+      var target = grid && grid.previousElementSibling ? grid.previousElementSibling : grid;
+      if (target && target.getBoundingClientRect().top < 0) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    if (prev) prev.addEventListener('click', function () { if (page > 1) { page--; render(); scrollTop(); } });
+    if (next) next.addEventListener('click', function () { page++; render(); scrollTop(); });
+    render();
+  })();
 </script>
 
 <%- include('partials/footer') %>

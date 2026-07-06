@@ -87,7 +87,8 @@
     .hero-card { order:0; display:flex; flex-wrap:wrap; gap:10px; }
     .hero-card > .card-glow { flex:1 1 100%; }
     .hero-card .float-pts { position:static; flex:1 1 0; min-width:150px; animation:none; }
-    .g3,.g4 { grid-template-columns: 1fr 1fr 1fr; }
+    .g3 { grid-template-columns: 1fr 1fr 1fr; }
+    .g4 { grid-template-columns: 1fr 1fr; }
     .vs { grid-template-columns: 1fr; }
     .vs-link { grid-template-columns: 1fr; gap: 20px; }
     .partner-head-mobile { width:100%; }
@@ -330,17 +331,14 @@
         <h3 style="margin-top:6px">Nájdi svoju partiu — alebo si založ vlastnú</h3>
       </div>
       <div class="row g-3 wrap-gap comm-actions">
-        <form method="GET" action="/seasons" class="input-icon search" style="display:flex">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4" stroke-linecap="round"/></svg>
-          <input class="input" name="q" placeholder="Hľadať podľa názvu alebo ID…">
-        </form>
+        <a href="/seasons" class="btn btn-primary">🔍︎ Preskúmať sezóny</a>
         <a href="/seasons/create" class="btn btn-brand">+ Vytvoriť sezónu</a>
       </div>
     </div>
   </div>
 
   <div class="section-head reveal">
-    <div><div class="eyebrow">Najväčšie verejné</div><h2>Top komunitné sezóny</h2></div>
+    <div><div class="eyebrow">Komunitné sezóny</div><h2>Najväčšie komunitné sezóny</h2></div>
   </div>
   <% if (community && community.length) { %>
   <div class="grid-cards g4">

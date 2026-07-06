@@ -209,7 +209,7 @@
       document.getElementById('toastWrap').appendChild(t); setTimeout(function(){t.remove();},2000);
     }
     var dlg = document.querySelector('[data-join]');
-    if (dlg && e.target.closest('[data-open-join]')) dlg.removeAttribute('hidden');
+    if (dlg && e.target.closest('[data-open-join]')) { dlg.removeAttribute('hidden'); var _je=dlg.querySelector('[data-join-error]'); if(_je){_je.setAttribute('hidden','');_je.textContent='';} var _jp=dlg.querySelector('input[type=password]'); if(_jp){_jp.value='';} }
     if (dlg && e.target.closest('[data-close-join]')) dlg.setAttribute('hidden','');
   });
 

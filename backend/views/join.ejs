@@ -48,6 +48,20 @@
   if (!pw) return;
   var code = document.querySelector('input[name="code"]');
   if (code) code.addEventListener('input', function(){ this.value = this.value.toUpperCase(); });
+  // chybové upozornenie z predošlého pokusu zmizne hneď, ako používateľ začne upravovať vstup
+  var err = document.querySelector('.join-err');
+  if (err) {
+    ['input[name="code"]','input[name="password"]'].forEach(function(sel){
+      var el = document.querySelector(sel);
+      if (el) el.addEventListener('input', function(){ err.remove(); }, { once: true });
+    });
+    // chyba je v URL (?error=) — odstráň ju z adresy, aby ju refresh/návrat nezobrazil znova
+    if (window.history && history.replaceState) {
+      var u = new URL(window.location.href);
+      u.searchParams.delete('error');
+      history.replaceState(null, '', u.pathname + (u.search || '') + u.hash);
+    }
+  }
 })();
 </script>
 

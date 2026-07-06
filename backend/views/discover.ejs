@@ -26,8 +26,8 @@
   <div class="between wrap-gap" style="gap:16px">
     <div>
       <div class="eyebrow">Objaviť</div>
-      <h1 style="font-size:clamp(2rem,3.4vw,2.8rem)">Nájdi verejnú komunitnú sezónu</h1>
-      <p class="muted" style="margin-top:6px">Prehľadaj komunitné sezóny podľa názvu — alebo sa pripoj cez ID.</p>
+      <h1 style="font-size:clamp(2rem,3.4vw,2.8rem)">Nájdi ideálnu sezónu</h1>
+      <p class="muted" style="margin-top:6px">Prehľadaj komunitné a oficiálne sezóny podľa názvu — alebo sa pripoj cez ID.</p>
     </div>
     <a href="/join" class="btn btn-secondary">Mám ID →</a>
   </div>
@@ -56,6 +56,13 @@
       <input type="hidden" name="q" value="<%= q %>">
       <input type="hidden" name="sort" value="<%= sort %>">
       <input type="hidden" name="f" value="1">
+      <div class="fc-group">
+        <div class="fc-title">Typ</div>
+        <div class="stack g-2">
+          <label class="check" style="font-size:var(--fs-sm)"><input type="checkbox" name="type" value="community" <%= filters.showCommunity ? 'checked' : '' %>> Komunitné</label>
+          <label class="check" style="font-size:var(--fs-sm)"><input type="checkbox" name="type" value="official" <%= filters.showOfficial ? 'checked' : '' %>> Oficiálne</label>
+        </div>
+      </div>
       <div class="fc-group">
         <div class="fc-title">Prístup</div>
         <div class="stack g-2">
@@ -92,7 +99,7 @@
       <% seasons.forEach(function(s, i){ %>
         <a href="/seasons/<%= s.id %>" class="card card-hover" style="overflow:hidden">
           <div class="dc-cover" style="background:<%= COVERS[i % COVERS.length] %>">
-            <span class="tag tag-gold">Community</span>
+            <% if (s.type === 'official') { %><span class="tag tag-brand">Oficiálna</span><% } else { %><span class="tag tag-gold">Community</span><% } %>
             <% if (s.hasPassword) { %><span class="tag tag-muted">🔒</span><% } %>
             <% if (s.status === 'active') { %><span class="tag tag-live"><span class="dot"></span>Live</span>
             <% } else if (s.status === 'upcoming') { %><span class="tag tag-info">Čoskoro</span>
