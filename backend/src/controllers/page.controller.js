@@ -620,6 +620,20 @@ const manageSeasonSubmit = asyncHandler(async (req, res) => {
   season.startDate = start;
   season.endDate = end;
 
+  // Ceny: polia prizes[] v poradí formulára → JSON [{place, prize}]; prázdne riadky preskoč
+  if (req.body.prizes !== undefined) {
+    const rows = [].concat(req.body.prizes || []).map((p) => String(p || '').trim());
+    const list = rows.filter(Boolean).map((prize, i) => ({ place: i + 1, prize }));
+    season.prizes = list.length ? JSON.stringify(list) : null;
+  }
+  // Viditeľnosť blokov — checkboxy sú vo formulári vždy, takže chýbajúci = odškrtnutý.
+  // blocksSubmitted chráni staré formuláre bez týchto polí pred nechceným vypnutím.
+  if (req.body.blocksSubmitted === '1') {
+    season.showPrizes = req.body.showPrizes === 'on';
+    season.showRules = req.body.showRules === 'on';
+    season.showNews = req.body.showNews === 'on';
+  }
+
   // súkromie/heslo — len pre community
   if (season.type === 'community') {
     if (removePassword === 'on' || removePassword === 'true') {

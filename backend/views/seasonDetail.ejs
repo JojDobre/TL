@@ -188,7 +188,29 @@
       </div>
     </section>
 
+    <!-- CENY -->
+    <% var _pz = []; try { _pz = JSON.parse((season.prizes) || '[]'); } catch (e) { _pz = []; } %>
+    <% if (season.showPrizes !== false && _pz.length) { %>
+    <section class="blk" id="prizes">
+      <div class="blk-head"><div><div class="eyebrow" style="color:var(--gold)">Ceny</div><h2>O čo sa hrá</h2></div></div>
+      <div class="card card-pad">
+        <div class="stack g-2">
+          <% _pz.forEach(function (p, i) { %>
+          <div class="row between prize-item" style="padding:12px 14px;border-radius:var(--r-sm);background:<%= i === 0 ? 'linear-gradient(90deg,rgba(212,175,55,.14),transparent)' : i === 1 ? 'linear-gradient(90deg,rgba(160,174,192,.12),transparent)' : i === 2 ? 'linear-gradient(90deg,rgba(176,112,60,.12),transparent)' : 'var(--surface-2)' %>">
+            <span class="row g-3" style="align-items:center">
+              <span style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-family:var(--num);flex:none;background:<%= i === 0 ? 'linear-gradient(135deg,#f6d365,#b8860b)' : i === 1 ? 'linear-gradient(135deg,#e2e8f0,#94a3b8)' : i === 2 ? 'linear-gradient(135deg,#e0a878,#8c5a2b)' : 'var(--surface-3, var(--line))' %>;color:<%= i < 3 ? '#0b0b12' : 'var(--text-2)' %>"><%= p.place %></span>
+              <span class="muted" style="font-size:var(--fs-sm)"><%= p.place %>. miesto</span>
+            </span>
+            <b class="hi" style="font-size:var(--fs-md)"><%= p.prize %></b>
+          </div>
+          <% }); %>
+        </div>
+      </div>
+    </section>
+    <% } %>
+
     <!-- NOVINKY -->
+    <% if (season.showNews !== false) { %>
     <section class="blk" id="news">
       <div class="blk-head"><div><div class="eyebrow">Aktuality</div><h2>Novinky v sezóne</h2></div></div>
       <div class="card card-pad">
@@ -207,6 +229,8 @@
         <% } %>
       </div>
     </section>
+    <% } %>
+    <% if (season.showRules !== false) { %>
       <div class="blk-head" id="rules"><div><div class="eyebrow">Pravidlá</div><h2>Ako sa hrá a boduje</h2></div></div>
       <div class="card card-pad">
         <div class="rules-list">
@@ -225,6 +249,7 @@
           <div class="rule" style="font-size:var(--fs-xs);color:var(--text-3)"><p>* Toto je predvolené bodovanie, správca môže bodovanie pre konkrétne ligy pozmeniť.</p></div>
       </div>
     </section>
+    <% } %>
   </main>
 
   <!-- ===== SIDE ===== -->

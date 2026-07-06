@@ -571,7 +571,7 @@ const endLeagueSubmit = asyncHandler(async (req, res) => {
 const manageLeaguePage = asyncHandler(async (req, res) => {
   const userId = Number(req.session.userId);
   const league = await League.findByPk(req.params.id, {
-    include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'description', 'image', 'startDate', 'endDate', 'inviteCode', 'hasPassword', 'hidden', 'mode', 'ended', 'active'] }],
+    include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'description', 'image', 'startDate', 'endDate', 'inviteCode', 'hasPassword', 'hidden', 'mode', 'ended', 'active', 'prizes', 'showPrizes', 'showRules', 'showNews'] }],
   });
   if (!league) return res.status(404).render('error-page', { message: 'Liga nebola nájdená.' });
   if (!(await isLeagueManager(league, userId))) {

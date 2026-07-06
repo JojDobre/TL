@@ -16,6 +16,9 @@
 
   .ev-match { display:grid; grid-template-columns:1fr auto auto; gap:14px; align-items:center; padding:13px 16px; border-radius:var(--r-md); background:var(--surface-2); border:1px solid var(--line); margin-bottom:8px; }
   .ev-match.done { border-color:rgba(52,211,153,.35); }
+  .ev-match.due { border-color:rgba(245,158,11,.55); background:linear-gradient(90deg,rgba(245,158,11,.08),var(--surface-2)); }
+  .ev-match.due .ev-when { color:var(--warn,#f59e0b); }
+  .rt-due { font-size:var(--fs-xs); color:#0b0b12; background:var(--warn,#f59e0b); border-radius:99px; padding:2px 9px; white-space:nowrap; flex:none; font-weight:700; }
   .ev-match.canceled { opacity:.6; }
   .ev-teams { font-weight:600; color:var(--text-1); }
   .ev-teams .faint { font-weight:400; }
@@ -59,16 +62,18 @@
     <div class="card card-pad" style="text-align:center;color:var(--text-3)">Táto šablóna nemá žiadne kolá. Najprv ich pridaj v <a href="/admin/templates/<%= template.id %>/edit" class="brand">úprave</a>.</div>
   <% } %>
 
-  <% rounds.forEach(function(r){ var rdone = r.matches.filter(function(m){ return m.status==='finished'||m.status==='canceled'; }).length; %>
-  <section class="rnd<%= rdone < r.matches.length && r.matches.length > 0 ? ' open' : '' %>">
-    <div class="rnd-title" data-toggle-round><span class="chev">▶</span><h3><%= r.name %></h3><span class="rt-count"><%= rdone %>/<%= r.matches.length %> hotových</span></div>
+  <% rounds.forEach(function(r){
+       var rdone = r.matches.filter(function(m){ return m.status==='finished'||m.status==='canceled'; }).length;
+       var rdue = r.matches.filter(function(m){ return m.status!=='finished' && m.status!=='canceled' && new Date(m.matchTime) < Date.now(); }).length; %>
+  <section class="rnd<%= rdue > 0 ? ' open' : '' %>">
+    <div class="rnd-title" data-toggle-round><span class="chev">▶</span><h3><%= r.name %></h3><% if (rdue > 0) { %><span class="rt-due" data-rt-due><%= rdue %> na vyhodnotenie</span><% } %><span class="rt-count"><%= rdone %>/<%= r.matches.length %> hotových</span></div>
     <div class="rnd-body">
     <% if (r.matches.length === 0) { %><p class="muted" style="font-size:var(--fs-sm)">Žiadne zápasy v tomto kole.</p><% } %>
-    <% r.matches.forEach(function(m){ var done = (m.status==='finished'); var canc = (m.status==='canceled'); %>
-    <div class="ev-match <%= done ? 'done' : '' %> <%= canc ? 'canceled' : '' %>" data-match="<%= m.id %>" data-type="<%= m.tipType %>">
+    <% r.matches.forEach(function(m){ var done = (m.status==='finished'); var canc = (m.status==='canceled'); var due = !done && !canc && new Date(m.matchTime) < Date.now(); %>
+    <div class="ev-match <%= done ? 'done' : '' %> <%= canc ? 'canceled' : '' %> <%= due ? 'due' : '' %>" data-match="<%= m.id %>" data-type="<%= m.tipType %>" data-time="<%= new Date(m.matchTime).getTime() %>">
       <div>
         <div class="ev-teams"><%= m.homeTeam %> <span class="faint">vs</span> <%= m.awayTeam %></div>
-        <div class="ev-when"><%= new Date(m.matchTime).toLocaleString('sk-SK') %> · <%= (m.tipType === 'winner' || m.tipType === 'winner_no_draw') ? 'tip na víťaza' : 'tip na skóre' %><span class="m-state"><%= canc ? ' · zrušený' : (done ? ' · vyhodnotený' : '') %></span></div>
+        <div class="ev-when"><%= new Date(m.matchTime).toLocaleString('sk-SK') %> · <%= (m.tipType === 'winner' || m.tipType === 'winner_no_draw') ? 'tip na víťaza' : 'tip na skóre' %><span class="m-state"><%= canc ? ' · zrušený' : (done ? ' · vyhodnotený' : (due ? ' · ČAKÁ NA VÝSLEDOK' : '')) %></span></div>
       </div>
 
       <% if (m.tipType === 'winner' || m.tipType === 'winner_no_draw') { %>
@@ -108,7 +113,26 @@
   function markDone(row, canceled){
     row.classList.toggle('done', !canceled);
     row.classList.toggle('canceled', !!canceled);
+    row.classList.remove('due');
     var st = row.querySelector('.m-state'); if (st) st.textContent = canceled ? ' · zrušený' : ' · vyhodnotený';
+    updateRoundDue(row);
+  }
+  function updateRoundDueRestore(row, added){
+    var rnd = row.closest('.rnd'); if (!rnd) return;
+    var due = rnd.querySelectorAll('.ev-match.due').length;
+    var b = rnd.querySelector('[data-rt-due]');
+    if (due > 0 && !b) {
+      b = document.createElement('span'); b.className='rt-due'; b.setAttribute('data-rt-due','');
+      var cnt = rnd.querySelector('.rt-count'); cnt.before(b);
+    }
+    if (b) { if (due === 0) b.remove(); else b.textContent = due + ' na vyhodnotenie'; }
+  }
+  function updateRoundDue(row){
+    var rnd = row.closest('.rnd'); if (!rnd) return;
+    var due = rnd.querySelectorAll('.ev-match.due').length;
+    var b = rnd.querySelector('[data-rt-due]');
+    if (due === 0) { if (b) b.remove(); }
+    else if (b) b.textContent = due + ' na vyhodnotenie';
   }
 
   function updateRoundProgress(row){
@@ -171,8 +195,10 @@
     if (e.target.closest('.btn-clear')){
       try { await api('/api/matches/'+mid+'/evaluate', { method:'POST', body: JSON.stringify({ status:'scheduled' }) });
         row.classList.remove('done','canceled');
-        updateRoundProgress(row); updateGlobalProgress();
-        var st = row.querySelector('.m-state'); if (st) st.textContent='';
+        var isDue = Number(row.getAttribute('data-time')) < Date.now();
+        row.classList.toggle('due', isDue);
+        updateRoundProgress(row); updateGlobalProgress(); updateRoundDueRestore(row, isDue);
+        var st = row.querySelector('.m-state'); if (st) st.textContent = isDue ? ' · ČAKÁ NA VÝSLEDOK' : '';
         row.querySelectorAll('.winner-pick button').forEach(function(b){ b.classList.remove('sel'); });
         var sh=row.querySelector('.sc-home'), sa=row.querySelector('.sc-away'); if(sh)sh.value=''; if(sa)sa.value='';
         toast('Výsledok vymazaný.');

@@ -5,6 +5,10 @@
   .ac-tabs { display:flex; gap:6px; margin:18px 0; flex-wrap:wrap; }
   .ac-layout { display:grid; grid-template-columns:1fr 320px; gap:26px; align-items:start; padding-bottom:64px; }
   .card-pad2 { padding:24px; }
+  .prize-row { position:relative; }
+  .prize-row .prize-place { position:relative; z-index:1; flex:none; }
+  .prize-row .input { min-width:0; flex:1; }
+
   .card-pad2 + .card-pad2 { margin-top:18px; }
   .card-pad2 h3 { font-size:var(--fs-h4); margin-bottom:4px; }
   .card-pad2 .sub { color:var(--text-3); font-size:var(--fs-sm); margin-bottom:18px; }
@@ -212,6 +216,29 @@
             <div class="field"><label class="label">Koniec (nepovinné)</label><input class="input" type="date" name="endDate" value="<%= dInput(season.endDate) %>"></div>
           </div>
         </div>
+        <div style="margin-top:18px"></div>
+        <div class="card card-pad2">
+          <h3>Ceny</h3>
+          <p class="sub">Ceny pre najlepších v poradí. Poradie miesta sa dopĺňa automaticky.</p>
+          <div class="stack g-2" id="prizeRows">
+            <% var prizeList = []; try { prizeList = JSON.parse(season.prizes || '[]'); } catch (e) { prizeList = []; } %>
+            <% prizeList.forEach(function (p, i) { %>
+            <div class="row g-2 prize-row"><span class="tag tag-muted prize-place" style="min-width:86px;justify-content:center"><%= i + 1 %>. miesto</span><input class="input" name="prizes" value="<%= p.prize %>" placeholder="napr. 200 €"><button type="button" class="btn btn-secondary btn-sm" data-prize-del>✕</button></div>
+            <% }); %>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="prizeAdd" style="margin-top:12px">+ Pridať miesto</button>
+        </div>
+
+        <div class="card card-pad2">
+          <h3>Zobrazenie blokov</h3>
+          <p class="sub">Vypni bloky, ktoré sa na detaile nemajú zobrazovať.</p>
+          <input type="hidden" name="blocksSubmitted" value="1">
+          <div class="stack g-2">
+            <label class="check" style="display:flex;align-items:center;gap:10px"><input type="checkbox" name="showPrizes" <%= season.showPrizes !== false ? 'checked' : '' %>> Ceny</label>
+            <label class="check" style="display:flex;align-items:center;gap:10px"><input type="checkbox" name="showRules" <%= season.showRules !== false ? 'checked' : '' %>> Pravidlá</label>
+            <label class="check" style="display:flex;align-items:center;gap:10px"><input type="checkbox" name="showNews" <%= season.showNews !== false ? 'checked' : '' %>> Aktuality</label>
+          </div>
+        </div>
         <div class="row g-2" style="justify-content:flex-end;margin-top:18px"><button class="btn btn-primary" type="submit">Uložiť nastavenia</button></div>
       </form>
 
@@ -372,4 +399,24 @@
 })();
 </script>
 
+<script>
+(function () {
+  var rows = document.getElementById('prizeRows');
+  var add = document.getElementById('prizeAdd');
+  function renumber() {
+    rows.querySelectorAll('.prize-row .prize-place').forEach(function (el, i) { el.textContent = (i + 1) + '. miesto'; });
+  }
+  if (add) add.addEventListener('click', function () {
+    var d = document.createElement('div');
+    d.className = 'row g-2 prize-row';
+    d.innerHTML = '<span class="tag tag-muted prize-place" style="min-width:86px;justify-content:center"></span><input class="input" name="prizes" placeholder="napr. 200 €"><button type="button" class="btn btn-secondary btn-sm" data-prize-del>✕</button>';
+    rows.appendChild(d); renumber();
+    d.querySelector('input').focus();
+  });
+  if (rows) rows.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-prize-del]');
+    if (b) { b.closest('.prize-row').remove(); renumber(); }
+  });
+})();
+</script>
 <%- include('partials/footer') %>

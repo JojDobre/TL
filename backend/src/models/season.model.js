@@ -67,6 +67,15 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,  // Pravidlá sezóny
       allowNull: true,
     },
+    // Ceny pre poradie — JSON pole [{ place: 1, prize: '200 €' }, …]
+    prizes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    // Viditeľnosť blokov na detaile sezóny/turnaja
+    showPrizes: { type: DataTypes.BOOLEAN, defaultValue: true },
+    showRules: { type: DataTypes.BOOLEAN, defaultValue: true },
+    showNews: { type: DataTypes.BOOLEAN, defaultValue: true },
     creatorId: {
       type: DataTypes.INTEGER,  // Odkaz na používateľa, ktorý vytvoril sezónu
       allowNull: false,
