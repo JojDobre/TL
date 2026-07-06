@@ -64,22 +64,82 @@ const createTeam = asyncHandler(async (req, res) => {
 
 // POST /api/admin/teams/bulk  (hromadne; body { teamType, sport, country, names })
 // names = text, jeden tím na riadok. sport/country sa použijú pre všetky.
+// Hromadný import. Každý riadok: Názov[;typ][;šport][;krajina][;logo]
+// — polia sú voliteľné, prázdne pole (;;) = použije sa predvolená hodnota
+//   z formulára (teamType/sport/country v tele requestu).
+// — typ: club|national|individual, akceptujú sa aj slovenské aliasy.
+// — šport/krajina: kód (football, SK) alebo label (Futbal, Slovensko),
+//   bez ohľadu na veľkosť písmen.
+const TYPE_ALIASES = {
+  club: 'club', klub: 'club', k: 'club',
+  national: 'national', narodny: 'national', 'národný': 'national', n: 'national',
+  individual: 'individual', jednotlivec: 'individual', hrac: 'individual', 'hráč': 'individual', j: 'individual', i: 'individual',
+};
+const { SPORTS, COUNTRIES } = require('../utils/team.constants');
+const norm = (v) => String(v || '').trim().toLowerCase();
+const resolveSport = (v) => {
+  if (!v) return null;
+  const n = norm(v);
+  const hit = SPORTS.find((s) => s.code.toLowerCase() === n || s.label.toLowerCase() === n);
+  return hit ? hit.code : undefined; // undefined = neplatná hodnota (rozlíš od "nezadané")
+};
+const resolveCountry = (v) => {
+  if (!v) return null;
+  const n = norm(v);
+  const hit = COUNTRIES.find((c) => c.code.toLowerCase() === n || c.label.toLowerCase() === n);
+  return hit ? hit.code : undefined;
+};
+
 const bulkCreateTeams = asyncHandler(async (req, res) => {
   const { teamType, sport, country, names } = req.body;
   if (!names || !names.trim()) throw new ApiError(400, 'Zadaj aspoň jeden tím.');
 
-  const type = ['national', 'club', 'individual'].includes(teamType) ? teamType : 'club';
-  // klub aj jednotlivec môžu mať šport; len pri klube je povinný spolu s krajinou
-  const sp = (type === 'club' || type === 'individual') ? (SPORT_CODES.includes(sport) ? sport : null) : null;
-  const co = COUNTRY_CODES.includes(country) ? country : null;
-  if (type === 'club' && (!sp || !co)) throw new ApiError(400, 'Pri kluboch zvoľ platný šport aj krajinu.');
+  // predvolené hodnoty z formulára
+  const defType = ['national', 'club', 'individual'].includes(teamType) ? teamType : 'club';
+  const defSport = SPORT_CODES.includes(sport) ? sport : null;
+  const defCountry = COUNTRY_CODES.includes(country) ? country : null;
 
   const lines = names.split('\n').map((l) => l.trim()).filter(Boolean);
   let added = 0; const skipped = [];
-  for (const name of lines) {
+  for (const line of lines) {
+    const parts = line.split(';').map((p) => p.trim());
+    const name = parts[0];
+    if (!name) { skipped.push({ line, reason: 'chýba názov' }); continue; }
+
+    // typ
+    let type = defType;
+    if (parts[1]) {
+      const t = TYPE_ALIASES[norm(parts[1])];
+      if (!t) { skipped.push({ line, reason: `neznámy typ „${parts[1]}"` }); continue; }
+      type = t;
+    }
+
+    // šport (national nemá šport)
+    let sp = null;
+    if (type !== 'national') {
+      if (parts[2]) {
+        sp = resolveSport(parts[2]);
+        if (sp === undefined) { skipped.push({ line, reason: `neznámy šport „${parts[2]}"` }); continue; }
+      } else sp = defSport;
+    }
+
+    // krajina
+    let co = null;
+    if (parts[3]) {
+      co = resolveCountry(parts[3]);
+      if (co === undefined) { skipped.push({ line, reason: `neznáma krajina „${parts[3]}"` }); continue; }
+    } else co = defCountry;
+
+    // logo (URL)
+    const logo = parts[4] && /^https?:\/\//i.test(parts[4]) ? parts[4] : null;
+    if (parts[4] && !logo) { skipped.push({ line, reason: 'logo musí byť http(s) URL' }); continue; }
+
+    // klub vyžaduje šport aj krajinu (po dosadení predvolieb)
+    if (type === 'club' && (!sp || !co)) { skipped.push({ line, reason: 'klub potrebuje šport a krajinu' }); continue; }
+
     const exists = await Team.findOne({ where: { name, scope: 'global', teamType: type, sport: sp } });
-    if (exists) { skipped.push(name); continue; }
-    await Team.create({ name, scope: 'global', teamType: type, sport: sp, country: co, creatorId: null });
+    if (exists) { skipped.push({ line, reason: 'už existuje' }); continue; }
+    await Team.create({ name, scope: 'global', teamType: type, sport: sp, country: co, logo, creatorId: null });
     added += 1;
   }
   res.status(201).json({ success: true, message: `Pridaných ${added} tímov.`, added, skipped });

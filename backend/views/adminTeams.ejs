@@ -45,11 +45,27 @@
     <!-- hromadne -->
     <div id="paneBulk" hidden>
       <div class="add-grid" s>
-        <div class="field"><label class="label">Typ</label><select class="select" id="bType"><option value="club">Kluby (šport + krajina)</option><option value="national">Národné tímy (bez športu)</option></select></div>
-        <div class="field" data-bclub><label class="label">Šport</label><select class="select" id="bSport"><% sports.forEach(function(s){ %><option value="<%= s.code %>"><%= s.label %></option><% }); %></select></div>
-        <div class="field"><label class="label">Krajina</label><select class="select" id="bCountry"><% countries.forEach(function(c){ %><option value="<%= c.code %>"><%= c.label %></option><% }); %></select></div>
+        <div class="field"><label class="label">Predvolený typ</label><select class="select" id="bType"><option value="club">Kluby (šport + krajina)</option><option value="national">Národné tímy (bez športu)</option><option value="individual">Jednotlivci (osoby)</option></select></div>
+        <div class="field" data-bclub><label class="label">Predvolený šport</label><select class="select" id="bSport"><% sports.forEach(function(s){ %><option value="<%= s.code %>"><%= s.label %></option><% }); %></select></div>
+        <div class="field"><label class="label">Predvolená krajina</label><select class="select" id="bCountry"><% countries.forEach(function(c){ %><option value="<%= c.code %>"><%= c.label %></option><% }); %></select></div>
       </div>
-      <div class="field" style="margin-top:4px"><label class="label">Tímy — jeden na riadok</label><textarea class="textarea" id="bNames" rows="6" placeholder="Arsenal&#10;Manchester United&#10;Liverpool"></textarea></div>
+      <div class="field" style="margin-top:4px">
+        <label class="label">Tímy — jeden na riadok</label>
+        <textarea class="textarea" id="bNames" rows="10" placeholder="FORMÁT RIADKU (polia oddeľ bodkočiarkou, všetky okrem názvu sú voliteľné):
+Názov; typ; šport; krajina; logo
+
+PRÍKLADY:
+Arsenal                                  ← len názov, ostatné z predvolieb hore
+Slavia Praha;;;CZ                        ← krajina CZ, typ+šport z predvolieb
+Kometa Brno; klub; hokej; CZ             ← všetko v riadku (šport aj po slovensky)
+Slovensko; národný;; SK                  ← národný tím (šport sa ignoruje)
+Novak Djokovič; jednotlivec; tenis; other
+Real Madrid; club; football; ES; https://example.com/real.png
+
+Typ: club/klub, national/národný, individual/jednotlivec
+Šport a krajina: kód (football, SK) alebo názov (Futbal, Slovensko)
+Prázdne pole (;;) = predvolená hodnota. Logo musí byť http(s) URL."></textarea>
+      </div>
       <button class="btn btn-primary" id="addBulk" style="margin-top:16px;">Pridať tímy</button>
     </div>
   </div>
@@ -118,8 +134,14 @@
     fetch('/api/admin/teams/bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(res){
       $('addBulk').disabled=false;
       if(res.success===false){toast(res.message||'Nepodarilo sa pridať.');return;}
-      var msg='Pridaných '+res.added+' tímov'+(res.skipped&&res.skipped.length?' ('+res.skipped.length+' už existovalo)':'');
-      toast(msg,true); $('bNames').value=''; reload();
+      var sk=res.skipped||[];
+      var msg='Pridaných '+res.added+' tímov'+(sk.length?(' · preskočených '+sk.length):'');
+      toast(msg,true);
+      if(sk.length){
+        // preskočené riadky vráť do textarey aj s dôvodom, nech sa dajú opraviť
+        $('bNames').value=sk.map(function(x){return (x.line||x)+'    ← '+(x.reason||'preskočené');}).join('\n');
+      } else { $('bNames').value=''; }
+      reload();
     }).catch(function(){$('addBulk').disabled=false;toast('Chyba.');});
   };
 
