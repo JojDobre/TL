@@ -9,7 +9,71 @@ const { Op } = Sequelize;
 const { asyncHandler } = require('../middleware/error.middleware');
 const { seasonStatus } = require('../utils/season.utils');
 
-// GET /admin — prehľad platformy
+// GET /admin/pending — VŠETKY zápasy po termíne bez výsledku, ktoré musí
+// vyhodnotiť admin: ligy oficiálnych sezón + oficiálne ligy + šablóny.
+const adminPendingPage = asyncHandler(async (req, res) => {
+  const now = new Date();
+
+  const officialSeasons = await Season.findAll({ where: { type: 'official' }, attributes: ['id'] });
+  const officialSeasonIds = officialSeasons.map((s) => s.id);
+
+  const leagues = await League.findAll({
+    where: {
+      [Op.or]: [
+        { type: 'official' },
+        { isTemplate: true },
+        ...(officialSeasonIds.length ? [{ seasonId: { [Op.in]: officialSeasonIds } }] : []),
+      ],
+    },
+    attributes: ['id', 'name', 'isTemplate', 'templateId', 'seasonId'],
+  });
+  if (!leagues.length) return res.render('adminPending', { groups: [], total: 0 });
+
+  const leagueById = new Map(leagues.map((l) => [l.id, l]));
+  const rounds = await Round.findAll({
+    where: { leagueId: { [Op.in]: leagues.map((l) => l.id) } },
+    attributes: ['id', 'name', 'leagueId'],
+  });
+  const roundById = new Map(rounds.map((r) => [r.id, r]));
+
+  let matches = [];
+  if (rounds.length) {
+    matches = await Match.findAll({
+      where: {
+        status: 'scheduled',
+        matchTime: { [Op.lt]: now },
+        sourceMatchId: null, // klony sa vyhodnocujú cez originál/šablónu
+        roundId: { [Op.in]: rounds.map((r) => r.id) },
+      },
+      include: [
+        { model: Team, as: 'homeTeam', attributes: ['name'] },
+        { model: Team, as: 'awayTeam', attributes: ['name'] },
+      ],
+      order: [['matchTime', 'ASC']],
+    });
+  }
+
+  // zoskup podľa ligy/šablóny
+  const byLeague = new Map();
+  for (const m of matches) {
+    const r = roundById.get(m.roundId);
+    if (!r) continue;
+    const lg = leagueById.get(r.leagueId);
+    if (!lg) continue;
+    if (!byLeague.has(lg.id)) byLeague.set(lg.id, { league: lg, matches: [] });
+    byLeague.get(lg.id).matches.push({
+      id: m.id,
+      roundId: r.id,
+      roundName: r.name,
+      home: m.homeTeam ? m.homeTeam.name : '—',
+      away: m.awayTeam ? m.awayTeam.name : '—',
+      matchTime: m.matchTime,
+    });
+  }
+  const groups = [...byLeague.values()].sort((a, b) => b.matches.length - a.matches.length);
+  res.render('adminPending', { groups, total: matches.length });
+});
+
 // GET /admin — prehľad platformy
 const adminDashboardPage = asyncHandler(async (req, res) => {
   const adminId = Number(req.session.userId);
@@ -263,4 +327,5 @@ const adminCompetitionsPage = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { adminDashboardPage, adminUsersPage, adminCompetitionsPage };
+module.exports = {
+  adminPendingPage, adminDashboardPage, adminUsersPage, adminCompetitionsPage };

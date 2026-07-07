@@ -23,7 +23,7 @@
 
 <%- include('partials/admin-subnav', { active: 'dashboard' }) %>
 
-<div class="wrap" style="padding:26px 0 8px">
+<div class="wrap" style="padding:40px 0 8px">
   <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Prehľad platformy</h1>
   <p class="muted" style="margin-top:6px">Súhrn a rýchle akcie pre správu Tiperligy.</p>
 </div>
@@ -39,8 +39,11 @@
 
 <div class="wrap" style="padding-bottom:64px">
   <div class="ad-grid">
-    <div class="card card-pad">
-      <div class="stat-label" style="margin-bottom:14px">Vyžaduje pozornosť — zápasy po termíne bez výsledku <span class="muted" style="font-weight:400">(v súťažiach, ktoré spravuješ)</span></div>
+    <div class="card card-pad" style="border:1px solid rgba(245,158,11,.5);background:linear-gradient(135deg,rgba(245,158,11,.10),var(--surface-1))">
+      <div class="between" style="margin-bottom:14px;gap:10px;flex-wrap:wrap">
+        <div class="stat-label" style="margin:0;color:var(--warn,#f59e0b)">⚠ Vyžaduje pozornosť — zápasy po termíne bez výsledku</div>
+        <% if (stats.pendingCount > 0) { %><a href="/admin/pending" class="btn btn-primary btn-sm">Všetky (<%= stats.pendingCount %>) →</a><% } %>
+      </div>
       <% if (pending.length === 0) { %>
         <p class="muted" style="font-size:var(--fs-sm)">Žiadne čakajúce zápasy v tebou spravovaných súťažiach. Všetko vyhodnotené ✓</p>
       <% } %>

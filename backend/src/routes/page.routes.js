@@ -16,7 +16,7 @@ const {
   forgotPasswordPage, forgotPasswordSubmit, resetPasswordPage, resetPasswordSubmit,
 } = require('../controllers/authPage.controller');
 const { loginLimiter, registerLimiter, passwordResetLimiter } = require('../middleware/rate-limit.middleware');
-const { adminDashboardPage, adminUsersPage, adminCompetitionsPage } = require('../controllers/adminPage.controller');
+const { adminDashboardPage, adminUsersPage, adminCompetitionsPage, adminPendingPage } = require('../controllers/adminPage.controller');
 const {
   templatesListPage, templateCreate, templateEditPage,
   templateUpdateMeta, templateDelete, templateEvaluatePage,
@@ -144,6 +144,7 @@ router.post('/api/rounds/:id/matches/bulk', apiRequireLogin, bulkCreateMatches);
 
 // Admin
 router.get('/admin', requireAdmin, adminDashboardPage);
+router.get('/admin/pending', requireAdmin, adminPendingPage);
 router.get('/admin/users', requireAdmin, adminUsersPage);
 router.get('/admin/competitions', requireAdmin, adminCompetitionsPage);
 router.get('/admin/teams', requireAdmin, teamsAdminPage);

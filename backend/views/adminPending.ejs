@@ -1,0 +1,54 @@
+<%- include('partials/head', { title: 'Nevyhodnotené zápasy', page: 'admin', active: 'admin', pageStyle: `
+  .ad-head { padding:40px 0 18px; }
+  .pend-hero { display:flex; align-items:center; gap:14px; padding:16px 20px; border-radius:var(--r-md); border:1px solid rgba(245,158,11,.5); background:linear-gradient(90deg,rgba(245,158,11,.14),transparent); margin-bottom:22px; }
+  .pend-hero .n { font-family:var(--num); font-size:2rem; font-weight:800; color:var(--warn,#f59e0b); }
+  .pl-group { margin-bottom:14px; border:1px solid var(--line); border-radius:var(--r-md); overflow:hidden; }
+  .pl-title { display:flex; align-items:center; gap:10px; padding:13px 16px; background:var(--surface-2); }
+  .pl-title h3 { font-size:var(--fs-h4); flex:1; min-width:0; }
+  .pl-count { font-size:var(--fs-xs); color:#0b0b12; background:var(--warn,#f59e0b); border-radius:99px; padding:2px 9px; font-weight:700; flex:none; }
+  .pl-row { display:flex; align-items:center; gap:12px; padding:11px 16px; border-top:1px solid var(--line); flex-wrap:wrap; }
+  .pl-row .tm { font-weight:600; color:var(--text-1); flex:1; min-width:0; }
+  .pl-row .wh { font-size:var(--fs-xs); color:var(--warn,#f59e0b); white-space:nowrap; }
+  @media (max-width:600px){ .ad-head { padding:24px 0 12px; } .pl-row .btn { width:100%; } }
+` }) %>
+
+<%- include('partials/admin-subnav', { active: 'dashboard' }) %>
+
+<div class="wrap ad-head">
+  <div class="crumb" style="margin-bottom:6px"><a href="/admin">Prehľad</a> › Nevyhodnotené zápasy</div>
+  <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Nevyhodnotené zápasy</h1>
+  <p class="muted" style="margin-top:4px;font-size:var(--fs-sm)">Zápasy po termíne bez výsledku v oficiálnych sezónach, oficiálnych ligách a šablónach. Klony líg zo šablón sa vyhodnocujú automaticky cez šablónu.</p>
+</div>
+
+<div class="wrap" style="padding-bottom:72px">
+  <% if (total === 0) { %>
+    <div class="card card-pad" style="text-align:center;color:var(--text-3)">Všetko vyhodnotené ✓ Žiadny zápas nečaká na výsledok.</div>
+  <% } else { %>
+  <div class="pend-hero">
+    <span class="n"><%= total %></span>
+    <div><b class="hi">zápasov čaká na vyhodnotenie</b><div class="muted" style="font-size:var(--fs-sm)">Zoradené podľa súťaže s najväčším počtom.</div></div>
+  </div>
+
+  <% groups.forEach(function(g){ %>
+  <section class="pl-group">
+    <div class="pl-title">
+      <h3><%= g.league.name %></h3>
+      <% if (g.league.isTemplate) { %><span class="tag tag-brand">Šablóna</span><% } %>
+      <span class="pl-count"><%= g.matches.length %> na vyhodnotenie</span>
+      <% if (g.league.isTemplate) { %>
+        <a href="/admin/templates/<%= g.league.id %>/evaluate" class="btn btn-primary btn-sm">Vyhodnotiť šablónu</a>
+      <% } %>
+    </div>
+    <% g.matches.forEach(function(m){ %>
+    <div class="pl-row">
+      <div class="tm"><%= m.home %> <span class="faint">vs</span> <%= m.away %> <span class="muted" style="font-weight:400;font-size:var(--fs-xs)">· <%= m.roundName %></span></div>
+      <span class="wh"><%= new Date(m.matchTime).toLocaleString('sk-SK') %></span>
+      <% if (!g.league.isTemplate) { %><a href="/rounds/<%= m.roundId %>/evaluate" class="btn btn-primary btn-sm">Vyhodnotiť</a><% } %>
+    </div>
+    <% }); %>
+  </section>
+  <% }); %>
+  <% } %>
+</div>
+
+<%- include('partials/footer') %>
