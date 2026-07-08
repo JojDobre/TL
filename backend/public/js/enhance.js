@@ -163,16 +163,16 @@
       });
     }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
 
+    // Vstup stránky animuje page-enter na main/.wrap. Prvky nad záhybom
+    // preto dostanú .in okamžite (synchrónne pred prvým paintom) — inak by
+    // sa obsah animoval dvakrát (kontajner + stagger detí). Scroll-reveal
+    // ostáva len pod záhybom.
     var vh = window.innerHeight || document.documentElement.clientHeight;
     els.forEach(function (el) {
       var r = el.getBoundingClientRect();
       var inView = r.top < vh * 0.92 && r.bottom > 0;
       if (inView) {
-        // nad záhybom: odhalíme spoľahlivo bez čakania na observer
-        var d = parseFloat(el.getAttribute('data-delay') || 0);
-        requestAnimationFrame(function () {
-          setTimeout(function () { el.classList.add('in'); }, d);
-        });
+        el.classList.add('in');
       } else {
         io.observe(el);
       }

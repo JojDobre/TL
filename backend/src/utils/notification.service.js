@@ -121,15 +121,22 @@ async function matchCanceled(match, round, tips) {
 }
 
 // Nový hráč v lige → upozorni ostatných členov (okrem nového hráča).
+// Standalone liga: detail žije na /seasons/:seasonId, nie /leagues/:id.
 async function memberJoined(league, newUserId, newUserName) {
   try {
     const ids = await leagueMemberIds(league.id, newUserId);
     if (!ids.length) return;
+    let link = `/leagues/${league.id}`;
+    try {
+      const { Season } = require('../models');
+      const s = await Season.findByPk(league.seasonId, { attributes: ['id', 'mode'] });
+      if (s && s.mode === 'standalone') link = `/seasons/${league.seasonId}`;
+    } catch (e) { /* fallback na /leagues */ }
     await createMany(ids.map((uid) => ({
       userId: uid, type: 'member',
       title: 'Nový hráč v tvojej lige',
       message: `${newUserName || 'Nový hráč'} sa pripojil do ligy ${league.name}.`,
-      link: `/leagues/${league.id}`,
+      link,
     })));
   } catch (e) { console.error('[notify] memberJoined:', e.message); }
 }

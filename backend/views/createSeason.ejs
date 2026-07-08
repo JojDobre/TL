@@ -38,10 +38,10 @@
   <main>
     <div class="card form-card">
       <h3>Druh súťaže</h3>
-      <p class="sub">Vyber, či zakladáš klasickú sezónu s viacerými ligami, alebo jednoduchý samostatný turnaj.</p>
+      <p class="sub">Vyber, či zakladáš klasickú sezónu s viacerými ligami, alebo jednoduchý samostatnú súťaž.</p>
       <div class="type-pick">
-        <label class="type-opt sel" data-mode="classic"><input type="radio" name="mode" value="classic" hidden checked><div class="t-ic">📚</div><b>Klasická sezóna</b><span class="muted" style="font-size:var(--fs-sm)">Zastrešuje viacero líg a kôl. Hráči si vyberajú ligy v rámci sezóny.</span></label>
-        <label class="type-opt" data-mode="standalone"><input type="radio" name="mode" value="standalone" hidden><div class="t-ic">🎯</div><b>Samostatná liga</b><span class="muted" style="font-size:var(--fs-sm)">Jeden turnaj bez líg — rovno kolá a tipovanie. Jednoduchšie pre malé partie.</span></label>
+        <label class="type-opt sel" data-mode="classic"><input type="radio" name="mode" value="classic" hidden checked><div class="t-ic">📚</div><b>Klasická sezóna</b><span class="muted" style="font-size:var(--fs-sm)">Zastrešuje viacero líg a kôl. Hráči si vyberajú v rámci sezóny ligy, v ktorých budú súťažiť.</span></label>
+        <label class="type-opt" data-mode="standalone"><input type="radio" name="mode" value="standalone" hidden><div class="t-ic">🎯</div><b>Samostatná liga</b><span class="muted" style="font-size:var(--fs-sm)">Jedna súťaž bez líg — rovno kolá a tipovanie. Jednoduchšie pre malé partie.</span></label>
       </div>
 
       <!-- info blok: prepína sa podľa zvoleného druhu -->
@@ -49,7 +49,7 @@
         <span style="font-size:16px" id="modeInfoIcon">📚</span>
         <div>
           <b class="hi" id="modeInfoTitle" style="display:block;margin-bottom:3px">Klasická sezóna</b>
-          <p class="muted" id="modeInfoText" style="font-size:var(--fs-sm)">Sezóna je zastrešujúca súťaž, ktorá obsahuje jednu alebo viac líg, každú s vlastnými kolami a bodovaním. Hodí sa, keď chceš mať pod jednou strechou viac samostatných tipovačiek (napr. rôzne skupiny kamošov) a spoločný prehľad. Po vytvorení do sezóny pridávaš ligy a v nich kolá.</p>
+          <p class="muted" id="modeInfoText" style="font-size:var(--fs-sm)">Sezóna je zastrešujúca súťaž, ktorá obsahuje jednu alebo viac líg, každú s vlastnými kolami a bodovaním. Hodí sa, keď chceš mať pod jednou strechou viac samostatných tipovačiek (napr. rôzne druhy športov, oddelené futbalové ligy...) a spoločný prehľad. Po vytvorení do sezóny pridávaš ligy a v nich kolá.</p>
         </div>
       </div>
     </div>
@@ -58,7 +58,7 @@
       <h3>Základné údaje</h3>
       <p class="sub">Ako sa sezóna volá a o čo v nej ide.</p>
       <div class="stack g-4">
-        <div class="field"><label class="label">Názov sezóny</label><input class="input" id="nm" name="name" placeholder="napr. MS v hokeji 2026" required oninput="document.getElementById('pvName').textContent=this.value||'Názov sezóny'"></div>
+        <div class="field"><label class="label">Názov sezóny</label><input class="input" id="nm" name="name" placeholder="napr. Futbalová sezóna 2026/2027" required oninput="document.getElementById('pvName').textContent=this.value||'Názov sezóny'"></div>
         <div class="field"><label class="label">Popis</label><textarea class="textarea" name="description" placeholder="Krátky popis sezóny, ktorý uvidia hráči…"></textarea></div>
       </div>
     </div>
@@ -176,7 +176,7 @@
     var infoMap = {
       classic: {
         icon: '📚', title: 'Klasická sezóna',
-        text: 'Sezóna je zastrešujúca súťaž, ktorá obsahuje jednu alebo viac líg, každú s vlastnými kolami a bodovaním. Hodí sa, keď chceš mať pod jednou strechou viac samostatných tipovačiek (napr. rôzne skupiny kamošov) a spoločný prehľad. Po vytvorení do sezóny pridávaš ligy a v nich kolá.'
+        text: 'Sezóna je zastrešujúca súťaž, ktorá obsahuje jednu alebo viac líg, každú s vlastnými kolami a bodovaním. Hodí sa, keď chceš mať pod jednou strechou viac samostatných tipovačiek (napr. rôzne druhy športov, oddelené futbalové ligy...) a spoločný prehľad. Po vytvorení do sezóny pridávaš ligy a v nich kolá.'
       },
       standalone: {
         icon: '🎯', title: 'Samostatná liga (turnaj)',
@@ -221,8 +221,8 @@
       if (submitBtn) submitBtn.textContent = mode === 'standalone' ? 'Vytvoriť samostatnú ligu' : 'Vytvoriť sezónu';
       var tip = document.getElementById('sideTip');
       if (tip) tip.textContent = mode === 'standalone'
-        ? 'Po vytvorení turnaja pridaj rovno kolá so zápasmi. Hráči sa pripoja cez 6-miestne ID ligy.'
-        : 'Po vytvorení sezóny pridaj ligy a v nich kolá so zápasmi. Hráči sa do sezóny pripoja cez 6-miestne ID.';
+        ? 'Po vytvorení samostatnej ligy pridaj rovno tímy a kolá so zápasmi. Hráči sa pripoja cez 6-miestne ID.'
+        : 'Po vytvorení sezóny pridaj ligy a v nich tímy akolá so zápasmi. Hráči sa do sezóny pripoja cez 6-miestne ID.';
       var ls = document.getElementById('pvLeagueStat');
       if (ls) ls.toggleAttribute('hidden', mode === 'standalone');
       window.updatePrivacyCard();

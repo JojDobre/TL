@@ -231,3 +231,23 @@ html .wrap { padding-inline: 24px !important; }
 @media (max-width: 720px){
   html .wrap { padding-inline: 16px !important; }
 }
+
+/* ===== Prechody medzi stránkami =====
+   Moderné prehliadače: cross-document View Transitions (fade + jemný posun).
+   Ostatné: fallback animácia obsahu pri načítaní. Navbar/subnav sú sticky,
+   animuje sa len obsah pod nimi (main/.wrap), aby lišty "nepreskakovali". */
+body > main, body > .wrap, body > .form-layout {
+  animation: page-enter .32s var(--ease-out) both;
+}
+@keyframes page-enter { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+
+/* odchod: trieda page-leave na <html> pred navigáciou (shell.js) */
+.page-leave body > main, .page-leave body > .wrap, .page-leave body > .form-layout {
+  animation: page-leave .15s ease both;
+}
+@keyframes page-leave { to { opacity:0; transform:translateY(-8px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  body > main, body > .wrap, body > .form-layout,
+  .page-leave body > main, .page-leave body > .wrap, .page-leave body > .form-layout { animation: none !important; }
+}

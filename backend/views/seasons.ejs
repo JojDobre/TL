@@ -30,7 +30,7 @@
     <div>
       <div class="eyebrow">Sezóny</div>
       <h1 style="font-size:clamp(2rem,3.4vw,2.8rem)">Nájdi sezónu a začni tipovať</h1>
-      <p class="muted" style="margin-top:6px">Oficiálne turnaje s globálnym rebríčkom alebo komunitné ligy pre tvoju partiu.</p>
+      <p class="muted" style="margin-top:6px">Oficiálne sezóny s globálnym rebríčkom alebo komunitné súťaže pre tvoju partiu.</p>
     </div>
     <div class="row g-2 wrap-gap">
       <button class="btn btn-secondary" data-open-join>Pripojiť sa</button>
@@ -41,7 +41,7 @@
 
 <div class="wrap" style="padding-bottom:64px">
   <!-- OFFICIAL -->
-  <div class="blk-head" style="margin-top:8px"><div><div class="eyebrow">Oficiálne</div><h2>Veľké turnaje</h2></div></div>
+  <div class="blk-head" style="margin-top:8px"><div><div class="eyebrow">Oficiálne sezóny</div><h2>Veľké oficiálne sezóny</h2></div></div>
   <div class="grid-cards g3">
     <% if (official.length === 0) { %>
       <p class="muted" style="grid-column:1/-1">Zatiaľ tu nie sú žiadne oficiálne sezóny.</p>
@@ -62,14 +62,14 @@
   <!-- COMMUNITY SEARCH -->
   <div class="card card-pad" style="margin-top:40px;background:linear-gradient(120deg,color-mix(in srgb,var(--gold) 7%,var(--surface-1)),var(--surface-1))">
     <div class="eyebrow" style="color:var(--gold)">Komunitné sezóny</div>
-    <h3 style="margin:6px 0 16px">Hľadaj verejné ligy alebo sa pripoj cez ID</h3>
+    <h3 style="margin:6px 0 16px">Hľadaj verejné sezóny alebo sa pripoj cez ID</h3>
     <div class="se-search" style="grid-template-columns:1fr auto">
       <div class="input-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4" stroke-linecap="round"/></svg><input class="input" id="seasonSearch" placeholder="Hľadať podľa názvu alebo ID…"></div>
       <a href="/discover" class="btn btn-secondary">Objaviť všetky →</a>
     </div>
   </div>
 
-  <div class="blk-head"><div><div class="eyebrow">Najväčšie verejné</div><h2>Komunitné sezóny</h2></div><a href="/seasons/create" class="btn btn-ghost btn-sm">Vytvoriť sezónu →</a></div>
+  <div class="blk-head"><div><div class="eyebrow">Komunitné sezóny</div><h2>Verejné sezóny vytvorené komunitov</h2></div><a href="/seasons/create" class="btn btn-ghost btn-sm">Vytvoriť sezónu →</a></div>
   <div class="grid-cards g4">
     <% if (community.length === 0) { %>
       <p class="muted" style="grid-column:1/-1">Zatiaľ tu nie sú žiadne komunitné sezóny.</p>
@@ -94,6 +94,10 @@
       <label class="label">ID</label>
       <input class="input num" name="inviteCode" placeholder="napr. HK4F2X" style="letter-spacing:.3em;text-transform:uppercase;font-weight:700" maxlength="6" required>
     </div>
+    <div class="field" data-join-pw hidden style="margin-bottom:14px">
+      <label class="label">Heslo</label>
+      <input class="input" type="password" name="password" placeholder="Heslo súťaže" autocomplete="off">
+    </div>
     <div class="field-error" data-join-error hidden style="color:var(--danger);font-size:var(--fs-sm);margin-bottom:14px"></div>
     <div class="row g-2" style="justify-content:flex-end"><button type="button" class="btn btn-secondary" data-close-join>Zrušiť</button><button type="submit" class="btn btn-primary">Pripojiť sa</button></div>
   </form>
@@ -103,7 +107,7 @@
   // join dialóg
   document.addEventListener('click', function (e) {
     var dlg = document.querySelector('[data-join]'); if (!dlg) return;
-    if (e.target.closest('[data-open-join]')) dlg.removeAttribute('hidden');
+    if (e.target.closest('[data-open-join]')) { dlg.removeAttribute('hidden'); var _je=dlg.querySelector('[data-join-error]'); if(_je){_je.setAttribute('hidden','');_je.textContent='';} var _jp=dlg.querySelector('input[type=password]'); if(_jp){_jp.value='';} var _jf=dlg.querySelector('[data-join-pw]'); if(_jf){_jf.setAttribute('hidden','');} }
     else if (e.target.closest('[data-close-join]') || e.target === dlg) dlg.setAttribute('hidden','');
   });
   // odoslanie join dialógu cez fetch — chyba (zlé ID/heslo/skončená) sa zobrazí v modáli
@@ -125,6 +129,10 @@
         .then(function (d) {
           if (submitBtn) submitBtn.disabled = false;
           if (d && d.success) { window.location.href = d.redirect || window.location.href; return; }
+          if (d && d.needPassword) {
+            var pw = form.querySelector('[data-join-pw]');
+            if (pw) { pw.removeAttribute('hidden'); var pi = pw.querySelector('input'); if (pi) pi.focus(); }
+          }
           if (errBox) { errBox.textContent = (d && d.message) || 'Nepodarilo sa pripojiť. Skús to znova.'; errBox.removeAttribute('hidden'); }
         })
         .catch(function () {

@@ -301,3 +301,27 @@
 
   window.TL = { svg, I, init, setPage: function(p){ document.body.setAttribute('data-page', p||''); init(); } };
 })();
+/* ---- prechod pri odchode zo stránky --------------------------------
+   Klik na interný odkaz: krátky fade-out obsahu (.page-leave na <html>),
+   potom navigácia. Preskakuje: modifikačné klávesy, target=_blank,
+   download, kotvy na tej istej stránke, externé odkazy, odkazy v modáloch.
+   pageshow reset rieši návrat cez bfcache (späť/dopredu). */
+(function () {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  document.addEventListener('click', function (e) {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    var a = e.target.closest('a[href]');
+    if (!a) return;
+    if (a.target === '_blank' || a.hasAttribute('download') || a.closest('.dialog, .dropdown')) return;
+    var url;
+    try { url = new URL(a.href, location.href); } catch (err) { return; }
+    if (url.origin !== location.origin) return;
+    if (url.pathname === location.pathname && url.search === location.search && url.hash) return; // kotva na stránke
+    e.preventDefault();
+    document.documentElement.classList.add('page-leave');
+    setTimeout(function () { location.href = url.href; }, 140);
+  }, true);
+  window.addEventListener('pageshow', function () {
+    document.documentElement.classList.remove('page-leave');
+  });
+})();

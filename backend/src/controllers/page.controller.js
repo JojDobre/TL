@@ -61,9 +61,11 @@ const seasonsPage = asyncHandler(async (req, res) => {
     return { ...season.toJSON(), leaguesCount, participantsCount, matchesCount, status: seasonStatus(season) };
   }));
 
-  // skryté sezóny zo zoznamu vypadnú — okrem tých, kde je užívateľ člen/tvorca
+  // skryté sezóny zo zoznamu vypadnú — okrem tých, kde je užívateľ člen/tvorca;
+  // ukončené sa na /seasons nezobrazujú vôbec (sú dostupné cez detail/Centrum)
   const visible = withCounts.filter((s) =>
-    !s.hidden || (meId && (s.creatorId === meId || mySeasonIds.includes(s.id))));
+    s.status !== 'ended'
+    && (!s.hidden || (meId && (s.creatorId === meId || mySeasonIds.includes(s.id)))));
 
   const official = visible.filter((s) => s.type === 'official');
   const community = visible.filter((s) => s.type === 'community');
@@ -459,7 +461,7 @@ const joinSeasonSubmit = asyncHandler(async (req, res) => {
       if (league.hasPassword) {
         const ok = password && await bcrypt.compare(password, league.password || '');
         if (!ok) {
-          if (wantsJson) return res.status(401).json({ success: false, message: 'Nesprávne heslo.' });
+          if (wantsJson) return res.status(401).json({ success: false, needPassword: true, message: password ? 'Nesprávne heslo.' : 'Táto súťaž je chránená heslom — zadaj ho.' });
           return res.redirect('/leagues/' + league.id);
         }
       }
@@ -501,7 +503,7 @@ const joinSeasonSubmit = asyncHandler(async (req, res) => {
   if (season.hasPassword) {
     const ok = password && await bcrypt.compare(password, season.password || '');
     if (!ok) {
-      if (wantsJson) return res.status(401).json({ success: false, message: 'Nesprávne heslo sezóny.' });
+      if (wantsJson) return res.status(401).json({ success: false, needPassword: true, message: password ? 'Nesprávne heslo sezóny.' : 'Táto sezóna je chránená heslom — zadaj ho.' });
       // fallback bez JS: späť na detail s chybou hesla
       return res.status(401).render('seasonDetail', {
         season: { ...season.toJSON(), status: seasonStatus(season), locked: true },

@@ -230,6 +230,10 @@
       <label class="label">ID sezóny</label>
       <input class="input num" name="inviteCode" placeholder="napr. HK4F2X" style="letter-spacing:.3em;text-transform:uppercase;font-weight:700" maxlength="6" required>
     </div>
+    <div class="field" data-join-pw hidden style="margin-bottom:14px">
+      <label class="label">Heslo</label>
+      <input class="input" type="password" name="password" placeholder="Heslo súťaže" autocomplete="off">
+    </div>
     <div class="field-error" data-join-error hidden style="color:var(--danger);font-size:var(--fs-sm);margin-bottom:14px"></div>
     <div class="row g-2" style="justify-content:flex-end"><button type="button" class="btn btn-secondary" data-close-join>Zrušiť</button><button type="submit" class="btn btn-primary">Pripojiť sa</button></div>
   </form>
@@ -238,7 +242,7 @@
 <script>
   document.addEventListener('click', function (e) {
     var dlg = document.querySelector('[data-join]'); if (!dlg) return;
-    if (e.target.closest('[data-open-join]')) { dlg.removeAttribute('hidden'); var _je=dlg.querySelector('[data-join-error]'); if(_je){_je.setAttribute('hidden','');_je.textContent='';} var _jp=dlg.querySelector('input[type=password]'); if(_jp){_jp.value='';} }
+    if (e.target.closest('[data-open-join]')) { dlg.removeAttribute('hidden'); var _je=dlg.querySelector('[data-join-error]'); if(_je){_je.setAttribute('hidden','');_je.textContent='';} var _jp=dlg.querySelector('input[type=password]'); if(_jp){_jp.value='';} var _jf=dlg.querySelector('[data-join-pw]'); if(_jf){_jf.setAttribute('hidden','');} }
     else if (e.target.closest('[data-close-join]') || e.target === dlg) dlg.setAttribute('hidden','');
   });
   // odoslanie join dialógu cez fetch — chyba (zlé ID/heslo/skončená) sa zobrazí v modáli
@@ -260,6 +264,10 @@
         .then(function (d) {
           if (submitBtn) submitBtn.disabled = false;
           if (d && d.success) { window.location.href = d.redirect || window.location.href; return; }
+          if (d && d.needPassword) {
+            var pw = form.querySelector('[data-join-pw]');
+            if (pw) { pw.removeAttribute('hidden'); var pi = pw.querySelector('input'); if (pi) pi.focus(); }
+          }
           if (errBox) { errBox.textContent = (d && d.message) || 'Nepodarilo sa pripojiť. Skús to znova.'; errBox.removeAttribute('hidden'); }
         })
         .catch(function () {

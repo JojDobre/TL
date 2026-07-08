@@ -42,11 +42,18 @@ function roundStatus(round) {
 const leagueDetailPage = asyncHandler(async (req, res) => {
   const league = await League.findByPk(req.params.id, {
     include: [
-      { model: Season, attributes: ['id', 'name', 'creatorId'] },
+      { model: Season, attributes: ['id', 'name', 'creatorId', 'mode'] },
       { model: Round, attributes: ['id', 'name', 'description', 'startDate', 'endDate', 'active', 'createdAt'] },
     ],
   });
   if (!league) return res.status(404).render('error-page', { message: 'Liga nebola nájdená.' });
+
+  // KANONICKÁ URL: standalone turnaj žije na /seasons/:id. Priamy GET
+  // /leagues/:id (notifikácie, staré odkazy, drobčeky) presmeruj — inak by
+  // sa ten istý turnaj zobrazoval v dvoch rôznych šablónach.
+  if (!req._standaloneView && league.Season && league.Season.mode === 'standalone') {
+    return res.redirect('/seasons/' + league.seasonId);
+  }
 
   // SÚKROMIE: obsah ligy (kolá, zápasy, rebríček) podlieha heslu jej SEZÓNY.
   // Nečlen heslovanej sezóny sa cez priamu URL ligy k obsahu nedostane —
@@ -225,8 +232,13 @@ const joinLeagueSubmit = asyncHandler(async (req, res) => {
     await notify.memberJoined(league, userId, joiner ? joiner.username : null);
   }
 
-  if (wantsJson) return res.json({ success: true, redirect: '/leagues/' + league.id });
-  res.redirect('/leagues/' + league.id);
+  // standalone liga: detail žije na /seasons/:id (turnaj), nie /leagues/:id
+  const parentSeason = await Season.findByPk(league.seasonId, { attributes: ['id', 'mode'] });
+  const dest = (parentSeason && parentSeason.mode === 'standalone')
+    ? '/seasons/' + league.seasonId
+    : '/leagues/' + league.id;
+  if (wantsJson) return res.json({ success: true, redirect: dest });
+  res.redirect(dest);
 });
 
 // GET /leagues/create?season=:id — formulár na vytvorenie ligy
