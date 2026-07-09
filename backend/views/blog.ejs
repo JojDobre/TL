@@ -37,7 +37,7 @@
 <div class="wrap bl-head">
   <div class="eyebrow">Blog</div>
   <h1 style="font-size:clamp(2rem,3.4vw,2.8rem)">Tipy, stratégie a novinky</h1>
-  <p class="muted" style="margin-top:6px">Ako tipovať lepšie, rozhovory s top hráčmi a všetko zo sveta Tiperligy.</p>
+  <p class="muted" style="margin-top:6px">Ako tipovať lepšie, čo je nové a všetko z nášho sveta.</p>
   <div class="bl-cats">
     <% cats.forEach(function(c){ %>
       <a class="cat <%= activeCat === c ? 'active' : '' %>" href="<%= c === 'Všetko' ? '/blog' : '/blog?kategoria=' + encodeURIComponent(c) %>"><%= c %></a>

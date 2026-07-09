@@ -1,3 +1,11 @@
+<style>
+@media (max-width: 650px) {
+  .wrap-gap > .btn {
+    width: 100%;
+  }
+}
+</style>
+
 <%
   // statusCode môže prísť z errorHandleru aj z priamych render('error-page') volaní (kde nie je) → fallback
   var _code = (typeof statusCode !== 'undefined' && statusCode) ? statusCode : 404;
