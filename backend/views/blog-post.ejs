@@ -49,7 +49,7 @@
     <a href="/blog" class="muted" style="font-size:var(--fs-sm);display:inline-block;margin-bottom:14px">← Späť na blog</a>
     <div class="row g-2 wrap-gap" style="margin-bottom:14px"><span class="tag <%= catTag(article.category) %>"><%= article.category %></span><span class="muted" style="font-size:var(--fs-sm)"><%= article.readMinutes %> min čítania</span></div>
     <h1 style="font-size:clamp(1.9rem,3.6vw,3rem);max-width:18ch;color:#fff"><%= article.title %></h1>
-    <div class="row g-3" style="margin-top:20px"><span class="avatar avatar-md" style="background:linear-gradient(135deg,#7c5cff,#5b3fd6);color:#fff"><%= authorInit %></span><div><b style="color:#fff"><%= authorName %></b><div style="color:rgba(255,255,255,.65);font-size:var(--fs-sm)"><%= fmtDate(article.createdAt) %></div></div></div>
+    <div class="row g-3" style="margin-top:20px"><span class="avatar avatar-md" style="background:linear-gradient(135deg,#7c5cff,#5b3fd6);color:#fff;overflow:hidden"><% if (article.author && article.author.profileImage) { %><img src="<%= article.author.profileImage %>" alt="<%= authorName %>" style="width:100%;height:100%;object-fit:cover"><% } else { %><%= authorInit %><% } %></span><div><b style="color:#fff"><%= authorName %></b><div style="color:rgba(255,255,255,.65);font-size:var(--fs-sm)"><%= fmtDate(article.createdAt) %></div></div></div>
   </div>
 </header>
 
@@ -60,7 +60,7 @@
     <%- contentHtml %>
 
     <div class="hr" style="margin:34px 0"></div>
-    <div class="row g-3"><span class="avatar avatar-lg" style="background:linear-gradient(135deg,#7c5cff,#5b3fd6);color:#fff"><%= authorInit %></span><div><b class="hi"><%= authorName %></b><p class="muted" style="font-size:var(--fs-sm);margin:0">Autor článku na Tiperlige.</p></div></div>
+    <div class="row g-3"><span class="avatar avatar-lg" style="background:linear-gradient(135deg,#7c5cff,#5b3fd6);color:#fff;overflow:hidden"><% if (article.author && article.author.profileImage) { %><img src="<%= article.author.profileImage %>" alt="<%= authorName %>" style="width:100%;height:100%;object-fit:cover"><% } else { %><%= authorInit %><% } %></span><div><b class="hi"><%= authorName %></b><p class="muted" style="font-size:var(--fs-sm);margin:0">Autor článku na Tiperlige.</p></div></div>
   </article>
 
   <!-- SIDE -->
@@ -75,7 +75,13 @@
     </div>
     <div class="share-block">
       <div class="stat-label" style="margin-bottom:10px">Zdieľať</div>
-      <div class="row g-2 share-row" style="margin-bottom:28px"><a href="#" class="share-btn">𝕏</a><a href="#" class="share-btn">f</a><a href="#" class="share-btn">in</a><a href="#" class="share-btn">🔗</a></div>
+      <div class="row g-2 share-row" style="margin-bottom:28px">
+        <a class="share-btn" data-share="x" target="_blank" rel="noopener" title="Zdieľať na X">𝕏</a>
+        <a class="share-btn" data-share="fb" target="_blank" rel="noopener" title="Zdieľať na Facebooku">f</a>
+        <a class="share-btn" data-share="in" target="_blank" rel="noopener" title="Zdieľať na LinkedIn">in</a>
+        <button type="button" class="share-btn" data-share="native" title="Zdieľať (Instagram a ďalšie)" style="cursor:pointer" hidden>📲</button>
+        <button type="button" class="share-btn" data-share="copy" title="Kopírovať odkaz" style="cursor:pointer">🔗</button>
+      </div>
     </div>
     <div class="card card-pad" style="background:linear-gradient(135deg,var(--surface-1),color-mix(in srgb,var(--brand) 9%,var(--surface-1)))">
       <b class="hi" style="display:block;margin-bottom:6px">Otestuj to v praxi</b>
@@ -97,4 +103,36 @@
 </div>
 <% } %>
 
+<script>
+(function () {
+  var url = location.origin + location.pathname;
+  var title = document.title;
+  var links = {
+    x: 'https://twitter.com/intent/tweet?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(title),
+    fb: 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url),
+    in: 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(url)
+  };
+  document.querySelectorAll('[data-share]').forEach(function (el) {
+    var k = el.getAttribute('data-share');
+    if (links[k]) { el.href = links[k]; return; }
+    if (k === 'native') {
+      // systémový share sheet (mobil) — cesta k IG Story: používateľ vyberie
+      // Instagram v sheete. Priamy web intent do Stories neexistuje.
+      if (navigator.share) {
+        el.hidden = false;
+        el.addEventListener('click', function () {
+          navigator.share({ title: title, url: url }).catch(function () {});
+        });
+      }
+      return;
+    }
+    if (k === 'copy') el.addEventListener('click', function () {
+      (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () {
+        var t = el.textContent; el.textContent = '✓';
+        setTimeout(function () { el.textContent = t; }, 1400);
+      }).catch(function () { window.prompt('Skopíruj odkaz:', url); });
+    });
+  });
+})();
+</script>
 <%- include('partials/footer') %>

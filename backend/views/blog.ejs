@@ -58,7 +58,7 @@
       <h2 style="font-size:var(--fs-h2);margin-bottom:12px"><%= featured.title %></h2>
       <p class="muted" style="margin-bottom:18px"><%= featured.excerpt %></p>
       <div class="row g-3">
-        <span class="avatar avatar-sm" style="background:linear-gradient(135deg,#7c5cff,#5b3fd6);color:#fff"><%= (featured.author && featured.author.username ? featured.author.username : '?').substring(0,2).toUpperCase() %></span>
+        <span class="avatar avatar-sm" style="background:linear-gradient(135deg,#7c5cff,#5b3fd6);color:#fff;overflow:hidden"><% if (featured.author && featured.author.profileImage) { %><img src="<%= featured.author.profileImage %>" alt="<%= featured.author.username %>" style="width:100%;height:100%;object-fit:cover"><% } else { %><%= (featured.author && featured.author.username ? featured.author.username : '?').substring(0,2).toUpperCase() %><% } %></span>
         <div>
           <b class="hi" style="font-size:var(--fs-sm)"><%= featured.author && featured.author.username ? featured.author.username : '—' %></b>
           <div class="muted" style="font-size:var(--fs-xs)"><%= fmtDate(featured.createdAt) %> · <%= featured.readMinutes %> min čítania</div>

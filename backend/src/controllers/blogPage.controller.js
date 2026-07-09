@@ -112,7 +112,7 @@ const blogListPage = asyncHandler(async (req, res) => {
   if (!category || category === 'Všetko') {
     featured = await Article.findOne({
       where: { published: true, featured: true },
-      include: [{ model: User, as: 'author', attributes: ['username'] }],
+      include: [{ model: User, as: 'author', attributes: ['username', 'profileImage'] }],
       order: [['createdAt', 'DESC']],
     });
   }
@@ -121,7 +121,7 @@ const blogListPage = asyncHandler(async (req, res) => {
   const exclude = featured ? { id: { [require('sequelize').Op.ne]: featured.id } } : {};
   const posts = await Article.findAll({
     where: Object.assign({}, where, exclude),
-    include: [{ model: User, as: 'author', attributes: ['username'] }],
+    include: [{ model: User, as: 'author', attributes: ['username', 'profileImage'] }],
     order: [['createdAt', 'DESC']],
   });
 
@@ -132,7 +132,7 @@ const blogListPage = asyncHandler(async (req, res) => {
 const blogPostPage = asyncHandler(async (req, res) => {
   const article = await Article.findOne({
     where: { slug: req.params.slug },
-    include: [{ model: User, as: 'author', attributes: ['username'] }],
+    include: [{ model: User, as: 'author', attributes: ['username', 'profileImage'] }],
   });
 
   // neexistuje alebo je nepublikovaný (nepublikovaný smie vidieť len admin)

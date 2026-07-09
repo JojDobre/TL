@@ -287,8 +287,24 @@ function evaluate(def, stats, earnedCount, ownedRarityCount) {
   }
 }
 
+// Per-user zámok: vyhodnotenia toho istého používateľa bežia sekvenčne.
+// (Jedna PM2 inštancia — in-process reťazenie promises stačí.)
+const _userLocks = new Map();
+function _withUserLock(uid, fn) {
+  const prev = _userLocks.get(uid) || Promise.resolve();
+  const next = prev.then(fn, fn);
+  _userLocks.set(uid, next.finally(() => { if (_userLocks.get(uid) === next) _userLocks.delete(uid); }));
+  return next;
+}
+
 // Hlavná funkcia: vyhodnotí a udelí odznaky pre používateľa, vráti zoznam so stavom.
-async function evaluateUser(userId) {
+// Verejný wrapper serializuje volania per používateľ.
+function evaluateUser(userId) {
+  const uid = Number(userId);
+  return _withUserLock(uid, () => _evaluateUserInner(uid));
+}
+
+async function _evaluateUserInner(userId) {
   const uid = Number(userId);
   const defs = await Achievement.findAll({ order: [['sortOrder', 'ASC']] });
   if (!defs.length) return { items: [], earnedCount: 0, total: 0 };
