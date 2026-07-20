@@ -131,7 +131,11 @@
           <span class="round-n"><%= roundAbbr(r.name) %></span>
           <div><div class="row g-2 wrap-gap"><b class="hi"><%= r.description || r.name %></b><span class="tag tag-info">Naplánované</span></div><div class="muted" style="font-size:var(--fs-sm)">Otvorí sa <%= new Date(r.startDate).toLocaleDateString('sk-SK') %></div></div>
           <span class="rnd-pts muted" style="font-size:var(--fs-sm)">—</span>
+          <% if (typeof canManage !== 'undefined' && canManage) { %>
+          <a href="/rounds/<%= r.id %>" class="rnd-btn btn btn-secondary btn-sm">Spravovať</a>
+          <% } else { %>
           <span class="rnd-btn btn btn-ghost btn-sm" aria-disabled="true">Čaká</span>
+          <% } %>
         </div>
         <% } %>
       <% }); %>

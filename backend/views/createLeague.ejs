@@ -75,7 +75,7 @@
       <p class="sub">Názov a popis, ktoré uvidia hráči.</p>
       <div class="stack g-4">
         <div class="field"><label class="label">Názov ligy</label><input class="input" name="name" placeholder="napr. Tipovačka s kolegami" required oninput="document.getElementById('pvName').textContent=this.value||'Názov ligy'"></div>
-        <div class="field"><label class="label">Popis <span class="faint">(voliteľné)</span></label><textarea class="textarea" name="description" placeholder="O čo v lige ide, prípadné pravidlá navyše…"></textarea></div>
+        <div class="field"><label class="label">Popis <span class="faint">(voliteľné)</span></label><textarea class="textarea" name="description" placeholder="O čo v lige ide, prípadné pravidlá navyše…" oninput="var d=document.getElementById('pvDesc'); if(d){ d.textContent=this.value||'Popis ligy sa zobrazí tu.'; }"></textarea></div>
         <div class="field"><label class="label">Obrázok ligy <span class="faint">(URL, voliteľné)</span></label><input class="input" type="url" name="image" placeholder="https://… odkaz na obrázok" oninput="var p=document.getElementById('pvLogo'); if(p){ if(this.value){p.style.backgroundImage='url(\''+this.value+'\')';p.style.backgroundSize='cover';p.style.backgroundPosition='center';p.textContent='';}else{p.style.backgroundImage='';p.textContent='TK';} }"><span class="hint">Zobrazí sa namiesto iniciálok na kartách ligy.</span></div>
       </div>
     </div>
@@ -111,6 +111,7 @@
       <div class="stat-label" style="margin-bottom:12px">Náhľad ligy</div>
       <div class="row g-3" style="margin-bottom:12px"><span class="team-logo" id="pvLogo" style="width:48px;height:48px;font-size:16px;background:linear-gradient(135deg,#7c5cff,#3b1f8a)">TK</span><div><b class="hi" id="pvName">Názov ligy</b><div class="muted" style="font-size:var(--fs-xs)">v sezóne <%= season.name %></div></div></div>
       <div class="row g-2 wrap-gap" style="margin-bottom:10px"><span class="tag tag-gold">Custom</span><span class="tag tag-muted" id="pvLock" hidden>🔒 Heslo</span></div>
+      <p class="muted" id="pvDesc" style="font-size:var(--fs-sm);margin:0;word-break:break-word">Popis ligy sa zobrazí tu.</p>
     </div>
     <div class="card card-pad" style="margin-top:18px;background:var(--surface-2)">
       <b class="hi" style="display:block;margin-bottom:6px">💡 Tip</b>

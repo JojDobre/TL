@@ -42,7 +42,7 @@ function roundStatus(round) {
 const leagueDetailPage = asyncHandler(async (req, res) => {
   const league = await League.findByPk(req.params.id, {
     include: [
-      { model: Season, attributes: ['id', 'name', 'creatorId', 'mode'] },
+      { model: Season, attributes: ['id', 'name', 'creatorId', 'mode', 'showRules', 'showNews'] },
       { model: Round, attributes: ['id', 'name', 'description', 'startDate', 'endDate', 'active', 'createdAt'] },
     ],
   });
@@ -519,7 +519,7 @@ const leaveLeagueSubmit = asyncHandler(async (req, res) => {
 // GET /leagues/:id/members
 const leagueMembersPage = asyncHandler(async (req, res) => {
   const userId = Number(req.session.userId);
-  const league = await League.findByPk(req.params.id, { include: [{ model: Season, attributes: ['id', 'name', 'creatorId'] }] });
+  const league = await League.findByPk(req.params.id, { include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'mode', 'showRules', 'showNews'] }] });
   if (!league) return res.status(404).render('error-page', { message: 'Liga nebola nájdená.' });
   if (!(await isLeagueManager(league, userId))) {
     return res.status(403).render('error-page', { message: 'Nemáš oprávnenie spravovať členov.' });
@@ -544,8 +544,15 @@ const leagueMemberAction = asyncHandler(async (req, res) => {
   if (!(await isLeagueManager(league, userId))) {
     return res.status(403).render('error-page', { message: 'Nemáš oprávnenie spravovať členov.' });
   }
+  // návrat tam, odkiaľ akcia prišla (manage posiela from=manage,
+  // standalone správa turnaja from=season-manage)
+  const backUrl = req.body.from === 'season-manage'
+    ? '/seasons/' + league.seasonId + '/manage'
+    : (req.body.from === 'manage'
+      ? '/leagues/' + league.id + '/manage'
+      : '/leagues/' + league.id + '/members');
   if (targetId === league.creatorId) {
-    return res.redirect('/leagues/' + league.id + '/members');
+    return res.redirect(backUrl);
   }
   if (action === 'remove') {
     await UserLeague.destroy({ where: { userId: targetId, leagueId: league.id } });
@@ -554,7 +561,7 @@ const leagueMemberAction = asyncHandler(async (req, res) => {
   } else if (action === 'demote') {
     await UserLeague.update({ role: 'player' }, { where: { userId: targetId, leagueId: league.id } });
   }
-  res.redirect('/leagues/' + league.id + '/members');
+  res.redirect(backUrl);
 });
 
 // POST /leagues/:id/end — ukončiť alebo znovuotvoriť ligu (toggle, len správca)

@@ -688,6 +688,24 @@ section[id], .blk-head[id], [data-anchor] {
 .more-ic { font-size: 17px; flex:none; }
 @media (min-width: 901px){ [data-more-sheet] { display:none !important; } }
 
+/* „Ostatné" sheet: bottom-sheet vždy, keď je viditeľný tabbar (aj tablety
+   721–900px, kde všeobecné .dialog pravidlá platia len do 720px — inak by
+   sheet plával v strede obrazovky). */
+@media (max-width: 900px){
+  [data-more-sheet].scrim { align-items: flex-end; padding: 0; }
+  [data-more-sheet] .dialog {
+    width:100%; max-width:100%;
+    border-radius: var(--r-2xl) var(--r-2xl) 0 0;
+    padding: 22px 18px calc(24px + env(safe-area-inset-bottom, 0px));
+    animation: sheet-up .26s var(--ease-out);
+  }
+}
+
+/* extra úzke displeje: možnosti pod seba, žiadne vedľa seba */
+@media (max-width: 300px){
+  .more-grid { grid-template-columns: 1fr; }
+}
+
 /* ---- Equal-size scoring tiles (rules / bodovanie blocks) ---- */
 .score-grid { display:grid; grid-template-columns:repeat(4,1fr); grid-auto-rows:1fr; gap:12px; }
 .score-grid > .stat, .score-grid > .card { flex:none !important; min-width:0 !important; margin:0; }

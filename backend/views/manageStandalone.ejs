@@ -122,6 +122,7 @@
                 <button class="btn btn-ghost btn-sm" aria-disabled="true">—</button>
               <% } else { %>
                 <form method="POST" action="/leagues/<%= league.id %>/members/<%= m.id %>" style="display:flex;gap:8px;align-items:center">
+                  <input type="hidden" name="from" value="season-manage">
                   <% if (m.role === 'admin') { %>
                     <button class="btn btn-secondary btn-sm" name="action" value="demote">Zrušiť správu</button>
                   <% } else { %>
@@ -279,7 +280,7 @@
       <div class="stat-label" style="margin-bottom:12px">Súhrn ligy</div>
       <div class="stack g-3" style="font-size:var(--fs-sm)">
         <div class="between"><span class="muted">Členovia</span><b class="hi num"><%= summary.membersCount %></b></div>
-        <div class="between"><span class="muted">Odohrané kolá</span><b class="hi num"><%= summary.finishedCount %> / <%= summary.totalMatches %></b></div>
+        <div class="between"><span class="muted">Vyhodnotené zápasy</span><b class="hi num"><%= summary.finishedCount %> / <%= summary.totalMatches %></b></div>
         <div class="between"><span class="muted">Kolá</span><b class="hi num"><%= summary.roundsCount %></b></div>
         <div class="between"><span class="muted">Odoslaných tipov</span><b class="hi num"><%= summary.tipsCount %></b></div>
         <div class="between"><span class="muted">Typ</span><span class="tag <%= isOfficial ? 'tag-brand' : 'tag-gold' %>"><%= isOfficial ? 'Oficiálna' : 'Custom' %></span></div>

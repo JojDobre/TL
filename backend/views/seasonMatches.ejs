@@ -4,6 +4,12 @@
   .crumb a { color:var(--text-3); } .crumb a:hover { color:var(--brand-bright); }
   .grp-head { display:flex; align-items:center; gap:10px; margin:26px 0 14px; }
   .grp-head h3 { font-size:var(--fs-h4); }
+  @media (max-width: 360px){
+    /* názov kola, tag a uzávierka pod sebou — každé v samostatnom riadku */
+    .grp-head { flex-direction:column; align-items:flex-start; gap:5px; }
+    .grp-head .tag { align-self:flex-start; }
+    .grp-head .grp-deadline { margin-left:0 !important; }
+  }
   .match-list > * + * { margin-top:14px; }
   .match-row { padding:18px 20px; }
   .match-row.tipped { border-color: var(--brand-line); box-shadow: 0 0 0 1px var(--brand-line); }
@@ -111,7 +117,7 @@
     <div class="grp-head">
       <h3><%= g.roundName %></h3>
       <span class="tag tag-muted"><%= g.leagueName %></span>
-      <% if (g.endDate) { %><span class="muted" style="font-size:var(--fs-xs);margin-left:auto">uzávierka <%= fmtDT(g.endDate) %></span><% } %>
+      <% if (g.endDate) { %><span class="muted grp-deadline" style="font-size:var(--fs-xs);margin-left:auto">uzávierka <%= fmtDT(g.endDate) %></span><% } %>
     </div>
     <div class="match-list">
       <% g.matches.forEach(function (m) {

@@ -27,7 +27,7 @@ const teamAbbr = (name) => (name || '?').replace(/[^A-Za-zÀ-ž0-9 ]/g, '').spli
 // GET /rounds/:id/evaluate
 const evaluatePage = asyncHandler(async (req, res) => {
   const round = await Round.findByPk(req.params.id, {
-    include: [{ model: League, include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'startDate', 'endDate', 'ended'] }] }],
+    include: [{ model: League, include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'startDate', 'endDate', 'ended', 'mode', 'showRules', 'showNews'] }] }],
   });
   if (!round) return res.status(404).render('error-page', { message: 'Kolo nebolo nájdené.' });
 

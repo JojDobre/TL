@@ -157,6 +157,15 @@
   .tifo-lockup .tifo-wordmark { font-size: 1.2em; }
 }
 
+/* extra malé displeje: v navbare zostane len maskot, wordmark preč;
+   maskot sa pri nedostatku miesta zmenšuje proporčne (object-fit),
+   nie len do šírky */
+@media (max-width: 280px) {
+  .nav .tifo-lockup { min-width: 0; }
+  .nav .tifo-lockup .tifo-wordmark { display: none; }
+  .nav .tifo-logo { min-width: 0; max-width: 100%; object-fit: contain; object-position: left center; }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .tifo-logo { transition: filter .2s ease; }
 }

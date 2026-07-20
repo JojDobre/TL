@@ -7,7 +7,13 @@
 <% const sa = typeof active !== 'undefined' ? active : 'overview';
    const sid = typeof seasonId !== 'undefined' ? seasonId : '';
    const sname = typeof seasonName !== 'undefined' && seasonName ? seasonName : 'Sezóna';
-   const sinit = (sname || 'S').substring(0,2).toUpperCase(); %>
+   const sinit = (sname || 'S').substring(0,2).toUpperCase();
+   // viditeľnosť odkazov podľa nastavení sezóny (season priamo, alebo league.Season)
+   const _sobj = (typeof season !== 'undefined' && season) ? season
+               : ((typeof league !== 'undefined' && league && league.Season) ? league.Season : null);
+   const _standalone = !!(_sobj && _sobj.mode === 'standalone');
+   const _showRules = !_standalone && (!_sobj || _sobj.showRules !== false);
+   const _showNews  = !_standalone && (!_sobj || _sobj.showNews  !== false); %>
 <div class="subnav"><div class="wrap subnav-inner">
   <a href="/seasons/<%= sid %>" class="row g-2" style="font-weight:700;color:var(--text-1);white-space:nowrap;padding-right:8px">
     <span class="team-logo" style="width:26px;height:26px;font-size:11px;background:linear-gradient(135deg,#0b4ea2,#06306a)"><%= sinit %></span>
@@ -15,10 +21,10 @@
   </a>
   <span style="width:1px;height:22px;background:var(--line)"></span>
   <a class="subnav-link <%= sa==='overview'?'active':'' %>" data-spy="top" href="/seasons/<%= sid %>">Prehľad</a>
-  <a class="subnav-link <%= sa==='leagues'?'active':'' %>" data-spy="leagues" href="/seasons/<%= sid %>#leagues">Ligy</a>
+  <% if (!_standalone) { %><a class="subnav-link <%= sa==='leagues'?'active':'' %>" data-spy="leagues" href="/seasons/<%= sid %>#leagues">Ligy</a><% } %>
   <a class="subnav-link <%= sa==='leaderboard'?'active':'' %>" href="/seasons/<%= sid %>/leaderboard">Rebríček</a>
-  <a class="subnav-link <%= sa==='rules'?'active':'' %>" data-spy="rules" href="/seasons/<%= sid %>#rules">Pravidlá</a>
-  <a class="subnav-link <%= sa==='news'?'active':'' %>" data-spy="news" href="/seasons/<%= sid %>#news">Aktuality</a>
+  <% if (_showRules) { %><a class="subnav-link <%= sa==='rules'?'active':'' %>" data-spy="rules" href="/seasons/<%= sid %>#rules">Pravidlá</a><% } %>
+  <% if (_showNews) { %><a class="subnav-link <%= sa==='news'?'active':'' %>" data-spy="news" href="/seasons/<%= sid %>#news">Aktuality</a><% } %>
   <% if (currentUserRole === 'admin') { %>
     <a class="subnav-link admin" href="/admin/competitions">Admin</a>
   <% } %>
