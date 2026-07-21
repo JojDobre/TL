@@ -9,7 +9,7 @@
 //   const notify = require('../utils/notification.service');
 //   await notify.roundCreated(round, league);
 
-const { Notification, UserLeague, Round, League, User, Sequelize } = require('../models');
+const { Notification, UserLeague, Round, League, Match, Tip, User, Sequelize } = require('../models');
 const { Op } = Sequelize;
 
 // Odfiltruje príjemcov, ktorí majú vypnuté notifikácie v aplikácii (notifyInApp=false).
@@ -92,19 +92,86 @@ async function roundEvaluated(round, league, perUser) {
   } catch (e) { console.error('[notify] roundEvaluated:', e.message); }
 }
 
-// Jednoduchšia verzia: jeden zápas vyhodnotený → upozorni tipujúcich na zápas.
-// tips = pole tipov so .userId a .points (po prepočítaní).
+// Jeden zápas vyhodnotený → ZOSKUPENÁ notifikácia na úrovni kola.
+// Namiesto samostatnej notifikácie za každý zápas (10 zápasov = 10 notifikácií)
+// vytvoríme/aktualizujeme JEDNU neprečítanú notifikáciu typu 'result' pre dané
+// kolo. Rozlišujeme dve znenia:
+//   • časť kola   → „Kolo XY má vyhodnotené zápasy" (+ počet a získané body)
+//   • celé kolo   → „Kolo XY vyhodnotené"
+// Zoskupenie funguje aj pri postupnom vyhodnocovaní (evaluate po jednom zápase),
+// pretože existujúcu neprečítanú notifikáciu pre kolo nájdeme podľa link.
+// tips = pole tipov so .userId a .points (po prepočítaní tohto zápasu).
 async function matchEvaluated(match, round, tips) {
   try {
     if (!tips || !tips.length) return;
-    const rname = round && round.name ? round.name : 'kolo';
-    await createMany(tips.map((t) => ({
-      userId: t.userId, type: 'result',
-      title: 'Výsledok zápasu vyhodnotený',
-      message: `Zápas bol vyhodnotený. Za tip si získal +${t.points || 0} bodov (${rname}).`,
-      link: round ? `/rounds/${round.id}` : '/my',
-    })));
+    if (!round) {
+      // bez kontextu kola padáme na jednoduchú per-zápas notifikáciu
+      await createMany(tips.map((t) => ({
+        userId: t.userId, type: 'result',
+        title: 'Výsledok zápasu vyhodnotený',
+        message: `Zápas bol vyhodnotený. Za tip si získal +${t.points || 0} bodov.`,
+        link: '/my',
+      })));
+      return;
+    }
+
+    const link = `/rounds/${round.id}`;
+    const rname = round.name || 'kolo';
+
+    // koľko zápasov v kole je spolu a koľko je už vyhodnotených → celé vs. časť
+    const totalMatches = await Match.count({ where: { roundId: round.id } });
+    const finishedMatches = await Match.count({ where: { roundId: round.id, status: 'finished' } });
+    const wholeDone = totalMatches > 0 && finishedMatches >= totalMatches;
+
+    // príjemcovia, ktorí neodhlásili in-app notifikácie
+    const allowed = await filterOptedIn(tips.map((t) => ({ userId: t.userId, points: t.points })));
+    if (!allowed.length) return;
+
+    for (const t of allowed) {
+      const uid = Number(t.userId);
+      try {
+        // existuje už neprečítaná 'result' notifikácia pre toto kolo?
+        const existing = await Notification.findOne({
+          where: { userId: uid, type: 'result', link, read: false },
+          order: [['createdAt', 'DESC']],
+        });
+
+        // súčet získaných bodov hráča za celé kolo (pre presné znenie správy)
+        const roundPoints = await sumUserRoundPoints(uid, round.id);
+
+        const title = wholeDone ? `Kolo „${rname}" vyhodnotené` : `Kolo „${rname}" má vyhodnotené zápasy`;
+        const message = wholeDone
+          ? `Celé kolo je vyhodnotené. Získal si +${roundPoints} bodov.`
+          : `Vyhodnotených ${finishedMatches} z ${totalMatches} zápasov. Zatiaľ máš +${roundPoints} bodov.`;
+
+        if (existing) {
+          existing.title = title;
+          existing.message = message;
+          existing.set('createdAt', new Date(), { raw: true });
+          existing.changed('createdAt', true);
+          await existing.save({ silent: true, fields: ['title', 'message', 'createdAt'] });
+        } else {
+          await Notification.create({ userId: uid, type: 'result', title, message, link });
+        }
+      } catch (inner) {
+        console.error('[notify] matchEvaluated (user ' + uid + '):', inner.message);
+      }
+    }
   } catch (e) { console.error('[notify] matchEvaluated:', e.message); }
+}
+
+// Súčet bodov jedného hráča vo všetkých zápasoch daného kola.
+async function sumUserRoundPoints(userId, roundId) {
+  try {
+    const tips = await Tip.findAll({
+      attributes: ['points'],
+      include: [{ model: Match, attributes: [], where: { roundId }, required: true }],
+      where: { userId },
+    });
+    return tips.reduce((s, t) => s + (t.points || 0), 0);
+  } catch (e) {
+    return 0;
+  }
 }
 
 // Zápas zrušený → upozorni tipujúcich.

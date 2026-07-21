@@ -31,6 +31,11 @@
     .th-row > .th-val:nth-child(4)::before { content:"Výsl. "; color:var(--text-4); font-weight:600; font-family:var(--font-sans); font-size:var(--fs-xs); }
     .th-row > .ta-r { grid-area:pts; align-self:center; }
   }
+  @media (max-width:420px){
+    .summary { grid-template-columns:1fr; }
+    .filters { display:grid; grid-template-columns:1fr; gap:10px; }
+    a.btn.btn-secondary.btn-sm {width: 100%;}
+  }
 ` }) %>
 <%
   var SK_M=['jan','feb','mar','apr','máj','jún','júl','aug','sep','okt','nov','dec'];
@@ -102,7 +107,6 @@
         <div class="th-row" <%= r.quality === 'canceled' ? 'style="opacity:.7"' : '' %>>
           <span class="th-date th-date-col"><%= fmtDate(r.date) %><br><%= r.roundName %></span>
           <div class="th-match">
-            <span class="team-logo" style="width:30px;height:30px;font-size:10px;background:linear-gradient(135deg,#3a7bd5,#1b3f72)"><%= r.homeAbbr %></span>
             <div style="min-width:0"><div class="th-teams"><%= r.home %> — <%= r.away %></div><div class="th-sub col-hide"><%= r.leagueName %><%= r.quality === 'canceled' ? ' · zrušený zápas' : '' %></div></div>
           </div>
           <span class="th-val <%= tipCls(r.quality) %>"><%= r.tipStr %></span>

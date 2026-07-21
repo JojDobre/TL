@@ -8,6 +8,55 @@ const { Notification, UserLeague, Round, Match, Tip, League, Sequelize } = requi
 const { Op } = Sequelize;
 const { asyncHandler } = require('../middleware/error.middleware');
 
+// ── čistenie starých notifikácií ────────────────────────────────────────────
+// Aby tabuľka nerástla donekonečna, mažeme:
+//   1) PREČÍTANÉ notifikácie staršie než RETENTION_DAYS (default 14 dní),
+//   2) poistka: ak má používateľ viac než MAX_PER_USER záznamov, najstaršie
+//      prebytočné zmažeme (bez ohľadu na read) — chráni pred extrémami.
+// Neprečítané mladšie než limit necháme vždy. Beh je throttlovaný (max raz za
+// CLEAN_EVERY_MS na používateľa), takže nezaťažuje DB pri každom otvorení.
+const RETENTION_DAYS = 14;
+const MAX_PER_USER = 200;
+const CLEAN_EVERY_MS = 6 * 60 * 60 * 1000; // najviac raz za 6 hodín na používateľa
+const _lastClean = new Map(); // userId -> timestamp (in-memory throttle)
+
+async function cleanupOldNotifications(userId) {
+  try {
+    const now = Date.now();
+    const last = _lastClean.get(userId) || 0;
+    if (now - last < CLEAN_EVERY_MS) return; // throttle
+    _lastClean.set(userId, now);
+
+    // 1) prečítané staršie než RETENTION_DAYS
+    const cutoff = new Date(now - RETENTION_DAYS * 24 * 60 * 60 * 1000);
+    await Notification.destroy({
+      where: { userId, read: true, createdAt: { [Op.lt]: cutoff } },
+    });
+
+    // 2) tvrdý strop na počet záznamov používateľa
+    const count = await Notification.count({ where: { userId } });
+    if (count > MAX_PER_USER) {
+      // nájdi hranicu: ponecháme najnovších MAX_PER_USER, zvyšok zmažeme
+      const keep = await Notification.findAll({
+        where: { userId },
+        order: [['createdAt', 'DESC']],
+        offset: MAX_PER_USER - 1,
+        limit: 1,
+        attributes: ['createdAt'],
+      });
+      if (keep.length) {
+        const boundary = keep[0].createdAt;
+        await Notification.destroy({
+          where: { userId, createdAt: { [Op.lt]: boundary } },
+        });
+      }
+    }
+  } catch (e) {
+    // čistenie je vedľajší efekt — nikdy nezhodí stránku
+    console.error('[notify] cleanupOldNotifications:', e.message);
+  }
+}
+
 // ── lazy generovanie "blížiaca sa uzávierka" ────────────────────────────────
 // Pre prihláseného: kolá v jeho ligách, ktoré sa ešte neuzavreli, končia do 24h
 // a má v nich nevyplnené zápasy. Pre každé takéto kolo vznikne max. 1 notifikácia
@@ -73,6 +122,9 @@ const notificationsPage = asyncHandler(async (req, res) => {
   // lazy dogenerovanie deadline notifikácií
   await generateDeadlineNotifications(userId);
 
+  // priebežné čistenie starých prečítaných notifikácií (throttlované)
+  await cleanupOldNotifications(userId);
+
   const all = await Notification.findAll({
     where: { userId },
     order: [['createdAt', 'DESC']],
@@ -130,5 +182,5 @@ const recentApi = asyncHandler(async (req, res) => {
 
 module.exports = {
   notificationsPage, markRead, markAllRead, unreadCountApi, recentApi,
-  generateDeadlineNotifications,
+  generateDeadlineNotifications, cleanupOldNotifications,
 };

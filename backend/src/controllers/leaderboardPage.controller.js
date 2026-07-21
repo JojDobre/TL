@@ -196,9 +196,9 @@ const globalLeaderboardPage = asyncHandler(async (req, res) => {
   // berieme zo SEZÓN, nie z prvej ligy (sezóna môže mať viac líg).
   const seasonIds = [...new Set(officialLeagues.map((l) => l.seasonId).filter(Boolean))];
   const seasonRows = seasonIds.length
-    ? await Season.findAll({ where: { id: { [Op.in]: seasonIds } }, attributes: ['id', 'name'] })
+    ? await Season.findAll({ where: { id: { [Op.in]: seasonIds } }, attributes: ['id', 'name', 'image'] })
     : [];
-  const seasonOpts = seasonRows.map((s) => ({ id: s.id, name: s.name }));
+  const seasonOpts = seasonRows.map((s) => ({ id: s.id, name: s.name, image: s.image || '' }));
 
   res.render('leaderboards', {
     board,

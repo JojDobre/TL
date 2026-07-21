@@ -37,6 +37,10 @@
     .cmp-val { font-size:1.15rem; }
     .h2h { grid-template-columns:1fr; }
   }
+  @media (max-width:380px){
+    .row.g-2.center.wrap-gap.reveal.in { gap:8px;display:grid; grid-template-columns:1fr;justify-content:center; flex-wrap:wrap; width:100%; }
+      .row.g-2.center.wrap-gap.reveal.in > a[href^="/leaderboards"] { order:-1; }
+  }
 ` }) %>
 <%
   function rankColor(r){ if(r===1) return 'var(--gold)'; if(r===2 || r===3) return 'var(--success)'; if(!r) return 'var(--text-4)'; return 'var(--text-3)'; }

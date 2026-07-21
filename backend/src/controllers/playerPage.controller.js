@@ -64,7 +64,8 @@ const playerPage = asyncHandler(async (req, res) => {
       },
       isPrivate: true,
       // prázdne hodnoty, aby šablóna mohla bezpečne zdieľať rovnaký kód
-      stats: { totalPoints: 0, bestRank: null, accuracy: null, bestStreak: 0 },
+      stats: { totalPoints: 0, bestRank: null, accuracy: null, bestStreak: 0, exactCount: 0, evaluated: 0 },
+      officialStats: { hasOfficial: false, totalPoints: 0, bestRank: null, accuracy: null, roundsPlayed: 0 },
       form: [], badges: [], badgeCount: 0, shared: [], moments: [],
       isLoggedIn: !!meId,
     });
@@ -131,6 +132,7 @@ const playerPage = asyncHandler(async (req, res) => {
   const tMems = await UserLeague.findAll({ where: { userId: targetId }, attributes: ['leagueId'] });
   const targetLeagueIds = tMems.map((m) => m.leagueId);
   let bestRank = null;
+  let officialLeagueIds = [];
   const boards = {}; // leagueId -> board (cache pre spoločné súťaže)
   if (targetLeagueIds.length) {
     // zisti typy líg, aby sme oddelili oficiálne od komunitných
@@ -138,7 +140,7 @@ const playerPage = asyncHandler(async (req, res) => {
       where: { id: { [Op.in]: targetLeagueIds } },
       attributes: ['id', 'type'],
     });
-    const officialLeagueIds = tLeagues.filter((l) => l.type === 'official').map((l) => l.id);
+    officialLeagueIds = tLeagues.filter((l) => l.type === 'official').map((l) => l.id);
 
     for (const lid of officialLeagueIds) {
       const board = await leagueBoard(lid);
@@ -149,6 +151,34 @@ const playerPage = asyncHandler(async (req, res) => {
       if (r !== null && (bestRank === null || r < bestRank)) bestRank = r;
     }
   }
+
+  // ── štatistiky IBA z oficiálnych líg/sezón ──
+  // Rovnaká množina líg ako rebríček (/leaderboards). Prejdeme tipy znova a
+  // započítame len tie, ktorých kolo patrí do oficiálnej ligy. Tak sedia čísla
+  // s rebríčkom, na rozdiel od verejných štatistík (tie rátajú všetky ligy).
+  const officialSet = new Set(officialLeagueIds.map(Number));
+  let offPoints = 0; let offEvaluated = 0; let offExact = 0; let offWeight = 0;
+  const offRoundIds = new Set();
+  for (const t of tips) {
+    const m = t.Match; if (!m) continue;
+    const round = m.Round; const league = round && round.League;
+    if (!league || !officialSet.has(Number(league.id))) continue;
+    offPoints += t.points || 0;
+    if (round) offRoundIds.add(round.id);
+    const exactPts = (league.scoringSystem && league.scoringSystem.exactScore) || DEFAULT_EXACT;
+    if (m.status === 'finished') {
+      offEvaluated += 1;
+      offWeight += tipQualityWeight(t, m);
+      if (m.tipType !== 'winner' && m.tipType !== 'winner_no_draw' && (t.points || 0) >= exactPts) offExact += 1;
+    }
+  }
+  const officialStats = {
+    hasOfficial: officialSet.size > 0,
+    totalPoints: offPoints,
+    bestRank,
+    accuracy: offEvaluated > 0 ? Math.round((offWeight / offEvaluated) * 100) : null,
+    roundsPlayed: offRoundIds.size,
+  };
 
   // ── odznaky (verejné, získané) ──
   // Pošleme VŠETKY získané, zoradené podľa rarity (legendary → epic → rare →
@@ -183,14 +213,15 @@ const playerPage = asyncHandler(async (req, res) => {
     if (commonIds.length) {
       const leagues = await League.findAll({
         where: { id: { [Op.in]: commonIds } },
-        attributes: ['id', 'name', 'type'],
-        include: [{ model: Season, attributes: ['name'] }],
+        attributes: ['id', 'name', 'type', 'image'],
+        include: [{ model: Season, attributes: ['name', 'image'] }],
       });
       for (const l of leagues) {
         const board = boards[l.id] || await leagueBoard(l.id);
         shared.push({
           id: l.id, name: l.name, type: l.type,
           abbr: abbr2(l.name),
+          image: l.image || (l.Season && l.Season.image) || '',
           theirRank: rankOf(board, targetId),
           myRank: rankOf(board, meId),
         });
@@ -218,7 +249,8 @@ const playerPage = asyncHandler(async (req, res) => {
       createdAt: user.createdAt,
       allowCompare: user.allowCompare !== false,
     },
-    stats: { totalPoints, bestRank, accuracy, bestStreak },
+    stats: { totalPoints, bestRank, accuracy, bestStreak, exactCount, evaluated },
+    officialStats,
     form,
     badges, badgeCount,
     shared,

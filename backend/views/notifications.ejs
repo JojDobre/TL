@@ -2,12 +2,16 @@
   .nt-head { padding:30px 0 18px; }
   .nt-layout { max-width:780px; margin:0 auto; padding-bottom:64px; }
   .nt-tabs { display:flex; gap:8px; margin:18px 0; }
-  .nt-item { display:flex; gap:15px; padding:16px 18px; border-radius:var(--r-md); border:1px solid var(--line); background:var(--surface-1); margin-bottom:10px; align-items:flex-start; transition:background .15s; position:relative; }
+  .nt-item { display:flex; gap:15px; padding:16px 18px; border-radius:var(--r-md); border:1px solid var(--line); background:var(--surface-1); margin-bottom:10px; align-items:flex-start; transition:background .15s, opacity .15s; position:relative; }
   .nt-item.unread { background:color-mix(in srgb,var(--brand-soft) 50%, var(--surface-1)); border-color:var(--brand-line); }
   .nt-item.unread::before { content:""; position:absolute; left:0; top:14px; bottom:14px; width:3px; border-radius:3px; background:var(--brand); }
+  /* prečítané notifikácie stlmené (~80% viditeľnosti), na hover plné */
+  .nt-item.read { opacity:.8; }
+  .nt-item.read:hover { opacity:1; }
   .nt-ico { width:42px; height:42px; border-radius:var(--r-md); flex:none; display:flex; align-items:center; justify-content:center; font-size:19px; }
   .nt-body { flex:1; min-width:0; }
   .nt-title { font-weight:700; color:var(--text-1); margin-bottom:2px; }
+  .nt-badge { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; padding:2px 8px; border-radius:999px; flex:none; line-height:1.7; }
   .nt-msg { color:var(--text-3); font-size:var(--fs-sm); }
   .nt-time { font-size:var(--fs-xs); color:var(--text-4); white-space:nowrap; flex:none; }
   .nt-actions { display:flex; gap:8px; margin-top:10px; }
@@ -35,6 +39,20 @@
       case 'member':    return { e:'👥', s:'background:var(--info-soft);color:var(--info)' };
       case 'canceled':  return { e:'🚫', s:'background:var(--surface-3);color:var(--text-3)' };
       default:          return { e:'🔔', s:'background:var(--surface-3);color:var(--text-3)' };
+    }
+  }
+  // textový štítok pred nadpisom — aby hráč hneď videl, o čo ide
+  function ntBadge(t){
+    switch(t){
+      case 'new_round': return { l:'Kolo',   s:'background:var(--live-soft);color:var(--live)' };
+      case 'deadline':  return { l:'Uzávierka', s:'background:var(--warning-soft);color:var(--warning)' };
+      case 'result':    return { l:'Výsledky', s:'background:var(--success-soft);color:var(--success)' };
+      case 'achievement': return { l:'Odznak', s:'background:var(--gold-soft);color:var(--gold)' };
+      case 'rank':      return { l:'Rebríček', s:'background:var(--brand-soft);color:var(--brand-bright)' };
+      case 'member':    return { l:'Liga',   s:'background:var(--info-soft);color:var(--info)' };
+      case 'canceled':  return { l:'Zrušené', s:'background:var(--surface-3);color:var(--text-3)' };
+      case 'admin':     return { l:'Oznam',  s:'background:var(--surface-3);color:var(--text-2)' };
+      default:          return { l:'Info',   s:'background:var(--surface-3);color:var(--text-3)' };
     }
   }
   // relatívny čas (pred X min / hod / dátum)
@@ -75,7 +93,7 @@
       <% } %>
     </div>
     <div class="nt-tabs segment" style="display:inline-flex">
-      <button class="active" data-nf>Všetky</button><button data-nf>Neprečítané</button><button data-nf>Kolá</button><button data-nf>Výsledky</button>
+      <button class="active" data-nf>Všetky</button><button data-nf>Neprečítané</button>
     </div>
   </div>
 
@@ -88,11 +106,11 @@
   <% } else { %>
     <% groups.forEach(function(g){ %>
       <div class="day-label"><%= g.label %></div>
-      <% g.items.forEach(function(n){ var ic = ntIcon(n.type); %>
-        <div class="nt-item <%= n.read ? '' : 'unread' %>" data-type="<%= n.type %>">
+      <% g.items.forEach(function(n){ var ic = ntIcon(n.type); var bd = ntBadge(n.type); %>
+        <div class="nt-item <%= n.read ? 'read' : 'unread' %>" data-type="<%= n.type %>">
           <span class="nt-ico" style="<%= ic.s %>"><%= ic.e %></span>
           <div class="nt-body">
-            <div class="between" style="gap:10px"><div class="nt-title"><%= n.title || 'Notifikácia' %></div><span class="nt-time"><%= relTime(n.createdAt) %></span></div>
+            <div class="between" style="gap:10px"><div class="row g-2" style="min-width:0;flex-wrap:wrap"><span class="nt-badge" style="<%= bd.s %>"><%= bd.l %></span><div class="nt-title"><%= n.title || 'Notifikácia' %></div></div><span class="nt-time"><%= relTime(n.createdAt) %></span></div>
             <div class="nt-msg"><%= n.message %></div>
             <div class="nt-actions">
               <% if (n.link) { %><a href="<%= n.link %>" class="btn btn-primary btn-sm"><%= ctaLabel(n.type) %></a><% } %>
@@ -104,22 +122,24 @@
         </div>
       <% }); %>
     <% }); %>
+    <div class="card card-pad center" id="ntFilterEmpty" style="display:none;text-align:center;padding:56px 24px">
+      <p class="muted">Nemáš žiadne neprečítané notifikácie.</p>
+    </div>
   <% } %>
 </div>
 
 <script>
-  // filtre (vizuálne, na klientovi)
+  // filtre (vizuálne, na klientovi): Všetky / Neprečítané
+  var ntEmpty = document.getElementById('ntFilterEmpty');
   document.querySelectorAll('[data-nf]').forEach(function(b){ b.addEventListener('click', function(){
     document.querySelectorAll('[data-nf]').forEach(function(x){ x.classList.toggle('active', x === b); });
     var t = b.textContent.trim();
+    var anyItem = false;
     document.querySelectorAll('.nt-item').forEach(function(i){
-      var type = i.getAttribute('data-type');
       var unread = i.classList.contains('unread');
-      var show = true;
-      if (t === 'Neprečítané') show = unread;
-      else if (t === 'Kolá') show = (type === 'new_round' || type === 'deadline');
-      else if (t === 'Výsledky') show = (type === 'result' || type === 'canceled');
+      var show = (t === 'Neprečítané') ? unread : true;
       i.style.display = show ? '' : 'none';
+      if (show) anyItem = true;
     });
     // skry prázdne day-label skupiny
     document.querySelectorAll('.day-label').forEach(function(lbl){
@@ -127,6 +147,8 @@
       while (sib && sib.classList.contains('nt-item')) { if (sib.style.display !== 'none') anyVisible = true; sib = sib.nextElementSibling; }
       lbl.style.display = anyVisible ? '' : 'none';
     });
+    // ak filter nič nezobrazil, ukáž prázdny stav namiesto čiernej obrazovky
+    if (ntEmpty) ntEmpty.style.display = anyItem ? 'none' : '';
   }); });
 </script>
 

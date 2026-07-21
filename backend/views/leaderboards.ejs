@@ -14,11 +14,27 @@
   .pod3 { background: linear-gradient(180deg, color-mix(in srgb,#e0935a 16%, var(--surface-1)), var(--surface-1)); border:1px solid rgba(224,147,90,.35); }
   .pod-crown { position:absolute; top:-2px; right:14px; font-size:22px; }
   .lb-layout { display:grid; grid-template-columns: 1fr 320px; gap:26px; align-items:start; padding-bottom:64px; }
-  .filters { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:18px; }
-  .lb-table .lb-row { grid-template-columns: 52px 1fr auto 96px; border-bottom:1px solid var(--line); border-radius:0; padding:13px 14px; cursor:pointer; transition:background .14s; }
+  /* filtre: vždy 100% šírky. Search sa naťahuje, selecty majú min. šírku.
+     Keď sa 3 do riadku nezmestia, search skočí na celý riadok sám a oba
+     selecty pod neho, každý na 50 %. */
+  .filters { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:18px; width:100%; }
+  .filters .search { flex:1 1 260px; min-width:260px; max-width:none; }
+  .filters .select { flex:1 1 200px; min-width:180px; width:auto; }
+  /* zlom: search sám na 100 %, selecty 50/50 vedľa seba */
+  @media (max-width: 640px){
+    .filters .search { flex:1 1 100%; min-width:0; }
+    .filters .select { flex:1 1 calc(50% - 5px); min-width:0; }
+  }
+  .lb-table .lb-row { border-top:1px solid var(--line); border-radius:0; grid-template-columns: 52px 1fr auto 96px; border-bottom:1px solid var(--line); border-radius:0; padding:13px 14px; cursor:pointer; transition:background .14s; }
   .lb-table .lb-row:hover { background:var(--surface-2); }
-  .lb-table .lb-row:last-child { border-bottom:none; }
-  .lb-table .lb-row.me { background:color-mix(in srgb,var(--brand) 8%,transparent); }
+  .lb-table .lb-row:last-child { border-top:1px solid var(--line); border-radius:0; border-bottom:none; }
+  /* zvýraznený hráč: zaoblený „chip" s vlastným orámovaním a medzerou,
+     aby sa jeho okraje nekryli s deliacimi čiarami susedných riadkov. */
+  .lb-table .lb-row.me { background:color-mix(in srgb,var(--brand) 8%,transparent); border:1px solid var(--brand-line); border-radius:var(--r-md); margin:6px 0; }
+  
+  .lb-table .lb-row { grid-template-columns: 52px 1fr auto 96px; border-bottom:1px solid var(--line); border-radius:0; padding:13px 14px; cursor:pointer; transition:background .14s; }
+  .lb-table .lb-row.me:hover { background:var(--surface-3); }
+
   .lb-head-row { grid-template-columns: 52px 1fr auto 96px; display:grid; gap:14px; padding:10px 14px; align-items:center; }
   .lb-head-row span { font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.1em; color:var(--text-4); font-weight:700; }
   .ta-r { text-align:right; }
@@ -37,9 +53,6 @@
     .podium { grid-template-columns:1fr; gap:12px; }
     .pod1 { order:0; } .pod2 { order:1; } .pod3 { order:2; }
     .pod .avatar { width:64px; height:64px; font-size:24px; }
-    .filters { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .filters .search { grid-column:1 / -1; max-width:none !important; }
-    .filters .select { width:100% !important; }
     .lb-table .lb-row, .lb-head-row { grid-template-columns: 28px 1fr auto; gap:9px; padding:11px 8px; }
     .col-hide { display:none; }
     .lb-table .avatar.avatar-md { width:32px; height:32px; font-size:12px; }
@@ -114,17 +127,17 @@
 <div class="wrap lb-layout">
   <main>
     <div class="filters">
-      <div class="input-icon search" style="max-width:280px">
+      <div class="input-icon search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4" stroke-linecap="round"/></svg>
         <input class="input" id="lbSearch" placeholder="Hľadať hráča…">
       </div>
-      <select class="select" id="lbSeason" style="width:auto">
+      <select class="select" id="lbSeason">
         <option value="">Všetky oficiálne sezóny</option>
         <% officialLeagues.forEach(function(l){ %>
           <option value="<%= l.id %>"<%= (seasonFilter && seasonFilter === l.id) ? ' selected' : '' %>><%= l.name %></option>
         <% }); %>
       </select>
-      <select class="select" id="lbSort" style="width:auto">
+      <select class="select" id="lbSort">
         <option value="points">Zoradiť: Body</option>
         <option value="accuracy">Zoradiť: Presnosť %</option>
       </select>
@@ -194,7 +207,7 @@
       <div class="stat-label" style="margin-bottom:10px">Rebríčky podľa sezóny</div>
       <div class="stack g-2">
         <% var seen = {}; officialLeagues.forEach(function(l){ if (seen[l.id]) return; seen[l.id] = 1; %>
-          <a href="/seasons/<%= l.id %>/leaderboard" class="row between" style="padding:9px 11px;border-radius:var(--r-sm);background:var(--surface-2)"><span class="row g-2"><span class="team-logo" style="width:24px;height:24px;font-size:10px;background:linear-gradient(<%= grad(l.id) %>)"><%= (l.name||'S').substring(0,2).toUpperCase() %></span><span style="font-weight:600;color:var(--text-1);font-size:var(--fs-sm)"><%= l.name %></span></span><span class="faint">›</span></a>
+          <a href="/seasons/<%= l.id %>/leaderboard" class="row between" style="padding:9px 11px;border-radius:var(--r-sm);background:var(--surface-2)"><span class="row g-2"><span class="team-logo" style="width:24px;height:24px;font-size:10px;<% if (l.image) { %>background:var(--surface-3);overflow:hidden<% } else { %>background:linear-gradient(<%= grad(l.id) %>)<% } %>"><% if (l.image) { %><img src="<%= l.image %>" alt="" style="width:100%;height:100%;object-fit:cover"><% } else { %><%= (l.name||'S').substring(0,2).toUpperCase() %><% } %></span><span style="font-weight:600;color:var(--text-1);font-size:var(--fs-sm)"><%= l.name %></span></span><span class="faint">›</span></a>
         <% }); %>
       </div>
     </div>

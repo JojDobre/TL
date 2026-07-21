@@ -133,7 +133,32 @@
 
     
   // Pri OTVORENÍ zvončeka: skry badge a označ všetky ako prečítané (trvalo).
+  // Prečítané notifikácie z OKIENKA zmiznú pár minút po otvorení, nech sa
+  // dropdown nezahlcuje starými položkami (v /notifications zostávajú).
   var markedOnOpen = false;
+  var READ_HIDE_MS = 3 * 60 * 1000; // 3 minúty
+  var hideReadTimer = null;
+
+  // po otvorení sú všetky notifikácie označené ako prečítané, takže po uplynutí
+  // času vyčistíme celý zoznam v okienku (v /notifications ostávajú)
+  function pruneReadFromDropdown(){
+    if (!list) return;
+    // ak medzitým pribudli nové (neprečítané s bodkou), tie ponecháme
+    var items = list.querySelectorAll('[data-notif-item]');
+    var removedAny = false;
+    items.forEach(function(el){
+      var hasDot = el.querySelector('span[style*="border-radius:50%"]');
+      if (!hasDot) {
+        if (el.remove) el.remove(); else if (el.parentNode) el.parentNode.removeChild(el);
+        removedAny = true;
+      }
+    });
+    // fallback: ak sa bodky nedali spoľahlivo rozlíšiť a nič sa neodstránilo,
+    // ale badge je 0 (žiadne neprečítané), vyčisti celé okienko
+    if (!removedAny && badge && badge.hidden) list.innerHTML = '';
+    if (!list.querySelector('[data-notif-item]')) renderEmpty();
+  }
+
   document.addEventListener('click', function(e){
     var bell = e.target.closest('[data-bell]');
     if (bell) {
@@ -141,11 +166,16 @@
       // (malý timeout, aby sme reagovali až po prepnutí 'hidden')
       setTimeout(function(){
         var open = panel && !panel.hasAttribute('hidden');
-        if (open && !markedOnOpen) {
-          markedOnOpen = true;
-          if (badge) { badge.hidden = true; badge.textContent = ''; }
-          lastCount = 0;
-          fetch('/notifications/read-all', { method:'POST', headers:{ 'Accept':'application/json' } }).catch(function(){});
+        if (open) {
+          if (!markedOnOpen) {
+            markedOnOpen = true;
+            if (badge) { badge.hidden = true; badge.textContent = ''; }
+            lastCount = 0;
+            fetch('/notifications/read-all', { method:'POST', headers:{ 'Accept':'application/json' } }).catch(function(){});
+          }
+          // naplánuj skrytie prečítaných po pár minútach (reštartuj pri každom otvorení)
+          if (hideReadTimer) clearTimeout(hideReadTimer);
+          hideReadTimer = setTimeout(pruneReadFromDropdown, READ_HIDE_MS);
         }
       }, 0);
       return;
