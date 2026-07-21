@@ -97,6 +97,11 @@
         </ul>
       </div>
       <div style="margin-top:16px"><button class="btn btn-primary btn-sm" id="saveNotifications">Uložiť</button></div>
+
+      <div class="notif-row" id="installRow" hidden style="margin-top:6px;border-top:1px solid var(--line);padding-top:16px">
+        <div class="nr-tx"><b>Nainštalovať appku</b><span data-install-help>Pridaj si tifo.sk na plochu — rýchlejší prístup a notifikácie ako v natívnej appke.</span></div>
+        <button class="btn btn-primary btn-sm" id="installBtn" type="button">Nainštalovať</button>
+      </div>
     </div>
 
     <!-- PRIVACY (vizuál — zatiaľ netrackujeme) -->
@@ -265,6 +270,31 @@
       .then(function(r){return r.json();}).then(function(res){ snBtn.disabled=false; if(res.success===false){ toast('Nepodarilo sa',res.message||'Skús znova.',true); return; } toast('Uložené','Nastavenia notifikácií boli uložené.'); })
       .catch(function(){ snBtn.disabled=false; toast('Chyba','Skús znova.',true); });
   });
+
+  // Inštalácia appky — zobraz riadok len keď je inštalácia možná a appka ešte
+  // nie je nainštalovaná (v standalone režime nemá zmysel).
+  (function(){
+    var row=document.getElementById('installRow');
+    var btn=document.getElementById('installBtn');
+    var help=document.querySelector('[data-install-help]');
+    if(!row || !btn || !window.tifoInstall) return;
+    if(window.tifoInstall.isStandalone()) return; // už nainštalované
+    if(!window.tifoInstall.available()) return;    // prehliadač inštaláciu neponúka
+    row.hidden=false;
+
+    var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+    if(ios){
+      // na iOS nevieme spustiť natívny dialóg → tlačidlo nahradíme návodom
+      btn.style.display='none';
+      if(help) help.innerHTML='Na iPhone/iPade: ťukni dole na <b>Zdieľať</b> a zvoľ <b>„Pridať na plochu"</b>.';
+    } else {
+      btn.addEventListener('click',function(){
+        window.tifoInstall.promptInstall().then(function(ok){
+          if(ok){ row.hidden=true; toast('Hotovo','Appka sa inštaluje na plochu.'); }
+        });
+      });
+    }
+  })();
 
   // Súkromie
   var spvBtn=document.getElementById('savePrivacy');

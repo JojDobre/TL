@@ -6,12 +6,13 @@
    Scope: '/' (súbor je servovaný z /sw.js cez express.static)
    ===================================================================== */
 
-const CACHE = 'tifo-shell-v1';
+const CACHE = 'tifo-shell-v2';
 
 // Minimálny „app shell": statické assety, ktoré chceme mať k dispozícii aj
 // offline. Zámerne malý zoznam — appka je server-rendered (EJS), takže offline
 // nemá zmysel cachovať HTML stránky, len základnú kostru a ikony.
 const SHELL = [
+  '/offline.html',
   '/css/tokens.css',
   '/css/components.css',
   '/css/enhance.css',
@@ -70,10 +71,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // navigácie: network-first
+  // navigácie: network-first, offline fallback na peknú offline stránku
   if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(req).catch(() => caches.match('/') || Response.error())
+      fetch(req).catch(function () {
+        return caches.match('/offline.html').then(function (off) {
+          return off || caches.match('/') || Response.error();
+        });
+      })
     );
     return;
   }

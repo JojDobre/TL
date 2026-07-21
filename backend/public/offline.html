@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="sk" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Offline — tifo.sk</title>
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="stylesheet" href="/css/tokens.css">
+  <style>
+    html,body{margin:0;height:100%}
+    body{
+      background:var(--bg,#0b0f1a);color:var(--text-1,#eef1f9);
+      font-family:var(--font-body,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif);
+      display:flex;align-items:center;justify-content:center;
+      padding:24px calc(24px + env(safe-area-inset-right,0)) calc(24px + env(safe-area-inset-bottom,0)) calc(24px + env(safe-area-inset-left,0));
+      text-align:center;
+    }
+    .wrap{max-width:400px}
+    .logo{width:72px;height:72px;border-radius:18px;margin:0 auto 20px;display:block}
+    h1{font-size:22px;margin:0 0 8px}
+    p{color:var(--text-3,#828caa);font-size:15px;line-height:1.5;margin:0 0 24px}
+    button{
+      border:none;border-radius:12px;padding:12px 22px;font-weight:800;font-size:15px;cursor:pointer;
+      background:var(--gold,#facc15);color:var(--gold-ink,#1c1605);
+    }
+    .hint{margin-top:18px;font-size:13px;color:var(--text-4,#5a678c)}
+    .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--danger,#f0476a);margin-right:6px;vertical-align:middle}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <img class="logo" src="/branding/identity/favicon-192.png" alt="tifo.sk">
+    <h1><span class="dot"></span>Si offline</h1>
+    <p>Vyzerá to, že práve nie si pripojený na internet. Skontroluj sieť a skús to znova — tvoje tipy a body sú v bezpečí.</p>
+    <button onclick="location.reload()">Skúsiť znova</button>
+    <div class="hint">tifo.sk</div>
+  </div>
+  <script>
+    // keď sa sieť vráti, automaticky obnoviť
+    window.addEventListener('online', function(){ location.reload(); });
+  </script>
+</body>
+</html>

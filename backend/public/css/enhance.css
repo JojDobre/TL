@@ -131,3 +131,38 @@
   outline-offset: 2px;
   border-radius: var(--r-xs);
 }
+
+/* =====================================================================
+   PWA / natívny pocit na mobile
+   ===================================================================== */
+
+/* Zabráň iOS „bounce" preťaženiu a nechcenému pull-to-refresh v nainštalovanej
+   appke; stabilizuj veľkosť textu pri rotácii. Bezpečné aj v prehliadači. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+html.is-standalone,
+html.is-standalone body {
+  overscroll-behavior-y: none;
+}
+
+/* V nainštalovanej appke (standalone) posuň hornú lištu pod notch/status bar.
+   V prehliadači sa nič nemení (trieda is-standalone tam nie je). */
+html.is-standalone .nav {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Bezpečné okraje po stranách (zakrivené displeje / landscape notch).
+   .wrap má padding-inline s !important, preto ho musíme prebiť tiež cez
+   !important a zachovať 16px základ (mobilná hodnota). */
+html.is-standalone .wrap {
+  padding-left: max(16px, env(safe-area-inset-left, 0px)) !important;
+  padding-right: max(16px, env(safe-area-inset-right, 0px)) !important;
+}
+
+/* Konzistentne potlač modrý tap-highlight na interaktívnych prvkoch (mimo tých,
+   ktoré to už majú lokálne). */
+a, button, .btn, [role="button"], .tab-item, .nav-link {
+  -webkit-tap-highlight-color: transparent;
+}
