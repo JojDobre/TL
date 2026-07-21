@@ -14,7 +14,6 @@ module.exports = (sequelize, DataTypes) => {
     code: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: true,
     },
     name: {
       type: DataTypes.STRING,  // Názov odznaku
@@ -65,6 +64,9 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     tableName: 'achievements',
     timestamps: true,
+    indexes: [
+      { name: 'achievements_code_unique', unique: true, fields: ['code'] },
+    ],
   });
 
   Achievement.associate = function (models) {

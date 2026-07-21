@@ -26,7 +26,6 @@ module.exports = (sequelize, DataTypes) => {
       joinCode: {
         type: DataTypes.STRING(6),
         allowNull: false,
-        unique: true,
       },
       password: {
         type: DataTypes.STRING,  // Hash hesla pre ligu (voliteľné) — NIKDY plaintext
@@ -92,6 +91,11 @@ module.exports = (sequelize, DataTypes) => {
     }, {
       tableName: 'leagues',
       timestamps: true,
+      indexes: [
+        // pomenovaný index — alter-sync ho znovupoužije namiesto pridávania
+        // stále nových unikátnych indexov (inak ER_TOO_MANY_KEYS, max 64)
+        { name: 'leagues_join_code_unique', unique: true, fields: ['join_code'] },
+      ],
     });
 
     League.associate = function(models) {

@@ -26,11 +26,15 @@ module.exports = (sequelize, DataTypes) => {
       index: true,
     },
     // SHA-256 hash surového tokenu (hex, 64 znakov). Hľadáme podľa neho.
-    // unique: true zároveň zaručí, že sa nevytvorí duplicitný hash.
+    // POZOR: unique má POMENOVANÝ index (string, nie true) — inak Sequelize
+    // pri každom alter-sync pridá nový unikátny index (token_hash, token_hash_2…)
+    // až po strop 64 → ER_TOO_MANY_KEYS. Pomenovaný index sa znovupoužije.
+    // Index je stále definovaný na stĺpci (nie v `indexes:`), takže sa vytvorí
+    // spolu so stĺpcom a nehrozí chyba 1072 (viď poznámka vyššie).
     tokenHash: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: true,
+      unique: 'password_reset_tokens_token_hash_unique',
     },
     // Čas, dokedy je token platný. Po ňom sa považuje za neplatný.
     expiresAt: {

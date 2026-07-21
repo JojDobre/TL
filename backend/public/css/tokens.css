@@ -28,6 +28,7 @@
   --warning-soft: rgba(245, 165, 36, 0.14);
   --danger:       #f0476a;   /* wrong tip / destructive */
   --danger-soft:  rgba(240, 71, 106, 0.14);
+  --danger-soft-100:  rgb(196, 68, 93);
   --info:         #3da5f4;   /* scheduled / informational */
   --info-soft:    rgba(61, 165, 244, 0.14);
   --live:         #ff4d6d;   /* match in progress */

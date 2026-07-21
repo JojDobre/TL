@@ -29,7 +29,6 @@ module.exports = (sequelize, DataTypes) => {
     inviteCode: {
       type: DataTypes.STRING,  // Jedinečný kód na prihlásenie do sezóny
       allowNull: false,
-      unique: true,
     },
     active: {
       type: DataTypes.BOOLEAN,
@@ -88,6 +87,9 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     tableName: 'seasons',
     timestamps: true,
+    indexes: [
+      { name: 'seasons_invite_code_unique', unique: true, fields: ['invite_code'] },
+    ],
   });
 
 

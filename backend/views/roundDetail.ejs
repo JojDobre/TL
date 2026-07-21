@@ -56,19 +56,6 @@
   .vs-mid { display:flex; align-items:center; justify-content:center; font-family:var(--num); font-weight:700;
     color:var(--text-4); font-size:var(--fs-sm); letter-spacing:.12em; padding:0 4px; }
 
-  @media (max-width:480px){
-    .pick-1x2 { gap:5px; } .pick-opt { min-width:46px; padding:8px 5px; }
-    .pick-opt .k { font-size:1.1rem; }
-    .winner-people, .winner-vs { grid-template-columns:1fr 1fr; }
-    .winner-people .vs-pill, .winner-vs .vs-mid { display:none; }
-    .wp-photo { width:68px; }
-    .wp-card .nm { font-size:var(--fs-xs); line-height:1.15; }
-    /* tím na mobile: logo nad text, veľkosť ako klasická skóre karta */
-    .vs-opt { flex-direction:column; gap:8px; text-align:center; padding:12px 8px; }
-    .vs-opt.away { flex-direction:column; text-align:center; }
-    .vs-opt .nm { font-size:var(--fs-xs); line-height:1.15; white-space:normal; }
-  }
-
   .tip-num:disabled { opacity:.45; cursor:not-allowed; background:var(--surface-2); }
   .tip-num.hit { border-color:var(--success); box-shadow:0 0 0 1px var(--success); }
   .match-row.locked { opacity:.72; }
@@ -105,12 +92,23 @@
     .round-head .between { flex-direction:column; align-items:stretch; gap:14px; }
     .round-head .between > .card { width:100%; text-align:center; }
     .round-head .between > .card .countdown { justify-content:center; }
+    .between.title {gap:16px;}
     /* tab segment full width */
     .round-head .segment { display:flex; }
     .round-head .segment button { flex:1; text-align:center; padding-inline:8px; }
   }
-  @media (max-width: 480px){
-    /* tighten match cards so team names fit on one/two lines */
+  @media (max-width:480px){
+    .pick-1x2 { gap:5px; } .pick-opt { min-width:46px; padding:8px 5px; }
+    .pick-opt .k { font-size:1.1rem; }
+    .winner-people, .winner-vs { grid-template-columns:1fr 1fr; }
+    .winner-people .vs-pill, .winner-vs .vs-mid { display:none; }
+    .wp-photo { width:68px; }
+    .wp-card .nm { font-size:var(--fs-xs); line-height:1.15; }
+    /* tím na mobile: logo nad text, veľkosť ako klasická skóre karta */
+    .vs-opt { flex-direction:column; gap:8px; text-align:center; padding:12px 8px; }
+    .vs-opt.away { flex-direction:column; text-align:center; }
+    .vs-opt .nm { font-size:var(--fs-xs); line-height:1.15; white-space:normal; }
+        /* tighten match cards so team names fit on one/two lines */
     .match-row { padding:16px; }
     .match-row .match-teams { gap:8px; }
     .match-row .team-name { font-size:var(--fs-xs); line-height:1.15; text-align:center; white-space:normal; overflow:visible; text-overflow:clip; max-width:none; word-break:normal; }
@@ -119,6 +117,7 @@
     .row > .btn-brand { width:100%; }
     .row > .btn-ghost { width:100%; }
     .row > .btn-secondary { width:100%; }
+    .between.title { display:grid; grid-template-columns: 1fr; gap:16px; padding:12px 0px;}
   }
 ` }) %>
 
@@ -176,8 +175,8 @@
     <!-- OTVORENÉ — TIPOVANIE -->
     <% var canTip = isMember; %>
     <section>
-      <div class="between" style="margin-bottom:16px">
-        <h3 style="font-size:var(--fs-h4)">Zápasy na tip</h3>
+      <div class="between title" style="gap:8px; margin-bottom:12px">
+        <h3 style="font-size:var(--fs-h4)">Zápasy na tipovanie</h3>
         <span class="muted" style="font-size:var(--fs-sm)"><b class="hi" id="tippedCount"><%= tippedCount %></b> / <%= matches.length %> vyplnených</span>
       </div>
       <% if (!canTip) { %>
@@ -278,8 +277,8 @@
     <% } else { %>
     <!-- UKONČENÉ — VÝSLEDKY -->
     <section>
-      <div class="between" style="margin-bottom:16px">
-        <h3 style="font-size:var(--fs-h4)"><%= round.name %> — výsledky &amp; body</h3>
+      <div class="between title" style="margin-bottom:16px">
+        <h3 style="font-size:var(--fs-h4)">Výsledky &amp; Body</h3>
         <span class="pts-pill max">Tvoje kolo: +<%= myPoints %> pts</span>
       </div>
       <div class="match-list">
@@ -311,9 +310,9 @@
             <% } %>
           </div>
           <% if (m.others && m.others.length > 0) { %>
-          <button class="toggle-others" data-others>Zobraziť tipy ostatných (<%= m.others.length %>) ▾</button>
+          <button class="toggle-others" data-others>Zobraziť tipy ostatných (<%= m.others.length > 4 ? '4+' : m.others.length %>) ▾</button>
           <div class="others" data-others-box>
-            <% if (m.others.length > 5) { %>
+            <% if (m.others.length > 4) { %>
             <div class="others-search" style="margin-bottom:10px">
               <input class="input" placeholder="Hľadať hráča…" data-others-search style="font-size:var(--fs-sm);padding:7px 11px">
             </div>
@@ -343,6 +342,18 @@
       <div class="stat-label">Tvoj progres v kole</div>
       <div class="row g-3" style="margin:12px 0 4px"><span class="stat-value brand" style="font-size:2.2rem" id="progNum"><%= tippedCount %></span><span class="muted" style="font-size:var(--fs-sm)">zo <%= matches.length %> zápasov<br>vyplnených</span></div>
       <div class="progress" style="margin-top:10px"><i id="progBar" style="width:<%= matches.length ? Math.round(tippedCount/matches.length*100) : 0 %>%"></i></div>
+    </div>
+    <% } %>
+
+    <% if (round.status === 'finished' && isMember) { %>
+    <div class="card card-pad card-glow">
+      <div class="stat-label">Tvoj zisk v kole</div>
+      <div class="stat-value gold" style="font-size:2.8rem;margin:6px 0">+<%= myPoints %></div>
+      <p class="muted" style="font-size:var(--fs-sm)">bodov<% if (typeof myExactCount !== 'undefined' && (myExactCount || myPartialCount)) { %> · <%= myExactCount %>× presný výsledok, <%= myPartialCount %>× čiastočné body<% } %></p>
+      <% if (typeof myRank !== 'undefined' && myRank) { %>
+        <div class="hr" style="margin:14px 0"></div>
+        <div class="between" style="font-size:var(--fs-sm)"><span class="muted">Pozícia v kole</span><b class="brand num">#<%= myRank %></b></div>
+      <% } %>
     </div>
     <% } %>
 
@@ -426,8 +437,8 @@
     Promise.all(ops).then(function(res){ var fail=res.filter(function(r){return r&&r.success===false;}); if(fail.length){ toast(fail[0].message||'Niektoré tipy sa neuložili.'); save.disabled=false; save.textContent='Uložiť tipy'; } else { toast('Tipy uložené ✓', true); setSaved(); } }).catch(function(){ toast('Chyba pri ukladaní.'); save.disabled=false; save.textContent='Uložiť tipy'; });
   });
 
-  // tipy ostatných: toggle + stránkovanie (5/strana) + search
-  var PAGE_SIZE = 5;
+  // tipy ostatných: toggle + stránkovanie (4/strana) + search
+  var PAGE_SIZE = 4;
   function renderOthers(box){
     var list = box.querySelector('[data-others-list]');
     var pager = box.querySelector('[data-others-pager]');

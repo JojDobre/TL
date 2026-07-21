@@ -121,7 +121,7 @@
 <script>
 (function () {
   var roundId = <%= round.id %>;
-  function toast(msg, ok){ var t=document.createElement('div'); t.textContent=msg; t.style.cssText='background:'+(ok?'var(--success)':'var(--surface-2)')+';color:'+(ok?'#fff':'var(--text-1)')+';border:1px solid var(--line);padding:10px 14px;border-radius:10px'; document.getElementById('toastWrap').appendChild(t); setTimeout(function(){t.remove();},2500); }
+  function toast(msg, ok){ var t=document.createElement('div'); t.textContent=msg; t.style.cssText='background:'+(ok?'var(--success)':'var(--danger-soft-100)')+';color:'+(ok?'#fff':'var(--text-1)')+';border:1px solid var(--line);padding:10px 14px;border-radius:10px'; document.getElementById('toastWrap').appendChild(t); setTimeout(function(){t.remove();},2500); }
   function abbr(n){ return (n||'?').split(' ').map(function(w){return w[0];}).filter(Boolean).slice(0,3).join('').toUpperCase(); }
   function fmtDT(d){ var dt=new Date(d); return dt.toLocaleDateString('sk-SK',{day:'numeric',month:'numeric'})+' · '+dt.toLocaleTimeString('sk-SK',{hour:'2-digit',minute:'2-digit'}); }
 

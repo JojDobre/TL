@@ -132,6 +132,22 @@ const roundDetailPage = asyncHandler(async (req, res) => {
 
   const myPoints = matchData.reduce((sum, m) => sum + (m.myTip && m.myTip.points ? m.myTip.points : 0), 0);
 
+  // pre bočný blok „Tvoj zisk v kole" (prenesené z round-results)
+  const _exactPts = scoring.exactScore || 10;
+  let myRank = null;
+  leaderboard.forEach((row, i) => { if (meId && row.user.id === meId) myRank = i + 1; });
+  const myExactCount = matchData.filter((m) => {
+    if (!m.myTip || m.status !== 'finished') return false;
+    if (m.tipType === 'winner' || m.tipType === 'winner_no_draw') return false;
+    return (m.myTip.points || 0) >= _exactPts;
+  }).length;
+  const myPartialCount = matchData.filter((m) => {
+    if (!m.myTip || m.status !== 'finished') return false;
+    const pts = m.myTip.points || 0;
+    if (m.tipType === 'winner' || m.tipType === 'winner_no_draw') return pts > 0;
+    return pts > 0 && pts < _exactPts;
+  }).length;
+
   res.render('roundDetail', {
     round: { ...round.toJSON(), status },
     league,
@@ -143,6 +159,9 @@ const roundDetailPage = asyncHandler(async (req, res) => {
     isManager,
     isMember,
     myPoints,
+    myRank,
+    myExactCount,
+    myPartialCount,
     isClone: !!(league && league.templateId),
     seasonLocked: league.Season ? isSeasonLocked(league.Season) : false,
   });

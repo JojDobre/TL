@@ -18,7 +18,6 @@ module.exports = (sequelize, DataTypes) => {
     slug: {
       type: DataTypes.STRING,   // URL-friendly identifikátor pre /blog/:slug
       allowNull: false,
-      unique: true,
     },
     excerpt: {
       type: DataTypes.TEXT,     // Perex / krátky popis (zobrazuje sa na kartách v zozname)
@@ -70,6 +69,9 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     tableName: 'articles',
     timestamps: true,  // createdAt slúži ako dátum publikovania
+    indexes: [
+      { name: 'articles_slug_unique', unique: true, fields: ['slug'] },
+    ],
   });
 
   Article.associate = function (models) {

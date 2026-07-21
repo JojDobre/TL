@@ -128,14 +128,23 @@
 
 <script>
 (function () {
-  function toast(msg, ok){ var t=document.createElement('div'); t.textContent=msg; t.style.cssText='background:'+(ok?'var(--success)':'var(--surface-2)')+';color:'+(ok?'#fff':'var(--text-1)')+';border:1px solid var(--line);padding:10px 14px;border-radius:10px'; document.getElementById('toastWrap').appendChild(t); setTimeout(function(){t.remove();},2500); }
+  function toast(msg, type){
+    // type: true/'ok' = zelená (úspech) · 'danger' = červená (chyba) · inak neutrálna
+    var bg, color, border;
+    if (type === true || type === 'ok') { bg='var(--success)'; color='#fff'; border='rgba(0,0,0,.15)'; }
+    else if (type === 'danger') { bg='var(--danger)'; color='#fff'; border='rgba(0,0,0,.15)'; }
+    else { bg='var(--surface-2)'; color='var(--text-1)'; border='var(--line)'; }
+    var t=document.createElement('div'); t.textContent=msg;
+    t.style.cssText='background:'+bg+';color:'+color+';border:1px solid '+border+';padding:10px 14px;border-radius:10px;font-weight:600;box-shadow:var(--shadow-lg)';
+    document.getElementById('toastWrap').appendChild(t); setTimeout(function(){t.remove();},2800);
+  }
 
   function evaluate(card, body, okMsg) {
     var id = card.getAttribute('data-match-id');
     fetch('/api/matches/'+id+'/evaluate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) })
       .then(function(r){ return r.json(); })
-      .then(function(res){ if (res.success === false) { toast(res.message || 'Nepodarilo sa uložiť.'); return; } toast(okMsg, true); setTimeout(function(){ location.reload(); }, 700); })
-      .catch(function(){ toast('Chyba pri ukladaní.'); });
+      .then(function(res){ if (res.success === false) { toast(res.message || 'Nepodarilo sa uložiť.', 'danger'); return; } toast(okMsg, true); setTimeout(function(){ location.reload(); }, 700); })
+      .catch(function(){ toast('Chyba pri ukladaní.', 'danger'); });
   }
 
   document.addEventListener('click', function (e) {
@@ -143,7 +152,7 @@
 
     if (e.target.closest('[data-save]')) {
       var h = card.querySelector('[data-home]').value, a = card.querySelector('[data-away]').value;
-      if (h === '' || a === '') { toast('Zadaj obe skóre.'); return; }
+      if (h === '' || a === '') { toast('Zadaj obe skóre.', 'danger'); return; }
       evaluate(card, { homeScore: Number(h), awayScore: Number(a), status: 'finished' }, 'Výsledok uložený, body pridelené ✓');
     }
     else if (e.target.closest('[data-cancel]')) {
@@ -178,7 +187,7 @@
   var saveAll = document.getElementById('saveAll');
   if (saveAll) saveAll.addEventListener('click', function(){
     var cards = readyCards();
-    if (cards.length === 0) { toast('Žiadny zápas nemá vyplnené obe skóre.'); return; }
+    if (cards.length === 0) { toast('Žiadny zápas nemá vyplnené obe skóre.', 'danger'); return; }
     if (!confirm('Uložiť výsledky ' + cards.length + ' zápasov? Body sa hráčom okamžite pridelia.')) return;
     saveAll.disabled = true; saveAll.textContent = 'Ukladám…';
     var ops = cards.map(function(card){
@@ -189,7 +198,7 @@
     });
     Promise.all(ops).then(function(res){
       var fail = res.filter(function(r){ return r && r.success === false; });
-      if (fail.length) { toast(fail.length + ' z ' + cards.length + ' sa neuložilo.'); saveAll.disabled=false; saveAll.textContent='Uložiť všetky výsledky'; }
+      if (fail.length) { toast(fail.length + ' z ' + cards.length + ' sa neuložilo.', 'danger'); saveAll.disabled=false; saveAll.textContent='Uložiť všetky výsledky'; }
       else { toast('Uložené: ' + cards.length + ' zápasov ✓', true); }
       setTimeout(function(){ location.reload(); }, 800);
     });
