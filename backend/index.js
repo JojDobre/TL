@@ -19,6 +19,7 @@ const roundApi = require('./src/routes/round.routes');
 const matchApi = require('./src/routes/match.routes');
 const teamApi = require('./src/routes/team.routes');
 const tipApi = require('./src/routes/tip.routes');
+const pushApi = require('./src/routes/push.routes');
 
 // Page routes (vracajú HTML cez EJS render)
 const pageRoutes = require('./src/routes/page.routes');
@@ -155,6 +156,7 @@ app.use('/api/rounds', roundApi);
 app.use('/api/matches', matchApi);
 app.use('/api/teams', teamApi);
 app.use('/api/tips', tipApi);
+app.use('/api/push', pushApi);
 
 // ---- Stránky (HTML cez EJS) ----
 app.use('/', pageRoutes);

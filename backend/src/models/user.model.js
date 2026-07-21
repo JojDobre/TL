@@ -60,6 +60,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.BOOLEAN,           // Dostávať notifikácie v aplikácii
         defaultValue: true,
       },
+      notifyPush: {
+        type: DataTypes.BOOLEAN,           // Dostávať push notifikácie (mobil/desktop)
+        defaultValue: true,
+      },
       profilePublic: {
         type: DataTypes.BOOLEAN,           // Verejný profil (vidia ho ostatní cez rebríček)
         defaultValue: true,

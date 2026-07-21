@@ -85,6 +85,7 @@
     <div class="card card-pad set-card" id="notifications">
       <div class="sc-head"><div><h3>Notifikácie</h3><p>Upozornenia v aplikácii (zvonček v hlavičke).</p></div></div>
       <div class="notif-row"><div class="nr-tx"><b>Notifikácie v aplikácii</b><span>Hlavný prepínač. Keď je vypnutý, nebudeš dostávať žiadne upozornenia.</span></div><label class="switch"><input type="checkbox" id="notifyInApp" <%= prefs.notifyInApp ? 'checked' : '' %>><span class="track"></span></label></div>
+      <div class="notif-row"><div class="nr-tx"><b>Push notifikácie na zariadení</b><span data-push-help>Upozornenia priamo na mobil/plochu, aj keď nemáš otvorenú stránku. Vyžaduje povolenie v prehliadači.</span></div><label class="switch"><input type="checkbox" id="notifyPush" <%= prefs.notifyPush ? 'checked' : '' %>><span class="track"></span></label></div>
       <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
         <span class="stat-label" style="display:block;margin-bottom:8px">Budeš dostávať upozornenia, keď:</span>
         <ul style="list-style:none;padding:0;margin:0;color:var(--text-3);font-size:var(--fs-sm);line-height:1.9">
@@ -221,10 +222,46 @@
   if(avRemove) avRemove.addEventListener('click',function(){ document.getElementById('avatarUrl').value=''; saveAvatar('', avRemove); });
 
   // Notifikácie
+  var pushEl = document.getElementById('notifyPush');
+  var pushHelp = document.querySelector('[data-push-help]');
+
+  // Zosúlaď stav push prepínača so skutočným stavom v prehliadači.
+  if (pushEl && window.tifoPush) {
+    window.tifoPush.status().then(function(s){
+      if (!s.supported) {
+        pushEl.checked = false; pushEl.disabled = true;
+        if (pushHelp) pushHelp.textContent = 'Tento prehliadač nepodporuje push notifikácie.';
+        return;
+      }
+      if (s.permission === 'denied') {
+        pushEl.checked = false; pushEl.disabled = true;
+        if (pushHelp) pushHelp.textContent = 'Notifikácie sú blokované v nastaveniach prehliadača. Povoľ ich a obnov stránku.';
+        return;
+      }
+      // ak DB hovorí zapnuté, ale zariadenie nie je subscribed, necháme zaškrtnuté —
+      // subscribe prebehne pri uložení
+    });
+
+    // Keď používateľ zapne prepínač, hneď si vyžiadaj povolenie + subscribe
+    // (requestPermission musí byť v rámci gesta = tento change/click).
+    pushEl.addEventListener('change', function(){
+      if (pushEl.checked) {
+        window.tifoPush.subscribe().catch(function(e){
+          pushEl.checked = false;
+          toast('Nepodarilo sa', (e && e.message) || 'Push sa nepodarilo zapnúť.', true);
+        });
+      } else {
+        window.tifoPush.unsubscribe().catch(function(){});
+      }
+    });
+  }
+
   var snBtn=document.getElementById('saveNotifications');
   if(snBtn) snBtn.addEventListener('click',function(){
     snBtn.disabled=true;
-    fetch('/api/profile/notifications',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({notifyInApp:document.getElementById('notifyInApp').checked})})
+    var body={notifyInApp:document.getElementById('notifyInApp').checked};
+    if(pushEl && !pushEl.disabled) body.notifyPush=pushEl.checked;
+    fetch('/api/profile/notifications',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
       .then(function(r){return r.json();}).then(function(res){ snBtn.disabled=false; if(res.success===false){ toast('Nepodarilo sa',res.message||'Skús znova.',true); return; } toast('Uložené','Nastavenia notifikácií boli uložené.'); })
       .catch(function(){ snBtn.disabled=false; toast('Chyba','Skús znova.',true); });
   });

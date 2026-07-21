@@ -11,6 +11,31 @@
 
 const { Notification, UserLeague, Round, League, Match, Tip, User, Sequelize } = require('../models');
 const { Op } = Sequelize;
+const push = require('./push.service');
+
+// Odošle Web Push pre skupinu už vytvorených in-app notifikácií.
+// Zoskupí podľa (title, message, link) tak, aby sa každému príjemcovi poslal
+// zodpovedajúci obsah. Fire-and-forget: chyby push nikdy neprepadnú do hlavného
+// toku (push.service má vlastný try/catch, ale pridávame ešte jednu poistku).
+async function pushForRows(rows) {
+  try {
+    if (!push.isEnabled() || !rows || !rows.length) return;
+    // zoskup notifikácie s rovnakým obsahom → jeden push payload pre skupinu ID
+    const groups = new Map();
+    for (const r of rows) {
+      const key = (r.title || '') + '\u0000' + (r.message || '') + '\u0000' + (r.link || '');
+      if (!groups.has(key)) {
+        groups.set(key, { title: r.title, body: r.message, url: r.link || '/notifications', tag: r.type, ids: [] });
+      }
+      groups.get(key).ids.push(Number(r.userId));
+    }
+    for (const g of groups.values()) {
+      await push.pushToUsers(g.ids, { title: g.title, body: g.body, url: g.url, tag: g.tag });
+    }
+  } catch (e) {
+    console.error('[notify] push zlyhalo:', e.message);
+  }
+}
 
 // Odfiltruje príjemcov, ktorí majú vypnuté notifikácie v aplikácii (notifyInApp=false).
 async function filterOptedIn(rows) {
@@ -30,6 +55,8 @@ async function createMany(rows) {
     const allowed = await filterOptedIn(rows);
     if (!allowed.length) return;
     await Notification.bulkCreate(allowed);
+    // po uložení in-app notifikácií pošli aj Web Push (ak je zapnutý)
+    await pushForRows(allowed);
   } catch (e) {
     // zámerne nehádžeme ďalej — notifikácie sú vedľajší efekt
     console.error('[notify] bulkCreate zlyhalo:', e.message);
@@ -42,6 +69,7 @@ async function createOne(row) {
     const allowed = await filterOptedIn([row]);
     if (!allowed.length) return;
     await Notification.create(allowed[0]);
+    await pushForRows(allowed);
   } catch (e) {
     console.error('[notify] create zlyhalo:', e.message);
   }
@@ -153,6 +181,8 @@ async function matchEvaluated(match, round, tips) {
         } else {
           await Notification.create({ userId: uid, type: 'result', title, message, link });
         }
+        // Web Push pre tohto hráča (aktualizácia aj nová notifikácia)
+        await pushForRows([{ userId: uid, type: 'result', title, message, link }]);
       } catch (inner) {
         console.error('[notify] matchEvaluated (user ' + uid + '):', inner.message);
       }

@@ -25,6 +25,7 @@ const settingsPage = asyncHandler(async (req, res) => {
     },
     prefs: {
       notifyInApp: user.notifyInApp !== false,
+      notifyPush: user.notifyPush !== false,
       profilePublic: user.profilePublic !== false,
       allowCompare: user.allowCompare !== false,
     },
@@ -111,6 +112,10 @@ const updateNotifications = asyncHandler(async (req, res) => {
   if (!user) throw new ApiError(404, 'Používateľ nenájdený.');
 
   user.notifyInApp = !!req.body.notifyInApp;
+  // notifyPush je voliteľný — meníme ho len ak prišiel v tele (spätná kompatibilita)
+  if (typeof req.body.notifyPush !== 'undefined') {
+    user.notifyPush = !!req.body.notifyPush;
+  }
   await user.save();
 
   res.status(200).json({ success: true, message: 'Nastavenia notifikácií uložené.' });
