@@ -8,20 +8,20 @@ const { seedArticles } = require('../seeds/articles.seed');
 
 // Synchronizácia databázy a vloženie počiatočných dát.
 //
-// POZNÁMKA K REŽIMOM:
-//  - force: true  -> pri každom štarte ZMAŽE a znovu vytvorí všetky tabuľky.
-//                    Vhodné len pri prvom rozbiehaní alebo keď chceš čistú DB.
-//  - alter: true  -> pokúsi sa upraviť existujúce tabuľky podľa modelov a ZACHOVÁ dáta.
-//                    Vhodnejšie počas bežného vývoja, keď nechceš strácať dáta.
+// POZNÁMKA K REŽIMOM (premenná DB_SYNC v .env):
+//  - force -> pri každom štarte ZMAŽE a znovu vytvorí všetky tabuľky.
+//             Vhodné len pri prvom rozbiehaní alebo keď chceš čistú DB.
+//  - alter -> pokúsi sa upraviť existujúce tabuľky podľa modelov a ZACHOVÁ dáta.
+//             Vhodné počas vývoja pri zmene modelov.
+//  - off   -> NEROBÍ žiadnu zmenu schémy (žiadny sync). Vhodné pre PRODUKCIU
+//             a bežné reštarty — tabuľky sa nemenia, len sa spustí appka.
 //
-// Režim sa riadi premennou DB_SYNC v .env (hodnoty: "force" alebo "alter").
-// Ak nie je nastavená, použije sa bezpečnejší "alter".
+// Ak DB_SYNC nie je nastavená, použije sa bezpečné "off" (bez zmeny schémy).
 const syncDatabase = async () => {
   try {
-    const isForce = process.env.DB_SYNC === 'force';
-    const mode = isForce
-      ? { force: true }   // zmaže a vytvorí nanovo
-      : { alter: true };  // zachová dáta, len upraví štruktúru
+    const dbSync = (process.env.DB_SYNC || 'off').toLowerCase();
+    const isForce = dbSync === 'force';
+    const isAlter = dbSync === 'alter';
 
     if (isForce) {
       // Pri force musíme dočasne vypnúť kontrolu cudzích kľúčov, inak MariaDB
@@ -31,14 +31,19 @@ const syncDatabase = async () => {
       // na duplicitu (ER_DUP_ENTRY 'administrator').
       await db.sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
       try {
-        await db.sequelize.sync(mode);
+        await db.sequelize.sync({ force: true });
       } finally {
         await db.sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
       }
+      console.log('Databáza synchronizovaná (režim: force).');
+    } else if (isAlter) {
+      await db.sequelize.sync({ alter: true });
+      console.log('Databáza synchronizovaná (režim: alter).');
     } else {
-      await db.sequelize.sync(mode);
+      // off — žiadny sync schémy. Iba overíme spojenie.
+      await db.sequelize.authenticate();
+      console.log('Databáza pripravená (režim: off — bez zmeny schémy).');
     }
-    console.log(`Databáza synchronizovaná (režim: ${process.env.DB_SYNC || 'alter'}).`);
 
     // Definičné dáta (odznaky) sa upsertujú VŽDY — sú idempotentné a nezávisia
     // od toho, či je DB prázdna. Tým sa nové/zmenené odznaky doplnia aj v "alter"
