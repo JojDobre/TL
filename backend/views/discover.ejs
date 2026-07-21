@@ -4,6 +4,20 @@
   .dc-bar .input-icon { flex:1; min-width:240px; }
   .dc-layout { display:grid; grid-template-columns:240px 1fr; gap:26px; align-items:start; padding-bottom:64px; }
   .filter-card { position:sticky; top:128px; }
+  /* rozbaľovací filter (details/summary) */
+  .fc-summary { list-style:none; display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none; }
+  .fc-summary::-webkit-details-marker { display:none; }
+  .fc-chev { transition:transform .18s ease; color:var(--text-4); font-size:14px; }
+  details#dcFilterBox[open] .fc-chev { transform:rotate(180deg); }
+  /* na PC je filter vždy otvorený a hlavička (summary) nie je klikacia/potrebná */
+  @media (min-width:981px){
+    .fc-summary { cursor:default; margin-bottom:6px; }
+    .fc-chev { display:none; }
+  }
+  /* na mobile/tablete summary oddelíme od obsahu jemnou čiarou keď je otvorené */
+  @media (max-width:980px){
+    details#dcFilterBox[open] .fc-summary { margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid var(--line); }
+  }
   .fc-group { padding:14px 0; border-bottom:1px solid var(--line); }
   .fc-group:last-of-type { border:none; }
   .fc-title { font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.08em; color:var(--text-4); font-weight:700; margin-bottom:10px; }
@@ -15,6 +29,7 @@
   .activity { font-size:var(--fs-xs); display:inline-flex; align-items:center; gap:6px; }
   .act-dot { width:7px; height:7px; border-radius:50%; display:inline-block; }
   .chips { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .dc-tags-left { display:inline-flex; flex-direction:column; align-items:flex-start; gap:6px; }
   @media (max-width:980px){ .dc-layout { grid-template-columns:1fr; } .filter-card { position:static; } .results-grid { grid-template-columns:1fr 1fr; } }
   @media (max-width:560px){ .results-grid { grid-template-columns:1fr; } .dc-bar { display:grid; grid-template-columns:1fr 1fr; } .dc-bar .input-icon { grid-column:1 / -1; } .dc-bar .select { width:100% !important; } }
 ` }) %>
@@ -48,9 +63,9 @@
 </div>
 
 <div class="wrap dc-layout">
-  <!-- FILTRE -->
-  <aside class="card card-pad filter-card">
-    <b class="hi" style="display:block;margin-bottom:6px">Filtre</b>
+  <!-- FILTRE (rozbaľovacie) -->
+  <details class="card card-pad filter-card" id="dcFilterBox" open>
+    <summary class="fc-summary"><b class="hi">Filtre</b><span class="fc-chev">▾</span></summary>
     <form method="GET" action="/discover" id="dcFilters">
       <%# zachovaj aktuálne hľadanie a triedenie %>
       <input type="hidden" name="q" value="<%= q %>">
@@ -80,7 +95,7 @@
       </div>
     </form>
     <a href="/discover" class="faint" style="font-size:var(--fs-xs);display:inline-block;margin-top:12px">Vymazať filtre</a>
-  </aside>
+  </details>
 
   <!-- VÝSLEDKY -->
   <main>
@@ -99,8 +114,10 @@
       <% seasons.forEach(function(s, i){ %>
         <a href="/seasons/<%= s.id %>" class="card card-hover" style="overflow:hidden">
           <div class="dc-cover" style="background:<%= COVERS[i % COVERS.length] %>">
-            <% if (s.type === 'official') { %><span class="tag tag-brand">Oficiálna</span><% } else { %><span class="tag tag-gold">Community</span><% } %>
-            <% if (s.hasPassword) { %><span class="tag tag-muted">🔒</span><% } %>
+            <span class="dc-tags-left">
+              <% if (s.type === 'official') { %><span class="tag tag-brand">Oficiálna</span><% } else { %><span class="tag tag-gold">Community</span><% } %>
+              <% if (s.hasPassword) { %><span class="tag tag-muted">🔒</span><% } %>
+            </span>
             <% if (s.status === 'active') { %><span class="tag tag-live"><span class="dot"></span>Live</span>
             <% } else if (s.status === 'upcoming') { %><span class="tag tag-info">Čoskoro</span>
             <% } else { %><span class="tag tag-muted">Ukončená</span><% } %>
@@ -144,6 +161,22 @@
       }
       filters.submit();
     });
+  }
+
+  // Rozbaľovací filter: defaultne ZATVORENÝ na mobile/tablete (≤980px),
+  // otvorený na PC. (HTML má `open` kvôli bezpečnému fallbacku bez JS.)
+  var fbox = document.getElementById('dcFilterBox');
+  if (fbox) {
+    var mq = window.matchMedia('(max-width: 980px)');
+    // pri načítaní zatvor, ak je úzka obrazovka
+    if (mq.matches) fbox.removeAttribute('open');
+    // pri prechode PC → mobil zatvor, mobil → PC otvor
+    var onChange = function(e){ if (e.matches) fbox.removeAttribute('open'); else fbox.setAttribute('open',''); };
+    if (mq.addEventListener) mq.addEventListener('change', onChange);
+    else if (mq.addListener) mq.addListener(onChange);
+    // na PC filter nezatváraj klikom na hlavičku
+    var sm = fbox.querySelector('summary');
+    if (sm) sm.addEventListener('click', function(ev){ if (!mq.matches) ev.preventDefault(); });
   }
 })();
 </script>
