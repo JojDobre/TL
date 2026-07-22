@@ -75,6 +75,12 @@ module.exports = (sequelize, DataTypes) => {
     showPrizes: { type: DataTypes.BOOLEAN, defaultValue: true },
     showRules: { type: DataTypes.BOOLEAN, defaultValue: true },
     showNews: { type: DataTypes.BOOLEAN, defaultValue: true },
+    // Príznak pre plánovač: kedy sa rozposlala notifikácia o spustení sezóny.
+    // NULL = ešte neodoslané. Týka sa len oficiálnych sezón.
+    startNotifiedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
     creatorId: {
       type: DataTypes.INTEGER,  // Odkaz na používateľa, ktorý vytvoril sezónu
       allowNull: false,

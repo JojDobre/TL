@@ -182,8 +182,10 @@ const createRound = asyncHandler(async (req, res) => {
     startDate: startObj, endDate: endObj, active: true,
   });
 
-  // notifikácia členom ligy o novom kole (fire-and-forget, nezhodí akciu)
-  await notify.roundCreated(newRound, league);
+  // POZN.: notifikáciu o kole tu ZÁMERNE neposielame. Kolo v tejto chvíli ešte
+  // nemusí byť otvorené na tipovanie — upozornenie by hráča informovalo o niečom,
+  // s čím nemôže nič robiť. Notifikáciu pošle plánovač (utils/scheduler.js)
+  // v okamihu, keď kolo naozaj začne (notify.roundStarted).
 
   res.status(201).json({ success: true, message: 'Kolo bolo úspešne vytvorené.', data: newRound });
 });

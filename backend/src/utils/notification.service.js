@@ -12,6 +12,9 @@
 const { Notification, UserLeague, Round, League, Match, Tip, User, Sequelize } = require('../models');
 const { Op } = Sequelize;
 const push = require('./push.service');
+// Formátovanie časov v slovenskej zóne — notifikácie vznikajú na serveri,
+// ktorý môže bežať v UTC (viď utils/datetime.util.js).
+const { fmtDateTimeShort } = require('./datetime.util');
 
 // Odošle Web Push pre skupinu už vytvorených in-app notifikácií.
 // Zoskupí podľa (title, message, link) tak, aby sa každému príjemcovi poslal
@@ -91,33 +94,54 @@ async function leagueMemberIds(leagueId, excludeUserId) {
 // ── UDALOSTI ───────────────────────────────────────────────────────────────
 
 // Nové kolo otvorené → upozorni členov ligy.
+// ODPOJENÉ (2026-07): notifikácia sa posielala pri VYTVORENÍ kola, teda aj vtedy,
+// keď kolo ešte nebolo otvorené na tipovanie. Hráč tak dostal upozornenie na niečo,
+// s čím nemohol nič robiť. Nahradené funkciou roundStarted() nižšie, ktorú spúšťa
+// plánovač v okamihu, keď kolo naozaj začne. Funkciu nemažeme kvôli spätnej
+// kompatibilite — jednoducho sa už nikde nevolá.
 async function roundCreated(round, league) {
+  return; // zámerne nič nerobí — viď komentár vyššie
+}
+
+// Kolo sa PRÁVE OTVORILO na tipovanie (nastal startDate).
+// Volá plánovač (utils/scheduler.js), nie HTTP request.
+async function roundStarted(round, league) {
   try {
     const ids = await leagueMemberIds(league.id);
     if (!ids.length) return;
-    const when = round.endDate ? new Date(round.endDate).toLocaleString('sk-SK', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : null;
-    const msg = `Kolo „${round.name}" v lige ${league.name} je otvorené na tipovanie.` + (when ? ` Uzávierka ${when}.` : '');
+    const when = round.endDate ? fmtDateTimeShort(round.endDate, null) : null;
+    const msg = `Kolo „${round.name}" v lige ${league.name} je otvorené — môžeš tipovať.`
+      + (when ? ` Uzávierka ${when}.` : '');
     await createMany(ids.map((uid) => ({
       userId: uid, type: 'new_round',
-      title: 'Nové kolo otvorené na tipovanie',
+      title: 'Kolo sa otvorilo na tipovanie',
       message: msg, link: `/rounds/${round.id}`,
     })));
-  } catch (e) { console.error('[notify] roundCreated:', e.message); }
+  } catch (e) { console.error('[notify] roundStarted:', e.message); }
 }
 
-// Vyhodnotenie zápasov v kole → upozorni hráčov, ktorí v danom kole tipovali.
-// Voláme po vyhodnotení; perUser je mapa userId -> { points } (zisk v tomto kroku).
-async function roundEvaluated(round, league, perUser) {
+// Blíži sa UZÁVIERKA kola → pripomienka LEN tým hráčom, ktorí nemajú vyplnené
+// všetky tipy. Kto má natipované celé kolo, notifikáciu nedostane.
+// userIds určuje volajúci (plánovač si ich vyfiltruje podľa počtu tipov).
+async function roundDeadlineSoon(round, league, userIds) {
   try {
-    const entries = Object.entries(perUser || {});
-    if (!entries.length) return;
-    await createMany(entries.map(([uid, info]) => ({
-      userId: Number(uid), type: 'result',
-      title: `Výsledky kola „${round.name}" vyhodnotené`,
-      message: `Získal si +${info.points || 0} bodov v kole ${round.name}.`,
-      link: `/rounds/${round.id}`,
+    const ids = (userIds || []).filter(Boolean);
+    if (!ids.length) return;
+    const when = round.endDate ? fmtDateTimeShort(round.endDate, null) : null;
+    const msg = `Kolo „${round.name}" sa čoskoro uzatvára${when ? ` (${when})` : ''}. Nemáš vyplnené všetky tipy.`;
+    await createMany(ids.map((uid) => ({
+      userId: uid, type: 'deadline',
+      title: 'Blíži sa uzávierka tipovania',
+      message: msg, link: `/rounds/${round.id}`,
     })));
-  } catch (e) { console.error('[notify] roundEvaluated:', e.message); }
+  } catch (e) { console.error('[notify] roundDeadlineSoon:', e.message); }
+}
+
+// ODPOJENÉ (2026-07): duplicitné s matchEvaluated(), ktorá už zoskupuje
+// notifikácie na úroveň kola a sama rozlišuje „celé kolo vyhodnotené" vs
+// „kolo má vyhodnotené zápasy". Ponechané kvôli spätnej kompatibilite.
+async function roundEvaluated(round, league, perUser) {
+  return; // zámerne nič nerobí — viď komentár vyššie
 }
 
 // Jeden zápas vyhodnotený → ZOSKUPENÁ notifikácia na úrovni kola.
@@ -208,6 +232,14 @@ async function sumUserRoundPoints(userId, roundId) {
 async function matchCanceled(match, round, tips) {
   try {
     if (!tips || !tips.length) return;
+
+    // Notifikáciu posielame LEN ak sa na kolo už dalo tipovať — teda kolo je
+    // otvorené alebo už uzavreté. Pri NAPLÁNOVANOM kole (tipovanie sa ešte
+    // neotvorilo) by hráča zrušený zápas nezaujímal: nemohol naň tipovať.
+    if (round && round.startDate && new Date(round.startDate) > new Date()) {
+      return;
+    }
+
     await createMany(tips.map((t) => ({
       userId: t.userId, type: 'canceled',
       title: 'Zápas zrušený',
@@ -219,22 +251,90 @@ async function matchCanceled(match, round, tips) {
 
 // Nový hráč v lige → upozorni ostatných členov (okrem nového hráča).
 // Standalone liga: detail žije na /seasons/:seasonId, nie /leagues/:id.
+// Hranica, od ktorej sa notifikácie o nových hráčoch zoskupujú a posielajú
+// už len správcom (nie všetkým členom). Nad týmto počtom by pri každom
+// pripojení dostal notifikáciu každý člen — v 50-člennej lige neúnosné.
+const MEMBER_NOTIFY_LIMIT = 10;
+
+// Nový hráč sa pripojil do ligy.
+//
+// Pravidlá (podľa zadania):
+//   • LEN komunitné sezóny — v oficiálnych sezónach sa pripojenia neriešia.
+//   • Menej ako 10 členov → notifikáciu dostanú všetci členovia (menná).
+//   • 10 a viac členov    → dostane ju už len SPRÁVCA ligy/sezóny, a to
+//     zoskupene: ak má neprečítanú notifikáciu o nových hráčoch, len sa
+//     aktualizuje počet („Pribudli 3 noví hráči" → „Pribudlo 7 nových hráčov").
+//     Nová notifikácia vznikne až keď si predchádzajúcu prečíta — ochrana
+//     proti spamu pri veľkých ligách.
 async function memberJoined(league, newUserId, newUserName) {
   try {
-    const ids = await leagueMemberIds(league.id, newUserId);
-    if (!ids.length) return;
-    let link = `/leagues/${league.id}`;
-    try {
-      const { Season } = require('../models');
-      const s = await Season.findByPk(league.seasonId, { attributes: ['id', 'mode'] });
-      if (s && s.mode === 'standalone') link = `/seasons/${league.seasonId}`;
-    } catch (e) { /* fallback na /leagues */ }
-    await createMany(ids.map((uid) => ({
-      userId: uid, type: 'member',
-      title: 'Nový hráč v tvojej lige',
-      message: `${newUserName || 'Nový hráč'} sa pripojil do ligy ${league.name}.`,
-      link,
-    })));
+    const { Season, League } = require('../models');
+
+    // --- sezóna: notifikujeme len v komunitných ---
+    const season = await Season.findByPk(league.seasonId, {
+      attributes: ['id', 'mode', 'type', 'creatorId'],
+    });
+    if (season && season.type === 'official') return;
+
+    const link = (season && season.mode === 'standalone')
+      ? `/seasons/${league.seasonId}`
+      : `/leagues/${league.id}`;
+
+    // všetci členovia okrem toho, kto sa práve pripojil
+    const memberIds = await leagueMemberIds(league.id, newUserId);
+    const totalMembers = memberIds.length + 1; // + práve pripojený
+
+    // --- malá liga: klasická menná notifikácia všetkým ---
+    if (totalMembers < MEMBER_NOTIFY_LIMIT) {
+      if (!memberIds.length) return;
+      await createMany(memberIds.map((uid) => ({
+        userId: uid, type: 'member',
+        title: 'Nový hráč v tvojej lige',
+        message: `${newUserName || 'Nový hráč'} sa pripojil do ligy ${league.name}.`,
+        link,
+      })));
+      return;
+    }
+
+    // --- veľká liga: len správcovia, zoskupene ---
+    const managerIds = new Set();
+    if (league.creatorId) managerIds.add(Number(league.creatorId));
+    if (season && season.creatorId) managerIds.add(Number(season.creatorId));
+    managerIds.delete(Number(newUserId));
+    if (!managerIds.size) return;
+
+    const allowed = await filterOptedIn([...managerIds].map((uid) => ({ userId: uid })));
+    if (!allowed.length) return;
+
+    for (const row of allowed) {
+      const uid = Number(row.userId);
+      try {
+        // existuje neprečítaná notifikácia o nových hráčoch pre túto ligu?
+        const existing = await Notification.findOne({
+          where: { userId: uid, type: 'member', link, read: false },
+          order: [['createdAt', 'DESC']],
+        });
+
+        if (existing) {
+          // zvýš počet v existujúcej správe namiesto vytvorenia novej
+          const m = /^(\d+)/.exec(String(existing.message || ''));
+          const count = (m ? Number(m[1]) : 1) + 1;
+          existing.title = 'Noví hráči v lige';
+          existing.message = `${count} nových hráčov sa pripojilo do ligy ${league.name}.`;
+          existing.set('createdAt', new Date(), { raw: true });
+          existing.changed('createdAt', true);
+          await existing.save({ silent: true, fields: ['title', 'message', 'createdAt'] });
+          // push zámerne NEposielame — hráč už notifikáciu má a neprečítal si ju
+        } else {
+          const title = 'Nový hráč v lige';
+          const message = `1 nový hráč sa pripojil do ligy ${league.name}.`;
+          await Notification.create({ userId: uid, type: 'member', title, message, link });
+          await pushForRows([{ userId: uid, type: 'member', title, message, link }]);
+        }
+      } catch (inner) {
+        console.error('[notify] memberJoined (user ' + uid + '):', inner.message);
+      }
+    }
   } catch (e) { console.error('[notify] memberJoined:', e.message); }
 }
 
@@ -257,8 +357,179 @@ async function adminMessage(userId, title, message, link) {
   await createOne({ userId: Number(userId), type: 'admin', title: title || 'Oznámenie', message, link: link || null });
 }
 
+
+// ---------------------------------------------------------------------------
+// MASOVÉ NOTIFIKÁCIE (oficiálne sezóny a ligy)
+// ---------------------------------------------------------------------------
+
+// Veľkosť dávky a pauza medzi dávkami. Pri tisíckach používateľov nechceme
+// zahltiť DB ani push službu — rozložíme to v čase.
+const BROADCAST_BATCH = Number(process.env.BROADCAST_BATCH || 100);
+const BROADCAST_PAUSE_MS = Number(process.env.BROADCAST_PAUSE_MS || 10000);
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Rozpošle rovnakú notifikáciu VŠETKÝM používateľom po dávkach.
+//
+// Ochrany:
+//   • dedupe podľa (type + link) — kto už takú notifikáciu má, druhýkrát ju
+//     nedostane, a to ani keď si ju medzitým prečítal
+//   • dávkovanie: BROADCAST_BATCH príjemcov, potom pauza BROADCAST_PAUSE_MS
+//   • beží na pozadí (volajúci nečaká) — pri veľa používateľoch by inak
+//     HTTP request alebo beh plánovača trval minúty
+async function broadcastToAll({ type, title, message, link }) {
+  try {
+    const { User } = require('../models');
+
+    // koho už notifikácia zastihla (bez ohľadu na prečítanie)
+    const already = await Notification.findAll({
+      where: { type, link }, attributes: ['userId'],
+    });
+    const skip = new Set(already.map((n) => Number(n.userId)));
+
+    const users = await User.findAll({ attributes: ['id'] });
+    const targets = users.map((u) => Number(u.id)).filter((id) => !skip.has(id));
+    if (!targets.length) return;
+
+    console.log(`[notify] broadcast "${title}" → ${targets.length} používateľov `
+      + `(po ${BROADCAST_BATCH}, pauza ${BROADCAST_PAUSE_MS} ms)`);
+
+    for (let i = 0; i < targets.length; i += BROADCAST_BATCH) {
+      const batch = targets.slice(i, i + BROADCAST_BATCH);
+      // createMany sám rieši opt-out (notifyInApp) aj Web Push
+      await createMany(batch.map((uid) => ({ userId: uid, type, title, message, link })));
+      if (i + BROADCAST_BATCH < targets.length) await sleep(BROADCAST_PAUSE_MS);
+    }
+    console.log(`[notify] broadcast "${title}" dokončený`);
+  } catch (e) { console.error('[notify] broadcastToAll:', e.message); }
+}
+
+// Spustila sa OFICIÁLNA sezóna → notifikácia všetkým používateľom.
+// Beží na pozadí, volajúci na dokončenie nečaká.
+function seasonStarted(season) {
+  const payload = {
+    type: 'season',
+    title: 'Spustila sa nová sezóna',
+    message: `Oficiálna sezóna ${season.name} sa práve začala. Pripoj sa a tipuj.`,
+    link: `/seasons/${season.id}`,
+  };
+  broadcastToAll(payload).catch((e) => console.error('[notify] seasonStarted:', e.message));
+}
+
+// Pribudla nová OFICIÁLNA liga v oficiálnej sezóne → notifikácia všetkým.
+function officialLeagueAdded(league, season) {
+  const payload = {
+    type: 'season',
+    title: 'Nová oficiálna liga',
+    message: `V sezóne ${season ? season.name : 'oficiálnej sezóne'} pribudla liga ${league.name}.`,
+    link: `/leagues/${league.id}`,
+  };
+  broadcastToAll(payload).catch((e) => console.error('[notify] officialLeagueAdded:', e.message));
+}
+
+// ---------------------------------------------------------------------------
+// PREVÁDZKOVÉ NOTIFIKÁCIE PRE WEBOVÝCH ADMINOV (role === 'admin')
+// ---------------------------------------------------------------------------
+
+// ID všetkých webových adminov.
+async function webAdminIds() {
+  try {
+    const { User } = require('../models');
+    const admins = await User.findAll({ where: { role: 'admin' }, attributes: ['id'] });
+    return admins.map((a) => Number(a.id));
+  } catch (e) {
+    console.error('[notify] webAdminIds:', e.message);
+    return [];
+  }
+}
+
+// Súhrnná notifikácia pre adminov.
+//
+// Tieto stavy trvajú, kým ich admin nevyrieši, preto notifikáciu neposielame
+// znova pri každom behu plánovača. Namiesto toho aktualizujeme existujúcu
+// neprečítanú notifikáciu s rovnakým `link` — a to len ak sa zmenil počet.
+// Nová (a s ňou push) vznikne až po prečítaní tej predchádzajúcej.
+async function sysadminNotice({ key, title, message, link }) {
+  try {
+    const ids = await webAdminIds();
+    if (!ids.length) return;
+
+    const allowed = await filterOptedIn(ids.map((uid) => ({ userId: uid })));
+    if (!allowed.length) return;
+
+    for (const row of allowed) {
+      const uid = Number(row.userId);
+      try {
+        const existing = await Notification.findOne({
+          where: { userId: uid, type: 'sysadmin', link, read: false },
+          order: [['createdAt', 'DESC']],
+        });
+
+        if (existing) {
+          // rovnaký obsah → neotravuj (žiadny zápis, žiadny push)
+          if (existing.message === message) continue;
+          existing.title = title;
+          existing.message = message;
+          existing.set('createdAt', new Date(), { raw: true });
+          existing.changed('createdAt', true);
+          await existing.save({ silent: true, fields: ['title', 'message', 'createdAt'] });
+        } else {
+          await Notification.create({ userId: uid, type: 'sysadmin', title, message, link });
+          await pushForRows([{ userId: uid, type: 'sysadmin', title, message, link }]);
+        }
+      } catch (inner) {
+        console.error('[notify] sysadminNotice (user ' + uid + '):', inner.message);
+      }
+    }
+  } catch (e) { console.error('[notify] sysadminNotice:', e.message); }
+}
+
+// Zápasy, ktoré sa už odohrali, ale nemajú zadaný výsledok.
+async function adminMatchesAwaitingResult(count) {
+  if (!count) return;
+  await sysadminNotice({
+    title: 'Zápasy čakajú na vyhodnotenie',
+    message: count === 1
+      ? '1 zápas sa už odohral a nemá zadaný výsledok.'
+      : `${count} zápasov sa už odohralo a nemá zadaný výsledok.`,
+    link: '/admin/pending',
+  });
+}
+
+// Šablóny, v ktorých čakajú zápasy na doplnenie výsledku.
+async function adminTemplatesAwaitingResult(count) {
+  if (!count) return;
+  await sysadminNotice({
+    title: 'Šablóny čakajú na výsledky',
+    message: count === 1
+      ? '1 zápas v šablóne čaká na doplnenie výsledku.'
+      : `${count} zápasov v šablónach čaká na doplnenie výsledku.`,
+    link: '/admin/templates',
+  });
+}
+
+// Kolá v oficiálnych sezónach, ktoré skončili a nie sú vyhodnotené.
+async function adminRoundsUnevaluated(count) {
+  if (!count) return;
+  await sysadminNotice({
+    title: 'Kolá čakajú na vyhodnotenie',
+    message: count === 1
+      ? '1 kolo v oficiálnej sezóne skončilo a nie je vyhodnotené.'
+      : `${count} kôl v oficiálnych sezónach skončilo a nie je vyhodnotených.`,
+    link: '/admin/competitions',
+  });
+}
+
 module.exports = {
   createOne, createMany, leagueMemberIds,
-  roundCreated, roundEvaluated, matchEvaluated, matchCanceled,
-  memberJoined, achievementsAwarded, adminMessage,
+  // kolá
+  roundStarted, roundDeadlineSoon, matchEvaluated, matchCanceled,
+  // ligy a sezóny
+  memberJoined, seasonStarted, officialLeagueAdded,
+  // odznaky
+  achievementsAwarded,
+  // prevádzkové (weboví admini)
+  adminMatchesAwaitingResult, adminTemplatesAwaitingResult, adminRoundsUnevaluated,
+  // ODPOJENÉ — ponechané kvôli spätnej kompatibilite, nikde sa nevolajú:
+  roundCreated, roundEvaluated, adminMessage,
 };

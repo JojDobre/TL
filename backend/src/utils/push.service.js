@@ -31,7 +31,7 @@ function ensureConfigured() {
     webpush = require('web-push');
     const subject = process.env.VAPID_SUBJECT
       || (process.env.EMAIL_FROM && process.env.EMAIL_FROM.match(/<(.+)>/) ? 'mailto:' + process.env.EMAIL_FROM.match(/<(.+)>/)[1] : null)
-      || 'mailto:podpora@tiperliga.sk';
+      || 'mailto:podpora@tifo.sk';
     webpush.setVapidDetails(subject, pub, priv);
     configured = true;
   } catch (e) {

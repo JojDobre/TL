@@ -70,6 +70,12 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: false,
       },
       // Šablóna: oficiálna liga, ktorú si používatelia môžu naklonovať
+      // Príznak pre plánovač: kedy sa rozposlala notifikácia o novej oficiálnej
+      // lige. NULL = ešte neodoslané. Týka sa len líg v oficiálnych sezónach.
+      announcedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
       isTemplate: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,

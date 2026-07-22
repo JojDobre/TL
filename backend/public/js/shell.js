@@ -97,7 +97,7 @@
 
     return `<div class="nav"><div class="wrap nav-inner">
       <a class="row g-2" href="index.html" style="gap:10px">
-        ${ICON}<span class="wordmark" style="font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:-.02em;color:var(--text-1)">Tiper<b style="color:var(--gold)">liga</b></span>
+        ${ICON}<span class="wordmark" style="font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:-.02em;color:var(--text-1)">Tifo<b style="color:var(--gold)">.sk</b></span>
       </a>
       <nav class="nav-links">${links}</nav>
       <div class="nav-actions">${actions}</div>
@@ -191,7 +191,7 @@
     return `<div class="wrap">
       <div class="footer-grid">
         <div>
-          <a class="row g-2" href="index.html" style="gap:10px;margin-bottom:14px">${ICON}<span style="font-family:var(--font-display);font-weight:700;font-size:19px;color:var(--text-1)">Tiper<b style="color:var(--gold)">liga</b></span></a>
+          <a class="row g-2" href="index.html" style="gap:10px;margin-bottom:14px">${ICON}<span style="font-family:var(--font-display);font-weight:700;font-size:19px;color:var(--text-1)">Tifo<b style="color:var(--gold)">.sk</b></span></a>
           <p class="muted" style="font-size:var(--fs-sm);max-width:280px">Tipuj výsledky zápasov, súťaž v ligách a stúpaj v rebríčku. Oficiálne aj komunitné sezóny na jednom mieste.</p>
         </div>
         ${col('Platforma', [['Sezóny','seasons.html'],['Objaviť súťaže','discover.html'],['Rebríčky','leaderboards.html'],['Vytvoriť ligu','create-league.html']])}
@@ -199,7 +199,7 @@
         ${col('Komunita', [['Blog','blog.html'],['O nás','about.html'],['Kontakt','kontakt.html'],['Achievementy','achievements.html']])}
       </div>
       <div class="footer-bottom">
-        <span>© 2026 Tiperliga. Všetky práva vyhradené.</span>
+        <span>© 2026 Tifo.sk. Všetky práva vyhradené.</span>
         <span class="row g-4"><a href="#" style="padding:0">Podmienky</a><a href="#" style="padding:0">Súkromie</a><a href="Design System.html" style="padding:0">Dizajn systém</a></span>
       </div>
     </div>`;

@@ -10,6 +10,7 @@ const { errorHandler, notFoundHandler } = require('./src/middleware/error.middle
 const { createSessionStore } = require('./src/config/session-store');
 const { provideCsrfToken, verifyCsrf } = require('./src/middleware/csrf.middleware');
 const dt = require('./src/utils/datetime.util');
+const scheduler = require('./src/utils/scheduler');
 
 // API routes (vracajú JSON — pre akcie cez fetch z prehliadača)
 const authApi = require('./src/routes/auth.routes');
@@ -185,7 +186,13 @@ app.use(errorHandler);
 // ---- štart ----
 // Synchronizáciu riadi DB_SYNC (force/alter/off) — nie NODE_ENV.
 syncDatabase()
-  .then(() => console.log('Inicializácia DB hotová.'))
+  .then(() => {
+    console.log('Inicializácia DB hotová.');
+    // Plánovač časovo viazaných notifikácií (otvorenie kola, uzávierka,
+    // spustenie sezóny, prevádzkové kontroly pre adminov). Až po inicializácii
+    // DB, aby mal pripravené modely.
+    scheduler.start();
+  })
   .catch((error) => console.error('Chyba pri inicializácii databázy:', error));
 
 app.listen(PORT, () => console.log(`Tiperliga beží na porte ${PORT}`));

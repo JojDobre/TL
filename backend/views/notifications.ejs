@@ -38,6 +38,8 @@
       case 'rank':      return { e:'📈', s:'background:var(--brand-soft);color:var(--brand-bright)' };
       case 'member':    return { e:'👥', s:'background:var(--info-soft);color:var(--info)' };
       case 'canceled':  return { e:'🚫', s:'background:var(--surface-3);color:var(--text-3)' };
+      case 'season':    return { e:'🏆', s:'background:var(--brand-soft);color:var(--brand-bright)' };
+      case 'sysadmin':  return { e:'🛠️', s:'background:var(--warning-soft);color:var(--warning)' };
       default:          return { e:'🔔', s:'background:var(--surface-3);color:var(--text-3)' };
     }
   }
@@ -51,6 +53,8 @@
       case 'rank':      return { l:'Rebríček', s:'background:var(--brand-soft);color:var(--brand-bright)' };
       case 'member':    return { l:'Liga',   s:'background:var(--info-soft);color:var(--info)' };
       case 'canceled':  return { l:'Zrušené', s:'background:var(--surface-3);color:var(--text-3)' };
+      case 'season':    return { l:'Sezóna', s:'background:var(--brand-soft);color:var(--brand-bright)' };
+      case 'sysadmin':  return { l:'Správa webu', s:'background:var(--warning-soft);color:var(--warning)' };
       case 'admin':     return { l:'Oznam',  s:'background:var(--surface-3);color:var(--text-2)' };
       default:          return { l:'Info',   s:'background:var(--surface-3);color:var(--text-3)' };
     }
@@ -68,6 +72,8 @@
   // CTA label podľa typu
   function ctaLabel(t){
     if(t==='new_round'||t==='deadline') return 'Tipovať teraz';
+    if(t==='season') return 'Pozrieť sezónu';
+    if(t==='sysadmin') return 'Otvoriť správu';
     if(t==='result') return 'Zobraziť výsledky';
     if(t==='achievement') return 'Zobraziť odznaky';
     if(t==='member') return 'Zobraziť ligu';

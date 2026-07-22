@@ -30,6 +30,21 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
       },
+      // --- príznaky pre plánovač notifikácií (utils/scheduler.js) ---
+      // Zabraňujú opakovanému odoslaniu tej istej notifikácie pri každom behu.
+      // NULL = ešte neodoslané.
+      startNotifiedAt: {
+        type: DataTypes.DATE,      // kolo sa otvorilo na tipovanie
+        allowNull: true,
+      },
+      deadlineNotifiedAt: {
+        type: DataTypes.DATE,      // pripomienka pred uzávierkou
+        allowNull: true,
+      },
+      adminUnevaluatedNotifiedAt: {
+        type: DataTypes.DATE,      // upozornenie adminom, že kolo nie je vyhodnotené
+        allowNull: true,
+      },
     }, {
       tableName: 'rounds',
       timestamps: true,
