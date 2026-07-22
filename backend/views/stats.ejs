@@ -110,7 +110,7 @@
             <%# bodka = nulová čiara s okrúhlym zakončením + non-scaling-stroke,
                 aby ju preserveAspectRatio="none" nedeformoval do oválu %>
             <path class="rk-dot" d="M <%= rx(i).toFixed(1) %> <%= ry(p.rank).toFixed(1) %> h 0.01" stroke="var(--gold-bright)" stroke-width="<%= n <= 1 ? 12 : 8 %>" stroke-linecap="round" vector-effect="non-scaling-stroke" fill="none"
-              data-rank="<%= p.rank %>" data-points="<%= p.points %>" data-players="<%= p.players %>" data-date="<%= new Date(p.date).toLocaleDateString('sk-SK') %>"></path>
+              data-rank="<%= p.rank %>" data-points="<%= p.points %>" data-players="<%= p.players %>" data-date="<%= fmtDate(p.date) %>"></path>
           <% }); %>
         </svg>
         <div class="between" style="font-size:var(--fs-xs);color:var(--text-4);margin-top:6px"><span>najlepšie #<%= best %></span><span>aktuálne <b class="hi">#<%= rankProgress[rankProgress.length-1].rank %></b> z <%= rankProgress[rankProgress.length-1].players %></span></div>

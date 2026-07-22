@@ -114,7 +114,7 @@
         <% if (r.status === 'open') { %>
         <div class="card round-item" style="border-color:var(--brand-line)">
           <span class="round-n active"><%= roundAbbr(r.name) %></span>
-          <div><div class="row g-2 wrap-gap"><b class="hi"><%= r.description || r.name %></b><span class="tag tag-warning"><span class="dot"></span>Otvorené</span></div><div class="muted" style="font-size:var(--fs-sm)"><%= r.matchesCount %> zápasov · uzávierka <%= new Date(r.endDate).toLocaleDateString('sk-SK') %></div></div>
+          <div><div class="row g-2 wrap-gap"><b class="hi"><%= r.description || r.name %></b><span class="tag tag-warning"><span class="dot"></span>Otvorené</span></div><div class="muted" style="font-size:var(--fs-sm)"><%= r.matchesCount %> zápasov · uzávierka <%= fmtDate(r.endDate) %></div></div>
                     <span class="rnd-pts muted" style="font-size:var(--fs-sm)"><% if (isMember) { %>tipuješ <b class="hi"><%= r.myTips %>/<%= r.matchesCount %></b><% } %></span>
           <a href="/rounds/<%= r.id %>" class="rnd-btn btn <%= isMember ? 'btn-primary' : 'btn-secondary' %> btn-sm"><%= isMember ? 'Tipovať' : 'Pozrieť' %></a>
 
@@ -122,14 +122,14 @@
         <% } else if (r.status === 'finished') { %>
         <div class="card round-item">
           <span class="round-n"><%= roundAbbr(r.name) %></span>
-          <div><div class="row g-2 wrap-gap"><b class="hi"><%= r.description || r.name %></b><span class="tag tag-success"><span class="dot"></span>Ukončené</span></div><div class="muted" style="font-size:var(--fs-sm)"><%= r.matchesCount %> zápasov · <%= new Date(r.endDate).toLocaleDateString('sk-SK') %></div></div>
+          <div><div class="row g-2 wrap-gap"><b class="hi"><%= r.description || r.name %></b><span class="tag tag-success"><span class="dot"></span>Ukončené</span></div><div class="muted" style="font-size:var(--fs-sm)"><%= r.matchesCount %> zápasov · <%= fmtDate(r.endDate) %></div></div>
           <span class="rnd-pts muted" style="font-size:var(--fs-sm)"></span>
           <a href="/rounds/<%= r.id %>" class="rnd-btn btn btn-secondary btn-sm">Výsledky</a>
         </div>
         <% } else { %>
         <div class="card round-item" style="opacity:.6">
           <span class="round-n"><%= roundAbbr(r.name) %></span>
-          <div><div class="row g-2 wrap-gap"><b class="hi"><%= r.description || r.name %></b><span class="tag tag-info">Naplánované</span></div><div class="muted" style="font-size:var(--fs-sm)">Otvorí sa <%= new Date(r.startDate).toLocaleDateString('sk-SK') %></div></div>
+          <div><div class="row g-2 wrap-gap"><b class="hi"><%= r.description || r.name %></b><span class="tag tag-info">Naplánované</span></div><div class="muted" style="font-size:var(--fs-sm)">Otvorí sa <%= fmtDate(r.startDate) %></div></div>
           <span class="rnd-pts muted" style="font-size:var(--fs-sm)">—</span>
           <% if (typeof canManage !== 'undefined' && canManage) { %>
           <a href="/rounds/<%= r.id %>" class="rnd-btn btn btn-secondary btn-sm">Spravovať</a>

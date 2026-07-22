@@ -17,7 +17,7 @@ module.exports = {
     },
     dialectOptions: {
       // MariaDB: korektné spracovanie dátumov a časových zón
-      timezone: 'Etc/GMT0',
+      timezone: '+00:00',
     },
   },
   test: {},
@@ -34,7 +34,7 @@ module.exports = {
       underscored: true,
     },
     dialectOptions: {
-      timezone: 'Etc/GMT0',
+      timezone: '+00:00',
     },
   },
 };

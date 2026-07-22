@@ -43,7 +43,8 @@ const createMatchesPage = asyncHandler(async (req, res) => {
   }
 
   // tímy pre výber — LEN zo súpisky ligy (definovanej pri lige)
-  const teams = await league.getTeams({ attributes: ['id', 'name'], order: [['name', 'ASC']] });
+  // 'logo' je potrebné pre zobrazenie znaku tímu vo výbere aj v zozname zápasov
+  const teams = await league.getTeams({ attributes: ['id', 'name', 'logo'], order: [['name', 'ASC']] });
 
   // už pridané zápasy v kole
   const matches = await Match.findAll({

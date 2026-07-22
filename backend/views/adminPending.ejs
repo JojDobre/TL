@@ -42,7 +42,7 @@
     <% g.matches.forEach(function(m){ %>
     <div class="pl-row">
       <div class="tm"><%= m.home %> <span class="faint">vs</span> <%= m.away %> <span class="muted" style="font-weight:400;font-size:var(--fs-xs)">· <%= m.roundName %></span></div>
-      <span class="wh"><%= new Date(m.matchTime).toLocaleString('sk-SK') %></span>
+      <span class="wh"><%= fmtDateTime(m.matchTime) %></span>
       <% if (!g.league.isTemplate) { %><a href="/rounds/<%= m.roundId %>/evaluate" class="btn btn-primary btn-sm">Vyhodnotiť</a><% } %>
     </div>
     <% }); %>

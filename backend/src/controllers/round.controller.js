@@ -14,6 +14,8 @@ const { Op } = Sequelize;
 const { ApiError, asyncHandler } = require('../middleware/error.middleware');
 const { tipQualityWeight } = require('../utils/accuracy.util');
 const notify = require('../utils/notification.service');
+// Parsovanie dátumov z formulárov v slovenskej zóne (viď utils/datetime.util.js)
+const { parseLocalInput } = require('../utils/datetime.util');
 
 const DEFAULT_EXACT = 10;
 
@@ -168,9 +170,11 @@ const createRound = asyncHandler(async (req, res) => {
     throw new ApiError(403, 'Nemáš oprávnenie vytvoriť kolo v tejto lige.');
   }
 
-  const startObj = new Date(startDate);
-  const endObj = new Date(endDate);
-  if (isNaN(startObj) || isNaN(endObj)) throw new ApiError(400, 'Neplatný formát dátumu.');
+  // Dátumy z <input type="datetime-local"> prichádzajú bez zóny — parseLocalInput
+  // ich vyhodnotí ako slovenský čas (inak by server v UTC posunul uzávierku).
+  const startObj = parseLocalInput(startDate);
+  const endObj = parseLocalInput(endDate);
+  if (!startObj || !endObj) throw new ApiError(400, 'Neplatný formát dátumu.');
   if (endObj <= startObj) throw new ApiError(400, 'Koniec tipovania musí byť po začiatku.');
 
   const newRound = await Round.create({
@@ -200,9 +204,9 @@ const updateRound = asyncHandler(async (req, res) => {
   }
 
   // výsledné dátumy (nové alebo pôvodné) a validácia, že koniec je po začiatku
-  const newStart = startDate ? new Date(startDate) : new Date(round.startDate);
-  const newEnd = endDate ? new Date(endDate) : new Date(round.endDate);
-  if (isNaN(newStart) || isNaN(newEnd)) throw new ApiError(400, 'Neplatný formát dátumu.');
+  const newStart = startDate ? parseLocalInput(startDate) : new Date(round.startDate);
+  const newEnd = endDate ? parseLocalInput(endDate) : new Date(round.endDate);
+  if (!newStart || !newEnd || isNaN(newStart) || isNaN(newEnd)) throw new ApiError(400, 'Neplatný formát dátumu.');
   if (newEnd <= newStart) throw new ApiError(400, 'Koniec tipovania musí byť po začiatku.');
   round.startDate = newStart;
   round.endDate = newEnd;

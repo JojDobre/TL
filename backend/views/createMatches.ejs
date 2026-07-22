@@ -65,11 +65,11 @@
       <% } %>
       <div class="match-builder">
         <div class="team-select"><label class="label">Domáci tím</label>
-          <select class="select" id="homeTeam"><% teams.forEach(function(t){ %><option value="<%= t.id %>"><%= t.name %></option><% }); %></select>
+          <select class="select" id="homeTeam"><% teams.forEach(function(t){ %><option value="<%= t.id %>" data-logo="<%= t.logo || '' %>"><%= t.name %></option><% }); %></select>
         </div>
         <span class="vs-mid">vs</span>
         <div class="team-select"><label class="label">Hosťujúci tím</label>
-          <select class="select" id="awayTeam"><% teams.forEach(function(t){ %><option value="<%= t.id %>"><%= t.name %></option><% }); %></select>
+          <select class="select" id="awayTeam"><% teams.forEach(function(t){ %><option value="<%= t.id %>" data-logo="<%= t.logo || '' %>"><%= t.name %></option><% }); %></select>
         </div>
         <div class="team-select"><label class="label">Čas</label><input class="input" type="datetime-local" id="matchTime" style="width:auto"></div>
         <button class="btn btn-brand" style="margin-bottom:0" id="addMatch">+ Pridať</button>
@@ -100,9 +100,9 @@
       <% if (matches.length === 0) { %><p class="muted" id="emptyMsg">Zatiaľ žiadne zápasy. Pridaj prvý vyššie.</p><% } %>
       <% matches.forEach(function(m){ %>
       <div class="built-match" data-match-id="<%= m.id %>">
-        <span class="built-team"><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)"><%= m.homeAbbr %></span><%= m.homeTeam ? m.homeTeam.name : '—' %></span>
+        <span class="built-team"><% if (m.homeTeam && m.homeTeam.logo) { %><span class="team-logo" style="width:30px;height:30px;background:none;border:none"><img src="<%= m.homeTeam.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)"><%= m.homeAbbr %></span><% } %><%= m.homeTeam ? m.homeTeam.name : '—' %></span>
         <span class="vs-mid">:</span>
-        <span class="built-team r"><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)"><%= m.awayAbbr %></span><%= m.awayTeam ? m.awayTeam.name : '—' %></span>
+        <span class="built-team r"><% if (m.awayTeam && m.awayTeam.logo) { %><span class="team-logo" style="width:30px;height:30px;background:none;border:none"><img src="<%= m.awayTeam.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)"><%= m.awayAbbr %></span><% } %><%= m.awayTeam ? m.awayTeam.name : '—' %></span>
         <span class="muted" style="font-size:var(--fs-xs)" data-time="<%= m.matchTime %>"><%= fmtDT(m.matchTime) %></span>
         <span class="built-acts">
           <button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-edit-time title="Upraviť čas">✎</button>
@@ -123,6 +123,19 @@
   var roundId = <%= round.id %>;
   function toast(msg, ok){ var t=document.createElement('div'); t.textContent=msg; t.style.cssText='background:'+(ok?'var(--success)':'var(--danger-soft-100)')+';color:'+(ok?'#fff':'var(--text-1)')+';border:1px solid var(--line);padding:10px 14px;border-radius:10px'; document.getElementById('toastWrap').appendChild(t); setTimeout(function(){t.remove();},2500); }
   function abbr(n){ return (n||'?').split(' ').map(function(w){return w[0];}).filter(Boolean).slice(0,3).join('').toUpperCase(); }
+
+  // Vykreslí znak tímu: logo z data-logo na <option>, inak sivý štvorček so
+  // skratkou (rovnaký vzhľad ako server-rendered zoznam vyššie).
+  function teamLogoHtml(opt){
+    var logo = opt ? (opt.getAttribute('data-logo') || '') : '';
+    var name = opt ? opt.text : '';
+    if (logo) {
+      return '<span class="team-logo" style="width:30px;height:30px;background:none;border:none">'
+        + '<img src="' + logo + '" alt="" style="width:100%;height:100%;object-fit:contain"></span>';
+    }
+    return '<span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)">'
+      + abbr(name) + '</span>';
+  }
   function fmtDT(d){ var dt=new Date(d); return dt.toLocaleDateString('sk-SK',{day:'numeric',month:'numeric'})+' · '+dt.toLocaleTimeString('sk-SK',{hour:'2-digit',minute:'2-digit'}); }
 
   var add = document.getElementById('addMatch');
@@ -143,7 +156,14 @@
         var m = res.data;
         var empty = document.getElementById('emptyMsg'); if (empty) empty.remove();
         var row = document.createElement('div'); row.className='built-match'; row.setAttribute('data-match-id', m.id);
-        row.innerHTML = '<span class="built-team"><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)">'+abbr(home.options[home.selectedIndex].text)+'</span>'+home.options[home.selectedIndex].text+'</span><span class="vs-mid">:</span><span class="built-team r"><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)">'+abbr(away.options[away.selectedIndex].text)+'</span>'+away.options[away.selectedIndex].text+'</span><span class="muted" style="font-size:var(--fs-xs)" data-time="'+matchTime+'">'+fmtDT(matchTime)+'</span><span class="built-acts"><button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-edit-time title="Upraviť čas">✎</button><button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-del title="Odstrániť">✕</button></span>';
+        row.innerHTML = '<span class="built-team">' + teamLogoHtml(home.options[home.selectedIndex]) + home.options[home.selectedIndex].text + '</span>'
+          + '<span class="vs-mid">:</span>'
+          + '<span class="built-team r">' + teamLogoHtml(away.options[away.selectedIndex]) + away.options[away.selectedIndex].text + '</span>'
+          + '<span class="muted" style="font-size:var(--fs-xs)" data-time="' + matchTime + '">' + fmtDT(matchTime) + '</span>'
+          + '<span class="built-acts">'
+          + '<button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-edit-time title="Upraviť čas">\u270E</button>'
+          + '<button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-del title="Odstrániť">\u2715</button>'
+          + '</span>';
         document.getElementById('builtList').appendChild(row);
         updateCount();
         toast('Zápas pridaný ✓', true);

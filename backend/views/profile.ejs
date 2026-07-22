@@ -60,7 +60,7 @@
       <% } %>
       <% recent.forEach(function(t){ %>
       <div class="th-row">
-        <span class="th-mt"><span class="team-logo" style="background:linear-gradient(135deg,#0b4ea2,#06306a)"><%= t.homeAbbr %></span><span class="th-vs"><%= t.homeAbbr %> – <%= t.awayAbbr %></span></span>
+        <span class="th-mt"><span class="th-vs"><%= t.homeAbbr %> – <%= t.awayAbbr %></span></span>
         <span class="th-meta"><%= t.context %></span>
         <span class="th-tip">tip <%= t.tip %></span>
         <% if (t.finished) { %><span class="pts-pill<%= t.points >= 10 ? ' max' : (t.points ? '' : ' zero') %>">+<%= t.points %></span><% } else { %><span class="tag tag-muted" style="font-size:var(--fs-xs)">čaká</span><% } %>
@@ -76,7 +76,7 @@
         <div class="between"><span class="muted">Prezývka</span><b class="hi">@<%= profile.username %></b></div>
         <div class="between"><span class="muted">E-mail</span><b class="hi"><%= profile.email || '—' %></b></div>
         <div class="between"><span class="muted">Rola</span><span class="tag <%= profile.role === 'admin' ? 'tag-brand' : (profile.role === 'vip' ? 'tag-gold' : 'tag-muted') %>"><%= profile.role === 'admin' ? 'Admin' : (profile.role === 'vip' ? 'VIP' : 'Hráč') %></span></div>
-        <% if (profile.createdAt) { %><div class="between"><span class="muted">Člen od</span><b class="hi"><%= new Date(profile.createdAt).toLocaleDateString('sk-SK',{day:'numeric',month:'long',year:'numeric'}) %></b></div><% } %>
+        <% if (profile.createdAt) { %><div class="between"><span class="muted">Člen od</span><b class="hi"><%= fmtDateLong(profile.createdAt) %></b></div><% } %>
       </div>
       <p class="muted" style="font-size:var(--fs-xs);margin-top:16px">Údaje účtu, profilovú fotku a heslo zmeníš v <a href="/settings" style="color:var(--brand-bright)">nastaveniach</a>.</p>
     </div>

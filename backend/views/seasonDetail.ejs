@@ -219,7 +219,7 @@
         <% } else { %>
         <% news.forEach(function(n){ %>
         <div class="news-item">
-          <span class="news-date"><%= n.at ? new Date(n.at).toLocaleDateString('sk-SK',{day:'numeric',month:'short'}) : '' %></span>
+          <span class="news-date"><%= n.at ? fmtDateShort(n.at) : '' %></span>
           <div>
             <div class="row g-2 wrap-gap" style="margin-bottom:3px"><span class="tag <%= n.tagClass %>"><%= n.tagText %></span><b class="hi"><%= n.title %></b></div>
             <p class="muted" style="font-size:var(--fs-sm)"><%= n.desc %></p>

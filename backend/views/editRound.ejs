@@ -14,7 +14,12 @@
 <%- include('partials/season-subnav', { seasonId: league.seasonId, seasonName: (league.Season && league.Season.name) || 'Sezóna', active: 'leagues' }) %>
 
 <%
-  function dtLocal(d){ if(!d) return ''; var x=new Date(d); var off=x.getTimezoneOffset(); var l=new Date(x.getTime()-off*60000); return l.toISOString().slice(0,16); }
+  // Predvyplnenie <input type="datetime-local"> ide cez toLocalInputValue z
+  // utils/datetime.util.js — formátuje v slovenskej zóne bez ohľadu na zónu
+  // servera. (Pôvodné riešenie používalo getTimezoneOffset() servera, takže na
+  // VPS bežiacom v UTC predvyplnilo čas posunutý o 2 hodiny a admin ho
+  // uložením nechtiac presunul.)
+  var dtLocal = toLocalInputValue;
 %>
 
 <div class="wrap form-head" style="padding-top:24px; padding-bottom:24px"">

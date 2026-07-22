@@ -14,6 +14,8 @@ const { Op } = Sequelize;
 const { ApiError, asyncHandler } = require('../middleware/error.middleware');
 const { isLeagueLocked } = require('../utils/league.utils');
 const notify = require('../utils/notification.service');
+// Parsovanie času z formulárov v slovenskej zóne (viď utils/datetime.util.js)
+const { parseLocalInput } = require('../utils/datetime.util');
 
 const DEFAULT_SCORING = { exactScore: 10, correctGoals: 1, correctWinner: 3, goalDifference: 2 };
 
@@ -162,8 +164,11 @@ const createMatch = asyncHandler(async (req, res) => {
   const [homeTeam, awayTeam] = await Promise.all([Team.findByPk(homeTeamId), Team.findByPk(awayTeamId)]);
   if (!homeTeam || !awayTeam) throw new ApiError(404, 'Jeden alebo oba tímy neboli nájdené.');
 
-  const when = new Date(matchTime);
-  if (isNaN(when)) throw new ApiError(400, 'Neplatný čas zápasu.');
+  // Čas z <input type="datetime-local"> prichádza bez zóny ("2026-08-15T18:00").
+  // parseLocalInput ho vyhodnotí ako slovenský čas — bez toho by ho server
+  // bežiaci v UTC uložil o 2 hodiny posunutý.
+  const when = parseLocalInput(matchTime);
+  if (!when) throw new ApiError(400, 'Neplatný čas zápasu.');
 
   const newMatch = await Match.create({
     roundId, homeTeamId, awayTeamId,
@@ -194,8 +199,8 @@ const updateMatch = asyncHandler(async (req, res) => {
   if (homeTeamId) match.homeTeamId = homeTeamId;
   if (awayTeamId) match.awayTeamId = awayTeamId;
   if (matchTime) {
-    const when = new Date(matchTime);
-    if (isNaN(when)) throw new ApiError(400, 'Neplatný čas zápasu.');
+    const when = parseLocalInput(matchTime);
+    if (!when) throw new ApiError(400, 'Neplatný čas zápasu.');
     match.matchTime = when;
   }
   if (status) match.status = status;
@@ -384,8 +389,8 @@ const bulkCreateMatches = asyncHandler(async (req, res) => {
     if (!home) { errors.push(`Riadok ${i + 1}: tím „${homeName}" nie je v súpiske ligy.`); continue; }
     if (!away) { errors.push(`Riadok ${i + 1}: tím „${awayName}" nie je v súpiske ligy.`); continue; }
     if (home.id === away.id) { errors.push(`Riadok ${i + 1}: tímy sú rovnaké.`); continue; }
-    const when = new Date(timeStr.replace(' ', 'T'));
-    if (isNaN(when)) { errors.push(`Riadok ${i + 1}: neplatný čas „${timeStr}".`); continue; }
+    const when = parseLocalInput(timeStr.replace(' ', 'T'));
+    if (!when) { errors.push(`Riadok ${i + 1}: neplatný čas „${timeStr}".`); continue; }
     const tt = (typeStr || '').trim().toLowerCase();
     const tipType = /^(winner_no_draw|no_draw|1x2_nodraw|bez_remizy)$/.test(tt) ? 'winner_no_draw' : (/^(winner|víťaz|vitaz|1x2)$/i.test(tt) ? 'winner' : 'exact_score');
     await Match.create({ roundId: round.id, homeTeamId: home.id, awayTeamId: away.id, matchTime: when, tipType, status: 'scheduled' });

@@ -52,7 +52,7 @@
         <span style="width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--warning-soft,rgba(245,180,80,.15));color:var(--warning);flex:none">⚠</span>
         <div class="grow" style="min-width:0;flex:1">
           <b class="hi" style="font-size:var(--fs-sm)"><%= p.leagueName %> · <%= p.roundName %></b>
-          <div class="muted" style="font-size:var(--fs-xs)">zápas #<%= p.id %> · <%= new Date(p.matchTime).toLocaleString('sk-SK') %></div>
+          <div class="muted" style="font-size:var(--fs-xs)">zápas #<%= p.id %> · <%= fmtDateTime(p.matchTime) %></div>
         </div>
         <% if (p.roundId) { %><a href="/rounds/<%= p.roundId %>/evaluate" class="btn btn-primary btn-sm">Vyhodnotiť</a><% } %>
       </div>
@@ -92,7 +92,7 @@
       <% (upcomingDeadlines||[]).forEach(function(d){ %>
         <div class="lst-row">
           <span class="av" style="background:var(--brand-soft);color:var(--brand-bright)">⏱</span>
-          <div class="bd"><div class="nm"><%= d.leagueName %> · <%= d.name %></div><div class="sub"><%= new Date(d.endDate).toLocaleString('sk-SK',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) %></div></div>
+          <div class="bd"><div class="nm"><%= d.leagueName %> · <%= d.name %></div><div class="sub"><%= fmtDateTimeShort(d.endDate) %></div></div>
           <a href="/rounds/<%= d.id %>" class="btn btn-secondary btn-sm">Otvoriť</a>
         </div>
       <% }); %>
@@ -122,7 +122,7 @@
       <% (recentUsers||[]).forEach(function(u){ %>
         <div class="lst-row">
           <span class="av"><%= (u.name||'?').split(' ').map(function(w){return w[0];}).filter(Boolean).slice(0,2).join('').toUpperCase() %></span>
-          <div class="bd"><div class="nm"><%= u.name %><% if (u.role === 'admin') { %> <span class="tag tag-brand" style="padding:0 5px">admin</span><% } else if (u.role === 'vip') { %> <span class="tag tag-gold" style="padding:0 5px">VIP</span><% } %></div><div class="sub">@<%= u.username %><% if (u.createdAt) { %> · <%= new Date(u.createdAt).toLocaleDateString('sk-SK',{day:'numeric',month:'short'}) %><% } %></div></div>
+          <div class="bd"><div class="nm"><%= u.name %><% if (u.role === 'admin') { %> <span class="tag tag-brand" style="padding:0 5px">admin</span><% } else if (u.role === 'vip') { %> <span class="tag tag-gold" style="padding:0 5px">VIP</span><% } %></div><div class="sub">@<%= u.username %><% if (u.createdAt) { %> · <%= fmtDateShort(u.createdAt) %><% } %></div></div>
         </div>
       <% }); %>
     </div>

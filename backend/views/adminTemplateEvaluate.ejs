@@ -73,7 +73,7 @@
     <div class="ev-match <%= done ? 'done' : '' %> <%= canc ? 'canceled' : '' %> <%= due ? 'due' : '' %>" data-match="<%= m.id %>" data-type="<%= m.tipType %>" data-time="<%= new Date(m.matchTime).getTime() %>">
       <div>
         <div class="ev-teams"><%= m.homeTeam %> <span class="faint">vs</span> <%= m.awayTeam %></div>
-        <div class="ev-when"><%= new Date(m.matchTime).toLocaleString('sk-SK') %> · <%= (m.tipType === 'winner' || m.tipType === 'winner_no_draw') ? 'tip na víťaza' : 'tip na skóre' %><span class="m-state"><%= canc ? ' · zrušený' : (done ? ' · vyhodnotený' : (due ? ' · ČAKÁ NA VÝSLEDOK' : '')) %></span></div>
+        <div class="ev-when"><%= fmtDateTime(m.matchTime) %> · <%= (m.tipType === 'winner' || m.tipType === 'winner_no_draw') ? 'tip na víťaza' : 'tip na skóre' %><span class="m-state"><%= canc ? ' · zrušený' : (done ? ' · vyhodnotený' : (due ? ' · ČAKÁ NA VÝSLEDOK' : '')) %></span></div>
       </div>
 
       <% if (m.tipType === 'winner' || m.tipType === 'winner_no_draw') { %>

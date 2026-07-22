@@ -125,7 +125,7 @@
       <div class="round-block" data-round="<%= r.id %>">
         <div class="round-head" data-toggle-round>
           <span class="chev">▶</span>
-          <div class="rh-main"><b class="hi"><%= r.name %></b> <span class="muted" style="font-size:var(--fs-xs)"><%= r.startDate ? new Date(r.startDate).toLocaleString('sk-SK') : '' %> → <%= r.endDate ? new Date(r.endDate).toLocaleString('sk-SK') : '' %></span></div>
+          <div class="rh-main"><b class="hi"><%= r.name %></b> <span class="muted" style="font-size:var(--fs-xs)"><%= r.startDate ? fmtDateTime(r.startDate) : '' %> → <%= r.endDate ? fmtDateTime(r.endDate) : '' %></span></div>
           <span class="rh-count"><%= r.matches.length %> záp.</span>
           <button class="btn btn-ghost btn-icon" title="Vymazať kolo" data-del-round="<%= r.id %>" style="color:var(--danger)" onclick="event.stopPropagation()">🗑</button>
         </div>
@@ -135,7 +135,7 @@
             <% r.matches.forEach(function(m){ %>
             <div class="match-line" data-match="<%= m.id %>">
               <span class="match-teams"><%= m.homeTeam %> <span class="faint">vs</span> <%= m.awayTeam %></span>
-              <span class="muted"><%= new Date(m.matchTime).toLocaleString('sk-SK',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}) %></span>
+              <span class="muted"><%= fmtDateTimeShort(m.matchTime) %></span>
               <% var _wt = (m.tipType === 'winner' || m.tipType === 'winner_no_draw'); %><span class="tag <%= _wt ? 'tag-muted' : 'tag-info' %>"><%= m.tipType === 'winner_no_draw' ? 'Víťaz (1/2)' : (m.tipType === 'winner' ? 'Víťaz (1/X/2)' : 'Skóre') %></span>
               <button class="btn btn-ghost btn-icon" title="Vymazať" data-del-match="<%= m.id %>" style="color:var(--danger)">✕</button>
             </div>

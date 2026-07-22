@@ -9,6 +9,7 @@ const syncDatabase = require('./src/config/db.sync');
 const { errorHandler, notFoundHandler } = require('./src/middleware/error.middleware');
 const { createSessionStore } = require('./src/config/session-store');
 const { provideCsrfToken, verifyCsrf } = require('./src/middleware/csrf.middleware');
+const dt = require('./src/utils/datetime.util');
 
 // API routes (vracajú JSON — pre akcie cez fetch z prehliadača)
 const authApi = require('./src/routes/auth.routes');
@@ -119,6 +120,18 @@ app.use(provideCsrfToken);
 
 // ---- sprístupnenie prihláseného používateľa všetkým šablónam ----
 app.use(async (req, res, next) => {
+  // Formátovanie dátumov v slovenskej zóne (Europe/Bratislava) bez ohľadu na to,
+  // v akej zóne beží server. Šablóny majú volať tieto helpery namiesto
+  // `new Date(x).toLocaleString(...)`, ktoré by použilo zónu servera (na VPS UTC).
+  res.locals.fmtDate = dt.fmtDate;
+  res.locals.fmtDateShort = dt.fmtDateShort;
+  res.locals.fmtTime = dt.fmtTime;
+  res.locals.fmtDateTime = dt.fmtDateTime;
+  res.locals.fmtDateTimeShort = dt.fmtDateTimeShort;
+  res.locals.fmtDateLong = dt.fmtDateLong;
+  res.locals.toLocalInputValue = dt.toLocalInputValue;
+  res.locals.appTimeZone = dt.TZ;
+
   res.locals.currentUserId = req.session.userId || null;
   res.locals.currentUserRole = req.session.userRole || null;
   res.locals.currentUserName = req.session.userName || null;

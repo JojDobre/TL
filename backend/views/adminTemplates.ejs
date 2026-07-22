@@ -53,7 +53,7 @@
         <span><span class="n"><%= t.clonesCount %></span> použití (ligy)</span>
       </div>
       <div class="tpl-meta">
-        <span>Dostupná: <%= t.availableFrom ? new Date(t.availableFrom).toLocaleDateString('sk-SK') : '—' %> → <%= t.availableTo ? new Date(t.availableTo).toLocaleDateString('sk-SK') : '—' %></span>
+        <span>Dostupná: <%= t.availableFrom ? fmtDate(t.availableFrom) : '—' %> → <%= t.availableTo ? fmtDate(t.availableTo) : '—' %></span>
       </div>
     </div>
     <div class="tpl-actions">
