@@ -8,6 +8,11 @@
   .form-card h3 { font-size:var(--fs-h4); margin-bottom:4px; }
   .form-card .sub { color:var(--text-3); font-size:var(--fs-sm); margin-bottom:20px; }
   .field-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .score-row { display:flex; align-items:center; gap:14px; padding:12px 0; border-bottom:1px solid var(--line); }
+  .score-row:last-of-type { border:none; }
+  .score-row .desc { flex:1; }
+  .score-input { width:72px; }
+  .score-input input { text-align:center; font-family:var(--num); font-weight:700; }
   .type-pick { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
   .type-opt { padding:18px; border-radius:var(--r-md); border:1.5px solid var(--line); background:var(--surface-2); cursor:pointer; transition:all .15s; }
   .type-opt:hover { border-color:var(--line-strong); }
@@ -101,15 +106,34 @@
       <div style="margin-top:18px;border-top:1px solid var(--line);padding-top:18px">
         <label class="label">Šablóna <span class="faint">(voliteľné)</span></label>
         <p class="muted" style="font-size:var(--fs-sm);margin:2px 0 10px">Vyber oficiálnu šablónu — skopírujú sa jej kolá a zápasy. Výsledky spravuje admin a prejavia sa automaticky. Bez šablóny si kolá vytvoríš sám.</p>
-        <select class="select" name="templateId">
+        <select class="select" name="templateId" id="tplSelect">
           <option value="">— Bez šablóny (vlastný turnaj) —</option>
           <% templates.forEach(function(t){ %><option value="<%= t.id %>"><%= t.name %></option><% }); %>
         </select>
+        <div class="field" id="tipTypeField" hidden style="margin-top:12px">
+          <label class="label">Typ tipovania</label>
+          <select class="select" name="tipType" id="tipTypeSelect">
+            <option value="exact_score" selected>Presný výsledok (skóre)</option>
+            <option value="winner">Víťaz — 1 / X / 2 (možná remíza)</option>
+            <option value="winner_no_draw">Víťaz bez remízy — 1 / 2</option>
+          </select>
+          <span class="hint">Platí pre všetky zápasy skopírované zo šablóny. Pri type „Víťaz“ sa použije len bodovanie za správneho víťaza.</span>
+        </div>
         <div class="card" style="background:var(--surface-2);padding:11px 14px;margin-top:12px;display:flex;gap:9px;align-items:flex-start">
           <span style="font-size:15px">ℹ️</span><span style="font-size:var(--fs-sm);color:var(--text-2)">Pri turnaji zo šablóny nemôžeš meniť výsledky zápasov — riadi ich admin. Bodovanie a názov ostávajú tvoje.</span>
         </div>
       </div>
       <% } %>
+
+      <div style="margin-top:18px;border-top:1px solid var(--line);padding-top:18px">
+        <label class="label">Bodovanie</label>
+        <p class="muted" style="font-size:var(--fs-sm);margin:2px 0 12px">Nastav, koľko bodov sa prideľuje za jednotlivé presnosti tipu.</p>
+        <div class="score-row score-exact"><div class="desc"><b class="hi">Presný výsledok</b><div class="muted" style="font-size:var(--fs-sm)">Trafený presný počet gólov oboch tímov</div></div><div class="field score-input"><input class="input" type="number" min="0" name="exactScore" value="10"></div></div>
+        <div class="score-row"><div class="desc"><b class="hi">Víťaz / remíza</b><div class="muted" style="font-size:var(--fs-sm)">Správne určený víťaz alebo remíza</div></div><div class="field score-input"><input class="input" type="number" min="0" name="correctWinner" value="3"></div></div>
+        <div class="score-row score-exact"><div class="desc"><b class="hi">Gólový rozdiel</b><div class="muted" style="font-size:var(--fs-sm)">Trafený rozdiel skóre (napr. +2)</div></div><div class="field score-input"><input class="input" type="number" min="0" name="goalDifference" value="2"></div></div>
+        <div class="score-row score-exact"><div class="desc"><b class="hi">Presný počet gólov tímu</b><div class="muted" style="font-size:var(--fs-sm)">Za každý správne tipnutý tím</div></div><div class="field score-input"><input class="input" type="number" min="0" name="correctGoals" value="1"></div></div>
+        <p class="muted" id="scoreWinnerNote" hidden style="font-size:var(--fs-sm);margin-top:10px">Pri tipovaní na víťaza sa hodnotí len správne určený víťaz — ostatné položky sa nepoužijú.</p>
+      </div>
     </div>
 
     <div class="card form-card" id="privacyCard"<%= currentUserRole === 'admin' ? ' hidden' : '' %>>
@@ -237,6 +261,30 @@
         applyMode(opt.getAttribute('data-mode'));
       });
     });
+
+    // typ tipovania sa ponúka len ak je vybraná šablóna
+    var tplSelect = document.getElementById('tplSelect');
+    var tipField = document.getElementById('tipTypeField');
+    var tipSelect = document.getElementById('tipTypeSelect');
+    var scoreNote = document.getElementById('scoreWinnerNote');
+
+    function syncScoreRows() {
+      // polia sa iba skryjú — hodnoty ostávajú a pri tipe na víťaza sa nepoužijú
+      var winner = !!(tipField && !tipField.hasAttribute('hidden') && tipSelect
+        && (tipSelect.value === 'winner' || tipSelect.value === 'winner_no_draw'));
+      document.querySelectorAll('.score-exact').forEach(function (row) {
+        row.style.display = winner ? 'none' : '';
+      });
+      if (scoreNote) scoreNote.toggleAttribute('hidden', !winner);
+    }
+    function syncTipField() {
+      if (!tplSelect || !tipField) return;
+      tipField.toggleAttribute('hidden', !tplSelect.value);
+      syncScoreRows();
+    }
+    if (tplSelect) tplSelect.addEventListener('change', syncTipField);
+    if (tipSelect) tipSelect.addEventListener('change', syncScoreRows);
+    syncTipField();
 
     // heslo ligy toggle
     var lgPwToggle = document.getElementById('lgPwToggle');

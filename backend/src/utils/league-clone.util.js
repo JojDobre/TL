@@ -10,11 +10,20 @@
 
 const { League, Round, Match } = require('../models');
 
+// Povolené typy tipovania (musia sedieť s ENUM v models/match.model.js).
+const TIP_TYPES = ['winner', 'winner_no_draw', 'exact_score'];
+
 // Vytvorí klon. Vstup:
-//   template     — inštancia League (šablóna)
-//   targetLeague — už vytvorená cieľová liga (klon), do ktorej kopírujeme kolá/zápasy
+//   template        — inštancia League (šablóna)
+//   targetLeague    — už vytvorená cieľová liga (klon), do ktorej kopírujeme kolá/zápasy
+//   tipTypeOverride — voliteľné; ak je zadaný platný typ, VŠETKY klonované zápasy
+//                     dostanú tento typ tipovania namiesto typu zo šablóny.
+//                     Šablóna sa vždy zadáva ako 'exact_score' a používateľ si pri
+//                     tvorbe ligy/turnaja zvolí, ako sa v jeho lige bude tipovať.
 // Vráti počet skopírovaných kôl a zápasov.
-async function cloneTemplateInto(template, targetLeague) {
+async function cloneTemplateInto(template, targetLeague, tipTypeOverride) {
+  const override = TIP_TYPES.includes(tipTypeOverride) ? tipTypeOverride : null;
+
   // načítaj kolá šablóny so zápasmi
   const rounds = await Round.findAll({
     where: { leagueId: template.id },
@@ -43,7 +52,7 @@ async function cloneTemplateInto(template, targetLeague) {
         homeTeamId: m.homeTeamId,
         awayTeamId: m.awayTeamId,
         matchTime: m.matchTime,
-        tipType: m.tipType,
+        tipType: override || m.tipType,
         // výsledok sa NEkopíruje do vlastných polí — číta sa z originálu
         homeScore: null,
         awayScore: null,

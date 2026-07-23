@@ -310,6 +310,11 @@ const createLeagueSubmit = asyncHandler(async (req, res) => {
   const markTemplate = leagueType === 'official' && user.role === 'admin'
     && (req.body.isTemplate === 'on' || req.body.isTemplate === 'true');
 
+  // typ tipovania pre ligu zo šablóny — používateľ si volí sám (šablóna je vždy
+  // uložená ako 'exact_score'). Pri lige bez šablóny sa nepoužije.
+  const TIP_TYPES = ['winner', 'winner_no_draw', 'exact_score'];
+  const tipType = TIP_TYPES.includes(req.body.tipType) ? req.body.tipType : 'exact_score';
+
   // bodovanie z formulára (s rozumnými predvolenými hodnotami)
   const num = (v, d) => { const n = parseInt(v, 10); return Number.isInteger(n) && n >= 0 ? n : d; };
   const scoringSystem = {
@@ -356,7 +361,7 @@ const createLeagueSubmit = asyncHandler(async (req, res) => {
 
   // ak je liga zo šablóny → naklonuj kolá a zápasy zo šablóny
   if (template) {
-    try { await cloneTemplateInto(template, league); }
+    try { await cloneTemplateInto(template, league, tipType); }
     catch (e) { /* ak klon zlyhá, liga ostane prázdna — používateľ dostane info v detaile */ }
     // klon má tímy/zápasy zo šablóny → rovno na detail
     achievements.evaluateInBackground([userId]);

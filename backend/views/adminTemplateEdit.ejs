@@ -30,6 +30,8 @@
   .match-line:last-child { border:none; }
   .match-teams { color:var(--text-1); font-weight:600; }
   .add-match-row { display:grid; grid-template-columns:1fr 1fr 1fr auto auto; gap:8px; align-items:end; margin-top:12px; padding-top:12px; border-top:1px dashed var(--line); }
+  .round-edit { display:none; grid-template-columns:1fr 1fr 1fr auto auto; gap:8px; align-items:end; padding:12px 16px; background:var(--surface-2); border-bottom:1px solid var(--line); }
+  .round-block.editing .round-edit { display:grid; }
   .mini-label { font-size:var(--fs-xs); color:var(--text-4); display:block; margin-bottom:3px; }
   .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--surface-3); color:var(--text-1); padding:11px 18px; border-radius:10px; z-index:300; font-size:var(--fs-sm); box-shadow:0 6px 20px rgba(0,0,0,.35); border:1px solid var(--line-strong); }
   .toast.err { background:#3a1620; border-color:rgba(240,71,106,.5); color:#ffb3c2; }
@@ -41,6 +43,8 @@
   @media (max-width:600px){
     .ad-head { padding:16px 0 10px; }
     .add-match-row { grid-template-columns:1fr 1fr; gap:8px; }
+    .round-edit { grid-template-columns:1fr 1fr; gap:8px; padding:12px 14px; }
+    .round-edit .re-name { grid-column:1 / -1; }
     .add-match-row .btn-add-match { grid-column:1 / -1; }
     .match-line { grid-template-columns:1fr auto; row-gap:4px; padding:10px 2px; }
     .match-line .match-teams { grid-column:1 / -1; }
@@ -127,7 +131,15 @@
           <span class="chev">▶</span>
           <div class="rh-main"><b class="hi"><%= r.name %></b> <span class="muted" style="font-size:var(--fs-xs)"><%= r.startDate ? fmtDateTime(r.startDate) : '' %> → <%= r.endDate ? fmtDateTime(r.endDate) : '' %></span></div>
           <span class="rh-count"><%= r.matches.length %> záp.</span>
+          <button class="btn btn-ghost btn-icon" title="Upraviť kolo" data-edit-round="<%= r.id %>" onclick="event.stopPropagation()">✎</button>
           <button class="btn btn-ghost btn-icon" title="Vymazať kolo" data-del-round="<%= r.id %>" style="color:var(--danger)" onclick="event.stopPropagation()">🗑</button>
+        </div>
+        <div class="round-edit" data-editrow="<%= r.id %>" data-orig-name="<%= r.name %>" data-orig-start="<%= toLocalInputValue(r.startDate) %>" data-orig-end="<%= toLocalInputValue(r.endDate) %>">
+          <div class="re-name"><span class="mini-label">Názov kola</span><input class="input inp-rname" value="<%= r.name %>"></div>
+          <div><span class="mini-label">Začiatok tipovania</span><input class="input inp-rstart" type="datetime-local" value="<%= toLocalInputValue(r.startDate) %>"></div>
+          <div><span class="mini-label">Uzávierka</span><input class="input inp-rend" type="datetime-local" value="<%= toLocalInputValue(r.endDate) %>"></div>
+          <button class="btn btn-secondary btn-sm btn-save-round">Uložiť</button>
+          <button class="btn btn-ghost btn-sm btn-cancel-round">Zrušiť</button>
         </div>
         <div class="round-body">
           <div class="match-list" data-matches="<%= r.id %>">
@@ -241,6 +253,54 @@
       } catch(err){ toast(err.message, true); }
       return;
     }
+    // otvoriť/zavrieť editáciu kola
+    var er = e.target.closest('[data-edit-round]');
+    if (er){
+      er.closest('.round-block').classList.toggle('editing');
+      return;
+    }
+    // zrušiť editáciu kola (vráti pôvodné hodnoty z data- atribútov riadku)
+    var cr = e.target.closest('.btn-cancel-round');
+    if (cr){
+      var blkC = cr.closest('.round-block');
+      var rowC = blkC.querySelector('.round-edit');
+      rowC.querySelector('.inp-rname').value  = rowC.getAttribute('data-orig-name')  || rowC.querySelector('.inp-rname').defaultValue;
+      rowC.querySelector('.inp-rstart').value = rowC.getAttribute('data-orig-start') || rowC.querySelector('.inp-rstart').defaultValue;
+      rowC.querySelector('.inp-rend').value   = rowC.getAttribute('data-orig-end')   || rowC.querySelector('.inp-rend').defaultValue;
+      blkC.classList.remove('editing');
+      return;
+    }
+    // uložiť zmeny kola
+    var sr = e.target.closest('.btn-save-round');
+    if (sr){
+      var blkS = sr.closest('.round-block');
+      var ridS = blkS.getAttribute('data-round');
+      var rowS = blkS.querySelector('.round-edit');
+      var nName  = rowS.querySelector('.inp-rname').value.trim();
+      var nStart = rowS.querySelector('.inp-rstart').value;
+      var nEnd   = rowS.querySelector('.inp-rend').value;
+      if (!nName){ toast('Zadaj názov kola.', true); return; }
+      if (!nStart || !nEnd){ toast('Zadaj začiatok aj uzávierku.', true); return; }
+      if (new Date(nEnd) <= new Date(nStart)){ toast('Uzávierka musí byť po začiatku.', true); return; }
+      sr.disabled = true;
+      try {
+        await api('/api/rounds/'+ridS, { method:'PUT', body: JSON.stringify({ name: nName, startDate: nStart, endDate: nEnd }) });
+        // prepíš hlavičku kola
+        var mainS = blkS.querySelector('.round-head .rh-main');
+        mainS.innerHTML = '<b class="hi"></b> <span class="muted" style="font-size:var(--fs-xs)"></span>';
+        mainS.querySelector('b').textContent = nName;
+        mainS.querySelector('span').textContent =
+          new Date(nStart).toLocaleString('sk-SK') + ' → ' + new Date(nEnd).toLocaleString('sk-SK');
+        // ulož nové hodnoty ako "pôvodné" pre prípadné zrušenie
+        rowS.setAttribute('data-orig-name', nName);
+        rowS.setAttribute('data-orig-start', nStart);
+        rowS.setAttribute('data-orig-end', nEnd);
+        blkS.classList.remove('editing');
+        toast('Kolo upravené.');
+      } catch(err){ toast(err.message, true); }
+      finally { sr.disabled = false; }
+      return;
+    }
     // vymazať kolo
     var dr = e.target.closest('[data-del-round]');
     if (dr){
@@ -327,7 +387,14 @@
       block.innerHTML =
         '<div class="round-head" data-toggle-round><span class="chev">▶</span><div class="rh-main"><b class="hi">'+name+'</b> <span class="muted" style="font-size:var(--fs-xs)">'+sD.toLocaleString('sk-SK')+' → '+eD.toLocaleString('sk-SK')+'</span></div>'
         + '<span class="rh-count">0 záp.</span>'
+        + '<button class="btn btn-ghost btn-icon" title="Upraviť kolo" data-edit-round="'+rid+'" onclick="event.stopPropagation()">✎</button>'
         + '<button class="btn btn-ghost btn-icon" title="Vymazať kolo" data-del-round="'+rid+'" style="color:var(--danger)" onclick="event.stopPropagation()">🗑</button></div>'
+        + '<div class="round-edit" data-editrow="'+rid+'" data-orig-name="'+name.replace(/"/g,'&quot;')+'" data-orig-start="'+start+'" data-orig-end="'+end+'">'
+        + '<div class="re-name"><span class="mini-label">Názov kola</span><input class="input inp-rname" value="'+name.replace(/"/g,'&quot;')+'"></div>'
+        + '<div><span class="mini-label">Začiatok tipovania</span><input class="input inp-rstart" type="datetime-local" value="'+start+'"></div>'
+        + '<div><span class="mini-label">Uzávierka</span><input class="input inp-rend" type="datetime-local" value="'+end+'"></div>'
+        + '<button class="btn btn-secondary btn-sm btn-save-round">Uložiť</button>'
+        + '<button class="btn btn-ghost btn-sm btn-cancel-round">Zrušiť</button></div>'
         + '<div class="round-body"><div class="match-list" data-matches="'+rid+'"><p class="muted nomatch" style="font-size:var(--fs-sm)">Žiadne zápasy.</p></div>'
         + '<div class="add-match-row" data-addmatch="'+rid+'">'
         + '<div><span class="mini-label">Domáci</span><select class="select sel-home">'+teamOptions()+'</select></div>'

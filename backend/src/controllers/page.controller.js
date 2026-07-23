@@ -358,6 +358,20 @@ const createSeasonSubmit = asyncHandler(async (req, res) => {
       if (!template) return await back('Vybraná šablóna neexistuje.');
     }
 
+    // typ tipovania pre turnaj zo šablóny — volí si ho používateľ (šablóna je
+    // vždy uložená ako 'exact_score'). Bez šablóny sa neuplatní.
+    const TIP_TYPES = ['winner', 'winner_no_draw', 'exact_score'];
+    const tipType = TIP_TYPES.includes(req.body.tipType) ? req.body.tipType : 'exact_score';
+
+    // bodovanie turnaja z formulára (predtým bolo natvrdo zadrátované)
+    const num = (v, d) => { const n = parseInt(v, 10); return Number.isInteger(n) && n >= 0 ? n : d; };
+    const scoringSystem = {
+      exactScore: num(req.body.exactScore, 10),
+      correctWinner: num(req.body.correctWinner, 3),
+      goalDifference: num(req.body.goalDifference, 2),
+      correctGoals: num(req.body.correctGoals, 1),
+    };
+
     // heslo LIGY (pripojenie do turnaja ide cez ID ligy)
     let leaguePwHash = null;
     const lgPw = req.body.leaguePassword;
@@ -386,7 +400,7 @@ const createSeasonSubmit = asyncHandler(async (req, res) => {
           name: name.trim(), description: description || null,
           type: leagueType, joinCode, password: leaguePwHash, hasPassword: !!leaguePwHash,
           seasonId: season.id, creatorId: userId,
-          scoringSystem: { exactScore: 10, correctWinner: 3, goalDifference: 2, correctGoals: 1 },
+          scoringSystem,
           scoringLocked: false, active: true, isTemplate: false,
           templateId: template ? template.id : null,
         }, { transaction: t });
@@ -405,7 +419,7 @@ const createSeasonSubmit = asyncHandler(async (req, res) => {
     // klonovanie zo šablóny — až po commite (rovnako ako pri tvorbe ligy).
     // Ak klon zlyhá, turnaj ostane bez kôl a používateľ ich doplní v správe.
     if (template && newLeague) {
-      try { await cloneTemplateInto(template, newLeague); } catch (e) { /* ticho — turnaj ostane prázdny */ }
+      try { await cloneTemplateInto(template, newLeague, tipType); } catch (e) { /* ticho — turnaj ostane prázdny */ }
     }
 
     achievements.evaluateInBackground([userId]);
