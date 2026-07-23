@@ -230,9 +230,12 @@
   }
 
   document.addEventListener('click', async function(e){
-    // rozbalenie/zbalenie kola
+    // rozbalenie/zbalenie kola — ale nie pri kliku na tlačidlá v hlavičke
+    // (✎ upraviť, 🗑 vymazať), tie majú vlastné handlery nižšie
     var th = e.target.closest('[data-toggle-round]');
-    if (th){ th.closest('.round-block').classList.toggle('open'); return; }
+    if (th && !e.target.closest('[data-edit-round],[data-del-round]')){
+      th.closest('.round-block').classList.toggle('open'); return;
+    }
     // pridať existujúci tím
     var addEx = e.target.closest('[data-add-existing]');
     if (addEx){
