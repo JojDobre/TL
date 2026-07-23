@@ -131,7 +131,7 @@
           <span class="chev">▶</span>
           <div class="rh-main"><b class="hi"><%= r.name %></b> <span class="muted" style="font-size:var(--fs-xs)"><%= r.startDate ? fmtDateTime(r.startDate) : '' %> → <%= r.endDate ? fmtDateTime(r.endDate) : '' %></span></div>
           <span class="rh-count"><%= r.matches.length %> záp.</span>
-          <button class="btn btn-ghost btn-icon" title="Upraviť kolo" data-edit-round="<%= r.id %>" onclick="event.stopPropagation()">✎</button>
+          <button class="btn btn-ghost btn-icon" title="Upraviť kolo" data-edit-round="<%= r.id %>">✎</button>
           <button class="btn btn-ghost btn-icon" title="Vymazať kolo" data-del-round="<%= r.id %>" style="color:var(--danger)" onclick="event.stopPropagation()">🗑</button>
         </div>
         <div class="round-edit" data-editrow="<%= r.id %>" data-orig-name="<%= r.name %>" data-orig-start="<%= toLocalInputValue(r.startDate) %>" data-orig-end="<%= toLocalInputValue(r.endDate) %>">
@@ -390,7 +390,7 @@
       block.innerHTML =
         '<div class="round-head" data-toggle-round><span class="chev">▶</span><div class="rh-main"><b class="hi">'+name+'</b> <span class="muted" style="font-size:var(--fs-xs)">'+sD.toLocaleString('sk-SK')+' → '+eD.toLocaleString('sk-SK')+'</span></div>'
         + '<span class="rh-count">0 záp.</span>'
-        + '<button class="btn btn-ghost btn-icon" title="Upraviť kolo" data-edit-round="'+rid+'" onclick="event.stopPropagation()">✎</button>'
+        + '<button class="btn btn-ghost btn-icon" title="Upraviť kolo" data-edit-round="'+rid+'">✎</button>'
         + '<button class="btn btn-ghost btn-icon" title="Vymazať kolo" data-del-round="'+rid+'" style="color:var(--danger)" onclick="event.stopPropagation()">🗑</button></div>'
         + '<div class="round-edit" data-editrow="'+rid+'" data-orig-name="'+name.replace(/"/g,'&quot;')+'" data-orig-start="'+start+'" data-orig-end="'+end+'">'
         + '<div class="re-name"><span class="mini-label">Názov kola</span><input class="input inp-rname" value="'+name.replace(/"/g,'&quot;')+'"></div>'

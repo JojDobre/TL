@@ -64,7 +64,8 @@
 <!-- standalone subnav: turnaj nemá medzistupeň líg, len Prehľad + Rebríček -->
 <div class="subnav"><div class="wrap subnav-inner">
   <a href="/seasons/<%= league.seasonId %>" class="row g-2" style="font-weight:700;color:var(--text-1);white-space:nowrap;padding-right:8px">
-    <span class="team-logo" style="width:26px;height:26px;font-size:11px;background:linear-gradient(135deg,#7c5cff,#3b1f8a)"><%= (heroName||'T').substring(0,2).toUpperCase() %></span>
+    <% var subnavImg = heroImage || league.image || null; %>
+    <% if (subnavImg) { %><span class="team-logo" style="width:26px;height:26px;background:none;border:none;overflow:hidden;border-radius:7px"><img src="<%= subnavImg %>" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:7px"></span><% } else { %><span class="team-logo" style="width:26px;height:26px;font-size:11px;background:linear-gradient(135deg,#7c5cff,#3b1f8a)"><%= (heroName||'T').substring(0,2).toUpperCase() %></span><% } %>
     <%= heroName %>
   </a>
   <span style="width:1px;height:22px;background:var(--line)"></span>

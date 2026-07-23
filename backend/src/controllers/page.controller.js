@@ -397,7 +397,9 @@ const createSeasonSubmit = asyncHandler(async (req, res) => {
         }, { transaction: t });
 
         const league = await League.create({
-          name: name.trim(), description: description || null,
+          // pri standalone je sezóna a liga jeden celok — obrázok patrí obom,
+          // inak liga ostane bez loga (subnav, karty líg)
+          name: name.trim(), description: description || null, image: image || null,
           type: leagueType, joinCode, password: leaguePwHash, hasPassword: !!leaguePwHash,
           seasonId: season.id, creatorId: userId,
           scoringSystem,
