@@ -81,7 +81,7 @@
       </div>
     </div>
 
-    <!-- NOTIFICATIONS (vizuál — zatiaľ netrackujeme) -->
+    <!-- NOTIFICATIONS -->
     <div class="card card-pad set-card" id="notifications">
       <div class="sc-head"><div><h3>Notifikácie</h3><p>Upozornenia v aplikácii (zvonček v hlavičke).</p></div></div>
       <div class="notif-row"><div class="nr-tx"><b>Notifikácie v aplikácii</b><span>Hlavný prepínač. Keď je vypnutý, nebudeš dostávať žiadne upozornenia.</span></div><label class="switch"><input type="checkbox" id="notifyInApp" <%= prefs.notifyInApp ? 'checked' : '' %>><span class="track"></span></label></div>
@@ -104,7 +104,7 @@
       </div>
     </div>
 
-    <!-- PRIVACY (vizuál — zatiaľ netrackujeme) -->
+    <!-- PRIVACY -->
     <div class="card card-pad set-card" id="privacy">
       <div class="sc-head"><div><h3>Súkromie</h3><p>Ovládaj, čo o tebe vidia ostatní hráči.</p></div></div>
       <div class="notif-row"><div class="nr-tx"><b>Verejný profil</b><span>Ostatní môžu vidieť tvoje štatistiky a odznaky cez rebríček.</span></div><label class="switch"><input type="checkbox" id="profilePublic" <%= prefs.profilePublic ? 'checked' : '' %>><span class="track"></span></label></div>
@@ -121,7 +121,7 @@
       </div>
     </div>
 
-    <!-- DANGER ZONE (vizuál — akcie zatiaľ neaktívne) -->
+    <!-- DANGER ZONE -->
     <div class="card card-pad set-card danger-card" id="danger">
       <div class="sc-head"><div><h3 style="color:var(--danger)">Nebezpečná zóna</h3><p>Tieto akcie sú nezvratné. Postupuj opatrne.</p></div></div>
       <%# Resetovať štatistiky — dočasne zakomentované
@@ -331,7 +331,7 @@
     navLinks.forEach(function(a){ a.classList.toggle('active', a.getAttribute('href')==='#'+(cur&&cur.id)); });
   },{passive:true});
 
-  // confirm dialog (akcie zatiaľ informačné)
+  // confirm dialog 
   var scrim=document.getElementById('confirmScrim');
   var confTitle=document.getElementById('confTitle'), confMsg=document.getElementById('confMsg');
   var confField=document.getElementById('confConfirmField'), confInput=document.getElementById('confInput'), confOk=document.getElementById('confOk');

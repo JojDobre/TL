@@ -1,18 +1,29 @@
 // backend/src/controllers/staticPage.controller.js
 //
 // Controllery pre jednoduché statické stránky (O nás, Kontakt).
-// Tieto stránky nepotrebujú dáta z DB; výnimkou je Kontakt, ktorý predvyplní
+// Väčšina týchto stránok nepotrebuje dáta z DB. Výnimkou sú: "O nás" (načíta
+// reálne štatistiky do metrík) a Kontakt, ktorý predvyplní
 // meno a e-mail prihláseného používateľa do formulára (ak je prihlásený)
 // a po odoslaní pošle podnet na schránku podpory cez e-mailovú službu.
 
-const { User } = require('../models');
+const { User, League, Tip } = require('../models');
 const { asyncHandler } = require('../middleware/error.middleware');
 const { sendContactEmail } = require('../services/email.service');
 
-// GET /about — statická stránka "O nás" (obsah 1:1 zo šablóny)
-const aboutPage = (req, res) => {
-  res.render('about');
-};
+// GET /about — stránka "O nás".
+// Metriky v hlavičke stránky ukazujú REÁLNE čísla z databázy (rovnaký zdroj
+// ako štatistiky na úvodnej stránke), nie pevne zapísané hodnoty.
+const aboutPage = asyncHandler(async (req, res) => {
+  const [usersCount, leaguesCount, tipsCount] = await Promise.all([
+    User.count(),
+    League.count(),
+    Tip.count(),
+  ]);
+
+  res.render('about', {
+    stats: { usersCount, leaguesCount, tipsCount },
+  });
+});
 
 // pomocník: predvyplní meno/e-mail z prihláseného používateľa (ak je)
 async function prefillFromSession(req) {

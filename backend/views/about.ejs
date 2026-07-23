@@ -47,14 +47,19 @@
 <div class="wrap ab-hero">
   <div class="eyebrow" style="margin-bottom:14px">Náš príbeh</div>
   <h1>Spravili sme z tipovania šport sám o sebe</h1>
-  <p class="muted" style="max-width:54ch;margin:0 auto;font-size:var(--fs-lg)">Tifo vznikla z jednoduchej Messenger skupiny, kde sme si s kamošmi tipovali zápasy. Dnes je to platforma pre stovky tipérov.</p>
+  <p class="muted" style="max-width:54ch;margin:0 auto;font-size:var(--fs-lg)">Tifo.sk vzniklo z jednoduchej Messenger skupiny, kde sme si s kamošmi tipovali zápasy. Dnes je to platforma pre stovky tipérov.</p>
 </div>
 
+<%
+  // Rovnaké formátovanie čísel ako na úvodnej stránke: oddeľovač tisícov
+  // podľa slovenských zvyklostí (14 280 namiesto 14280).
+  function grp(n){ return Number(n||0).toLocaleString('sk-SK'); }
+%>
 <div class="wrap" style="max-width:1000px">
   <div class="metrics">
-    <div class="card metric"><div class="n gold">14 280</div><div class="l">aktívnych tipérov</div></div>
-    <div class="card metric"><div class="n brand">320+</div><div class="l">komunitných líg</div></div>
-    <div class="card metric"><div class="n" style="color:var(--success)">2.1M</div><div class="l">odoslaných tipov</div></div>
+    <div class="card metric"><div class="n gold"><%= grp(stats.usersCount) %></div><div class="l">registrovaných tipérov</div></div>
+    <div class="card metric"><div class="n brand"><%= grp(stats.leaguesCount) %></div><div class="l">vytvorených líg</div></div>
+    <div class="card metric"><div class="n" style="color:var(--success)"><%= grp(stats.tipsCount) %></div><div class="l">odoslaných tipov</div></div>
     <div class="card metric"><div class="n">2024</div><div class="l">rok založenia</div></div>
   </div>
 </div>
@@ -64,7 +69,7 @@
     <p>Začalo to v lete 2024. Partia kamarátov si počas futbalových majstrovstiev európy tipovala výsledky v skupinovej konverzácii a niekto musel ručne počítať body v exceli. Bolo to chaotické, ale súťaženie medzi nami bolo zábavne.</p>
     <p>Tak sme si povedali, že to spravíme poriadne. Chceli sme miesto, kde si <b class="hi">ktokoľvek môže založiť vlastnú ligu</b>, kde môžeme tipovať rôzna zápasy, kde môžeme pozvať partiu cez jednoduché ID a sledovať, kto je naozaj najlepší tipér. Bez excelov, pohodlne, s automatickým rebríčkom.</p>
     <h2>Čomu veríme</h2>
-    <p>Tipovanie nie je o peniazoch - je o súťaživosti, o tom poraziť kamoša a o radosti z dobrého odhadu. Preto je Tifo zadarmo a vždy bude o zábave a komunite. Súťažiť medzi sebou, plniť výzvy po prehratom kole a zabávať sa.</p>
+    <p>Tipovanie nie je o peniazoch - je o súťaživosti, o tom poraziť kamoša a o radosti z dobrého odhadu. Preto je Tifo.sk zadarmo a vždy bude o zábave a komunite. Súťažiť medzi sebou, plniť výzvy po prehratom kole a zabávať sa.</p>
   </div>
 
   <div class="values">

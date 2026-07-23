@@ -6,7 +6,7 @@
    Scope: '/' (súbor je servovaný z /sw.js cez express.static)
    ===================================================================== */
 
-const CACHE = 'tifo-shell-v2';
+const CACHE = 'tifo-shell-v3';
 
 // Minimálny „app shell": statické assety, ktoré chceme mať k dispozícii aj
 // offline. Zámerne malý zoznam — appka je server-rendered (EJS), takže offline
@@ -16,7 +16,8 @@ const SHELL = [
   '/css/tokens.css',
   '/css/components.css',
   '/css/enhance.css',
-  '/js/shell.js',
+  '/js/push.js',
+  '/js/install.js',
   '/js/enhance.js',
   '/branding/identity/favicon-192.png',
   '/site.webmanifest',
