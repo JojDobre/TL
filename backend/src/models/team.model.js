@@ -42,6 +42,12 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    // ID tímu v TheSportsDB — pre idempotentný import a dedupláciu
+    externalId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: 'teams_external_id_unique',
+    },
   }, {
     tableName: 'teams',
     timestamps: true,
