@@ -77,3 +77,6 @@ backend/playwright.config.js
 backend/package.playwright.json
 tests
 /backend/test-results/
+
+
+backend/src/seeds/.tsdb-*.json"

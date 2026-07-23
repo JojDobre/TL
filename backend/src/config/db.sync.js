@@ -1,7 +1,8 @@
 // backend/src/config/db.sync.js
 const db = require('../models');
+const seedInitialData = require('../seeds/initial-data.seed');
 const { seedAchievements } = require('../seeds/achievements.seed');
-const seedAdminData = require('../seeds/admin.seed');
+const { seedArticles } = require('../seeds/articles.seed');
 //const seedTeams = require('../seeds/teams.seed');
 
 
@@ -55,12 +56,14 @@ const syncDatabase = async () => {
     // s prázdnou DB vytvoril testovacích hráčov s heslom password123.
     const isProd = process.env.NODE_ENV === 'production';
     const userCount = await db.User.count();
-    if (isForce || (!isProd && userCount === 0)) {
-      console.log('Začínam seed admina...');
-      await seedAdminData();
-      console.log('Administračné dáta boli vložené.');
+    if (!isProd && (isForce || userCount === 0)) {
+      console.log('Začínam testovací seed...');
+      await seedInitialData();
+      await seedArticles();
+      //await seedTeams();
+      console.log('Testovacie dáta boli vložené.');
     } else if (isProd && userCount === 0) {
-      console.log('Produkcia s prázdnou DB — seed preskočený.');
+      console.log('Produkcia s prázdnou DB — testovací seed preskočený. Prvého admina vytvor registráciou a povýš v DB (UPDATE users SET role=\'admin\' WHERE id=...).');
     } else {
       console.log('Dáta už existujú, seeding preskočený.');
     }
