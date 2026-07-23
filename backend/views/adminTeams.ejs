@@ -186,7 +186,7 @@ Prázdne pole (;;) = predvolená hodnota. Logo musí byť http(s) URL."></textar
         var row=document.createElement('div'); row.className='team-row'; row.setAttribute('data-team-id',t.id);
         row.setAttribute('data-name',t.name||''); row.setAttribute('data-type',t.teamType||''); row.setAttribute('data-sport',t.sport||''); row.setAttribute('data-country',t.country||''); row.setAttribute('data-logo',t.logo||'');
         var logoCell=t.logo?'<span class="team-logo-sm has-logo"><img src="'+t.logo+'" alt=""></span>':'<span class="team-logo-sm">'+(t.name||'?').substring(0,3).toUpperCase()+'</span>';
-        var typeTag=t.teamType==='national'?'<span class="tag tag-info tcol-hide">Národný</span>':'<span class="tag tag-muted tcol-hide">Klub</span>';
+        var typeTag=t.teamType==='national'?'<span class="tag tag-info tcol-hide">Národný</span>':(t.teamType==='individual'?'<span class="tag tag-gold tcol-hide">Jednotlivec</span>':'<span class="tag tag-muted tcol-hide">Klub</span>');
         row.innerHTML=logoCell+'<div><b>'+t.name+'</b></div>'+typeTag+'<span class="muted tcol-hide" style="font-size:var(--fs-sm)">'+(t.sport||'—')+(t.country?' · '+t.country:'')+'</span><span style="display:flex;gap:4px"><button class="btn btn-ghost btn-icon" style="width:34px;height:34px" data-edit title="Upraviť">✎</button><button class="btn btn-ghost btn-icon" style="width:34px;height:34px" data-del title="Zmazať">✕</button></span>';
         list.appendChild(row);
       });

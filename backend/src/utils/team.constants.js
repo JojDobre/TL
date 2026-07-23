@@ -13,6 +13,15 @@ const SPORTS = [
   { code: 'volleyball', label: 'Volejbal' },
   { code: 'tennis', label: 'Tenis' },
   { code: 'other', label: 'Iné' },
+  { code: 'motorsport', label: 'Motošport' },
+  { code: 'fighting', label: 'Bojové športy' },
+  { code: 'americanfootball', label: 'Americký futbal' },
+  { code: 'rugby', label: 'Rugby' },
+  { code: 'cycling', label: 'Cyklistika' },
+  { code: 'esports', label: 'Esport' },
+  { code: 'snooker', label: 'Snooker' },
+  { code: 'darts', label: 'Šípky' },
+  { code: 'skiing', label: 'Lyžovanie' },
 ];
 
 // Krajiny (pre kluby aj národné tímy). Skratka = kód, label = názov.
