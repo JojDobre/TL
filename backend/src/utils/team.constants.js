@@ -237,6 +237,7 @@ const COUNTRIES = [
   { code: 'AS', label: 'Americká Samoa' },
   { code: 'CK', label: 'Cookove ostrovy' },
   { code: 'other', label: 'Iné / medzinárodné' },
+  { code: 'LS', label: 'Lesotho' },
 ];
 
 const SPORT_CODES = SPORTS.map((s) => s.code);
