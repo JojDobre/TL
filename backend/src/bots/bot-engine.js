@@ -27,6 +27,8 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const { botLeagueName } = require('./bot-names');
 const { cloneTemplateInto } = require('../utils/league-clone.util');
+// Rovnaká zámka ako v tip.controller — bot nesmie mať výhodu oproti hráčovi.
+const { isLeagueLocked } = require('../utils/league.utils');
 const { calculatePoints } = require('../controllers/match.controller');
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -81,10 +83,26 @@ function sampleGoals(sport, rnd, wildness) {
 function sportOf(match) {
   return (match.homeTeam && match.homeTeam.sport) || (match.awayTeam && match.awayTeam.sport) || 'default';
 }
+// Smie sa tento zápas práve tipovať? Musí platiť to isté, čo kontroluje
+// tip.controller pri reálnom hráčovi — bot nesmie obísť žiadne pravidlo tým,
+// že ide priamo cez DB namiesto cez API:
+//   - zápas je 'scheduled' (nezrušený, nedohraný),
+//   - kolo sa už OTVORILO (now >= Round.startDate) a ešte neuplynula uzávierka,
+//   - liga ani jej sezóna nie sú ukončené.
 function isOpen(match, now) {
   if (match.status && match.status !== 'scheduled') return false;
+
+  const round = match.Round;
+  if (!round) return false;
+
+  // naplánované kolo — tipovanie sa ešte neotvorilo
+  if (round.startDate && now < new Date(round.startDate)) return false;
+
+  // ukončená liga / sezóna (league.League je načítaná v tipOpenMatches)
+  if (round.League && isLeagueLocked(round.League)) return false;
+
   const start = new Date(match.matchTime);
-  const roundEnd = match.Round && match.Round.endDate ? new Date(match.Round.endDate) : null;
+  const roundEnd = round.endDate ? new Date(round.endDate) : null;
   const deadline = roundEnd && roundEnd < start ? roundEnd : start;
   return now < deadline;
 }
@@ -156,13 +174,33 @@ async function tipOpenMatches(bots, log) {
     if (!memberships.length) continue;
     const leagueIds = memberships.map((m) => m.leagueId);
     const matches = await Match.findAll({
-      where: { status: 'scheduled' },
+      // Predfiltrovanie priamo v SQL: zápas ešte nezačal a kolo je otvorené.
+      // Bez toho by limit nižšie zabrali zápasy, ktoré sa aj tak nesmú tipovať.
+      where: { status: 'scheduled', matchTime: { [Op.gt]: now } },
       include: [
-        { model: Round, attributes: ['id', 'endDate', 'leagueId'], where: { leagueId: { [Op.in]: leagueIds } }, required: true },
+        {
+          model: Round,
+          attributes: ['id', 'startDate', 'endDate', 'leagueId'],
+          where: {
+            leagueId: { [Op.in]: leagueIds },
+            startDate: { [Op.lte]: now },   // kolo sa už otvorilo
+            endDate: { [Op.gt]: now },      // uzávierka ešte neprešla
+          },
+          required: true,
+          // liga + sezóna kvôli isLeagueLocked (ukončená liga/sezóna = zamknuté)
+          include: [{
+            model: League,
+            attributes: ['id', 'ended'],
+            include: [{ model: Season, attributes: ['id', 'endDate', 'ended'] }],
+          }],
+        },
         { model: Team, as: 'homeTeam', attributes: ['sport'] },
         { model: Team, as: 'awayTeam', attributes: ['sport'] },
       ],
-      limit: 80,
+      // najskôr zápasy s najbližšou uzávierkou — aby pri limite nevypadli tie,
+      // ktoré sa čoskoro zatvoria a už by sa nedali dotipovať
+      order: [['matchTime', 'ASC']],
+      limit: 200,
     });
     for (const match of matches) {
       if (!isOpen(match, now)) continue;
@@ -178,15 +216,32 @@ async function tipOpenMatches(bots, log) {
 
 // ── ZAKLADATEĽSKÉ kroky (životný cyklus vlastného obsahu) ────────────────────
 
+// Mäkký strop botích súťaží. Nie je to tvrdý zákaz — po prekročení sa tvorba
+// len výrazne spomalí, aby zoznam komunitných sezón nezaplavili nepoužívané
+// botie súťaže. Rátajú sa VÝHRADNE sezóny založené botmi; sezóny reálnych
+// používateľov strop neovplyvňujú (a ani naopak).
+const BOT_SEASON_SOFT_CAP = 50;
+// Pravdepodobnosti na jeden tick (cron/20 min → 72 tickov denne):
+//   pod stropom  0.015 → ~1 súťaž denne
+//   nad stropom  0.003 → ~1–2 súťaže týždenne
+const CREATE_RATE_BELOW_CAP = 0.015;
+const CREATE_RATE_ABOVE_CAP = 0.003;
+
 // 1) tvorba súťaží: standalone turnaj (klon šablóny) ALEBO klasická sezóna
 async function createCompetitions(bots, log) {
-  if (Math.random() > 0.15) return; // rast má byť pomalý — max ~1 súťaž/tick
   const creators = bots.filter((b) => persona(b.id).isCreator);
   if (!creators.length) return;
+
+  // koľko súťaží už boti vlastnia — podľa toho sa volí tempo
+  const botIds = bots.map((b) => b.id);
+  const botSeasons = await Season.count({ where: { creatorId: { [Op.in]: botIds } } });
+  const rate = botSeasons >= BOT_SEASON_SOFT_CAP ? CREATE_RATE_ABOVE_CAP : CREATE_RATE_BELOW_CAP;
+  if (Math.random() > rate) return;
+
   const creator = creators[Math.floor(Math.random() * creators.length)];
   const p = persona(creator.id);
 
-  // tempo brzdi počet už vlastnených súťaží (žiadny tvrdý limit — ako hráči)
+  // tempo brzdi aj počet už vlastnených súťaží — jeden bot nemá mať desiatky
   const owned = await Season.count({ where: { creatorId: creator.id } });
   if (Math.random() < owned * 0.4) return;
 
