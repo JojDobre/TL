@@ -42,6 +42,7 @@ async function cloneTemplateInto(template, targetLeague, tipTypeOverride) {
       startDate: r.startDate,
       endDate: r.endDate,
       active: r.active,
+      sourceRoundId: r.id,   // odkaz na kolo v šablóne (propagácia termínov)
     });
     roundsCopied += 1;
 

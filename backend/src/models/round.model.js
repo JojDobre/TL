@@ -30,6 +30,13 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
       },
+      // Ak je toto kolo v KLONOVANEJ lige, odkaz na zdrojové kolo v šablóne.
+      // Umožňuje propagovať zmenu termínov kola (a časov jeho zápasov) zo
+      // šablóny do všetkých klonov — správca klonu ich upravovať nemôže.
+      sourceRoundId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
       // --- príznaky pre plánovač notifikácií (utils/scheduler.js) ---
       // Zabraňujú opakovanému odoslaniu tej istej notifikácie pri každom behu.
       // NULL = ešte neodoslané.

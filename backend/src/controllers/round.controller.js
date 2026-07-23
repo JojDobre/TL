@@ -16,6 +16,8 @@ const { tipQualityWeight } = require('../utils/accuracy.util');
 const notify = require('../utils/notification.service');
 // Parsovanie dátumov z formulárov v slovenskej zóne (viď utils/datetime.util.js)
 const { parseLocalInput } = require('../utils/datetime.util');
+// Propagácia termínov zo šablóny do klonov (viď utils/round-propagate.util.js)
+const { propagateRoundSchedule } = require('../utils/round-propagate.util');
 
 const DEFAULT_EXACT = 10;
 
@@ -218,7 +220,23 @@ const updateRound = asyncHandler(async (req, res) => {
   if (active !== undefined) round.active = active;
 
   await round.save();
-  res.status(200).json({ success: true, message: 'Kolo bolo úspešne aktualizované.', data: round });
+
+  // Ak je kolo v ŠABLÓNE, prenes nové termíny do všetkých klonov. Správca klonu
+  // kolá zo šablóny upravovať nemôže, takže bez tohto by tam ostali staré dátumy.
+  let propagated = 0;
+  const ownerLeague = round.League || await League.findByPk(round.leagueId);
+  if (ownerLeague && ownerLeague.isTemplate) {
+    try { propagated = await propagateRoundSchedule(round); }
+    catch (e) { /* propagácia nesmie zhodiť uloženie kola */ }
+  }
+
+  res.status(200).json({
+    success: true,
+    message: propagated
+      ? `Kolo bolo úspešne aktualizované. Termíny sa preniesli do ${propagated} klonovaných líg.`
+      : 'Kolo bolo úspešne aktualizované.',
+    data: round,
+  });
 });
 
 // DELETE /api/rounds/:id

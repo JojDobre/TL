@@ -16,6 +16,8 @@ const { isLeagueLocked } = require('../utils/league.utils');
 const notify = require('../utils/notification.service');
 // Parsovanie času z formulárov v slovenskej zóne (viď utils/datetime.util.js)
 const { parseLocalInput } = require('../utils/datetime.util');
+// Propagácia času zápasu zo šablóny do klonov
+const { propagateMatchTime } = require('../utils/round-propagate.util');
 
 const DEFAULT_SCORING = { exactScore: 10, correctGoals: 1, correctWinner: 3, goalDifference: 2 };
 
@@ -97,7 +99,7 @@ const loadMatchWithContext = (id, withTips = false) => {
       model: Round,
       include: [{
         model: League,
-        attributes: ['id', 'seasonId', 'scoringSystem', 'creatorId'],
+        attributes: ['id', 'seasonId', 'scoringSystem', 'creatorId', 'isTemplate'],
         include: [{ model: Season, attributes: ['id', 'creatorId'] }],
       }],
     },
@@ -207,9 +209,23 @@ const updateMatch = asyncHandler(async (req, res) => {
   if (tipType) match.tipType = ['winner', 'winner_no_draw', 'exact_score'].includes(tipType) ? tipType : 'exact_score';
 
   await match.save();
+
+  // Ak zápas patrí do ŠABLÓNY a menil sa čas, prenes ho do klonov.
+  let timePropagated = 0;
+  if (matchTime) {
+    const ownerLeague = (match.Round && match.Round.League)
+      || (match.Round ? await League.findByPk(match.Round.leagueId) : null);
+    if (ownerLeague && ownerLeague.isTemplate) {
+      try { timePropagated = await propagateMatchTime(match); }
+      catch (e) { /* propagácia nesmie zhodiť uloženie zápasu */ }
+    }
+  }
+
   res.status(200).json({
     success: true,
-    message: 'Zápas bol úspešne upravený. (Na zadanie výsledku a body použi vyhodnotenie.)',
+    message: timePropagated
+      ? `Zápas bol úspešne upravený. Čas sa preniesol do ${timePropagated} klonovaných zápasov.`
+      : 'Zápas bol úspešne upravený. (Na zadanie výsledku a body použi vyhodnotenie.)',
     data: match,
   });
 });
