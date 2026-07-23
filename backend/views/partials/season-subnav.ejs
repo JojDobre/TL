@@ -13,10 +13,13 @@
                : ((typeof league !== 'undefined' && league && league.Season) ? league.Season : null);
    const _standalone = !!(_sobj && _sobj.mode === 'standalone');
    const _showRules = !_standalone && (!_sobj || _sobj.showRules !== false);
-   const _showNews  = !_standalone && (!_sobj || _sobj.showNews  !== false); %>
+   const _showNews  = !_standalone && (!_sobj || _sobj.showNews  !== false);
+   // logo sezóny: obrázok ak existuje, inak iniciálky
+   const _simg = (typeof seasonImage !== 'undefined' && seasonImage) ? seasonImage
+               : (_sobj && _sobj.image ? _sobj.image : null); %>
 <div class="subnav"><div class="wrap subnav-inner">
   <a href="/seasons/<%= sid %>" class="row g-2" style="font-weight:700;color:var(--text-1);white-space:nowrap;padding-right:8px">
-    <span class="team-logo" style="width:26px;height:26px;font-size:11px;background:linear-gradient(135deg,#0b4ea2,#06306a)"><%= sinit %></span>
+    <% if (_simg) { %><span class="team-logo" style="width:26px;height:26px;background:none;border:none;overflow:hidden;border-radius:7px"><img src="<%= _simg %>" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:7px"></span><% } else { %><span class="team-logo" style="width:26px;height:26px;font-size:11px;background:linear-gradient(135deg,#0b4ea2,#06306a)"><%= sinit %></span><% } %>
     <span class="subnav-brand-name"><%= sname %></span>
   </a>
   <span style="width:1px;height:22px;background:var(--line)"></span>

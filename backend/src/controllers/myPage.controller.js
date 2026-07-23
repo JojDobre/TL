@@ -81,7 +81,7 @@ const myPage = asyncHandler(async (req, res) => {
   const lMems = await UserLeague.findAll({ where: { userId: meId } });
   const myLeagueIds = lMems.map((m) => m.leagueId);
   const leaguesRaw = myLeagueIds.length
-    ? await League.findAll({ where: { id: { [Op.in]: myLeagueIds } }, include: [{ model: Season, attributes: ['id', 'name', 'endDate', 'ended', 'mode'] }], order: [['createdAt', 'DESC']] })
+    ? await League.findAll({ where: { id: { [Op.in]: myLeagueIds } }, include: [{ model: Season, attributes: ['id', 'name', 'endDate', 'ended', 'mode', 'image'] }], order: [['createdAt', 'DESC']] })
     : [];
 
   const myLeagues = [];

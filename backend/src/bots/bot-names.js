@@ -109,6 +109,12 @@ const NICK_PATTERNS = [
 ];
 
 
+// Indexy vzorov, ktoré vyrobia "meno + priezvisko" (jan.novak, jnovak, jan-novak…).
+// Zvyšné vzory sú skutočné prezývky (sniper_jan, kanonier412, peto99…).
+// Reálni používatelia si oveľa častejšie volia prezývku než celé meno, preto
+// sa REAL_NAME_PATTERNS ťahajú len v menšine prípadov (viď botIdentity).
+const REAL_NAME_PATTERNS = [0, 1, 2, 3, 4, 5, 17, 18];
+
 function strip(s) {
   // odstráň diakritiku pre username (Kováč → kovac)
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -119,16 +125,41 @@ function pickFrom(arr, n) { return arr[Math.abs(n) % arr.length]; }
 function scramble(i) { let x = (i + 1) * 2654435761 % 2 ** 31; return Math.abs(x); }
 
 // Vygeneruje meno pre bota s daným indexom (0..N). Deterministické.
+// Deterministický avatar (DiceBear) — kreslené figúrky, žiadne fotky reálnych
+// ľudí. Seed je odvodený od indexu, takže bot má vždy rovnakú tvár.
+const AVATAR_STYLES = [
+  'avataaars', 'bottts', 'notionists', 'adventurer', 'big-smile',
+  'fun-emoji', 'lorelei', 'micah', 'miniavs', 'open-peeps',
+  'personas', 'pixel-art', 'thumbs',
+];
+function botAvatar(index) {
+  const s = scramble(index);
+  const style = AVATAR_STYLES[(s >> 9) % AVATAR_STYLES.length];
+  const seed = `tifo${index}${(s >> 12) % 9973}`;
+  return `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(seed)}`;
+}
+
+// Vygeneruje meno pre bota s daným indexom (0..N). Deterministické.
 function botIdentity(index) {
   const s = scramble(index);
   const first = FIRST[s % FIRST.length];
   const last = LAST[(s >> 3) % LAST.length];
-  const pattern = NICK_PATTERNS[(s >> 6) % NICK_PATTERNS.length];
+
+  // ~20 % botov má username odvodený od mena a priezviska, zvyšok prezývku
+  const wantsRealName = (s >> 17) % 100 < 20;
+  let pattern;
+  if (wantsRealName) {
+    pattern = NICK_PATTERNS[REAL_NAME_PATTERNS[(s >> 6) % REAL_NAME_PATTERNS.length]];
+  } else {
+    const nickOnly = NICK_PATTERNS.filter((_, i) => !REAL_NAME_PATTERNS.includes(i));
+    pattern = nickOnly[(s >> 6) % nickOnly.length];
+  }
+
   let username = pattern(first, last, s % 997);
   // poistka proti kolíziám medzi botmi: pri opakovaní pridaj index
   username = username.slice(0, 24);
   const email = `${strip(first).toLowerCase()}.${strip(last).toLowerCase()}${index}@bot.tifo.sk`;
-  return { first, last, username, email };
+  return { first, last, username, email, avatar: botAvatar(index) };
 }
 
 // Názvy komunitných súťaží, ktoré boti zakladajú
@@ -161,4 +192,4 @@ function botLeagueName(seed) {
   return `${p} ${s}`;
 }
 
-module.exports = { botIdentity, botLeagueName };
+module.exports = { botIdentity, botLeagueName, botAvatar };

@@ -59,7 +59,7 @@ const getAllLeagues = asyncHandler(async (req, res) => {
 
   const leagues = await League.findAll({
     where,
-    include: [{ model: Season, attributes: ['id', 'name', 'type'] }],
+    include: [{ model: Season, attributes: ['id', 'name', 'type', 'image'] }],
     order: [['createdAt', 'DESC']],
   });
 

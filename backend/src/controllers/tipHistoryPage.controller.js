@@ -45,7 +45,7 @@ const tipHistoryPage = asyncHandler(async (req, res) => {
           include: [{
             model: League,
             attributes: ['id', 'name', 'seasonId', 'scoringSystem'],
-            include: [{ model: Season, attributes: ['id', 'name', 'type'] }],
+            include: [{ model: Season, attributes: ['id', 'name', 'type', 'image'] }],
           }],
         },
       ],

@@ -29,10 +29,9 @@ async function createBots(count) {
     if (exists) { skipped++; continue; }
     // registrácia rozložená do minulých 60 dní, nech nevyzerá, že prišli naraz
     const createdAt = new Date(Date.now() - Math.floor(Math.random() * 60) * DAY - Math.floor(Math.random() * DAY));
-    // ~40 % botov má generovaný avatar (iniciály), zvyšok používa fallback appky
-    const avatar = Math.random() < 0.4
-      ? `https://ui-avatars.com/api/?name=${encodeURIComponent(id.first + ' ' + id.last)}&background=random&size=128`
-      : null;
+    // Avatar má takmer každý bot — prázdny profil s iniciálkami pôsobí umelo.
+    // Obrázky sú kreslené figúrky (DiceBear), deterministické podľa indexu.
+    const avatar = Math.random() < 0.92 ? id.avatar : null;
     // username musí byť unikátny (DB constraint) — pri kolízii pridaj číslo
     let username = id.username.slice(0, 20);
     if (await db.User.findOne({ where: { username } })) username = `${username.slice(0, 16)}${i}`;

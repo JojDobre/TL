@@ -26,7 +26,7 @@ const createRoundPage = asyncHandler(async (req, res) => {
   const leagueId = req.query.league;
   if (!leagueId) return res.redirect('/seasons');
   const league = await League.findByPk(leagueId, {
-    include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'startDate', 'endDate', 'ended', 'mode', 'showRules', 'showNews'] }],
+    include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'startDate', 'endDate', 'ended', 'mode', 'showRules', 'showNews', 'image'] }],
   });
   if (!league) return res.status(404).render('error-page', { message: 'Liga nebola nájdená.' });
 
@@ -49,7 +49,7 @@ const createRoundSubmit = asyncHandler(async (req, res) => {
   const userId = Number(req.session.userId);
 
   const league = await League.findByPk(leagueId, {
-    include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'startDate', 'endDate', 'ended', 'mode', 'showRules', 'showNews'] }],
+    include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'startDate', 'endDate', 'ended', 'mode', 'showRules', 'showNews', 'image'] }],
   });
   if (!league) return res.redirect('/seasons');
 
@@ -84,7 +84,7 @@ const createRoundSubmit = asyncHandler(async (req, res) => {
 // GET /rounds/:id/edit — formulár na úpravu kola (len správca, nie klon)
 async function editRoundPageFn(req, res) {
   const round = await Round.findByPk(req.params.id, {
-    include: [{ model: League, include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'mode', 'showRules', 'showNews'] }] }],
+    include: [{ model: League, include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'mode', 'showRules', 'showNews', 'image'] }] }],
   });
   if (!round) return res.status(404).render('error-page', { message: 'Kolo nebolo nájdené.' });
   const league = round.League;

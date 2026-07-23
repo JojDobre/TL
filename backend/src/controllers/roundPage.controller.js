@@ -41,7 +41,7 @@ const roundDetailPage = asyncHandler(async (req, res) => {
     include: [{
       model: League,
       attributes: ['id', 'name', 'seasonId', 'scoringSystem', 'creatorId', 'templateId'],
-      include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'ended', 'endDate', 'mode', 'showRules', 'showNews'] }],
+      include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'ended', 'endDate', 'mode', 'showRules', 'showNews', 'image'] }],
     }],
   });
   if (!round) return res.status(404).render('error-page', { message: 'Kolo nebolo nájdené.' });
@@ -184,7 +184,7 @@ const roundResultsPage = asyncHandler(async (req, res) => {
     include: [{
       model: League,
       attributes: ['id', 'name', 'seasonId', 'scoringSystem', 'creatorId', 'templateId'],
-      include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'ended', 'endDate', 'mode', 'showRules', 'showNews'] }],
+      include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'ended', 'endDate', 'mode', 'showRules', 'showNews', 'image'] }],
     }],
   });
   if (!round) return res.status(404).render('error-page', { message: 'Kolo nebolo nájdené.' });

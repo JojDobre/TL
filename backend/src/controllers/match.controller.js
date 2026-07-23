@@ -17,7 +17,9 @@ const notify = require('../utils/notification.service');
 // Parsovanie času z formulárov v slovenskej zóne (viď utils/datetime.util.js)
 const { parseLocalInput } = require('../utils/datetime.util');
 // Propagácia času zápasu zo šablóny do klonov
-const { propagateMatchTime } = require('../utils/round-propagate.util');
+const {
+  propagateMatchTime, propagateMatchCreate, propagateMatchDelete,
+} = require('../utils/round-propagate.util');
 
 const DEFAULT_SCORING = { exactScore: 10, correctGoals: 1, correctWinner: 3, goalDifference: 2 };
 
@@ -179,7 +181,21 @@ const createMatch = asyncHandler(async (req, res) => {
     status: 'scheduled',
   });
 
-  res.status(201).json({ success: true, message: 'Zápas bol úspešne vytvorený.', data: newMatch });
+  // Ak zápas pribudol do ŠABLÓNY, vytvor ho aj vo všetkých klonoch — inak by
+  // ho videli len ligy vytvorené po tejto zmene.
+  let cloned = 0;
+  if (round.League && round.League.isTemplate) {
+    try { cloned = await propagateMatchCreate(newMatch, round); }
+    catch (e) { /* propagácia nesmie zhodiť vytvorenie zápasu */ }
+  }
+
+  res.status(201).json({
+    success: true,
+    message: cloned
+      ? `Zápas bol úspešne vytvorený a pridaný do ${cloned} klonovaných líg.`
+      : 'Zápas bol úspešne vytvorený.',
+    data: newMatch,
+  });
 });
 
 // PUT /api/matches/:id  — úprava zápasu (NErátá body; na to je evaluate)
@@ -362,8 +378,23 @@ const deleteMatch = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Zápas nemožno vymazať, pretože už obsahuje tipy.');
   }
 
+  // Zápas zo ŠABLÓNY zmaž aj vo všetkých klonoch. Klony môžu mať tipy — tie sa
+  // mažú s nimi, inak by ostali visieť na neexistujúcom zápase.
+  const isTemplateMatch = !!(match.Round && match.Round.League && match.Round.League.isTemplate);
+  let removed = { matches: 0, tips: 0 };
+  if (isTemplateMatch) {
+    try { removed = await propagateMatchDelete(match.id); }
+    catch (e) { /* propagácia nesmie zhodiť mazanie zápasu */ }
+  }
+
   await match.destroy();
-  res.status(200).json({ success: true, message: 'Zápas bol úspešne vymazaný.' });
+
+  let message = 'Zápas bol úspešne vymazaný.';
+  if (removed.matches) {
+    message = `Zápas bol vymazaný aj z ${removed.matches} klonovaných líg`
+      + (removed.tips ? ` (spolu s ${removed.tips} tipmi).` : '.');
+  }
+  res.status(200).json({ success: true, message });
 });
 
 // POST /api/rounds/:id/matches/bulk  { rows: "Domáci;Hosť;2026-06-10 20:00;typ\n..." }

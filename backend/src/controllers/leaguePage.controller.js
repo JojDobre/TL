@@ -42,7 +42,7 @@ function roundStatus(round) {
 const leagueDetailPage = asyncHandler(async (req, res) => {
   const league = await League.findByPk(req.params.id, {
     include: [
-      { model: Season, attributes: ['id', 'name', 'creatorId', 'mode', 'showRules', 'showNews'] },
+      { model: Season, attributes: ['id', 'name', 'creatorId', 'mode', 'showRules', 'showNews', 'image'] },
       { model: Round, attributes: ['id', 'name', 'description', 'startDate', 'endDate', 'active', 'createdAt'] },
     ],
   });
@@ -377,7 +377,7 @@ const createLeagueSubmit = asyncHandler(async (req, res) => {
 const editLeaguePage = asyncHandler(async (req, res) => {
   const userId = Number(req.session.userId);
   const league = await League.findByPk(req.params.id, {
-    include: [{ model: Season, attributes: ['id', 'name', 'creatorId'] }],
+    include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'image'] }],
   });
   if (!league) return res.status(404).render('error-page', { message: 'Liga nebola nájdená.' });
 
@@ -415,7 +415,7 @@ const editLeagueSubmit = asyncHandler(async (req, res) => {
   const { name, description, type, password, removePassword, exactScore, correctWinner, goalDifference, correctGoals } = req.body;
 
   const league = await League.findByPk(req.params.id, {
-    include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'mode'] }],
+    include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'mode', 'image'] }],
   });
   if (!league) return res.redirect('/seasons');
 
@@ -524,7 +524,7 @@ const leaveLeagueSubmit = asyncHandler(async (req, res) => {
 // GET /leagues/:id/members
 const leagueMembersPage = asyncHandler(async (req, res) => {
   const userId = Number(req.session.userId);
-  const league = await League.findByPk(req.params.id, { include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'mode', 'showRules', 'showNews'] }] });
+  const league = await League.findByPk(req.params.id, { include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'mode', 'showRules', 'showNews', 'image'] }] });
   if (!league) return res.status(404).render('error-page', { message: 'Liga nebola nájdená.' });
   if (!(await isLeagueManager(league, userId))) {
     return res.status(403).render('error-page', { message: 'Nemáš oprávnenie spravovať členov.' });

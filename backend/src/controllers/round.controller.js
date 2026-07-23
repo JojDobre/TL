@@ -64,7 +64,7 @@ const getRoundById = asyncHandler(async (req, res) => {
       {
         model: League,
         attributes: ['id', 'name', 'seasonId', 'scoringSystem', 'creatorId'],
-        include: [{ model: Season, attributes: ['id', 'name', 'creatorId'] }],
+        include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'image'] }],
       },
       {
         model: Match,

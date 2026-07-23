@@ -67,8 +67,39 @@ const seasonsPage = asyncHandler(async (req, res) => {
     s.status !== 'ended'
     && (!s.hidden || (meId && (s.creatorId === meId || mySeasonIds.includes(s.id)))));
 
-  const official = visible.filter((s) => s.type === 'official');
-  const community = visible.filter((s) => s.type === 'community');
+  // Radenie zoznamu:
+  //   oficiálne  — najprv sezóny s práve otvoreným kolom, potom podľa počtu členov
+  //   komunitné  — len podľa počtu členov
+  // "Otvorené kolo" = sezóna má aspoň jednu ligu, ktorej kolo práve beží
+  // (now medzi startDate a endDate) — rovnaká definícia ako roundStatus() inde.
+  const now = new Date();
+  const Op = Sequelize.Op;
+  const openSeasonIds = new Set();
+  try {
+    // jeden dotaz pre všetky sezóny naraz (žiadne N+1)
+    const openRounds = await Round.findAll({
+      where: { startDate: { [Op.lte]: now }, endDate: { [Op.gte]: now } },
+      attributes: ['leagueId'],
+      include: [{ model: League, attributes: ['seasonId'], required: true }],
+    });
+    for (const r of openRounds) {
+      if (r.League && r.League.seasonId) openSeasonIds.add(r.League.seasonId);
+    }
+  } catch { /* radenie je vedľajšie — pri chybe ostane pôvodné poradie */ }
+
+  // stabilné triedenie: pri zhode rozhoduje novšia sezóna (pôvodné createdAt DESC)
+  const byMembers = (a, b) => (b.participantsCount - a.participantsCount)
+    || (new Date(b.createdAt) - new Date(a.createdAt));
+
+  const official = visible
+    .filter((s) => s.type === 'official')
+    .map((s) => ({ ...s, hasOpenRound: openSeasonIds.has(s.id) }))
+    .sort((a, b) => (Number(b.hasOpenRound) - Number(a.hasOpenRound)) || byMembers(a, b));
+
+  const community = visible
+    .filter((s) => s.type === 'community')
+    .sort(byMembers);
+
   res.render('seasons', { official, community });
 });
 

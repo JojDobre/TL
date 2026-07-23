@@ -39,7 +39,7 @@ const myTipsPage = asyncHandler(async (req, res) => {
     const leagues = await League.findAll({
       where: { id: { [Op.in]: myLeagueIds } },
       attributes: ['id', 'name', 'seasonId', 'scoringSystem'],
-      include: [{ model: Season, attributes: ['id', 'name', 'type'] }],
+      include: [{ model: Season, attributes: ['id', 'name', 'type', 'image'] }],
     });
     const leagueById = {};
     leagues.forEach((l) => { leagueById[l.id] = l; });
