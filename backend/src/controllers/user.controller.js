@@ -99,7 +99,7 @@ const getUserById = asyncHandler(async (req, res) => {
 
 // PUT /api/users/:id
 const updateUser = asyncHandler(async (req, res) => {
-  const { username, email, firstName, lastName, role, active } = req.body;
+  const { username, email, firstName, lastName, role, active, profileImage } = req.body;
   const targetId = Number(req.params.id);
   const meId = currentId(req);
 
@@ -136,6 +136,8 @@ const updateUser = asyncHandler(async (req, res) => {
   if (lastName !== undefined) user.lastName = lastName;
   if (role !== undefined) user.role = role;
   if (active !== undefined) user.active = active;
+  // prázdny reťazec = zmazať fotku (späť na iniciálky)
+  if (profileImage !== undefined) user.profileImage = (profileImage || '').trim() || null;
 
   await user.save();
 
@@ -145,7 +147,7 @@ const updateUser = asyncHandler(async (req, res) => {
     data: {
       id: user.id, username: user.username, email: user.email,
       firstName: user.firstName, lastName: user.lastName,
-      role: user.role, active: user.active,
+      role: user.role, active: user.active, profileImage: user.profileImage,
     },
   });
 });

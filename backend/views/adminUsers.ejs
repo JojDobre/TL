@@ -68,7 +68,7 @@
     <div class="u-table" id="uTable">
       <% users.forEach(function (u) { var active = u.active !== false; %>
       <div class="u-row" data-uid="<%= u.id %>"<% if(!active){ %> style="opacity:.6"<% } %>>
-        <div class="u-user"><span class="avatar avatar-md" style="background:<%= gradFor(u.username || fullName(u)) %>;color:#fff"><%= initials(u) %></span><div style="min-width:0"><div class="u-name"><%= fullName(u) %></div><div class="u-email"><%= u.email || '' %></div></div></div>
+        <div class="u-user"><%- include('partials/avatar', { image: u.profileImage || '', initials: initials(u), cls: 'avatar-md', grad: gradFor(u.username || fullName(u)) }) %><div style="min-width:0"><div class="u-name"><%= fullName(u) %></div><div class="u-email"><%= u.email || '' %></div></div></div>
         <span><span class="chip-role role-<%= u.role || 'player' %>"><%= roleLabel(u.role) %></span></span>
         <span class="u-num u-col-hide"><%= u.totalPoints != null ? u.totalPoints : '—' %></span>
         <span class="u-num u-col-hide"><%= u.tipsCount != null ? u.tipsCount : '—' %></span>
@@ -100,11 +100,17 @@
   function fullName(u){return [u.firstName,u.lastName].filter(Boolean).join(' ')||u.username||'?';}
   function initials(u){return fullName(u).split(' ').map(function(w){return w[0];}).filter(Boolean).slice(0,2).join('').toUpperCase();}
   function roleLabel(r){return r==='admin'?'Admin':r==='vip'?'VIP':'Hráč';}
+  // Avatar: fotka ak existuje, inak iniciály na gradiente. Musí sedieť
+  // s partials/avatar.ejs, ktorý sa použije pri prvom vykreslení zo servera.
+  function avatarHtml(u){
+    if (u.profileImage) return '<span class="avatar avatar-md" style="background:var(--surface-2)"><img src="'+esc(u.profileImage)+'" alt="" loading="lazy"></span>';
+    return '<span class="avatar avatar-md" style="background:'+gradFor(u.username||fullName(u))+';color:#fff">'+esc(initials(u))+'</span>';
+  }
   function esc(s){return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 
   function rowHtml(u){var active=u.active!==false;var col=active?'var(--success)':'var(--danger)';
     return '<div class="u-row" data-uid="'+u.id+'"'+(active?'':' style="opacity:.6"')+'>'+
-      '<div class="u-user" data-profile="'+u.id+'" style="cursor:pointer" title="Otvoriť profil"><span class="avatar avatar-md" style="background:'+gradFor(u.username||fullName(u))+';color:#fff">'+esc(initials(u))+'</span><div style="min-width:0"><div class="u-name">'+esc(fullName(u))+'</div><div class="u-email">'+esc(u.email)+'</div></div></div>'+
+      '<div class="u-user" data-profile="'+u.id+'" style="cursor:pointer" title="Otvoriť profil">'+avatarHtml(u)+'<div style="min-width:0"><div class="u-name">'+esc(fullName(u))+'</div><div class="u-email">'+esc(u.email)+'</div></div></div>'+
       '<span><span class="chip-role role-'+(u.role||'player')+'">'+roleLabel(u.role)+'</span></span>'+
       '<span class="u-num u-col-hide">'+(u.totalPoints!=null?u.totalPoints:'—')+'</span><span class="u-num u-col-hide">'+(u.tipsCount!=null?u.tipsCount:'—')+'</span>'+
       '<span class="status-dot" style="color:'+col+'"><span class="d" style="background:'+col+'"></span>'+(active?'Aktívny':'Zablokovaný')+'</span>'+
@@ -134,14 +140,66 @@
     var active=user.active!==false;
     var panel=document.createElement('div');panel.setAttribute('data-rowmenu','');panel.className='row-pop';
     panel.style.cssText='position:absolute;right:0;top:100%;z-index:60;display:block';
-    panel.innerHTML='<a data-act="role-player">Zmeniť rolu → Hráč</a><a data-act="role-vip">Zmeniť rolu → VIP</a><a data-act="role-admin">Zmeniť rolu → Admin</a><div class="sep"></div><a class="danger" data-act="ban">'+(active?'Zablokovať':'Aktivovať')+'</a><a class="danger" data-act="del">Vymazať účet</a>';
+    panel.innerHTML='<a data-act="edit">Upraviť údaje</a><div class="sep"></div><a data-act="role-player">Zmeniť rolu → Hráč</a><a data-act="role-vip">Zmeniť rolu → VIP</a><a data-act="role-admin">Zmeniť rolu → Admin</a><div class="sep"></div><a class="danger" data-act="ban">'+(active?'Zablokovať':'Aktivovať')+'</a><a class="danger" data-act="del">Vymazať účet</a>';
     wrap.style.position='relative';wrap.appendChild(panel);
     panel.addEventListener('click',function(ev){var a=ev.target.closest('[data-act]');if(!a)return;ev.preventDefault();ev.stopPropagation();var act=a.getAttribute('data-act');
+      if(act==='edit'){panel.remove();openEdit(user);return;}
       var opts={method:'',headers:{'Content-Type':'application/json'},body:null};
       if(act.indexOf('role-')===0){opts.method='PUT';opts.body=JSON.stringify({role:act.replace('role-','')});}
       else if(act==='ban'){opts.method='PUT';opts.body=JSON.stringify({active:!(user.active!==false)});}
       else if(act==='del'){if(!confirm('Naozaj vymazať účet '+fullName(user)+'?'))return;opts.method='DELETE';opts.body=null;}
       fetch('/api/users/'+user.id,opts).then(function(r){return r.json();}).then(function(res){if(res.success===false){alert(res.message||'Akcia zlyhala.');}panel.remove();load();}).catch(function(){alert('Akcia zlyhala.');});
+    });
+  }
+
+  // ---- úprava údajov používateľa ----
+  // Ide na PUT /api/users/:id, ktorý už rieši duplicity prezývky/e-mailu aj
+  // ochranu vlastného účtu. Prázdne priezvisko sa pošle ako '' (nie undefined),
+  // aby sa dalo naozaj odstrániť.
+  function openEdit(u){
+    var back=document.createElement('div');
+    back.setAttribute('data-editmodal','');
+    back.style.cssText='position:fixed;inset:0;background:rgba(4,6,12,.72);z-index:200;display:flex;align-items:center;justify-content:center;padding:18px';
+    back.innerHTML=
+      '<div class="card card-pad" style="max-width:460px;width:100%;max-height:90vh;overflow:auto">'+
+        '<h3 style="margin-bottom:4px">Upraviť údaje</h3>'+
+        '<p class="muted" style="font-size:var(--fs-sm);margin-bottom:16px">@'+esc(u.username)+' &middot; ID '+u.id+'</p>'+
+        '<div class="field" style="margin-bottom:12px"><label class="label">Prezývka</label><input class="input" id="edUsername" value="'+esc(u.username)+'" maxlength="24"></div>'+
+        '<div class="field" style="margin-bottom:12px"><label class="label">E-mail</label><input class="input" id="edEmail" type="email" value="'+esc(u.email)+'"></div>'+
+        '<div class="field" style="margin-bottom:12px"><label class="label">Meno</label><input class="input" id="edFirst" value="'+esc(u.firstName)+'"></div>'+
+        '<div class="field" style="margin-bottom:12px"><label class="label">Priezvisko</label><input class="input" id="edLast" value="'+esc(u.lastName)+'"><span class="hint">Nechaj prázdne, ak priezvisko nemá.</span></div>'+
+        '<div class="field"><label class="label">Odkaz na profilovú fotku</label><input class="input" id="edImage" value="'+esc(u.profileImage)+'" placeholder="https://..."><span class="hint">Prázdne = iniciálky.</span></div>'+
+        '<p id="edErr" style="color:var(--danger);font-size:var(--fs-sm);margin-top:12px;display:none"></p>'+
+        '<div class="row g-2" style="justify-content:flex-end;margin-top:18px">'+
+          '<button class="btn btn-ghost btn-sm" data-ed="cancel">Zrušiť</button>'+
+          '<button class="btn btn-brand btn-sm" data-ed="save">Uložiť</button>'+
+        '</div>'+
+      '</div>';
+    document.body.appendChild(back);
+
+    function close(){ back.remove(); }
+    back.addEventListener('click',function(ev){ if(ev.target===back) close(); });
+    back.querySelector('[data-ed="cancel"]').addEventListener('click',close);
+
+    back.querySelector('[data-ed="save"]').addEventListener('click',function(){
+      var btn=this, err=back.querySelector('#edErr');
+      var body={
+        username: back.querySelector('#edUsername').value.trim(),
+        email: back.querySelector('#edEmail').value.trim(),
+        firstName: back.querySelector('#edFirst').value.trim(),
+        lastName: back.querySelector('#edLast').value.trim(),
+        profileImage: back.querySelector('#edImage').value.trim()
+      };
+      if(!body.username){ err.textContent='Prezývka nesmie byť prázdna.'; err.style.display=''; return; }
+      if(!body.email){ err.textContent='E-mail nesmie byť prázdny.'; err.style.display=''; return; }
+      err.style.display='none'; btn.disabled=true;
+      fetch('/api/users/'+u.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+        .then(function(r){return r.json();})
+        .then(function(res){
+          if(res.success===false){ err.textContent=res.message||'Uloženie zlyhalo.'; err.style.display=''; btn.disabled=false; return; }
+          close(); load();
+        })
+        .catch(function(){ err.textContent='Uloženie zlyhalo.'; err.style.display=''; btn.disabled=false; });
     });
   }
 
