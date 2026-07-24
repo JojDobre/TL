@@ -43,7 +43,7 @@ const {
 } = require('../controllers/settingsPage.controller');
 const { requireLogin, requireAdmin, apiRequireAdmin, apiRequireLogin, attachUser } = require('../middleware/page-auth.middleware');
 const { homePage } = require('../controllers/homePage.controller');
-const { aboutPage, kontaktPage, kontaktSubmit, navodyPage, logoIdentityPage, podmienkyPage, sukromiePage } = require('../controllers/staticPage.controller');
+const { aboutPage, kontaktPage, kontaktSubmit, navodyPage, logoIdentityPage, podmienkyPage, sukromiePage, podporNasPage, bugReportPage, bugReportSubmit } = require('../controllers/staticPage.controller');
 const { blogListPage, blogPostPage } = require('../controllers/blogPage.controller');
 const {
   adminBlogListPage, adminBlogNewPage, adminBlogCreate,
@@ -64,7 +64,13 @@ const { myTipsPage } = require('../controllers/myTipsPage.controller');
 
 
 // Domov 
-router.get('/', attachUser, homePage);
+// Domovská stránka. Ak appku otvorí PRIHLÁSENÝ používateľ zo skratky na ploche
+// (PWA štartuje na /?src=pwa), pošleme ho rovno do centra — bez toho by videl
+// marketingovú úvodku. Priamy vstup na "/" (klik na logo) zostáva funkčný.
+router.get('/', attachUser, (req, res, next) => {
+  if (req.userId && req.query.src === 'pwa') return res.redirect('/my');
+  return next();
+}, homePage);
 
 // SEO: dynamická sitemapa + AdSense ads.txt (robots.txt je statický v public/)
 const { sitemapXml, adsTxt } = require('../controllers/seo.controller');
@@ -186,6 +192,10 @@ router.get('/about', attachUser, aboutPage);
 router.get('/kontakt', attachUser, kontaktPage);
 router.post('/kontakt', attachUser, kontaktSubmit);
 router.get('/navody', attachUser, navodyPage);
+router.get('/podpor-nas', attachUser, podporNasPage);
+// hlásenie chýb je len pre prihlásených (potrebujeme vedieť, kto hlási)
+router.get('/nahlasit-bug', requireLogin, bugReportPage);
+router.post('/nahlasit-bug', requireLogin, bugReportSubmit);
 router.get('/podmienky', attachUser, podmienkyPage);
 router.get('/sukromie', attachUser, sukromiePage);
 router.get('/achievements', requireLogin, achievementsPage);

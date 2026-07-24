@@ -58,6 +58,7 @@ const discoverPage = asyncHandler(async (req, res) => {
       id: s.id,
       name: s.name,
       description: s.description || '',
+      image: s.image || null,
       participantsCount: pc,
       leaguesCount: lc,
       hasPassword: !!s.hasPassword,

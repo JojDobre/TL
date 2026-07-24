@@ -123,4 +123,86 @@ const sukromiePage = (req, res) => {
   res.render('sukromie');
 };
 
-module.exports = { aboutPage, kontaktPage, kontaktSubmit, navodyPage, logoIdentityPage, podmienkyPage, sukromiePage };
+// GET /podpor-nas — donate stránka (statická, bez DB)
+const podporNasPage = (req, res) => {
+  res.render('podpor-nas');
+};
+
+// GET /nahlasit-bug — formulár na nahlásenie chyby.
+// Len pre prihlásených (route má requireLogin) — meno a e-mail berieme zo
+// session, takže ich používateľ nemusí vypĺňať.
+const bugReportPage = (req, res) => {
+  res.render('nahlasit-bug', {
+    sent: false, error: null,
+    subject: '', message: '', imageUrl: '', pageUrl: '',
+  });
+};
+
+// POST /nahlasit-bug — odošle hlásenie na schránku podpory.
+// Hlásenie ide cez rovnakú e-mailovú službu ako kontaktný formulár, len s
+// pevnou témou a s technickými údajmi (stránka, screenshot, prehliadač)
+// pribalenými do textu správy.
+const bugReportSubmit = asyncHandler(async (req, res) => {
+  const { subject, message, imageUrl, pageUrl, area } = req.body;
+
+  const back = (error) => res.status(400).render('nahlasit-bug', {
+    sent: false, error,
+    subject: subject || '', message: message || '',
+    imageUrl: imageUrl || '', pageUrl: pageUrl || '',
+  });
+
+  if (!subject || !subject.trim()) return back('Vyplň stručný popis chyby.');
+  if (!message || !message.trim()) return back('Popíš, čo sa stalo.');
+
+  // odkaz na screenshot je nepovinný, ale ak je zadaný, musí to byť http(s)
+  const img = (imageUrl || '').trim();
+  if (img && !/^https?:\/\//i.test(img)) {
+    return back('Odkaz na screenshot musí začínať http:// alebo https://');
+  }
+
+  // middleware attachUser/requireLogin dáva len req.userId — používateľa
+  // musíme načítať kvôli menu a e-mailu (Reply-To v hlásení)
+  const user = req.userId
+    ? await User.findByPk(req.userId, { attributes: ['id', 'username', 'firstName', 'lastName', 'email'] })
+    : null;
+  const reporterName = user
+    ? ([user.firstName, user.lastName].filter(Boolean).join(' ') || user.username)
+    : 'Neznámy používateľ';
+  const reporterEmail = (user && user.email) || process.env.CONTACT_TO || 'podpora@tifo.sk';
+
+  // technické údaje pripojíme k textu — v e-maile sa zobrazia ako súčasť správy
+  const details = [
+    message.trim(),
+    '',
+    '— — —',
+    `Oblasť: ${area || 'Všeobecné'}`,
+    pageUrl && pageUrl.trim() ? `Stránka: ${pageUrl.trim()}` : null,
+    img ? `Screenshot: ${img}` : null,
+    user ? `Používateľ: ${user.username} (ID ${user.id})` : null,
+    `Prehliadač: ${req.get('user-agent') || '—'}`,
+  ].filter(Boolean).join('\n');
+
+  const result = await sendContactEmail({
+    name: reporterName,
+    email: reporterEmail,
+    topic: 'Chyba v aplikácii',
+    subject: `[BUG] ${subject.trim()}`,
+    message: details,
+    consent: true,
+  });
+
+  // skipped = chýba RESEND_API_KEY (dev) — pre používateľa to berieme ako úspech
+  if (!result.success && !result.skipped) {
+    return back('Hlásenie sa nepodarilo odoslať. Skús to prosím neskôr.');
+  }
+
+  return res.render('nahlasit-bug', {
+    sent: true, error: null,
+    subject: '', message: '', imageUrl: '', pageUrl: '',
+  });
+});
+
+module.exports = {
+  aboutPage, kontaktPage, kontaktSubmit, navodyPage, logoIdentityPage,
+  podmienkyPage, sukromiePage, podporNasPage, bugReportPage, bugReportSubmit,
+};

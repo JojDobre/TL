@@ -669,6 +669,19 @@ const manageSeasonSubmit = asyncHandler(async (req, res) => {
   season.startDate = start;
   season.endDate = end;
 
+  // STANDALONE: sezóna a liga sú jeden celok, takže obrázok patrí obom.
+  // Bez toho by liga ostala bez loga všade, kde sa číta League.image
+  // (napr. zoznam "Moje ligy").
+  if (season.mode === 'standalone') {
+    try {
+      const standaloneLeague = await League.findOne({ where: { seasonId: season.id } });
+      if (standaloneLeague) {
+        standaloneLeague.image = image || null;
+        await standaloneLeague.save();
+      }
+    } catch (e) { /* obrázok ligy je vedľajší — nesmie zhodiť uloženie sezóny */ }
+  }
+
   // Ceny: polia prizes[] v poradí formulára → JSON [{place, prize}]; prázdne riadky preskoč
   if (req.body.prizes !== undefined) {
     const rows = [].concat(req.body.prizes || []).map((p) => String(p || '').trim());

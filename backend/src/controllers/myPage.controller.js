@@ -102,7 +102,10 @@ const myPage = asyncHandler(async (req, res) => {
     }
     const sEnded = l.Season && seasonStatus(l.Season) === 'ended';
     myLeagues.push({
-      id: l.id, name: l.name, type: l.type, hasPassword: l.hasPassword, image: l.image || null,
+      id: l.id, name: l.name, type: l.type, hasPassword: l.hasPassword,
+      // Pri standalone turnaji je obrázok uložený na SEZÓNE (sezóna a liga sú
+      // tam jeden celok) — bez fallbacku by karta ostala bez loga.
+      image: l.image || (l.Season ? l.Season.image : null) || null,
       seasonName: l.Season ? l.Season.name : null,
       seasonId: l.Season ? l.Season.id : null,
       seasonMode: l.Season ? l.Season.mode : null,

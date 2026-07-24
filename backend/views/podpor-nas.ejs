@@ -1,0 +1,85 @@
+<%- include('partials/head', { title: 'Podpor nás', page: 'podpora', active: 'podpora', pageStyle: `
+  .sp-wrap { max-width:860px; margin:0 auto; }
+  .sp-hero { background:linear-gradient(135deg, color-mix(in srgb,var(--gold) 12%,var(--surface-1)), var(--surface-1)); border:1px solid var(--line); border-radius:var(--r-lg); padding:30px 26px; margin-bottom:26px; text-align:center; }
+  .sp-uses { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin:22px 0 30px; }
+  .sp-use { background:var(--surface-2); border:1px solid var(--line); border-radius:var(--r-md); padding:16px 15px; }
+  .sp-use .ic { font-size:22px; line-height:1; margin-bottom:8px; display:block; }
+  .sp-pay { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:640px){ .sp-pay { grid-template-columns:1fr; } }
+  .sp-card { border:1px solid var(--line); border-radius:var(--r-lg); padding:22px 20px; display:flex; flex-direction:column; }
+  .sp-card .btn { margin-top:auto; }
+  .sp-paypal { background:linear-gradient(135deg, color-mix(in srgb,#0070ba 14%,var(--surface-1)), var(--surface-1)); }
+  .sp-coffee { background:linear-gradient(135deg, color-mix(in srgb,#ffdd00 12%,var(--surface-1)), var(--surface-1)); }
+  .sp-mail { font-family:var(--num,monospace); background:var(--surface-2); border:1px solid var(--line); border-radius:var(--r-sm); padding:8px 11px; display:inline-block; margin:10px 0 16px; font-size:var(--fs-sm); word-break:break-all; }
+` }) %>
+
+<div class="wrap sp-wrap" style="padding-top:26px;padding-bottom:56px">
+
+  <div class="sp-hero">
+    <div class="eyebrow" style="color:var(--gold)">Podpor projekt</div>
+    <h1 style="font-size:clamp(1.8rem,3.2vw,2.5rem);margin:8px 0 10px">tifo.sk beží vďaka vám</h1>
+    <p class="muted" style="font-size:var(--fs-sm);max-width:540px;margin:0 auto">
+      Tipovanie na tifo.sk je a zostane zadarmo. Prevádzka ale niečo stojí — ak ti projekt
+      dáva zmysel a chceš pomôcť, budeme vďační za akúkoľvek podporu.
+    </p>
+  </div>
+
+  <h3 style="margin-bottom:4px">Na čo idú peniaze</h3>
+  <p class="muted" style="font-size:var(--fs-sm)">Všetko, čo príde, ide späť do projektu.</p>
+
+  <div class="sp-uses">
+    <div class="sp-use">
+      <span class="ic">🖥️</span>
+      <b class="hi">Server (VPS)</b>
+      <p class="muted" style="font-size:var(--fs-sm);margin-top:4px">Aby appka bežala rýchlo a bez výpadkov.</p>
+    </div>
+    <div class="sp-use">
+      <span class="ic">🌐</span>
+      <b class="hi">Doména</b>
+      <p class="muted" style="font-size:var(--fs-sm);margin-top:4px">Ročný poplatok za tifo.sk a certifikáty.</p>
+    </div>
+    <div class="sp-use">
+      <span class="ic">🗄️</span>
+      <b class="hi">Databáza a dáta</b>
+      <p class="muted" style="font-size:var(--fs-sm);margin-top:4px">Úložisko a prístup k výsledkom zápasov.</p>
+    </div>
+    <div class="sp-use">
+      <span class="ic">🏆</span>
+      <b class="hi">Ceny do súťaží</b>
+      <p class="muted" style="font-size:var(--fs-sm);margin-top:4px">Odmeny pre najlepších tipérov sezóny.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-bottom:14px">Ako podporiť</h3>
+
+  <div class="sp-pay">
+    <div class="sp-card sp-paypal">
+      <div class="eyebrow" style="color:#4aa3e0">PayPal</div>
+      <h4 style="font-size:var(--fs-h4);margin:6px 0 4px">Jednorazový príspevok</h4>
+      <p class="muted" style="font-size:var(--fs-sm);margin-bottom:16px">Pošli ľubovoľnú sumu na náš PayPal účet.</p>
+
+      <a href="https://www.paypal.com/paypalme/jojdobre" target="_blank" rel="noopener noreferrer" class="btn btn-brand btn-block">Podporiť cez PayPal →</a>
+    </div>
+
+    <div class="sp-card sp-coffee">
+      <div class="eyebrow" style="color:var(--gold)">Buy Me a Coffee</div>
+      <h4 style="font-size:var(--fs-h4);margin:6px 0 4px">Kúp nám kávu</h4>
+      <p class="muted" style="font-size:var(--fs-sm);margin-bottom:16px">
+        Malá podpora, ktorá poteší. Stačí pár klikov a nemusíš mať účet.
+      </p>
+      <a href="https://buymeacoffee.com/tifo.sk" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-block">Kúpiť kávu →</a>
+    </div>
+  </div>
+
+  <div class="card card-pad" style="margin-top:26px;background:var(--surface-2);display:flex;gap:11px;align-items:flex-start">
+    <span style="font-size:16px">ℹ️</span>
+    <span style="font-size:var(--fs-sm);color:var(--text-2)">
+      Podpora je úplne dobrovoľná a nedáva žiadnu výhodu v tipovaní ani v rebríčkoch —
+      všetci hráči majú rovnaké podmienky. Ak máš otázku, napíš nám cez
+      <a href="/kontakt">kontaktný formulár</a>.
+    </span>
+  </div>
+
+</div>
+
+<%- include('partials/footer') %>

@@ -115,7 +115,7 @@
     <div class="card" style="padding:8px">
       <div class="lb-head-row"><span>#</span><span>Hráč</span><span class="col-hide">Presnosť</span><span class="ta-r">Body</span></div>
       <div class="hr" style="height:1px;background:var(--line);margin:0 6px"></div>
-      <div class="lb-table">
+      <div class="lb-table" id="lbTable">
         <% leaderboard.forEach(function(row, i){ var rank=i+1; var me = meId && row.user.id === meId; %>
         <div class="lb-row <%= me ? 'me' : '' %>" data-player-link="<%= row.user.id %>" data-me="<%= me ? '1' : '0' %>">
           <span class="lb-rank <%= rank<=3 ? 'top'+rank : '' %>"><%= rank %></span>
@@ -130,6 +130,11 @@
           <span class="lb-pts ta-r <%= rank===1 ? 'gold' : '' %>"><%= row.totalPoints %></span>
         </div>
         <% }); %>
+      </div>
+      <div class="row g-2" id="lbPager" hidden style="justify-content:center;margin-top:16px;padding-bottom:8px">
+        <button type="button" class="btn btn-secondary btn-sm" id="lbPrev">← Predošlé</button>
+        <span class="muted" id="lbPageInfo" style="font-size:var(--fs-sm);align-self:center"></span>
+        <button type="button" class="btn btn-secondary btn-sm" id="lbNext">Ďalšie →</button>
       </div>
     </div>
   </main>
@@ -160,5 +165,54 @@
   </aside>
 </div>
 <% } %>
+
+
+<script>
+(function(){
+  // Stránkovanie rebríčka — 40 riadkov na stranu. Prebieha na klientovi, takže
+  // funguje spolu s existujúcim triedením (riadky sa len skrývajú/zobrazujú).
+  var PAGE_SIZE = 40;
+  var table = document.getElementById('lbTable');
+  var pager = document.getElementById('lbPager');
+  if (!table || !pager) return;
+
+  var info = document.getElementById('lbPageInfo');
+  var prev = document.getElementById('lbPrev');
+  var next = document.getElementById('lbNext');
+  var page = 1;
+
+  function rows() { return Array.prototype.slice.call(table.querySelectorAll('.lb-row')); }
+
+  function render() {
+    var all = rows();
+    var pages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
+    if (page > pages) page = pages;
+    if (page < 1) page = 1;
+
+    all.forEach(function (r, i) {
+      var from = (page - 1) * PAGE_SIZE;
+      r.style.display = (i >= from && i < from + PAGE_SIZE) ? '' : 'none';
+    });
+
+    pager.hidden = all.length <= PAGE_SIZE;
+    if (info) {
+      var first = (page - 1) * PAGE_SIZE + 1;
+      var last = Math.min(page * PAGE_SIZE, all.length);
+      info.textContent = first + '–' + last + ' z ' + all.length;
+    }
+    if (prev) prev.disabled = page <= 1;
+    if (next) next.disabled = page >= pages;
+  }
+
+  if (prev) prev.addEventListener('click', function () { page--; render(); if (table.scrollIntoView) table.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  if (next) next.addEventListener('click', function () { page++; render(); if (table.scrollIntoView) table.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+
+  // po zmene triedenia sa vráť na prvú stranu a prekresli
+  var sortSel = document.getElementById('lbSort');
+  if (sortSel) sortSel.addEventListener('change', function () { page = 1; setTimeout(render, 0); });
+
+  render();
+})();
+</script>
 
 <%- include('partials/footer') %>

@@ -162,6 +162,11 @@
         <% }); %>
       </div>
       <div class="lb-empty" id="lbNoRes" hidden>Žiadny hráč nevyhovuje hľadaniu.</div>
+      <div class="row g-2" id="lbPager" hidden style="justify-content:center;margin-top:16px;padding-bottom:8px">
+        <button type="button" class="btn btn-secondary btn-sm" id="lbPrev">← Predošlé</button>
+        <span class="muted" id="lbPageInfo" style="font-size:var(--fs-sm);align-self:center"></span>
+        <button type="button" class="btn btn-secondary btn-sm" id="lbNext">Ďalšie →</button>
+      </div>
     </div>
   </main>
 
@@ -226,11 +231,17 @@
   var noRes = document.getElementById('lbNoRes');
   if (s) s.addEventListener('input', function(){
     var q = this.value.trim().toLowerCase(); var any = false;
+    // Pri hľadaní sa stránkovanie vypína — filtruje sa naprieč VŠETKÝMI riadkami,
+    // inak by zhoda mimo aktuálnej strany ostala skrytá. Po vymazaní dopytu sa
+    // stránkovanie obnoví cez window.lbRepage (definované nižšie).
     document.querySelectorAll('.lb-table .lb-row').forEach(function(r){
       var show = !q || (r.dataset.name || '').indexOf(q) >= 0;
       r.style.display = show ? '' : 'none'; if (show) any = true;
     });
     if (noRes) noRes.hidden = any;
+    var pg = document.getElementById('lbPager');
+    if (q) { if (pg) pg.hidden = true; }
+    else if (window.lbRepage) window.lbRepage();
   });
 
   // filter podľa sezóny → reload s ?season=
@@ -251,5 +262,57 @@
   });
 })();
 </script>
+
+<script>
+(function(){
+  // Stránkovanie rebríčka — 40 riadkov na stranu. Prebieha na klientovi, takže
+  // funguje spolu s existujúcim triedením (riadky sa len skrývajú/zobrazujú).
+  var PAGE_SIZE = 40;
+  var table = document.getElementById('lbTable');
+  var pager = document.getElementById('lbPager');
+  if (!table || !pager) return;
+
+  var info = document.getElementById('lbPageInfo');
+  var prev = document.getElementById('lbPrev');
+  var next = document.getElementById('lbNext');
+  var page = 1;
+
+  function rows() { return Array.prototype.slice.call(table.querySelectorAll('.lb-row')); }
+
+  function render() {
+    var all = rows();
+    var pages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
+    if (page > pages) page = pages;
+    if (page < 1) page = 1;
+
+    all.forEach(function (r, i) {
+      var from = (page - 1) * PAGE_SIZE;
+      r.style.display = (i >= from && i < from + PAGE_SIZE) ? '' : 'none';
+    });
+
+    pager.hidden = all.length <= PAGE_SIZE;
+    if (info) {
+      var first = (page - 1) * PAGE_SIZE + 1;
+      var last = Math.min(page * PAGE_SIZE, all.length);
+      info.textContent = first + '–' + last + ' z ' + all.length;
+    }
+    if (prev) prev.disabled = page <= 1;
+    if (next) next.disabled = page >= pages;
+  }
+
+  // umožní vyhľadávaniu obnoviť stránkovanie po vymazaní dopytu
+  window.lbRepage = function () { page = 1; render(); };
+
+  if (prev) prev.addEventListener('click', function () { page--; render(); if (table.scrollIntoView) table.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  if (next) next.addEventListener('click', function () { page++; render(); if (table.scrollIntoView) table.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+
+  // po zmene triedenia sa vráť na prvú stranu a prekresli
+  var sortSel = document.getElementById('lbSort');
+  if (sortSel) sortSel.addEventListener('change', function () { page = 1; setTimeout(render, 0); });
+
+  render();
+})();
+</script>
+
 
 <%- include('partials/footer') %>

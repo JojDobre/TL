@@ -1,0 +1,102 @@
+<%- include('partials/head', { title: 'Nahlásiť chybu', page: 'bug', active: 'bug', pageStyle: `
+  .bug-wrap { max-width:760px; margin:0 auto; }
+  .bug-hero { background:linear-gradient(135deg, color-mix(in srgb,var(--danger) 12%,var(--surface-1)), var(--surface-1)); border:1px solid var(--line); border-radius:var(--r-lg); padding:26px 24px; margin-bottom:22px; }
+  .bug-note { display:flex; gap:10px; align-items:flex-start; background:var(--surface-2); border-radius:var(--r-md); padding:12px 14px; margin-top:14px; }
+  .bug-field { margin-bottom:16px; }
+  .bug-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:640px){ .bug-grid { grid-template-columns:1fr; } }
+` }) %>
+
+<div class="wrap bug-wrap" style="padding-top:26px;padding-bottom:56px">
+
+  <div class="bug-hero">
+    <div class="eyebrow" style="color:var(--danger)">Beta verzia</div>
+    <h1 style="font-size:clamp(1.7rem,3vw,2.3rem);margin:6px 0 8px">Nahlásiť chybu</h1>
+    <p class="muted" style="font-size:var(--fs-sm)">
+      tifo.sk je zatiaľ v beta verzii, takže sa niečo pokaziť môže. Ak si narazil na chybu,
+      daj nám vedieť — čím presnejší popis, tým rýchlejšie ju vieme opraviť.
+    </p>
+    <div class="bug-note">
+      <span style="font-size:15px">💡</span>
+      <span style="font-size:var(--fs-sm);color:var(--text-2)">
+        Pomôže nám, keď napíšeš <b class="hi">čo si robil</b>, <b class="hi">čo si čakal</b> a
+        <b class="hi">čo sa stalo namiesto toho</b>. Screenshot nahraj na
+        <a href="https://imgur.com/upload" target="_blank" rel="noopener noreferrer">imgur.com</a>
+        a odkaz vlož nižšie.
+      </span>
+    </div>
+  </div>
+
+  <% if (typeof sent !== 'undefined' && sent) { %>
+    <div class="card card-pad" style="border-color:var(--success);background:color-mix(in srgb,var(--success) 8%,var(--surface-1));text-align:center;padding:36px 24px">
+      <div style="font-size:34px;line-height:1;margin-bottom:10px">✅</div>
+      <h3 style="margin-bottom:6px">Hlásenie odoslané</h3>
+      <p class="muted" style="font-size:var(--fs-sm)">Ďakujeme! Pozrieme sa na to čo najskôr.</p>
+      <div class="row g-2" style="justify-content:center;margin-top:18px">
+        <a href="/my" class="btn btn-brand btn-sm">Späť do centra</a>
+        <a href="/nahlasit-bug" class="btn btn-secondary btn-sm">Nahlásiť ďalšiu</a>
+      </div>
+    </div>
+  <% } else { %>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="card card-pad" style="border-color:var(--danger);background:color-mix(in srgb,var(--danger) 8%,var(--surface-1));margin-bottom:18px">
+        <b class="hi"><%= error %></b>
+      </div>
+    <% } %>
+
+    <form method="POST" action="/nahlasit-bug" class="card card-pad">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <div class="bug-grid">
+        <div class="bug-field">
+          <label class="label" for="bugArea">Kde sa chyba stala</label>
+          <select class="select" id="bugArea" name="area">
+            <option value="Všeobecné">Všeobecné / neviem zaradiť</option>
+            <option value="Tipovanie">Tipovanie a kolá</option>
+            <option value="Sezóny a ligy">Sezóny a ligy</option>
+            <option value="Rebríčky a body">Rebríčky a body</option>
+            <option value="Profil a nastavenia">Profil a nastavenia</option>
+            <option value="Notifikácie">Notifikácie</option>
+            <option value="Zobrazenie / dizajn">Zobrazenie a dizajn</option>
+          </select>
+        </div>
+
+        <div class="bug-field">
+          <label class="label" for="bugUrl">Na ktorej stránke</label>
+          <input class="input" id="bugUrl" name="pageUrl" placeholder="napr. /seasons/12" value="<%= typeof pageUrl !== 'undefined' ? pageUrl : '' %>">
+          <span class="hint">Nepovinné — pomôže nám to nájsť rýchlejšie.</span>
+        </div>
+      </div>
+
+      <div class="bug-field">
+        <label class="label" for="bugSubject">Stručný popis <span style="color:var(--danger)">*</span></label>
+        <input class="input" id="bugSubject" name="subject" required maxlength="140"
+               placeholder="napr. Po uložení tipu sa body nezapočítali"
+               value="<%= typeof subject !== 'undefined' ? subject : '' %>">
+      </div>
+
+      <div class="bug-field">
+        <label class="label" for="bugMessage">Čo sa stalo <span style="color:var(--danger)">*</span></label>
+        <textarea class="input" id="bugMessage" name="message" required rows="7"
+                  placeholder="Čo si robil, čo si čakal a čo sa stalo namiesto toho…"><%= typeof message !== 'undefined' ? message : '' %></textarea>
+      </div>
+
+      <div class="bug-field">
+        <label class="label" for="bugImage">Odkaz na screenshot</label>
+        <input class="input" id="bugImage" name="imageUrl" type="url"
+               placeholder="https://imgur.com/…"
+               value="<%= typeof imageUrl !== 'undefined' ? imageUrl : '' %>">
+        <span class="hint">Nepovinné. Nahraj obrázok na <a href="https://imgur.com/upload" target="_blank" rel="noopener noreferrer">imgur.com</a> a sem vlož odkaz.</span>
+      </div>
+
+      <div class="row g-2" style="margin-top:20px">
+        <button type="submit" class="btn btn-brand">Odoslať hlásenie</button>
+        <a href="/my" class="btn btn-ghost">Zrušiť</a>
+      </div>
+    </form>
+
+  <% } %>
+</div>
+
+<%- include('partials/footer') %>

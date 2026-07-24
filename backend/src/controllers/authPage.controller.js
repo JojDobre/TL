@@ -193,7 +193,7 @@ const loginSubmit = async (req, res) => {
       return res.status(403).render('login', { error: 'Tvoj účet je zablokovaný.', oldEmail: email });
     }
     setSession(req, user);
-    res.redirect('/seasons');
+    res.redirect('/my');
   } catch (err) {
     res.status(500).render('login', { error: 'Chyba pri prihlásení. Skús znova.', oldEmail: req.body.email || '' });
   }
@@ -224,7 +224,7 @@ const registerSubmit = async (req, res) => {
       username, email, password: hashed, firstName, lastName, role: 'player',
     });
     setSession(req, user);
-    res.redirect('/seasons');
+    res.redirect('/my');
   } catch (err) {
     res.status(500).render('register', { error: 'Chyba pri registrácii. Skús znova.' });
   }
