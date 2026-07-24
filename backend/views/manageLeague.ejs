@@ -106,7 +106,7 @@
         <% } %>
         <% members.forEach(function(m){ %>
           <div class="mem-row" data-name="<%= (fullName(m)+' @'+m.username).toLowerCase() %>">
-            <span class="avatar avatar-md" style="background:var(--surface-3);color:var(--text-1)"><%= initials(m) %></span>
+            <%- include('partials/avatar', { image: m.profileImage || '', initials: initials(m), cls: 'avatar-md' }) %>
             <div class="mem-name">
               <div class="u-name" style="font-weight:700;color:var(--text-1)"><a class="player-link" href="/player/<%= m.id %>"><%= fullName(m) %></a><% if (m.isCreator) { %> <span class="tag tag-brand" style="padding:1px 6px">Vlastník</span><% } %></div>
               <div class="muted" style="font-size:var(--fs-xs)"><a class="player-link" href="/player/<%= m.id %>">@<%= m.username %></a><% if (m.joinedAt) { %> · pripojený <%= fmtD(m.joinedAt) %><% } %></div>
@@ -129,6 +129,11 @@
             </div>
           </div>
         <% }); %>
+        <div class="row g-2" id="memPager" hidden style="justify-content:center;margin-top:14px">
+          <button type="button" class="btn btn-secondary btn-sm" id="memPrev">← Predošlí</button>
+          <span class="muted" id="memPageInfo" style="font-size:var(--fs-sm);align-self:center"></span>
+          <button type="button" class="btn btn-secondary btn-sm" id="memNext">Ďalší →</button>
+        </div>
       </div>
     </section>
 
@@ -281,7 +286,51 @@
 
   // ---- hľadanie členov ----
   var ms=document.getElementById('memSearch');
-  if(ms) ms.addEventListener('input', function(){ var q=this.value.trim().toLowerCase(); document.querySelectorAll('.mem-row').forEach(function(r){ var n=r.getAttribute('data-name')||''; r.style.display=(!q||n.indexOf(q)>=0)?'':'none'; }); });
+  if(ms) ms.addEventListener('input', function(){
+    var q=this.value.trim().toLowerCase();
+    // pri hľadaní filtrujeme naprieč VŠETKÝMI členmi (nie len aktuálnou stranou)
+    document.querySelectorAll('.mem-row').forEach(function(r){
+      var n=r.getAttribute('data-name')||'';
+      r.style.display=(!q||n.indexOf(q)>=0)?'':'none';
+    });
+    var pg=document.getElementById('memPager');
+    if(q){ if(pg) pg.hidden=true; }
+    else { memPage=1; memRender(); }
+  });
+
+  // ---- stránkovanie členov (40 na stranu) ----
+  // Pri veľkých sezónach je zoznam členov v stovkách riadkov — vypisovať ich
+  // naraz je neprehľadné. Stránkuje sa na klientovi, aby to fungovalo spolu
+  // s hľadaním (pri aktívnom dopyte sa stránkovanie vypína).
+  var MEM_PAGE = 40;
+  var memPager = document.getElementById('memPager');
+  var memInfo = document.getElementById('memPageInfo');
+  var memPrev = document.getElementById('memPrev');
+  var memNext = document.getElementById('memNext');
+  var memPage = 1;
+
+  function memRows(){ return Array.prototype.slice.call(document.querySelectorAll('.mem-row')); }
+
+  function memRender(){
+    var all = memRows();
+    var pages = Math.max(1, Math.ceil(all.length / MEM_PAGE));
+    if (memPage > pages) memPage = pages;
+    if (memPage < 1) memPage = 1;
+    var from = (memPage - 1) * MEM_PAGE;
+    all.forEach(function(r, i){ r.style.display = (i >= from && i < from + MEM_PAGE) ? '' : 'none'; });
+    if (memPager) memPager.hidden = all.length <= MEM_PAGE;
+    if (memInfo) {
+      var last = Math.min(memPage * MEM_PAGE, all.length);
+      memInfo.textContent = (all.length ? (from + 1) : 0) + '–' + last + ' z ' + all.length;
+    }
+    if (memPrev) memPrev.disabled = memPage <= 1;
+    if (memNext) memNext.disabled = memPage >= pages;
+  }
+
+  if (memPrev) memPrev.addEventListener('click', function(){ memPage--; memRender(); });
+  if (memNext) memNext.addEventListener('click', function(){ memPage++; memRender(); });
+  memRender();
+
 
   if (teamsLocked) return; // zvyšok je len pre tímy
 
