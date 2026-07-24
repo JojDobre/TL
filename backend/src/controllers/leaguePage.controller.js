@@ -415,7 +415,7 @@ const editLeagueSubmit = asyncHandler(async (req, res) => {
   const { name, description, type, password, removePassword, exactScore, correctWinner, goalDifference, correctGoals } = req.body;
 
   const league = await League.findByPk(req.params.id, {
-    include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'mode', 'image'] }],
+    include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'mode', 'image', 'hasPassword', 'hidden', 'type'] }],
   });
   if (!league) return res.redirect('/seasons');
 
@@ -460,15 +460,33 @@ const editLeagueSubmit = asyncHandler(async (req, res) => {
   }
 
   // heslo: pridať/zmeniť alebo odstrániť
+  let pwChanged = false;
   if (removePassword === 'on' || removePassword === 'true') {
     league.password = null;
     league.hasPassword = false;
+    pwChanged = true;
   } else if (password && password.trim()) {
     league.password = await bcrypt.hash(password.trim(), 10);
     league.hasPassword = true;
+    pwChanged = true;
   }
 
   await league.save();
+
+  // STANDALONE: turnaj je sezóna + jedna liga, takže heslo musí platiť pre oboje.
+  // Bez toho by liga heslo mala (pripojenie ho pýta), ale sezóna by ostala
+  // označená ako verejná — presne tak sa to prejavovalo v zozname /seasons.
+  if (pwChanged && league.Season && league.Season.mode === 'standalone') {
+    try {
+      const season = await Season.findByPk(league.seasonId);
+      if (season) {
+        season.password = league.password;      // rovnaký bcrypt hash
+        season.hasPassword = league.hasPassword;
+        if (!league.hasPassword) season.hidden = false;  // verejná = neskrytá
+        await season.save();
+      }
+    } catch (e) { /* heslo ligy je uložené — sync sezóny nesmie zhodiť request */ }
+  }
   // standalone turnaj: späť na detail turnaja (/seasons/:id), bežná liga na ligu
   if (league.Season && league.Season.mode === 'standalone') {
     return res.redirect('/seasons/' + league.seasonId);

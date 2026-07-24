@@ -714,17 +714,25 @@ const manageSeasonSubmit = asyncHandler(async (req, res) => {
     }
   }
 
-  // STANDALONE: drž názov a popis ligy zhodné so sezónou (turnaj = jedna liga)
+  await season.save();
+
+  // STANDALONE: turnaj je sezóna + jedna liga, takže názov, popis, obrázok aj
+  // PRÍSTUP musia byť na oboch rovnaké. Beží až PO season.save(), aby sa
+  // kopírovali skutočne uložené hodnoty.
   if (season.mode === 'standalone') {
-    const lg = await League.findOne({ where: { seasonId: season.id }, order: [['createdAt', 'ASC']] });
-    if (lg) {
-      lg.name = season.name;
-      lg.description = season.description;
-      await lg.save();
-    }
+    try {
+      const lg = await League.findOne({ where: { seasonId: season.id }, order: [['createdAt', 'ASC']] });
+      if (lg) {
+        lg.name = season.name;
+        lg.description = season.description;
+        lg.image = season.image;
+        lg.password = season.password;        // rovnaký bcrypt hash
+        lg.hasPassword = season.hasPassword;
+        await lg.save();
+      }
+    } catch (e) { /* sezóna je uložená — sync ligy nesmie zhodiť request */ }
   }
 
-  await season.save();
   res.redirect('/seasons/' + season.id);
 });
 
