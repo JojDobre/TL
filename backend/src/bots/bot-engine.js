@@ -132,19 +132,83 @@ async function getBots() {
   return User.findAll({ where: { isBot: true, active: true }, attributes: ['id', 'username'] });
 }
 
+// ── Brzdy vstupu botov do sezón ──────────────────────────────────────────────
+//
+// Bez brzdy sa každý bot na každom ticku znovu pokúša vstúpiť, takže sezóny sa
+// do pár dní naplnia na 100 % — čo vyzerá umelo. Preto sa pravdepodobnosť
+// vstupu násobí dvoma nezávislými faktormi: NAPLNENOSŤOU a VEKOM sezóny.
+
+// Cudzie komunitné sezóny (založené človekom) majú tvrdý strop — nemá zmysel,
+// aby súkromnú súťaž pár kamarátov zaplavili stovky botov.
+const HUMAN_COMMUNITY_BOT_CAP = 8;
+
+// Podiel botov v sezóne, od ktorého sa prísun spomaľuje (z CELKOVÉHO počtu botov).
+const FILL_MID = 0.50;
+const FILL_HIGH = 0.80;
+
+// Vek, po ktorom je sezóna „usadená" a nových členov už prakticky neprijíma.
+const AGE_FADE_DAYS = 30;
+const AGE_FLOOR = 0.05;
+
+// Násobiteľ podľa naplnenosti. Zachováva individualitu botov — násobí sa ich
+// vlastná joinAffinity (5–30 %), takže aktívny bot ostane aktívnejší.
+function fillFactor(ratio, season, isBotOwned) {
+  if (season.type === 'official') {
+    if (ratio >= FILL_HIGH) return 0.002;  // nad 80 % už prakticky nikto nepribudne
+    if (ratio >= FILL_MID) return 0.03;    // medzi 50–80 % výrazne spomalí
+    return 0.05;                           // nábeh trvá dni, nie hodiny
+  }
+  // komunitné — rovnaké pásma ako oficiálne, len nižšie hodnoty (bot má menšiu
+  // motiváciu vstúpiť do cudzej komunitnej súťaže než do oficiálnej)
+  if (ratio >= FILL_HIGH) return isBotOwned ? 0.002 : 0.0005;
+  if (ratio >= FILL_MID) return isBotOwned ? 0.02 : 0.01;
+  return isBotOwned ? 0.03 : 0.02;
+}
+
+// Násobiteľ podľa veku: lineárne klesá z 1,0 (nová) na AGE_FLOOR (30+ dní).
+function ageFactor(createdAt) {
+  if (!createdAt) return 1;
+  const days = (Date.now() - new Date(createdAt).getTime()) / 86400000;
+  if (days <= 0) return 1;
+  if (days >= AGE_FADE_DAYS) return AGE_FLOOR;
+  return 1 - (1 - AGE_FLOOR) * (days / AGE_FADE_DAYS);
+}
+
 // vstup do oficiálnych sezón + verejných komunitných súťaží
 async function ensureMemberships(bots, log) {
   const seasons = await Season.findAll({
     where: { ended: false, password: null, hidden: false },
-    attributes: ['id', 'type'],
+    attributes: ['id', 'type', 'creatorId', 'createdAt'],
   });
   if (!seasons.length) return;
+
+  const botIds = new Set(bots.map((b) => b.id));
+  const totalBots = bots.length || 1;
+
+  // koľko botov je už v ktorej sezóne — jeden dotaz namiesto N na bota
+  const botCounts = new Map();
+  try {
+    const rows = await UserSeason.findAll({
+      where: { userId: { [Op.in]: [...botIds] } },
+      attributes: ['seasonId', [Sequelize.fn('COUNT', Sequelize.col('userId')), 'n']],
+      group: ['seasonId'],
+      raw: true,
+    });
+    for (const r of rows) botCounts.set(Number(r.seasonId), Number(r.n));
+  } catch (e) { /* pri chybe sa brzdy neuplatnia, vstup ostane pôvodný */ }
+
   let joins = 0;
   for (const bot of bots) {
     const p = persona(bot.id);
     for (const season of seasons) {
-      // do oficiálnych vstupujú ochotne, do cudzích komunitných menej často
-      const prob = season.type === 'official' ? p.joinAffinity : p.joinAffinity * 0.3;
+      const inSeason = botCounts.get(season.id) || 0;
+      const isBotOwned = botIds.has(season.creatorId);
+
+      // tvrdý strop pre komunitné sezóny založené ČLOVEKOM
+      if (season.type !== 'official' && !isBotOwned && inSeason >= HUMAN_COMMUNITY_BOT_CAP) continue;
+
+      const ratio = inSeason / totalBots;
+      const prob = p.joinAffinity * fillFactor(ratio, season, isBotOwned) * ageFactor(season.createdAt);
       if (Math.random() > prob) continue;
       const already = await UserSeason.findOne({ where: { userId: bot.id, seasonId: season.id } });
       if (already) continue;
@@ -157,6 +221,7 @@ async function ensureMemberships(bots, log) {
         const inLg = await UserLeague.findOne({ where: { userId: bot.id, leagueId: lg.id } });
         if (!inLg) await UserLeague.create({ userId: bot.id, leagueId: lg.id, role: 'player', joinedAt: new Date() });
       }
+      botCounts.set(season.id, inSeason + 1);   // drž strop aj v rámci jedného ticku
       joins++;
     }
   }
