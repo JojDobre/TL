@@ -7,6 +7,7 @@
 //   node src/bots/run-bots.js status         → prehľad botov a ich aktivity
 //   node src/bots/run-bots.js pause          → pozastaví všetkých botov (active=false)
 //   node src/bots/run-bots.js resume         → opäť ich zapne
+//   node src/bots/run-bots.js remove 100    → odstráni 100 najnovších botov
 //
 // Nasadenie: cron každých 20 minút, napr.:
 //   */20 * * * * cd /cesta/k/backend && /usr/bin/node src/bots/run-bots.js tick >> logs/bots.log 2>&1
@@ -55,6 +56,68 @@ async function createBots(count) {
   console.log(`[bots] vytvorených: ${created}, preskočených (už existovali): ${skipped}`);
 }
 
+async function removeBots(count) {
+  const n = Number(count);
+
+  if (!Number.isInteger(n) || n <= 0) {
+    console.log('[bots] Počet botov musí byť kladné celé číslo.');
+    return;
+  }
+
+  // Najnovšie vytvorení boti idú preč ako prví.
+  const bots = await db.User.findAll({
+    where: { isBot: true },
+    order: [['createdAt', 'DESC']],
+    limit: n,
+  });
+
+  if (!bots.length) {
+    console.log('[bots] Žiadni boti na odstránenie.');
+    return;
+  }
+
+  console.log(`[bots] Na odstránenie vybraných: ${bots.length}`);
+
+  let removed = 0;
+
+  for (const bot of bots) {
+    try {
+      // Najprv odstráň tipy bota.
+      await db.Tip.destroy({
+        where: { userId: bot.id },
+      });
+
+      // Členstvá v ligách.
+      await db.UserLeague.destroy({
+        where: { userId: bot.id },
+      });
+
+      // Členstvá v sezónach.
+      await db.UserSeason.destroy({
+        where: { userId: bot.id },
+      });
+
+      // Nakoniec samotného používateľa.
+      await db.User.destroy({
+        where: { id: bot.id },
+      });
+
+      console.log(
+        `[bots] odstránený: ${bot.username} (#${bot.id})`
+      );
+
+      removed++;
+    } catch (e) {
+      console.error(
+        `[bots] nepodarilo sa odstrániť ${bot.username} (#${bot.id}):`,
+        e.message
+      );
+    }
+  }
+
+  console.log(`[bots] odstránených: ${removed}/${bots.length}`);
+}
+
 async function status() {
   const total = await db.User.count({ where: { isBot: true } });
   const active = await db.User.count({ where: { isBot: true, active: true } });
@@ -77,7 +140,12 @@ async function setActive(value) {
     if (cmd === 'create') {
       const n = Number(process.argv[3]) || 100;
       await createBots(n);
-    } else if (cmd === 'tick') {
+    }
+    else if (cmd === 'remove') {
+      const n = Number(process.argv[3]) || 1;
+      await removeBots(n);
+    }
+     else if (cmd === 'tick') {
       await tick();
     } else if (cmd === 'status') {
       await status();
@@ -86,7 +154,7 @@ async function setActive(value) {
     } else if (cmd === 'resume') {
       await setActive(true);
     } else {
-      console.log('Použitie: node src/bots/run-bots.js create [N] | tick | status | pause | resume');
+      console.log('Použitie: node src/bots/run-bots.js create [N] | remove [N] | tick | status | pause | resume');
     }
     process.exit(0);
   } catch (e) {
