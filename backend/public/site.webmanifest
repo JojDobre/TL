@@ -1,8 +1,8 @@
 {
-  "name": "tifo.sk",
-  "short_name": "tifo.sk",
+  "name": "Tifo – Tipovacia liga",
+  "short_name": "Tifo",
   "description": "Tipuj výsledky zápasov, súťaž v ligách a stúpaj v rebríčku.",
-  "start_url": "/?src=pwa",
+  "start_url": "/app?source=pwa",
   "scope": "/",
   "display": "standalone",
   "background_color": "#06080f",

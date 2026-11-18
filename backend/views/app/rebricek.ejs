@@ -1,0 +1,60 @@
+<%- include('_head') %>
+<header class="a-top">
+  <a class="a-ib" href="/app/rebricky" aria-label="Späť"><svg class="i"><use href="#i-back"/></svg></a>
+  <div style="flex:1;min-width:0">
+    <div class="a-label">Rebríček</div>
+    <% if (!isGlobal && options.length > 1) { %>
+    <select class="a-select" data-nav aria-label="Vybrať ligu">
+      <% options.forEach(function (o) { %><option value="/app/rebricky/<%= o.id %>"<%= o.id === leagueId ? ' selected' : '' %>><%= o.name %></option><% }); %>
+    </select>
+    <% } else { %><div style="font:700 21px var(--a-disp);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><%= title %></div><% } %>
+  </div>
+  <% if (!isGlobal) { %><a class="a-ib" href="/app/liga/<%= leagueId %>" aria-label="Detail ligy"><svg class="i"><use href="#i-info"/></svg></a><% } %>
+</header>
+<main class="a-wrap a-in">
+  <div class="a-seg">
+    <a class="<%= period === 'celkovo' ? 'on' : '' %>" href="<%= baseUrl %>">Celkovo</a>
+    <% if (!isGlobal) { %><a class="<%= period === 'kolo' ? 'on' : '' %>" href="<%= baseUrl %>?obdobie=kolo">Toto kolo</a><% } %>
+    <a class="<%= period === 'mesiac' ? 'on' : '' %>" href="<%= baseUrl %>?obdobie=mesiac">30 dní</a>
+  </div>
+  <div class="a-label" style="margin:16px 4px 8px;display:flex;justify-content:space-between"><span><%= total %> <%= pl(total, 'hráč', 'hráči', 'hráčov') %></span><span>Body</span></div>
+
+  <% if (!total) { %>
+    <div class="a-card a-empty"><b>Zatiaľ bez bodov</b>Rebríček sa zobrazí po prvých vyhodnotených zápasoch.</div>
+  <% } %>
+
+  <% top3.forEach(function (r) { %>
+  <div class="a-top3 p<%= r.rank %> <%= r.me ? 'me' : '' %>" <%= r.me ? 'data-me-row' : '' %>>
+    <span class="medal"><%= r.rank %></span>
+    <%- include('_av', { u: r, size: 42, st: 'box-shadow:0 0 0 2px ' + (r.rank === 1 ? '#facc15' : r.rank === 2 ? '#c9cfde' : '#c98c55') }) %>
+    <div style="flex:1;min-width:0"><div class="nm" style="font:700 15px var(--a-body)"><%= r.me ? 'Ty' : r.name %></div><% if (r.exact) { %><div class="a-muted" style="font-size:11.5px"><%= r.exact %> <%= pl(r.exact, 'presný tip', 'presné tipy', 'presných tipov') %></div><% } %></div>
+    <% if (r.move) { %><span class="a-mv <%= r.move > 0 ? 'a-up' : 'a-down' %>"><svg class="i"><use href="#i-<%= r.move > 0 ? 'up' : 'down' %>"/></svg><%= Math.abs(r.move) %></span><% } %>
+    <span class="a-pts" style="font-size:<%= r.rank === 1 ? 18 : 17 %>px;<%= r.rank === 1 ? 'color:var(--a-gold)' : '' %>"><%= r.points %></span>
+  </div>
+  <% }); %>
+
+  <% if (rest.length) { %>
+  <div class="a-card" style="padding:2px 0;margin-top:4px">
+    <% rest.forEach(function (r) { %>
+    <div class="a-rrow <%= r.me ? 'me' : '' %>" <%= r.me ? 'data-me-row' : '' %>>
+      <span class="r"><%= r.rank %></span>
+      <%- include('_av', { u: r, size: 34 }) %>
+      <span class="nm"><%= r.me ? 'Ty' : r.name %></span>
+      <span class="a-mv <%= r.move > 0 ? 'a-up' : (r.move < 0 ? 'a-down' : 'a-muted') %>"><% if (r.move) { %><svg class="i"><use href="#i-<%= r.move > 0 ? 'up' : 'down' %>"/></svg><%= Math.abs(r.move) %><% } else { %>–<% } %></span>
+      <span class="a-pts"><%= r.points %></span>
+    </div>
+    <% }); %>
+  </div>
+  <% if (total > 100) { %><div class="a-muted a-small" style="text-align:center;margin-top:10px">Zobrazených prvých 100 z <%= total %></div><% } %>
+  <% } %>
+</main>
+<% if (meRow) { %>
+<div class="a-mebar">
+  <span class="r"><%= meRow.rank %></span>
+  <%- include('_av', { u: meRow, size: 34, st: 'background:rgba(255,255,255,.2)' }) %>
+  <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px">Ty</div><div style="font-size:11.5px;color:#e4ddff"><%= meRow.rank === 1 ? 'Vedieš rebríček' : (meGap ? meGap + ' ' + pl(meGap, 'bod', 'body', 'bodov') + ' za ' + (meRow.rank - 1) + '. miestom' : 'Rovnako bodov ako ' + (meRow.rank - 1) + '. miesto') %></div></div>
+  <% if (meRow.move) { %><span class="a-mv" style="color:#bff5df"><svg class="i"><use href="#i-<%= meRow.move > 0 ? 'up' : 'down' %>"/></svg><%= Math.abs(meRow.move) %></span><% } %>
+  <span class="a-pts"><%= meRow.points %></span>
+</div>
+<% } %>
+<%- include('_foot') %>

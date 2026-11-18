@@ -1,0 +1,2 @@
+<%# avatar hráča: u = { image, initials, color }, size px, st = extra štýl %>
+<div class="a-av" style="width:<%= size %>px;height:<%= size %>px;font-size:<%= Math.round(size * 0.33) %>px;background:<%= u.color %>;<%= typeof st !== 'undefined' ? st : '' %>"><% if (u.image) { %><img src="<%= u.image %>" alt="" loading="lazy"><% } else { %><%= u.initials %><% } %></div>

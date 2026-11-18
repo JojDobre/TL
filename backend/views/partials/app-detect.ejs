@@ -1,0 +1,23 @@
+<%# Rozpoznanie MOBILNEJ APLIKÁCIE (Google Play / nainštalovaná PWA).
+    Beží ešte pred vykreslením stránky, aby appkový vzhľad nebliknul.
+    Appka = režim standalone ALEBO karta otvorená z appky (sessionStorage —
+    platí len pre danú kartu, takže web v Chrome na tom istom telefóne
+    ostane webom; cookie by sa s Chrome zdieľala). %>
+<script>
+(function () {
+  try {
+    var d = document.documentElement, s = window.sessionStorage;
+    if (/[?&](source|src)=(twa|pwa|app)\b/.test(location.search)) s.setItem('tifo-app', '1');
+    var app = s.getItem('tifo-app') === '1'
+      || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+      || window.navigator.standalone === true
+      || document.referrer.indexOf('android-app://') === 0;
+    if (!app) return;
+    s.setItem('tifo-app', '1');
+    d.classList.add('is-app');
+    // webová úvodka a „Centrum" majú v appke vlastnú obrazovku
+    var p = location.pathname;
+    if (p === '/' || p === '/my') location.replace('/app');
+  } catch (e) { /* bez sessionStorage ostáva web */ }
+})();
+</script>
