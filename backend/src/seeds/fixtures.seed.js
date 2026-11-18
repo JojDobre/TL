@@ -60,18 +60,9 @@ async function uniqueJoinCode(League) {
   throw new Error('Nepodarilo sa vygenerovať unikátny joinCode');
 }
 
-// čas zápasu: strTimestamp je UTC; fallback na dateEvent + strTime
-function matchTimeOf(e) {
-  if (e.strTimestamp) {
-    const d = new Date(e.strTimestamp + (e.strTimestamp.endsWith('Z') ? '' : 'Z'));
-    if (!isNaN(d)) return d;
-  }
-  if (e.dateEvent) {
-    const d = new Date(`${e.dateEvent}T${e.strTime || '00:00:00'}Z`);
-    if (!isNaN(d)) return d;
-  }
-  return null;
-}
+// čas zápasu (UTC) — zdieľaná logika s automatickými výsledkami; správne
+// zvládne strTimestamp so zónou aj bez nej ("…+00:00" predtým zlyhalo)
+const { eventTime: matchTimeOf } = require('../services/thesportsdb');
 
 function statusOf(e) {
   const s = (e.strStatus || '').toUpperCase();

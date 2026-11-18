@@ -78,6 +78,11 @@
       </form>
     </div>
 
+    <!-- AUTOMATICKÉ VÝSLEDKY -->
+    <% if (typeof autoResults !== 'undefined' && autoResults) { %>
+      <%- include('partials/auto-results-card', { leagueId: template.id, ar: autoResults }) %>
+    <% } %>
+
     <!-- TÍMY -->
     <div class="card sec-card">
       <h3>Tímy</h3>

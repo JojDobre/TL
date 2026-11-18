@@ -484,6 +484,19 @@ async function sysadminNotice({ key, title, message, link }) {
   } catch (e) { console.error('[notify] sysadminNotice:', e.message); }
 }
 
+// Automatické výsledky: zápasy, ktoré treba vyriešiť ručne (dlho bez výsledku,
+// remíza v zápase bez remízy, prerušený zápas…). Súhrnná notifikácia — rovnaký
+// obsah sa neposiela opakovane (viď sysadminNotice).
+async function adminAutoResultsIssues(lines) {
+  if (!lines || !lines.length) return;
+  const msg = lines.slice(0, 8).join(' • ') + (lines.length > 8 ? ` • … a ďalšie (${lines.length - 8})` : '');
+  await sysadminNotice({
+    title: 'Automatické výsledky: treba skontrolovať',
+    message: msg.slice(0, 1000),
+    link: '/admin/pending',
+  });
+}
+
 // Zápasy, ktoré sa už odohrali, ale nemajú zadaný výsledok.
 async function adminMatchesAwaitingResult(count) {
   if (!count) return;
@@ -530,6 +543,7 @@ module.exports = {
   achievementsAwarded,
   // prevádzkové (weboví admini)
   adminMatchesAwaitingResult, adminTemplatesAwaitingResult, adminRoundsUnevaluated,
+  adminAutoResultsIssues,
   // ODPOJENÉ — ponechané kvôli spätnej kompatibilite, nikde sa nevolajú:
   roundCreated, roundEvaluated, adminMessage,
 };

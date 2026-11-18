@@ -653,7 +653,15 @@ const manageLeaguePage = asyncHandler(async (req, res) => {
   const owner = await User.findByPk(league.creatorId, { attributes: ['username', 'firstName', 'lastName'] });
   const ownerName = owner ? ([owner.firstName, owner.lastName].filter(Boolean).join(' ') || owner.username) : '—';
 
+  // automatické výsledky — len webový admin pri oficiálnej (nie klonovanej) lige
+  let autoResults = null;
+  if (!req._standaloneManageView && league.type === 'official' && !league.templateId) {
+    const me = await User.findByPk(userId, { attributes: ['role'] });
+    if (me && me.role === 'admin') autoResults = await require('../utils/auto-results').leagueStatus(league.id);
+  }
+
   res.render(req._standaloneManageView ? 'manageStandalone' : 'manageLeague', {
+    autoResults,
     league: { ...league.toJSON(), scoringSystem: league.scoringSystem || DEFAULT_SCORING, scoringLocked },
     seasonName: league.Season ? league.Season.name : '',
     season: league.Season ? league.Season.toJSON() : null,

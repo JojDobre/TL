@@ -94,6 +94,17 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         allowNull: true,
       },
+      // --- automatické výsledky / synchronizácia programu (utils/auto-results.js) ---
+      // Prepojenie so súťažou u poskytovateľa (TheSportsDB). Len oficiálne
+      // ligy/šablóny spravované adminom; klony výsledky dedia zo šablóny.
+      externalSource: { type: DataTypes.STRING(32), allowNull: true },      // 'thesportsdb'
+      externalLeagueId: { type: DataTypes.STRING(32), allowNull: true },    // napr. '4328'
+      externalSeason: { type: DataTypes.STRING(32), allowNull: true },      // napr. '2026-2027'
+      autoResults: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+      autoSyncFixtures: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+      externalSyncCursor: { type: DataTypes.INTEGER, allowNull: true },     // import celej sezóny: ďalšie kolo
+      externalSyncedAt: { type: DataTypes.DATE, allowNull: true },
+      externalSyncNote: { type: DataTypes.STRING(500), allowNull: true },   // posledná správa synchronizácie
     }, {
       tableName: 'leagues',
       timestamps: true,

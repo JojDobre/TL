@@ -1,0 +1,149 @@
+<%# Karta prepojenia ligy/šablóny s TheSportsDB (automatický program a výsledky).
+    Parametre: leagueId, ar (výstup utils/auto-results.leagueStatus) %>
+<%
+  const _ar = ar || {};
+  const _fmt = (d) => d ? new Date(d).toLocaleString('sk-SK', { timeZone: 'Europe/Bratislava', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+%>
+<div class="card sec-card card-pad2" id="autoResultsCard" data-league="<%= leagueId %>" style="margin-bottom:16px">
+  <h3>Automatické výsledky</h3>
+  <p class="sub">Prepojenie so súťažou v <a class="brand" href="https://www.thesportsdb.com" target="_blank" rel="noopener">TheSportsDB</a> (zadarmo).
+    Program kôl sa udržiava automaticky a zápasy sa vyhodnotia <%= Math.round((_ar.config && _ar.config.delayMin || 180) / 60 * 10) / 10 %> h po začiatku.
+    Ručne zadaný výsledok má vždy prednosť.</p>
+
+  <div class="field" style="margin-bottom:10px">
+    <label class="label">ID súťaže v TheSportsDB</label>
+    <div class="row g-2" style="flex-wrap:nowrap">
+      <input class="input" name="externalLeagueId" inputmode="numeric" placeholder="napr. 4328 = Premier League" value="<%= _ar.externalLeagueId || '' %>">
+      <button class="btn btn-secondary btn-sm" type="button" data-ar-lookup>Overiť</button>
+    </div>
+    <div class="muted" data-ar-lookup-out style="font-size:var(--fs-xs);margin-top:4px"></div>
+  </div>
+
+  <details style="margin-bottom:10px">
+    <summary class="muted" style="font-size:var(--fs-sm);cursor:pointer">Nájsť ID súťaže podľa krajiny</summary>
+    <div class="row g-2" style="margin-top:8px;flex-wrap:nowrap">
+      <input class="input" name="arCountry" placeholder="Krajina po anglicky, napr. Slovakia">
+      <select class="input" name="arSport" style="max-width:140px">
+        <option value="Soccer">Futbal</option>
+        <option value="Ice Hockey">Hokej</option>
+        <option value="Basketball">Basketbal</option>
+        <option value="Handball">Hádzaná</option>
+        <option value="Volleyball">Volejbal</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" type="button" data-ar-search>Hľadať</button>
+    </div>
+    <div data-ar-search-out style="font-size:var(--fs-sm);margin-top:6px"></div>
+  </details>
+
+  <div class="field" style="margin-bottom:10px">
+    <label class="label">Sezóna</label>
+    <input class="input" name="externalSeason" placeholder="napr. 2026-2027" value="<%= _ar.externalSeason || '' %>">
+  </div>
+
+  <label class="row g-2" style="align-items:center;margin-bottom:6px;font-size:var(--fs-sm)">
+    <input type="checkbox" name="autoResults" <%= _ar.autoResults === false ? '' : 'checked' %>> Automaticky vyhodnocovať výsledky
+  </label>
+  <label class="row g-2" style="align-items:center;margin-bottom:6px;font-size:var(--fs-sm)">
+    <input type="checkbox" name="autoSyncFixtures" <%= _ar.autoSyncFixtures === false ? '' : 'checked' %>> Automaticky pridávať kolá a upravovať časy zápasov
+  </label>
+  <label class="row g-2" style="align-items:center;margin-bottom:12px;font-size:var(--fs-sm)">
+    <input type="checkbox" name="importAll" <%= _ar.importing ? 'checked' : '' %>> Postupne naimportovať všetky zostávajúce kolá sezóny
+  </label>
+
+  <div class="row g-2" style="flex-wrap:wrap">
+    <button class="btn btn-primary btn-sm" type="button" data-ar-save><%= _ar.linked ? 'Uložiť' : 'Prepojiť' %></button>
+    <% if (_ar.linked) { %>
+      <button class="btn btn-secondary btn-sm" type="button" data-ar-run>Synchronizovať teraz</button>
+      <% if (_ar.disabled) { %><button class="btn btn-secondary btn-sm" type="button" data-ar-enable>Zapnúť pre všetky zápasy (<%= _ar.disabled %>)</button><% } %>
+      <button class="btn btn-ghost btn-sm" type="button" data-ar-unlink style="color:var(--danger)">Odpojiť</button>
+    <% } %>
+  </div>
+
+  <% if (_ar.linked) { %>
+    <div class="muted" style="font-size:var(--fs-xs);margin-top:12px;line-height:1.6">
+      Posledná synchronizácia: <b><%= _fmt(_ar.syncedAt) %></b><% if (_ar.note) { %> · <%= _ar.note %><% } %><br>
+      Automaticky vyhodnotených: <b><%= _ar.autoEvaluated || 0 %></b> ·
+      Čaká na výsledok: <b><%= _ar.waiting || 0 %></b><% if (_ar.failing) { %> (opakované pokusy: <%= _ar.failing %>)<% } %>
+      <% if (_ar.disabled) { %> · Vypnuté ručne: <b><%= _ar.disabled %></b><% } %>
+      <% if (_ar.provider && _ar.provider.backoffUntil) { %><br><span style="color:var(--warning,#d97706)">Limit TheSportsDB prekročený — pokračuje sa o <%= _fmt(_ar.provider.backoffUntil) %>.</span><% } %>
+    </div>
+  <% } %>
+</div>
+<script>
+(function () {
+  var card = document.getElementById('autoResultsCard'); if (!card) return;
+  var id = card.getAttribute('data-league');
+  var q = function (s) { return card.querySelector(s); };
+  function say(msg, err) {
+    if (typeof window.toast === 'function') return window.toast(msg, err);
+    var t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.textContent = msg;
+    document.body.appendChild(t); setTimeout(function () { t.remove(); }, err ? 3600 : 2200);
+  }
+  async function api(url, opts) {
+    var r = await fetch(url, Object.assign({ headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' } }, opts || {}));
+    var j = {}; try { j = await r.json(); } catch (e) {}
+    if (!r.ok || j.success === false) throw new Error(j.message || 'Nepodarilo sa.');
+    return j;
+  }
+  q('[data-ar-lookup]').addEventListener('click', async function () {
+    var out = q('[data-ar-lookup-out]'); var ext = q('[name=externalLeagueId]').value.trim();
+    if (!ext) { out.textContent = 'Zadaj ID súťaže.'; return; }
+    out.textContent = 'Overujem…';
+    try {
+      var j = await api('/api/admin/tsdb/league/' + encodeURIComponent(ext));
+      var l = j.data;
+      out.textContent = l.name + ' · ' + (l.country || '') + ' · ' + (l.sport || '') + (l.currentSeason ? ' · aktuálna sezóna ' + l.currentSeason : '');
+      var s = q('[name=externalSeason]'); if (!s.value && l.currentSeason) s.value = l.currentSeason;
+    } catch (e) { out.textContent = e.message; }
+  });
+  q('[data-ar-search]').addEventListener('click', async function () {
+    var out = q('[data-ar-search-out]');
+    var c = q('[name=arCountry]').value.trim(); var sp = q('[name=arSport]').value;
+    if (!c) { out.textContent = 'Zadaj krajinu.'; return; }
+    out.textContent = 'Hľadám…';
+    try {
+      var j = await api('/api/admin/tsdb/search?country=' + encodeURIComponent(c) + '&sport=' + encodeURIComponent(sp));
+      if (!j.data.length) { out.textContent = 'Nič sa nenašlo (krajinu zadaj po anglicky).'; return; }
+      out.innerHTML = '';
+      j.data.slice(0, 25).forEach(function (l) {
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-ghost btn-sm';
+        b.style.cssText = 'display:block;text-align:left;width:100%';
+        b.textContent = l.id + ' — ' + l.name + (l.currentSeason ? ' (' + l.currentSeason + ')' : '');
+        b.addEventListener('click', function () {
+          q('[name=externalLeagueId]').value = l.id;
+          if (l.currentSeason) q('[name=externalSeason]').value = l.currentSeason;
+        });
+        out.appendChild(b);
+      });
+    } catch (e) { out.textContent = e.message; }
+  });
+  q('[data-ar-save]').addEventListener('click', async function () {
+    try {
+      var j = await api('/api/leagues/' + id + '/auto-results', { method: 'POST', body: JSON.stringify({
+        externalLeagueId: q('[name=externalLeagueId]').value.trim(),
+        externalSeason: q('[name=externalSeason]').value.trim(),
+        autoResults: q('[name=autoResults]').checked,
+        autoSyncFixtures: q('[name=autoSyncFixtures]').checked,
+        importAll: q('[name=importAll]').checked,
+      }) });
+      say(j.message || 'Uložené ✓'); setTimeout(function () { location.reload(); }, 1200);
+    } catch (e) { say(e.message, true); }
+  });
+  var run = q('[data-ar-run]');
+  if (run) run.addEventListener('click', async function () {
+    try { var j = await api('/api/leagues/' + id + '/auto-results/run', { method: 'POST' }); say(j.message || 'Spustené ✓'); setTimeout(function () { location.reload(); }, 4000); }
+    catch (e) { say(e.message, true); }
+  });
+  var en = q('[data-ar-enable]');
+  if (en) en.addEventListener('click', async function () {
+    try { var j = await api('/api/leagues/' + id + '/auto-results/enable-matches', { method: 'POST' }); say(j.message); setTimeout(function () { location.reload(); }, 1200); }
+    catch (e) { say(e.message, true); }
+  });
+  var un = q('[data-ar-unlink]');
+  if (un) un.addEventListener('click', async function () {
+    if (!confirm('Odpojiť ligu od TheSportsDB? Existujúce kolá a zápasy ostanú.')) return;
+    try { var j = await api('/api/leagues/' + id + '/auto-results', { method: 'DELETE' }); say(j.message); setTimeout(function () { location.reload(); }, 1200); }
+    catch (e) { say(e.message, true); }
+  });
+})();
+</script>

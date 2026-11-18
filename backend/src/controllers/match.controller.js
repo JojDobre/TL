@@ -229,8 +229,12 @@ const evaluateMatch = asyncHandler(async (req, res) => {
     }
   }
 
-  // ručný zásah má prednosť pred automatickým vyhodnocovaním
-  const { message } = await applyResult(match, { homeScore, awayScore, status: newStatus }, { source: 'manual' });
+  // Ručný zásah má prednosť pred automatickým vyhodnocovaním: ručne zadaný
+  // výsledok sa neprepíše a ručne VYMAZANÝ výsledok vypne automatiku pre tento
+  // zápas (inak by ho o pár minút znova doplnila).
+  if (newStatus === 'scheduled' && Match.rawAttributes.autoResults) match.autoResults = false;
+  let { message } = await applyResult(match, { homeScore, awayScore, status: newStatus }, { source: 'manual' });
+  if (newStatus === 'scheduled' && match.externalId) message += ' Automatické vyhodnotenie tohto zápasu bolo vypnuté.';
   res.status(200).json({ success: true, message, data: match });
 });
 

@@ -52,6 +52,11 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DATE,      // upozornenie adminom, že kolo nie je vyhodnotené
         allowNull: true,
       },
+      // číslo kola u poskytovateľa výsledkov (TheSportsDB intRound)
+      externalRound: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
     }, {
       tableName: 'rounds',
       timestamps: true,

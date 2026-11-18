@@ -205,6 +205,9 @@
 
     <!-- NASTAVENIA + NEBEZPEČNÁ ZÓNA -->
     <section data-cpanel="settings" hidden>
+      <% if (typeof autoResults !== 'undefined' && autoResults) { %>
+        <%- include('partials/auto-results-card', { leagueId: league.id, ar: autoResults }) %>
+      <% } %>
       <form class="card card-pad2" method="POST" action="/leagues/<%= league.id %>/edit">
         <h3>Základné nastavenia</h3>
         <p class="sub">Názov, popis a prístup k lige.</p>

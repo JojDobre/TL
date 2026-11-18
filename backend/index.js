@@ -237,6 +237,8 @@ syncDatabase()
     // spustenie sezóny, prevádzkové kontroly pre adminov). Až po inicializácii
     // DB, aby mal pripravené modely.
     scheduler.start();
+    // Automatické výsledky a program zápasov (TheSportsDB) — viď utils/auto-results.js
+    require('./src/utils/auto-results').start();
   })
   .catch((error) => console.error('Chyba pri inicializácii databázy:', error));
 
