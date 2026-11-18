@@ -1,0 +1,34 @@
+<%- include('partials/head', { title: 'Zmazanie účtu', page: 'legal', active: '', pageStyle: `
+  .dl-wrap { max-width:720px; margin:0 auto; padding:54px 0 72px; }
+  .dl-wrap h1 { font-size:clamp(2rem,4vw,2.6rem); margin-bottom:12px; }
+  .dl-wrap p, .dl-wrap li { color:var(--text-2); line-height:1.7; }
+  .dl-wrap ol, .dl-wrap ul { padding-left:22px; margin:10px 0 18px; }
+  .dl-wrap h2 { font-size:var(--fs-h3); margin:28px 0 10px; }
+  .dl-card { padding:18px 20px; margin:18px 0; }
+` }) %>
+<main class="wrap dl-wrap">
+  <div class="eyebrow">Tifo · tifo.sk</div>
+  <h1>Zmazanie účtu a údajov</h1>
+  <p>Svoj účet v aplikácii Tifo (tifo.sk) môžeš kedykoľvek zmazať sám, priamo v aplikácii alebo na webe.</p>
+
+  <div class="card dl-card">
+    <h2 style="margin-top:0">Ako zmazať účet</h2>
+    <ol>
+      <li>Prihlás sa v aplikácii Tifo alebo na <a class="brand" href="/login">tifo.sk</a>.</li>
+      <li>Otvor <b>Profil → Nastavenia</b> (na webe <a class="brand" href="/settings">Nastavenia</a>).</li>
+      <li>Dole na stránke zvoľ <b>Vymazať účet</b> a potvrď napísaním slova VYMAZAŤ.</li>
+    </ol>
+    <p style="margin:0">Ak sa nevieš prihlásiť, napíš nám cez <a class="brand" href="/kontakt">kontaktný formulár</a> z e-mailu, ktorý máš pri účte, a účet zmažeme do 30 dní.</p>
+  </div>
+
+  <h2>Čo sa zmaže</h2>
+  <ul>
+    <li>profil (meno, prezývka, e-mail, profilová fotka, heslo),</li>
+    <li>všetky tvoje tipy a body,</li>
+    <li>členstvá v ligách a sezónach, notifikácie, odznaky a nastavenia upozornení.</li>
+  </ul>
+  <h2>Čo môže zostať</h2>
+  <p>Sezóny, ktoré si založil, nezaniknú, aby o ne neprišli ostatní hráči: ich správu prevezme administrátor tifo.sk a s tvojím účtom už nebudú spojené. Záznamy v zálohách databázy sa prepíšu najneskôr do 14 dní.</p>
+  <p>Viac v <a class="brand" href="/sukromie">Zásadách ochrany súkromia</a>.</p>
+</main>
+<%- include('partials/footer') %>

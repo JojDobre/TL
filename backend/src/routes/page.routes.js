@@ -219,6 +219,8 @@ router.get('/nahlasit-bug', requireLogin, bugReportPage);
 router.post('/nahlasit-bug', requireLogin, bugReportSubmit);
 router.get('/podmienky', attachUser, podmienkyPage);
 router.get('/sukromie', attachUser, sukromiePage);
+// verejná stránka pre Google Play: ako požiadať o zmazanie účtu
+router.get('/zmazanie-uctu', attachUser, (req, res) => res.render('zmazanie-uctu'));
 router.get('/achievements', requireLogin, achievementsPage);
 router.get('/logo-identity', logoIdentityPage);
 router.get('/tip-history', requireLogin, tipHistoryPage);
