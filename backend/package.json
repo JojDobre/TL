@@ -7,6 +7,7 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "migrate": "node src/config/migrate.js",
     "seed:teams": "node src/seeds/teams.seed.js",
     "bots:create": "node src/bots/run-bots.js create",
     "bots:tick": "node src/bots/run-bots.js tick",
