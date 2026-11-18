@@ -72,8 +72,8 @@
       <p class="sub">Názov a okno dostupnosti.</p>
       <form method="POST" action="/admin/templates/<%= template.id %>/meta">
         <div class="field" style="margin-bottom:12px"><label class="label">Názov</label><input class="input" name="name" value="<%= template.name %>" required></div>
-        <div class="field" style="margin-bottom:12px"><label class="label">Dostupná od</label><input class="input" type="date" name="availableFrom" value="<%= template.availableFrom ? new Date(template.availableFrom).toISOString().slice(0,10) : '' %>"></div>
-        <div class="field" style="margin-bottom:14px"><label class="label">Dostupná do</label><input class="input" type="date" name="availableTo" value="<%= template.availableTo ? new Date(template.availableTo).toISOString().slice(0,10) : '' %>"></div>
+        <div class="field" style="margin-bottom:12px"><label class="label">Dostupná od</label><input class="input" type="date" name="availableFrom" value="<%= template.availableFrom ? new Date(template.availableFrom).toLocaleDateString('en-CA',{timeZone:'Europe/Bratislava'}) : '' %>"></div>
+        <div class="field" style="margin-bottom:14px"><label class="label">Dostupná do</label><input class="input" type="date" name="availableTo" value="<%= template.availableTo ? new Date(template.availableTo).toLocaleDateString('en-CA',{timeZone:'Europe/Bratislava'}) : '' %>"></div>
         <button class="btn btn-secondary btn-sm btn-block" type="submit">Uložiť nastavenia</button>
       </form>
     </div>
@@ -293,7 +293,7 @@
         mainS.innerHTML = '<b class="hi"></b> <span class="muted" style="font-size:var(--fs-xs)"></span>';
         mainS.querySelector('b').textContent = nName;
         mainS.querySelector('span').textContent =
-          new Date(nStart).toLocaleString('sk-SK') + ' → ' + new Date(nEnd).toLocaleString('sk-SK');
+          new Date(nStart).toLocaleString('sk-SK',{timeZone:'Europe/Bratislava'}) + ' → ' + new Date(nEnd).toLocaleString('sk-SK',{timeZone:'Europe/Bratislava'});
         // ulož nové hodnoty ako "pôvodné" pre prípadné zrušenie
         rowS.setAttribute('data-orig-name', nName);
         rowS.setAttribute('data-orig-start', nStart);
@@ -347,7 +347,7 @@
         var line = document.createElement('div');
         line.className='match-line'; line.setAttribute('data-match', j.data.id);
         line.innerHTML = '<span class="match-teams">'+hName+' <span class="faint">vs</span> '+aName+'</span>'
-          + '<span class="muted">'+d.toLocaleString('sk-SK',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})+'</span>'
+          + '<span class="muted">'+d.toLocaleString('sk-SK',{timeZone:'Europe/Bratislava',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})+'</span>'
           + '<span class="tag '+((type==='winner'||type==='winner_no_draw')?'tag-muted':'tag-info')+'">'+(type==='winner_no_draw'?'Víťaz (1/2)':(type==='winner'?'Víťaz (1/X/2)':'Skóre'))+'</span>'
           + '<button class="btn btn-ghost btn-icon" title="Vymazať" data-del-match="'+j.data.id+'" style="color:var(--danger)">✕</button>';
         list.appendChild(line);
@@ -388,7 +388,7 @@
       block.className='round-block open'; block.setAttribute('data-round', rid);
       var sD = new Date(start), eD = new Date(end);
       block.innerHTML =
-        '<div class="round-head" data-toggle-round><span class="chev">▶</span><div class="rh-main"><b class="hi">'+name+'</b> <span class="muted" style="font-size:var(--fs-xs)">'+sD.toLocaleString('sk-SK')+' → '+eD.toLocaleString('sk-SK')+'</span></div>'
+        '<div class="round-head" data-toggle-round><span class="chev">▶</span><div class="rh-main"><b class="hi">'+name+'</b> <span class="muted" style="font-size:var(--fs-xs)">'+sD.toLocaleString('sk-SK',{timeZone:'Europe/Bratislava'})+' → '+eD.toLocaleString('sk-SK',{timeZone:'Europe/Bratislava'})+'</span></div>'
         + '<span class="rh-count">0 záp.</span>'
         + '<button class="btn btn-ghost btn-icon" title="Upraviť kolo" data-edit-round="'+rid+'">✎</button>'
         + '<button class="btn btn-ghost btn-icon" title="Vymazať kolo" data-del-round="'+rid+'" style="color:var(--danger)" onclick="event.stopPropagation()">🗑</button></div>'

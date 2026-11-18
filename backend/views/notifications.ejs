@@ -67,7 +67,7 @@
     if(diff<86400) return 'pred ' + Math.floor(diff/3600) + ' hod';
     var days=Math.floor(diff/86400);
     if(days===1) return 'včera';
-    return x.toLocaleDateString('sk-SK',{day:'numeric',month:'short'});
+    return x.toLocaleDateString('sk-SK',{timeZone:'Europe/Bratislava',day:'numeric',month:'short'});
   }
   // CTA label podľa typu
   function ctaLabel(t){

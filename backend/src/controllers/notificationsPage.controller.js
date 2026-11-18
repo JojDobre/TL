@@ -7,6 +7,7 @@
 const { Notification, UserLeague, Round, Match, Tip, League, Sequelize } = require('../models');
 const { Op } = Sequelize;
 const { asyncHandler } = require('../middleware/error.middleware');
+const { fmtDateTimeShort } = require('../utils/datetime.util');
 
 // ── čistenie starých notifikácií ────────────────────────────────────────────
 // Aby tabuľka nerástla donekonečna, mažeme:
@@ -91,7 +92,8 @@ async function generateDeadlineNotifications(userId) {
       const exists = await Notification.findOne({ where: { userId, type: 'deadline', link } });
       if (exists) continue;
 
-      const when = new Date(round.endDate).toLocaleString('sk-SK', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+      // vždy v slovenskom čase (server beží v UTC)
+      const when = fmtDateTimeShort(round.endDate);
       await Notification.create({
         userId, type: 'deadline',
         title: 'Blížiaca sa uzávierka',

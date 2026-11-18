@@ -51,7 +51,7 @@
 <%
   function grad(id){ var g=['135deg,#0b4ea2,#1a1340','135deg,#16a085,#0c5f4d','135deg,#7c5cff,#3b1f8a','135deg,#c0392b,#7d2018','135deg,#d35400,#8a3700']; return g[(id||0)%g.length]; }
   function abbr(n){ return (n||'?').substring(0,2).toUpperCase(); }
-  function fmtTime(d){ if(!d) return ''; var x=new Date(d); return x.toLocaleString('sk-SK',{hour:'2-digit',minute:'2-digit'}); }
+  function fmtTime(d){ if(!d) return ''; var x=new Date(d); return x.toLocaleString('sk-SK',{timeZone:'Europe/Bratislava',hour:'2-digit',minute:'2-digit'}); }
 %>
 
 <div class="wrap my-head">
