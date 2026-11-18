@@ -15,6 +15,7 @@
 const { Achievement, UserAchievement, Tip, Match, Round, League, Season, Team, User, Sequelize } = require('../models');
 const { Op } = Sequelize;
 
+const { standings } = require('./standings.util');
 const DEFAULT_EXACT = 10;
 
 // Spočíta agregáty potrebné pre kritériá. Vracia objekt so štatistikami.
@@ -37,7 +38,29 @@ async function computeStats(userId) {
         { model: Team, as: 'awayTeam', attributes: ['id', 'sport'] },
       ],
     }],
+    attributes: ['id', 'userId', 'points', 'createdAt'],
+    // raw + nest: obyčajné objekty namiesto Sequelize inštancií — pri hráčoch
+    // s tisíckami tipov to šetrí väčšinu času procesora
+    raw: true,
+    nest: true,
   });
+  // raw dotaz vracia JSON stĺpec (scoringSystem) ako text — rozparsuj raz na ligu
+  const scoringCache = new Map();
+  for (const t of tips) {
+    const lg = t.Match && t.Match.Round && t.Match.Round.League;
+    if (!lg || lg.id == null) { if (t.Match && t.Match.Round) t.Match.Round.League = null; continue; }
+    if (!scoringCache.has(lg.id)) {
+      let sc = lg.scoringSystem;
+      if (typeof sc === 'string') { try { sc = JSON.parse(sc); } catch (e) { sc = null; } }
+      scoringCache.set(lg.id, sc);
+    }
+    lg.scoringSystem = scoringCache.get(lg.id);
+  }
+  // nest pri chýbajúcom zápase/kole vytvorí objekt s null hodnotami
+  for (const t of tips) {
+    if (t.Match && t.Match.id == null) t.Match = null;
+    else if (t.Match && t.Match.Round && t.Match.Round.id == null) t.Match.Round = null;
+  }
 
   let tipsTotal = 0;
   let exactTotal = 0;
@@ -189,18 +212,8 @@ async function computeStats(userId) {
       const leagues = await League.findAll({ where: { id: { [Op.in]: myLeagueIds } }, attributes: ['id', 'type', 'ended'] });
       for (const lg of leagues) {
         if (!lg.ended) continue; // rebríčkové odznaky až po ukončení ligy
-        const rounds = await Round.findAll({ where: { leagueId: lg.id }, attributes: ['id'] });
-        const roundIds = rounds.map((r) => r.id);
-        if (!roundIds.length) continue;
-        const lTips = await Tip.findAll({
-          include: [{ model: Match, attributes: ['id'], where: { roundId: { [Op.in]: roundIds } }, required: true }],
-          attributes: ['userId', 'points'],
-        });
-        const byUser = {};
-        lTips.forEach((t) => { byUser[t.userId] = (byUser[t.userId] || 0) + (t.points || 0); });
-        const board = Object.entries(byUser)
-          .map(([u, pts]) => ({ uid: Number(u), pts }))
-          .sort((a, b) => b.pts - a.pts);
+        // rebríček ligy agregovaný v SQL (zoradený: body ↓, pri zhode userId ↑)
+        const board = (await standings({ leagueIds: [lg.id] })).map((r) => ({ uid: r.userId, pts: r.points }));
         const idx = board.findIndex((b) => b.uid === uid);
         if (idx < 0) continue;
         const rank = idx + 1;
@@ -412,14 +425,44 @@ async function _evaluateUserInner(userId) {
 
 // Vyhodnotenie achievementov na pozadí (setImmediate) — neblokuje HTTP odpoveď.
 // evaluateUser() pri novo udelených odznakoch sám vytvorí notifikáciu.
-function evaluateInBackground(userIds) {
-  const uniq = [...new Set((userIds || []).map(Number).filter(Boolean))];
-  if (!uniq.length) return;
-  setImmediate(async () => {
-    for (const uid of uniq) {
-      try { await evaluateUser(uid); } catch (e) { console.error('[achievements] evaluateUser', uid, e.message); }
+// Prepočet odznakov na pozadí cez JEDNU frontu.
+//  • hráč vo fronte je len raz — keď sa za sebou vyhodnotí 50 zápasov, jeho
+//    odznaky sa prepočítajú raz, nie 50-krát,
+//  • spracúva sa po jednom s krátkou pauzou (ACHIEVEMENTS_PAUSE_MS), aby
+//    prepočet nezahltil procesor a web ostal svižný,
+//  • boti sa na pozadí preskakujú — ich odznaky sa dopočítajú, keď si niekto
+//    otvorí ich profil (playerPage volá evaluateUser priamo).
+const queue = new Set();
+let draining = false;
+const PAUSE_MS = Number(process.env.ACHIEVEMENTS_PAUSE_MS || 40);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function drainQueue() {
+  if (draining) return;
+  draining = true;
+  try {
+    while (queue.size) {
+      const batch = [...queue].slice(0, 200);
+      let bots = new Set();
+      try {
+        bots = new Set((await User.findAll({ where: { id: batch, isBot: true }, attributes: ['id'], raw: true }))
+          .map((u) => Number(u.id)));
+      } catch (e) { /* stĺpec isBot nemusí existovať — spracuj všetkých */ }
+      for (const uid of batch) {
+        queue.delete(uid);
+        if (bots.has(uid)) continue;
+        try { await evaluateUser(uid); } catch (e) { console.error('[achievements] evaluateUser', uid, e.message); }
+        await sleep(PAUSE_MS);
+      }
     }
-  });
+  } finally {
+    draining = false;
+  }
+}
+
+function evaluateInBackground(userIds) {
+  (userIds || []).map(Number).filter(Boolean).forEach((id) => queue.add(id));
+  if (queue.size && !draining) setImmediate(() => { drainQueue().catch(() => {}); });
 }
 
 module.exports = { evaluateUser, computeStats, evaluateInBackground };

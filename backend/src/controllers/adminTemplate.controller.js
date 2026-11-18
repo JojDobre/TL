@@ -30,28 +30,37 @@ const templatesListPage = asyncHandler(async (req, res) => {
     order: [['createdAt', 'DESC']],
   });
 
-  const rows = [];
-  for (const t of templates) {
-    const roundIds = (await Round.findAll({ where: { leagueId: t.id }, attributes: ['id'] })).map((r) => r.id);
-    const matchesCount = roundIds.length
-      ? await Match.count({ where: { roundId: { [Op.in]: roundIds } } })
-      : 0;
-    const finishedCount = roundIds.length
-      ? await Match.count({ where: { roundId: { [Op.in]: roundIds }, status: { [Op.in]: ['finished', 'canceled'] } } })
-      : 0;
-    const clonesCount = await League.count({ where: { templateId: t.id } });
-    rows.push({
-      id: t.id,
-      name: t.name,
-      availableFrom: t.availableFrom,
-      availableTo: t.availableTo,
-      status: availability(t),
-      roundsCount: roundIds.length,
-      matchesCount,
-      finishedCount,
-      clonesCount,
-    });
-  }
+  // počty pre všetky šablóny naraz (3 agregované dotazy namiesto 4 na šablónu)
+  const ids = templates.map((t) => t.id);
+  const [roundRows, matchRows, cloneRows] = ids.length ? await Promise.all([
+    Round.findAll({ where: { leagueId: ids }, attributes: ['leagueId', [Sequelize.fn('COUNT', Sequelize.col('id')), 'n']], group: ['leagueId'], raw: true }),
+    Match.findAll({
+      attributes: [
+        [Sequelize.col('Round.league_id'), 'leagueId'],
+        [Sequelize.fn('COUNT', Sequelize.col('Match.id')), 'total'],
+        [Sequelize.fn('SUM', Sequelize.literal("CASE WHEN `Match`.`status` IN ('finished','canceled') THEN 1 ELSE 0 END")), 'done'],
+      ],
+      include: [{ model: Round, attributes: [], where: { leagueId: ids }, required: true }],
+      group: [Sequelize.col('Round.league_id')],
+      raw: true,
+    }),
+    League.findAll({ where: { templateId: ids }, attributes: ['templateId', [Sequelize.fn('COUNT', Sequelize.col('id')), 'n']], group: ['templateId'], raw: true }),
+  ]) : [[], [], []];
+  const roundsBy = new Map(roundRows.map((r) => [Number(r.leagueId), Number(r.n)]));
+  const matchesBy = new Map(matchRows.map((r) => [Number(r.leagueId), { total: Number(r.total), done: Number(r.done) }]));
+  const clonesBy = new Map(cloneRows.map((r) => [Number(r.templateId), Number(r.n)]));
+
+  const rows = templates.map((t) => ({
+    id: t.id,
+    name: t.name,
+    availableFrom: t.availableFrom,
+    availableTo: t.availableTo,
+    status: availability(t),
+    roundsCount: roundsBy.get(t.id) || 0,
+    matchesCount: (matchesBy.get(t.id) || {}).total || 0,
+    finishedCount: (matchesBy.get(t.id) || {}).done || 0,
+    clonesCount: clonesBy.get(t.id) || 0,
+  }));
 
   res.render('adminTemplates', { templates: rows, query: req.query });
 });
