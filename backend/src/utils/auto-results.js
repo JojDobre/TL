@@ -58,6 +58,8 @@ const CFG = {
   aheadRounds: num(process.env.AUTO_SYNC_AHEAD_ROUNDS, 3),
   openDays: num(process.env.AUTO_ROUND_OPEN_DAYS, 7),
   importPerRun: 4,             // koľko kôl naimportovať pri importe celej sezóny za beh
+  pauseMs: num(process.env.AUTO_RESULTS_PAUSE_MS, 300),  // pauza medzi vyhodnoteniami
+  maxEvaluatePerRun: num(process.env.AUTO_RESULTS_MAX_EVALUATE, 40), // strop vyhodnotení za beh
 };
 
 const MIN = 60 * 1000;
@@ -510,6 +512,9 @@ async function processResults(budget, now) {
   const stats = { evaluated: 0, waiting: 0, requests: 0 };
   const problems = [];
   for (const { fetcher, matches } of groups.values()) {
+    // strop vyhodnotení na jeden beh — veľký nevyhodnotený backlog sa dobehne
+    // postupne v ďalších behoch, nie naraz
+    if (stats.evaluated >= CFG.maxEvaluatePerRun) break;
     let events = [];
     if (fetcher) {
       events = await call(budget, fetcher);
@@ -518,7 +523,11 @@ async function processResults(budget, now) {
     for (const m of matches) {
       try {
         const r = await handleMatch(m, findEvent(m, events, teamExtById), now, problems);
-        if (r === 'done') stats.evaluated += 1; else stats.waiting += 1;
+        if (r === 'done') {
+          stats.evaluated += 1;
+          // krátka pauza po každom vyhodnotení — web má prednosť pred dobiehaním
+          await new Promise((res) => setTimeout(res, CFG.pauseMs));
+        } else stats.waiting += 1;
       } catch (e) {
         console.error(`[auto-results] zápas ${m.id}:`, e.message);
         await markAttempt(m, now).catch(() => {});

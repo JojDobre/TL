@@ -172,12 +172,19 @@ async function applyResult(match, result, opts = {}) {
 
   invalidate();
 
-  // notifikácie a achievementy až po úspešnom commite
-  try {
-    if (match.status === 'canceled') await notify.matchCanceled(match, match.Round, tips);
-    else if (match.status === 'finished') await notify.matchEvaluated(match, match.Round, tips);
-  } catch (e) {
-    console.error('[evaluation] notifikácia zlyhala:', e.message);
+  // notifikácie a achievementy až po úspešnom commite.
+  // Automatické dobiehanie STARÝCH zápasov (začiatok pred viac ako 2 dňami)
+  // notifikácie neposiela — inak by hráči po prepojení ligy dostali desiatky
+  // oznámení naraz.
+  const backlog = source === 'auto' && match.matchTime
+    && Date.now() - new Date(match.matchTime).getTime() > 2 * 24 * 3600 * 1000;
+  if (!backlog) {
+    try {
+      if (match.status === 'canceled') await notify.matchCanceled(match, match.Round, tips);
+      else if (match.status === 'finished') await notify.matchEvaluated(match, match.Round, tips);
+    } catch (e) {
+      console.error('[evaluation] notifikácia zlyhala:', e.message);
+    }
   }
   if (match.status === 'finished') {
     const { evaluateInBackground } = require('./achievement.engine');
