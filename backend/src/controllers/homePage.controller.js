@@ -14,6 +14,7 @@ const { Season, User, League, Round, Match, Tip, Team, UserSeason, UserLeague, S
 const { Op } = Sequelize;
 const { seasonStatus } = require('../utils/season.utils');
 const { asyncHandler } = require('../middleware/error.middleware');
+const { seasonCounts, cached } = require('../utils/standings.util');
 
 const abbr = (n) => (n || '?').substring(0, 3).toUpperCase();
 
@@ -22,20 +23,20 @@ const homePage = asyncHandler(async (req, res) => {
   const meId = req.userId ? Number(req.userId) : null; // z attachUser
 
   // ---- GLOBÁLNE ŠTATISTIKY (reálne počty) ----
-  const [usersCount, leaguesCount, tipsCount] = await Promise.all([
+  // (krátka cache — počty sa menia pomaly a COUNT(*) nad tipmi nie je zadarmo)
+  const [usersCount, leaguesCount, tipsCount] = await cached('home:stats', 60 * 1000, () => Promise.all([
     User.count(),
     League.count(),
     Tip.count(),
-  ]);
+  ]));
 
   // ---- SEZÓNY (rovnaká logika viditeľnosti ako /seasons) ----
   const seasons = await Season.findAll({ order: [['createdAt', 'DESC']] });
-  const withCounts = await Promise.all(seasons.map(async (season) => {
-    const lc = await League.count({ where: { seasonId: season.id } });
-    let pc = 0;
-    try { pc = await season.countParticipants(); } catch { /* nič */ }
-    return { ...season.toJSON(), leaguesCount: lc, participantsCount: pc, status: seasonStatus(season) };
-  }));
+  const counts = await seasonCounts(seasons.map((s) => s.id));
+  const withCounts = seasons.map((season) => {
+    const c = counts.get(season.id) || {};
+    return { ...season.toJSON(), leaguesCount: c.leaguesCount || 0, participantsCount: c.participantsCount || 0, status: seasonStatus(season) };
+  });
   // verejné (neskryté) sezóny
   const visible = withCounts.filter((s) => !s.hidden);
   const official = visible.filter((s) => s.type === 'official').slice(0, 3);

@@ -11,6 +11,7 @@ const { Season, User, League, Match, Round, Tip, UserSeason } = require('../mode
 const { v4: uuidv4 } = require('uuid');
 const { ApiError, asyncHandler } = require('../middleware/error.middleware');
 const { tipQualityWeight } = require('../utils/accuracy.util');
+const { seasonCounts, leaderboardWithUsers } = require('../utils/standings.util');
 
 // 6-znakový alfanumerický kód pozvánky
 const generateInviteCode = () => uuidv4().substring(0, 6).toUpperCase();
@@ -35,12 +36,11 @@ const getAllSeasons = asyncHandler(async (req, res) => {
   });
 
   // doplníme počty líg a účastníkov
-  const data = await Promise.all(seasons.map(async (season) => {
-    const leaguesCount = await League.count({ where: { seasonId: season.id } });
-    let participantsCount = 0;
-    try { participantsCount = await season.countParticipants(); } catch { /* asociácia nemusí byť dostupná */ }
-    return { ...season.toJSON(), leaguesCount, participantsCount };
-  }));
+  const counts = await seasonCounts(seasons.map((s) => s.id));
+  const data = seasons.map((season) => {
+    const c = counts.get(season.id) || {};
+    return { ...season.toJSON(), leaguesCount: c.leaguesCount || 0, participantsCount: c.participantsCount || 0 };
+  });
 
   res.status(200).json({ success: true, data });
 });
@@ -204,47 +204,16 @@ const getSeasonLeaderboard = asyncHandler(async (req, res) => {
   const season = await Season.findByPk(id);
   if (!season) throw new ApiError(404, 'Sezóna nebola nájdená.');
 
-  // všetky tipy v sezóne (cez Match → Round → League patriacej do sezóny)
-  const tips = await Tip.findAll({
-    include: [
-      {
-        model: Match,
-        include: [{ model: Round, include: [{ model: League, where: { seasonId: id } }] }],
-      },
-      { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] },
-    ],
-  });
-
-  // agregácia bodov na používateľa
-  const byUser = {};
-  tips.forEach((tip) => {
-    if (!tip.User) return;
-    const uid = tip.User.id;
-    if (!byUser[uid]) {
-      byUser[uid] = {
-        user: {
-          id: tip.User.id, username: tip.User.username,
-          firstName: tip.User.firstName, lastName: tip.User.lastName,
-          profileImage: tip.User.profileImage,
-        },
-        totalPoints: 0, tipsCount: 0, evaluated: 0, weightSum: 0,
-      };
-    }
-    byUser[uid].totalPoints += tip.points || 0;
-    byUser[uid].tipsCount += 1;
-    // vážená presnosť — len z vyhodnotených zápasov (kvalita tipu)
-    if (tip.Match && tip.Match.status === 'finished') {
-      byUser[uid].evaluated += 1;
-      byUser[uid].weightSum += tipQualityWeight(tip, tip.Match);
-    }
-  });
-
-  const leaderboard = Object.values(byUser)
-    .sort((a, b) => b.totalPoints - a.totalPoints)
+  // body a presnosť agregované v SQL (len tipy z líg tejto sezóny)
+  const leaderboard = (await leaderboardWithUsers({ seasonId: id }, ['id', 'username', 'firstName', 'lastName', 'profileImage']))
     .map((entry, index) => ({
-      ...entry,
+      user: entry.user,
+      totalPoints: entry.totalPoints,
+      tipsCount: entry.tipsCount,
+      evaluated: entry.evaluated,
+      weightSum: entry.weightSum,
       rank: index + 1,
-      accuracy: entry.evaluated ? Math.round((entry.weightSum / entry.evaluated) * 100) : 0,
+      accuracy: entry.accuracy || 0,
     }));
 
   res.status(200).json({ success: true, data: leaderboard });

@@ -1,45 +1,22 @@
-// backend/src/bots/bot-engine.js  (v2 — plnohodnotní hráči)
+// backend/src/bots/bot-engine.js  (v3 — boti len tipujú)
 //
-// Simulovaní hráči sa správajú ako reálni používatelia platformy:
-//   HRÁČSKA rola (všetci):
-//     - postupne vstupujú do oficiálnych sezón a ich verejných líg,
-//     - vstupujú do verejných komunitných súťaží iných botov,
-//     - tipujú otvorené zápasy vo VŠETKÝCH svojich ligách (oficiálne aj
-//       komunitné) — rešpektujú deadline presne ako tip.controller.
-//   ZAKLADATEĽSKÁ rola (~12 % botov):
-//     - vytvárajú standalone turnaje (klon šablóny) AJ klasické sezóny,
-//     - vo vlastnej bežiacej klasickej sezóne si vytvoria ligu,
-//     - do vlastnej ligy si poskladajú súpisku z EXISTUJÚCICH globálnych
-//       tímov (vlastné tímy NEVYTVÁRAJÚ — požiadavka),
-//     - vytvárajú kolá a v nich zápasy medzi tímami zo súpisky,
-//     - po odohraní zápasy vyhodnocujú (ako admin ligy) — body počíta
-//       ta istá funkcia calculatePoints ako v appke.
+// Simulovaní hráči:
+//   - postupne vstupujú do OFICIÁLNYCH sezón a ich verejných líg,
+//   - tipujú otvorené zápasy vo svojich ligách — rešpektujú deadline presne
+//     ako tip.controller.
 //
-// Boti neobchádzajú žiadne pravidlá platformy: rovnaké limity ako hráči
-// (žiadne umelé stropy navyše, tempo riadi len pravdepodobnosť persony).
+// Boti už NEZAKLADAJÚ sezóny, ligy, kolá ani zápasy a nič nevyhodnocujú.
+// Existujúce botie súťaže ostávajú v DB nedotknuté.
+//
+// Boti neobchádzajú žiadne pravidlá platformy: rovnaké limity ako hráči.
 
 const {
-  User, Season, League, Round, Match, Tip, Team, UserSeason, UserLeague, sequelize, Sequelize,
+  User, Season, League, Round, Match, Tip, Team, UserSeason, UserLeague, Sequelize,
 } = require('../models');
 const { Op } = Sequelize;
-const { v4: uuidv4 } = require('uuid');
-const bcrypt = require('bcrypt');
-const crypto = require('crypto');
-const { botLeagueName } = require('./bot-names');
-const { cloneTemplateInto } = require('../utils/league-clone.util');
 // Rovnaká zámka ako v tip.controller — bot nesmie mať výhodu oproti hráčovi.
 const { isLeagueLocked } = require('../utils/league.utils');
-const { calculatePoints } = require('../controllers/match.controller');
 
-const DAY = 24 * 60 * 60 * 1000;
-const DEFAULT_SCORING = { exactScore: 10, correctWinner: 3, goalDifference: 2, correctGoals: 1 };
-
-// Botie súťaže sú CHRÁNENÉ HESLOM: vo verejných zoznamoch vidno, že existujú
-// (so zámkom), ale obsah (zápasy/kolá) vidia len členovia — heslo je náhodné
-// a nikde sa neukladá, takže sa reálny používateľ dnu nedostane.
-async function randomSeasonPassword() {
-  return bcrypt.hash(crypto.randomBytes(18).toString('hex'), 10);
-}
 
 // ── deterministická náhodnosť ────────────────────────────────────────────────
 function mulberry32(seed) {
@@ -60,7 +37,7 @@ function persona(userId) {
     homeBias: 0.35 + rnd() * 0.25,     // favoritizmus domácich
     wildness: rnd(),                   // sklon k vyšším skóre
     joinAffinity: 0.05 + rnd() * 0.25, // ochota vstúpiť do súťaže na tick
-    isCreator: rnd() < 0.12,           // zakladateľ obsahu
+    isCreator: rnd() < 0.12,           // (nepoužíva sa — ponechané kvôli stabilnej postupnosti rnd)
     contentDrive: 0.2 + rnd() * 0.6,   // ako usilovne tvorí obsah na tick
     favSport: rnd() < 0.7 ? 'football' : 'hockey',
     rnd,
@@ -121,10 +98,6 @@ function makeTipValues(match, p) {
   if (p.rnd() < p.homeBias - 0.3 && home < away) [home, away] = [away, home];
   return { homeScore: home, awayScore: away };
 }
-// náhodný realistický VÝSLEDOK zápasu (na vyhodnotenie vo vlastnej lige)
-function makeResult(sport, rnd) {
-  return { homeScore: sampleGoals(sport, rnd, 0.4), awayScore: sampleGoals(sport, rnd, 0.4) };
-}
 
 // ── HRÁČSKE kroky ────────────────────────────────────────────────────────────
 
@@ -176,8 +149,9 @@ function ageFactor(createdAt) {
 
 // vstup do oficiálnych sezón + verejných komunitných súťaží
 async function ensureMemberships(bots, log) {
+  // len OFICIÁLNE sezóny — do komunitných súťaží boti nevstupujú
   const seasons = await Season.findAll({
-    where: { ended: false, password: null, hidden: false },
+    where: { ended: false, password: null, hidden: false, type: 'official' },
     attributes: ['id', 'type', 'creatorId', 'createdAt'],
   });
   if (!seasons.length) return;
@@ -267,239 +241,26 @@ async function tipOpenMatches(bots, log) {
       order: [['matchTime', 'ASC']],
       limit: 200,
     });
+    if (!matches.length) continue;
+    // existujúce tipy bota jedným dotazom, nové tipy jedným INSERT-om
+    const have = new Set((await Tip.findAll({
+      where: { userId: bot.id, matchId: matches.map((m) => m.id) },
+      attributes: ['matchId'],
+    })).map((t) => t.matchId));
+    const rows = [];
     for (const match of matches) {
       if (!isOpen(match, now)) continue;
       if (Math.random() > p.coverage) continue;
-      const existing = await Tip.findOne({ where: { userId: bot.id, matchId: match.id } });
-      if (existing) continue;
-      await Tip.create({ userId: bot.id, matchId: match.id, ...makeTipValues(match, p), points: 0 });
-      placed++;
+      if (have.has(match.id)) continue;
+      rows.push({ userId: bot.id, matchId: match.id, ...makeTipValues(match, p), points: 0 });
+    }
+    if (rows.length) {
+      // ignoreDuplicates: súbeh s iným behom nesmie zhodiť celý tick
+      await Tip.bulkCreate(rows, { ignoreDuplicates: true });
+      placed += rows.length;
     }
   }
   if (placed) log(`tipy: +${placed}`);
-}
-
-// ── ZAKLADATEĽSKÉ kroky (životný cyklus vlastného obsahu) ────────────────────
-
-// Mäkký strop botích súťaží. Nie je to tvrdý zákaz — po prekročení sa tvorba
-// len výrazne spomalí, aby zoznam komunitných sezón nezaplavili nepoužívané
-// botie súťaže. Rátajú sa VÝHRADNE sezóny založené botmi; sezóny reálnych
-// používateľov strop neovplyvňujú (a ani naopak).
-const BOT_SEASON_SOFT_CAP = 50;
-// Pravdepodobnosti na jeden tick (cron/20 min → 72 tickov denne):
-//   pod stropom  0.015 → ~1 súťaž denne
-//   nad stropom  0.003 → ~1–2 súťaže týždenne
-const CREATE_RATE_BELOW_CAP = 0.015;
-const CREATE_RATE_ABOVE_CAP = 0.003;
-
-// 1) tvorba súťaží: standalone turnaj (klon šablóny) ALEBO klasická sezóna
-async function createCompetitions(bots, log) {
-  const creators = bots.filter((b) => persona(b.id).isCreator);
-  if (!creators.length) return;
-
-  // koľko súťaží už boti vlastnia — podľa toho sa volí tempo
-  const botIds = bots.map((b) => b.id);
-  const botSeasons = await Season.count({ where: { creatorId: { [Op.in]: botIds } } });
-  const rate = botSeasons >= BOT_SEASON_SOFT_CAP ? CREATE_RATE_ABOVE_CAP : CREATE_RATE_BELOW_CAP;
-  if (Math.random() > rate) return;
-
-  const creator = creators[Math.floor(Math.random() * creators.length)];
-  const p = persona(creator.id);
-
-  // tempo brzdi aj počet už vlastnených súťaží — jeden bot nemá mať desiatky
-  const owned = await Season.count({ where: { creatorId: creator.id } });
-  if (Math.random() < owned * 0.4) return;
-
-  const name = `${botLeagueName(creator.id * 31 + owned)} ${new Date().getFullYear()}`;
-  const standalone = Math.random() < 0.6;
-
-  if (standalone) {
-    const template = await League.findOne({ where: { isTemplate: true, active: true } });
-    let newLeague = null;
-    await sequelize.transaction(async (t) => {
-      const season = await Season.create({
-        name, description: 'Tipovačka partie — pridaj sa a ukáž, čo vieš!',
-        type: 'community', mode: 'standalone', inviteCode: uuidv4().substring(0, 6).toUpperCase(),
-        creatorId: creator.id, active: true, participantLimit: null,
-        startDate: new Date(), endDate: null, ended: false,
-        password: await randomSeasonPassword(), hasPassword: true, hidden: false, // zamknuté heslom — vidno ich, ale dnu len členovia
-      }, { transaction: t });
-      const league = await League.create({
-        name, description: null, type: 'custom', joinCode: uuidv4().substring(0, 6).toUpperCase(),
-        password: null, hasPassword: false, seasonId: season.id, creatorId: creator.id,
-        scoringSystem: DEFAULT_SCORING, scoringLocked: false, active: true,
-        isTemplate: false, templateId: template ? template.id : null,
-      }, { transaction: t });
-      await UserLeague.create({ userId: creator.id, leagueId: league.id, role: 'admin', joinedAt: new Date() }, { transaction: t });
-      await UserSeason.create({ userId: creator.id, seasonId: season.id, role: 'admin', joinedAt: new Date() }, { transaction: t });
-      newLeague = league;
-    });
-    if (template && newLeague) { try { await cloneTemplateInto(template, newLeague); } catch (e) { /* prázdny turnaj */ } }
-    log(`súťaž: standalone '${name}' (${creator.username})`);
-  } else {
-    // klasická sezóna — ligy, kolá a zápasy do nej pribudnú v ďalších tickoch
-    const season = await Season.create({
-      name: `Sezóna ${name}`, description: 'Naša vlastná tipovacia sezóna.',
-      type: 'community', mode: 'classic', inviteCode: uuidv4().substring(0, 6).toUpperCase(),
-      creatorId: creator.id, active: true, participantLimit: null,
-      startDate: new Date(), endDate: new Date(Date.now() + 120 * DAY), ended: false,
-      password: await randomSeasonPassword(), hasPassword: true, hidden: false, // zamknuté heslom — vidno ich, ale dnu len členovia
-    });
-    await UserSeason.create({ userId: creator.id, seasonId: season.id, role: 'admin', joinedAt: new Date() });
-    log(`súťaž: klasická sezóna '${season.name}' (${creator.username})`);
-  }
-
-  // pár botov sa hneď pridá
-  const fresh = await Season.findOne({ where: { creatorId: creator.id }, order: [['createdAt', 'DESC']] });
-  const joiners = bots.filter((b) => b.id !== creator.id && Math.random() < 0.08).slice(0, 10);
-  for (const j of joiners) {
-    await UserSeason.create({ userId: j.id, seasonId: fresh.id, role: 'player', joinedAt: new Date() }).catch(() => {});
-    const lgs = await League.findAll({ where: { seasonId: fresh.id }, attributes: ['id'] });
-    for (const lg of lgs) await UserLeague.create({ userId: j.id, leagueId: lg.id, role: 'player', joinedAt: new Date() }).catch(() => {});
-  }
-}
-
-// 2) vo vlastnej bežiacej KLASICKEJ sezóne založ ligu (ak žiadnu nemá)
-async function createLeaguesInOwnSeasons(bots, log) {
-  for (const bot of bots) {
-    const p = persona(bot.id);
-    if (!p.isCreator || Math.random() > p.contentDrive * 0.4) continue;
-    const seasons = await Season.findAll({ where: { creatorId: bot.id, ended: false, mode: 'classic' }, attributes: ['id', 'name'] });
-    for (const season of seasons) {
-      const count = await League.count({ where: { seasonId: season.id } });
-      if (count >= 2 && Math.random() < 0.9) continue; // väčšinou stačí 1–2 ligy
-      const useTemplate = Math.random() < 0.5;
-      const template = useTemplate ? await League.findOne({ where: { isTemplate: true, active: true } }) : null;
-      const league = await League.create({
-        name: `${season.name} — liga ${count + 1}`, description: null, type: 'custom',
-        joinCode: uuidv4().substring(0, 6).toUpperCase(), password: null, hasPassword: false,
-        seasonId: season.id, creatorId: bot.id, scoringSystem: DEFAULT_SCORING,
-        scoringLocked: false, active: true, isTemplate: false, templateId: template ? template.id : null,
-      });
-      await UserLeague.create({ userId: bot.id, leagueId: league.id, role: 'admin', joinedAt: new Date() });
-      if (template) { try { await cloneTemplateInto(template, league); } catch (e) { /* prázdna */ } }
-      // členovia sezóny sa pridajú do novej ligy
-      const members = await UserSeason.findAll({ where: { seasonId: season.id }, attributes: ['userId'] });
-      for (const m of members) {
-        if (m.userId === bot.id) continue;
-        await UserLeague.create({ userId: m.userId, leagueId: league.id, role: 'player', joinedAt: new Date() }).catch(() => {});
-      }
-      log(`liga: '${league.name}' v sezóne #${season.id} (${bot.username})`);
-      return; // max 1 nová liga na tick
-    }
-  }
-}
-
-// 3) súpiska vlastnej ligy — LEN existujúce globálne tímy (nič nevytvárame)
-async function buildRosters(bots, log) {
-  const { LeagueTeam } = require('../models');
-  for (const bot of bots) {
-    const p = persona(bot.id);
-    if (!p.isCreator || Math.random() > p.contentDrive * 0.6) continue;
-    const leagues = await League.findAll({ where: { creatorId: bot.id, isTemplate: false, active: true, templateId: null }, attributes: ['id', 'name'] });
-    for (const lg of leagues) {
-      const rosterCount = await LeagueTeam.count({ where: { leagueId: lg.id } });
-      if (rosterCount >= 6) continue;
-      const teams = await Team.findAll({ where: { scope: 'global', sport: p.favSport }, attributes: ['id'], limit: 40 });
-      if (teams.length < 4) continue;
-      const shuffled = teams.sort(() => Math.random() - 0.5).slice(0, 8 + Math.floor(Math.random() * 5));
-      for (const t of shuffled) {
-        await LeagueTeam.create({ leagueId: lg.id, teamId: t.id }).catch(() => {});
-      }
-      log(`súpiska: ${shuffled.length} tímov → '${lg.name}'`);
-      return;
-    }
-  }
-}
-
-// 4) kolo vo vlastnej lige, ak žiadne budúce nemá
-async function createRounds(bots, log) {
-  for (const bot of bots) {
-    const p = persona(bot.id);
-    if (!p.isCreator || Math.random() > p.contentDrive * 0.5) continue;
-    const leagues = await League.findAll({ where: { creatorId: bot.id, isTemplate: false, active: true, templateId: null }, attributes: ['id', 'name'] });
-    for (const lg of leagues) {
-      const { LeagueTeam } = require('../models');
-      if ((await LeagueTeam.count({ where: { leagueId: lg.id } })) < 4) continue; // najprv súpiska
-      const upcoming = await Round.count({ where: { leagueId: lg.id, endDate: { [Op.gt]: new Date() } } });
-      if (upcoming > 0) continue;
-      const n = (await Round.count({ where: { leagueId: lg.id } })) + 1;
-      const start = new Date(Date.now() + (1 + Math.floor(Math.random() * 2)) * DAY);
-      const end = new Date(start.getTime() + (5 + Math.floor(Math.random() * 4)) * DAY);
-      const round = await Round.create({ name: `${n}. kolo`, leagueId: lg.id, startDate: start, endDate: end });
-      log(`kolo: '${round.name}' v '${lg.name}'`);
-      return;
-    }
-  }
-}
-
-// 5) zápasy v najnovšom kole vlastnej ligy — párovanie tímov zo súpisky
-async function createMatches(bots, log) {
-  const { LeagueTeam } = require('../models');
-  for (const bot of bots) {
-    const p = persona(bot.id);
-    if (!p.isCreator || Math.random() > p.contentDrive * 0.6) continue;
-    const leagues = await League.findAll({ where: { creatorId: bot.id, isTemplate: false, active: true, templateId: null }, attributes: ['id', 'name'] });
-    for (const lg of leagues) {
-      const round = await Round.findOne({ where: { leagueId: lg.id, endDate: { [Op.gt]: new Date() } }, order: [['startDate', 'ASC']] });
-      if (!round) continue;
-      const existing = await Match.count({ where: { roundId: round.id } });
-      if (existing >= 4) continue;
-      const roster = await LeagueTeam.findAll({ where: { leagueId: lg.id }, attributes: ['teamId'] });
-      if (roster.length < 4) continue;
-      const ids = roster.map((r) => r.teamId).sort(() => Math.random() - 0.5);
-      const pairs = [];
-      for (let i = 0; i + 1 < ids.length && pairs.length < 4 + Math.floor(Math.random() * 3); i += 2) pairs.push([ids[i], ids[i + 1]]);
-      const rs = new Date(round.startDate).getTime();
-      const re = new Date(round.endDate).getTime();
-      for (const [home, away] of pairs) {
-        const matchTime = new Date(rs + Math.random() * Math.max(re - rs - 2 * 3600 * 1000, 3600 * 1000));
-        await Match.create({
-          roundId: round.id, homeTeamId: home, awayTeamId: away, matchTime,
-          tipType: Math.random() < 0.85 ? 'exact_score' : 'winner', status: 'scheduled',
-        });
-      }
-      log(`zápasy: +${pairs.length} v '${round.name}' (${lg.name})`);
-      return;
-    }
-  }
-}
-
-// 6) vyhodnotenie odohraných zápasov vo VLASTNÝCH ligách (ako admin ligy).
-// Výsledok je náhodný realistický; body počíta calculatePoints z appky.
-async function evaluateOwnMatches(bots, log) {
-  const creatorIds = bots.filter((b) => persona(b.id).isCreator).map((b) => b.id);
-  if (!creatorIds.length) return;
-  const now = new Date();
-  const due = await Match.findAll({
-    where: { status: 'scheduled', matchTime: { [Op.lt]: new Date(now.getTime() - 2 * 3600 * 1000) } },
-    include: [
-      { model: Round, attributes: ['id', 'leagueId'], required: true,
-        include: [{ model: League, attributes: ['id', 'creatorId', 'scoringSystem', 'type', 'isTemplate'], where: { creatorId: { [Op.in]: creatorIds }, isTemplate: false }, required: true }] },
-      { model: Team, as: 'homeTeam', attributes: ['sport'] },
-      { model: Team, as: 'awayTeam', attributes: ['sport'] },
-    ],
-    limit: 12,
-  });
-  let done = 0;
-  for (const match of due) {
-    const league = match.Round.League;
-    const rnd = mulberry32(match.id * 104729 + 7);
-    const result = makeResult(sportOf(match), rnd);
-    match.homeScore = result.homeScore;
-    match.awayScore = result.awayScore;
-    match.status = 'finished';
-    await match.save();
-    // prepočet bodov všetkých tipov — rovnaká funkcia ako v appke
-    const scoring = league.scoringSystem || DEFAULT_SCORING;
-    const tips = await Tip.findAll({ where: { matchId: match.id } });
-    for (const tip of tips) {
-      tip.points = calculatePoints(tip, match, scoring);
-      await tip.save();
-    }
-    done++;
-  }
-  if (done) log(`vyhodnotenie: ${done} zápasov vo vlastných ligách`);
 }
 
 // ── verejné API ──────────────────────────────────────────────────────────────
@@ -508,15 +269,11 @@ async function tick({ verbose = true } = {}) {
   const bots = await getBots();
   if (!bots.length) { log('žiadni boti — najprv spusti create'); return; }
   log(`tick — aktívnych botov: ${bots.length}`);
+  // Boti už NEZAKLADAJÚ súťaže, ligy, kolá ani zápasy a nič nevyhodnocujú —
+  // len vstupujú do oficiálnych sezón a tipujú (požiadavka prevádzky).
   await ensureMemberships(bots, log);
-  await createCompetitions(bots, log);
-  await createLeaguesInOwnSeasons(bots, log);
-  await buildRosters(bots, log);
-  await createRounds(bots, log);
-  await createMatches(bots, log);
   await tipOpenMatches(bots, log);
-  await evaluateOwnMatches(bots, log);
   log('tick hotový');
 }
 
-module.exports = { tick, persona, makeTipValues, isOpen, sampleGoals, makeResult };
+module.exports = { tick, persona, makeTipValues, isOpen, sampleGoals };

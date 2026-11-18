@@ -8,32 +8,9 @@
 const { Season, League, Round, Match, Tip, User, UserSeason, UserLeague, Team, Sequelize } = require('../models');
 const { asyncHandler } = require('../middleware/error.middleware');
 const { seasonStatus } = require('../utils/season.utils');
-const { tipQualityWeight } = require('../utils/accuracy.util');
+const { standings, accuracyOf, roundCounts } = require('../utils/standings.util');
 
 const Op = Sequelize.Op;
-
-// rebríček (body podľa user) z poľa tipov
-function rankFromTips(tips) {
-  const byUser = {};
-  tips.forEach((t) => {
-    if (!t.User) return;
-    const uid = t.User.id;
-    if (!byUser[uid]) byUser[uid] = { userId: uid, points: 0 };
-    byUser[uid].points += t.points || 0;
-  });
-  return Object.values(byUser).sort((a, b) => b.points - a.points);
-}
-
-// vážená presnosť používateľa z jeho tipov (kvalita tipu / vyhodnotené)
-function accuracyFromTips(tips, meId) {
-  let ev = 0; let weightSum = 0;
-  tips.forEach((t) => {
-    if (t.User && t.User.id !== meId) return;
-    if (!t.Match || t.Match.status !== 'finished') return;
-    ev += 1; weightSum += tipQualityWeight(t, t.Match);
-  });
-  return ev > 0 ? Math.round((weightSum / ev) * 100) : null;
-}
 
 // GET /my
 const myPage = asyncHandler(async (req, res) => {
@@ -42,66 +19,73 @@ const myPage = asyncHandler(async (req, res) => {
   const greetName = user ? (user.firstName || user.username) : '';
 
   // ---- MOJE SEZÓNY ----
-  const sMems = await UserSeason.findAll({ where: { userId: meId } });
+  const sMems = await UserSeason.findAll({ where: { userId: meId }, attributes: ['seasonId'] });
   const seasonIds = sMems.map((m) => m.seasonId);
   const seasons = seasonIds.length
     ? await Season.findAll({ where: { id: { [Op.in]: seasonIds } }, order: [['createdAt', 'DESC']] })
     : [];
 
-  const mySeasons = [];
-  for (const s of seasons) {
-    const leagues = await League.findAll({ where: { seasonId: s.id }, attributes: ['id'] });
-    const leagueIds = leagues.map((l) => l.id);
-    let myPoints = 0; let rank = null; let playedRounds = 0; let totalRounds = 0; let accuracy = null;
-    if (leagueIds.length) {
-      const rounds = await Round.findAll({ where: { leagueId: { [Op.in]: leagueIds } }, attributes: ['id', 'endDate'] });
-      totalRounds = rounds.length;
-      const now = new Date();
-      playedRounds = rounds.filter((r) => r.endDate && new Date(r.endDate) < now).length;
-      const tips = await Tip.findAll({
-        include: [
-          { model: Match, attributes: ['id', 'status', 'tipType', 'homeScore', 'awayScore'], include: [{ model: Round, attributes: ['id'], where: { leagueId: { [Op.in]: leagueIds } }, required: true }], required: true },
-          { model: User, attributes: ['id'] },
-        ],
-      });
-      const board = rankFromTips(tips);
-      const idx = board.findIndex((b) => b.userId === meId);
-      if (idx >= 0) { rank = idx + 1; myPoints = board[idx].points; }
-      accuracy = accuracyFromTips(tips, meId);
-    }
-    mySeasons.push({
-      id: s.id, name: s.name, type: s.type, hasPassword: s.hasPassword, image: s.image || null,
-      status: seasonStatus(s), rank, myPoints, accuracy,
-      playedRounds, totalRounds,
-      progressPct: totalRounds > 0 ? Math.round((playedRounds / totalRounds) * 100) : 0,
-    });
-  }
-
-  // ---- MOJE LIGY ----
-  const lMems = await UserLeague.findAll({ where: { userId: meId } });
+  // ---- MOJE LIGY (členstvá) ----
+  const lMems = await UserLeague.findAll({ where: { userId: meId }, attributes: ['leagueId'] });
   const myLeagueIds = lMems.map((m) => m.leagueId);
   const leaguesRaw = myLeagueIds.length
     ? await League.findAll({ where: { id: { [Op.in]: myLeagueIds } }, include: [{ model: Season, attributes: ['id', 'name', 'endDate', 'ended', 'mode', 'image'] }], order: [['createdAt', 'DESC']] })
     : [];
 
-  const myLeagues = [];
-  for (const l of leaguesRaw) {
-    const rounds = await Round.findAll({ where: { leagueId: l.id }, attributes: ['id'] });
-    const roundIds = rounds.map((r) => r.id);
-    let rank = null; let myPoints = 0;
-    if (roundIds.length) {
-      const tips = await Tip.findAll({
-        include: [
-          { model: Match, attributes: ['id'], where: { roundId: { [Op.in]: roundIds } }, required: true },
-          { model: User, attributes: ['id'] },
-        ],
-      });
-      const board = rankFromTips(tips);
-      const idx = board.findIndex((b) => b.userId === meId);
-      if (idx >= 0) { rank = idx + 1; myPoints = board[idx].points; }
-    }
+  // ligy všetkých mojich sezón (sezónny rebríček = súčet cez všetky jej ligy)
+  const seasonLeagues = seasonIds.length
+    ? await League.findAll({ where: { seasonId: { [Op.in]: seasonIds } }, attributes: ['id', 'seasonId'] })
+    : [];
+  const leaguesBySeason = new Map();
+  seasonLeagues.forEach((l) => {
+    if (!leaguesBySeason.has(l.seasonId)) leaguesBySeason.set(l.seasonId, []);
+    leaguesBySeason.get(l.seasonId).push(l.id);
+  });
+
+  // JEDEN agregovaný dotaz: body každého hráča v každej relevantnej lige
+  const allLeagueIds = [...new Set([...myLeagueIds, ...seasonLeagues.map((l) => l.id)])];
+  const [perLeague, rCounts] = await Promise.all([
+    standings({ leagueIds: allLeagueIds, groupBy: 'league' }),
+    roundCounts(allLeagueIds),
+  ]);
+  const rowsByLeague = new Map();
+  perLeague.forEach((r) => {
+    if (!rowsByLeague.has(r.leagueId)) rowsByLeague.set(r.leagueId, []);
+    rowsByLeague.get(r.leagueId).push(r);
+  });
+
+  // poradie a body hráča v rebríčku zloženom z daných líg
+  function myStanding(leagueIds) {
+    const byUser = new Map();
+    leagueIds.forEach((lid) => (rowsByLeague.get(lid) || []).forEach((r) => {
+      const cur = byUser.get(r.userId) || { userId: r.userId, points: 0, evaluated: 0, weightSum: 0 };
+      cur.points += r.points; cur.evaluated += r.evaluated; cur.weightSum += r.weightSum;
+      byUser.set(r.userId, cur);
+    }));
+    const board = [...byUser.values()].sort((a, b) => b.points - a.points);
+    const idx = board.findIndex((b) => b.userId === meId);
+    return idx >= 0
+      ? { rank: idx + 1, myPoints: board[idx].points, accuracy: accuracyOf(board[idx]) }
+      : { rank: null, myPoints: 0, accuracy: null };
+  }
+
+  const mySeasons = seasons.map((s) => {
+    const lids = leaguesBySeason.get(s.id) || [];
+    let totalRounds = 0; let playedRounds = 0;
+    lids.forEach((lid) => { const c = rCounts.get(lid); if (c) { totalRounds += c.total; playedRounds += c.played; } });
+    const st = lids.length ? myStanding(lids) : { rank: null, myPoints: 0, accuracy: null };
+    return {
+      id: s.id, name: s.name, type: s.type, hasPassword: s.hasPassword, image: s.image || null,
+      status: seasonStatus(s), rank: st.rank, myPoints: st.myPoints, accuracy: st.accuracy,
+      playedRounds, totalRounds,
+      progressPct: totalRounds > 0 ? Math.round((playedRounds / totalRounds) * 100) : 0,
+    };
+  });
+
+  const myLeagues = leaguesRaw.map((l) => {
+    const st = myStanding([l.id]);
     const sEnded = l.Season && seasonStatus(l.Season) === 'ended';
-    myLeagues.push({
+    return {
       id: l.id, name: l.name, type: l.type, hasPassword: l.hasPassword,
       // Pri standalone turnaji je obrázok uložený na SEZÓNE (sezóna a liga sú
       // tam jeden celok) — bez fallbacku by karta ostala bez loga.
@@ -109,9 +93,9 @@ const myPage = asyncHandler(async (req, res) => {
       seasonName: l.Season ? l.Season.name : null,
       seasonId: l.Season ? l.Season.id : null,
       seasonMode: l.Season ? l.Season.mode : null,
-      ended: !!l.ended || sEnded, rank, myPoints,
-    });
-  }
+      ended: !!l.ended || sEnded, rank: st.rank, myPoints: st.myPoints,
+    };
+  });
 
   // ---- NAJBLIŽŠIE ZÁPASY NA TIP (naprieč mojimi ligami) ----
   // Tipovateľné = zápasy v OTVORENÝCH kolách (now medzi startDate a endDate),
