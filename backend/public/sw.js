@@ -6,7 +6,7 @@
    Scope: '/' (súbor je servovaný z /sw.js cez express.static)
    ===================================================================== */
 
-const CACHE = 'tifo-shell-v3';
+const CACHE = 'tifo-shell-v4';
 
 // Minimálny „app shell": statické assety, ktoré chceme mať k dispozícii aj
 // offline. Zámerne malý zoznam — appka je server-rendered (EJS), takže offline
@@ -64,8 +64,19 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       caches.match(req).then((cached) => cached || fetch(req).then((res) => {
         // opportunisticky dopĺňaj cache
+        if (!res || !res.ok) return res;
         const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+        caches.open(CACHE).then(async (c) => {
+          // Assety sú verzované (?v=<deploy>). Staré verzie toho istého súboru
+          // zmaž, aby cache po každom nasadení nerástla donekonečna.
+          if (url.search) {
+            const keys = await c.keys();
+            await Promise.all(keys
+              .filter((k) => { const u = new URL(k.url); return u.pathname === url.pathname && u.search !== url.search; })
+              .map((k) => c.delete(k)));
+          }
+          await c.put(req, copy);
+        }).catch(() => {});
         return res;
       }).catch(() => cached))
     );

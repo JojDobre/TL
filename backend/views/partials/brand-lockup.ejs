@@ -86,11 +86,13 @@
        {{- include('partials/brand-lockup', { variant: 'badge' }) }}
      ============================================================================ -%>
 <%
-  const MASCOT = '/branding/identity/tifo-mascot-transparent.png';
+  // Optimalizované WebP varianty (originál PNG má 1,5 MB — v navbare sa
+  // zobrazuje 36 px, takže stačí 96 px verzia s ~4 KB). Veľkosť sa vyberá
+  // podľa zobrazenej výšky (2× kvôli retina displejom).
   const MONO   = {
-    'mono-gold':  '/branding/identity/tifo-mono-gold.png',
-    'mono-navy':  '/branding/identity/tifo-mono-navy.png',
-    'mono-white': '/branding/identity/tifo-mono-white.png',
+    'mono-gold':  '/branding/identity/tifo-mono-gold-256.webp',
+    'mono-navy':  '/branding/identity/tifo-mono-navy-256.webp',
+    'mono-white': '/branding/identity/tifo-mono-white-256.webp',
   };
   const BG = {
     'bg-dark':   '#080e14',
@@ -107,6 +109,9 @@
   const _fontSize  = (typeof fontSize   !== 'undefined') ? fontSize  : null;
   const _wordColor = (typeof wordColor  !== 'undefined') ? wordColor : 'var(--text-1)';
   const _round     = (typeof round      !== 'undefined') ? round     : false;
+
+  const _px = _size || ({ horizontal: 36, tagline: 74, descriptor: 64, icon: 64 }[_variant] || 160);
+  const MASCOT = '/branding/identity/tifo-mascot-' + (_px <= 48 ? 96 : (_px <= 96 ? 192 : 512)) + '.webp';
 
   const tag      = _href ? 'a' : 'span';
   const hrefAttr = _href ? (' href="' + _href + '"') : '';

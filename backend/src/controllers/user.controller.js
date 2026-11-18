@@ -140,6 +140,7 @@ const updateUser = asyncHandler(async (req, res) => {
   if (profileImage !== undefined) user.profileImage = (profileImage || '').trim() || null;
 
   await user.save();
+  if (req.session) delete req.session.avatarCache;
 
   res.status(200).json({
     success: true,

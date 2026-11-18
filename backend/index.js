@@ -3,6 +3,7 @@ const express = require('express');
 const session = require('express-session');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const compression = require('compression');
 const path = require('path');
 const syncDatabase = require('./src/config/db.sync');
 
@@ -47,9 +48,44 @@ app.set('trust proxy', 1);
 // ---- EJS view engine ----
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+// Cache skompilovaných šablón. Express ju zapína len pri NODE_ENV=production —
+// ak produkcia beží s NODE_ENV=development (napr. skopírovaný .env.example),
+// každá stránka by sa pri každom requeste kompilovala nanovo. Preto ju
+// zapíname vždy, okrem `npm run dev` (nodemon) alebo VIEW_CACHE=false.
+app.set('view cache', process.env.VIEW_CACHE
+  ? process.env.VIEW_CACHE !== 'false'
+  : process.env.npm_lifecycle_event !== 'dev');
+
+// ---- kompresia odpovedí (HTML, CSS, JS, JSON) ----
+// HTML stránky majú desiatky KB — gzip ich zmenší ~5–8×.
+app.use(compression());
+
+// ---- meranie času odpovede (Server-Timing + log pomalých stránok) ----
+app.use(require('./src/middleware/timing.middleware'));
+
+// ---- verzia assetov (cache-busting) ----
+// CSS/JS sa v šablónach odkazujú ako /css/x.css?v=<assetV>. Prehliadač si ich
+// môže dlho držať v cache a po nasadení novej verzie sa URL zmení.
+app.locals.assetV = require('./src/utils/asset-version');
 
 // ---- statické súbory (CSS, shell.js, enhance.js, obrázky) ----
-app.use(express.static(path.join(__dirname, 'public')));
+// Verzované assety (?v=…) a obrázky sa cachujú dlho; ostatné krátko.
+const staticDir = path.join(__dirname, 'public');
+app.use(express.static(staticDir, {
+  setHeaders(res, filePath) {
+    const req = res.req;
+    if (/[\\/]sw\.js$/.test(filePath)) {
+      // service worker sa musí vždy overiť, inak by sa nová verzia nenačítala
+      res.setHeader('Cache-Control', 'no-cache');
+    } else if (req && req.query && req.query.v) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else if (/\.(webp|png|jpe?g|avif|svg|ico|woff2?)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=604800');
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+    }
+  },
+}));
 
 // ---- bezpečnosť a logovanie ----
 // helmet s vypnutým CSP (inline štýly v šablónach); pri produkcii doladiť
@@ -145,13 +181,22 @@ app.use(async (req, res, next) => {
   res.locals.canonicalUrl = appBase + (req.path === '/' ? '/' : req.path.replace(/\/$/, ''));
   // profilová fotka prihláseného — načítava sa z DB (lacný select podľa PK),
   // aby bola vždy aktuálna bez ohľadu na to, kedy bola nastavená.
+  // Avatar sa drží v session (načíta sa raz za AVATAR_TTL), nie pri každom
+  // requeste — šetrí jeden DB dotaz na každú stránku.
   res.locals.currentUserImage = null;
   if (req.session.userId) {
-    try {
-      const { User } = require('./src/models');
-      const u = await User.findByPk(req.session.userId, { attributes: ['profileImage'] });
-      res.locals.currentUserImage = u ? (u.profileImage || null) : null;
-    } catch (e) { /* ignoruj — avatar je vedľajší */ }
+    const AVATAR_TTL = 5 * 60 * 1000;
+    const cached = req.session.avatarCache;
+    if (cached && cached.uid === req.session.userId && Date.now() - cached.at < AVATAR_TTL) {
+      res.locals.currentUserImage = cached.img;
+    } else {
+      try {
+        const { User } = require('./src/models');
+        const u = await User.findByPk(req.session.userId, { attributes: ['profileImage'] });
+        res.locals.currentUserImage = u ? (u.profileImage || null) : null;
+        req.session.avatarCache = { uid: req.session.userId, img: res.locals.currentUserImage, at: Date.now() };
+      } catch (e) { /* ignoruj — avatar je vedľajší */ }
+    }
   }
   next();
 });
