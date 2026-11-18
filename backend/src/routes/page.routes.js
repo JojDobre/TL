@@ -163,6 +163,18 @@ router.post('/admin/templates/:id/meta', requireAdmin, templateUpdateMeta);
 router.post('/admin/templates/:id/delete', requireAdmin, templateDelete);
 router.get('/admin/templates/:id/evaluate', requireAdmin, templateEvaluatePage);
 
+// Mobilná aplikácia (Google Play / PWA) — vlastné obrazovky, web ich neodkazuje
+const appCtl = require('../controllers/appPage.controller');
+router.get('/app', appCtl.entry);
+router.get('/app/welcome', appCtl.welcome);
+router.get('/app/home', appCtl.appLogin, appCtl.home);
+router.get('/app/tipovat', appCtl.appLogin, appCtl.tipovat);
+router.get('/app/rebricky', appCtl.appLogin, appCtl.rebricky);
+router.get('/app/rebricky/:id', appCtl.appLogin, appCtl.rebricek);
+router.get('/app/liga/:id', appCtl.appLogin, appCtl.liga);
+router.get('/app/notifikacie', appCtl.appLogin, appCtl.notifikacie);
+router.get('/app/profil', appCtl.appLogin, appCtl.profil);
+
 // Admin API — automatické výsledky (TheSportsDB)
 const autoResultsCtl = require('../controllers/autoResults.controller');
 router.get('/api/admin/tsdb/league/:extId', apiRequireAdmin, autoResultsCtl.lookupLeague);
@@ -207,6 +219,8 @@ router.get('/nahlasit-bug', requireLogin, bugReportPage);
 router.post('/nahlasit-bug', requireLogin, bugReportSubmit);
 router.get('/podmienky', attachUser, podmienkyPage);
 router.get('/sukromie', attachUser, sukromiePage);
+// verejná stránka pre Google Play: ako požiadať o zmazanie účtu
+router.get('/zmazanie-uctu', attachUser, (req, res) => res.render('zmazanie-uctu'));
 router.get('/achievements', requireLogin, achievementsPage);
 router.get('/logo-identity', logoIdentityPage);
 router.get('/tip-history', requireLogin, tipHistoryPage);

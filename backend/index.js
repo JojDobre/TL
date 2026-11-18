@@ -72,6 +72,27 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// ---- Digital Asset Links pre Android appku (TWA z Google Play) ----
+// Google ním overí, že appka sk.tifo.app patrí k tejto doméne — bez neho by
+// appka zobrazovala adresný riadok. Odtlačky (SHA-256) podpisových kľúčov:
+//   • upload kľúč (vstavaný nižšie),
+//   • kľúč Google Play App Signing — skopíruj ho z Play Console (Nastavenie →
+//     Integrita aplikácie) do .env ako TWA_SHA256 (viac hodnôt oddeľ čiarkou).
+const TWA_UPLOAD_SHA256 = '23:F0:4C:CB:54:FB:7D:6D:8C:66:C3:AD:0F:B9:2C:07:42:7A:4D:FB:04:DC:A0:6B:D7:11:0B:33:24:D3:6F:2A';
+app.get('/.well-known/assetlinks.json', (req, res) => {
+  const fingerprints = [TWA_UPLOAD_SHA256, ...String(process.env.TWA_SHA256 || '').split(',')]
+    .map((f) => f.trim().toUpperCase())
+    .filter((f) => /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/.test(f));
+  res.set('Cache-Control', 'public, max-age=3600').json([{
+    relation: ['delegate_permission/common.handle_all_urls'],
+    target: {
+      namespace: 'android_app',
+      package_name: process.env.TWA_PACKAGE || 'sk.tifo.app',
+      sha256_cert_fingerprints: [...new Set(fingerprints)],
+    },
+  }]);
+});
+
 // ---- kompresia odpovedí (HTML, CSS, JS, JSON) ----
 // HTML stránky majú desiatky KB — gzip ich zmenší ~5–8×.
 app.use(compression());

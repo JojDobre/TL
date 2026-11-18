@@ -5,12 +5,14 @@
 <html lang="sk" data-theme="dark">
 <head>
 <meta charset="utf-8">
+<%- include('app-detect') %>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>tifo.sk — <%= title %></title>
 <link rel="stylesheet" href="/css/tokens.css?v=<%= assetV %>">
 <link rel="stylesheet" href="/css/components.css?v=<%= assetV %>">
 <link rel="stylesheet" href="/css/enhance.css?v=<%= assetV %>">
 <link rel="stylesheet" href="/css/logo.css?v=<%= assetV %>">
+<link rel="stylesheet" href="/css/app.css?v=<%= assetV %>">
 <%- include('meta-head') %>
 <% if (typeof pageStyle !== 'undefined' && pageStyle) { %>
 <style><%- pageStyle %></style>

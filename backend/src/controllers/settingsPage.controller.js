@@ -163,8 +163,26 @@ const deleteAccount = asyncHandler(async (req, res) => {
     if (!ok) throw new ApiError(403, 'Heslo nie je správne.');
   }
 
-  const { Tip } = require('../models');
+  const {
+    Tip, Notification, PushSubscription, Season, Article, Sequelize,
+  } = require('../models');
+  const { Op } = Sequelize;
   await sequelize.transaction(async (t) => {
+    // Sezóny a články musia mať vlastníka (stĺpec nesmie byť prázdny). Aby
+    // súťaže ostatných hráčov po zmazaní účtu nezanikli, prevezme ich admin.
+    const ownsSeasons = await Season.count({ where: { creatorId: meId }, transaction: t });
+    const ownsArticles = await Article.count({ where: { authorId: meId }, transaction: t });
+    if (ownsSeasons || ownsArticles) {
+      const heir = await User.findOne({
+        where: { role: 'admin', id: { [Op.ne]: meId } }, order: [['id', 'ASC']], attributes: ['id'], transaction: t,
+      });
+      if (!heir) throw new ApiError(409, 'Účet nemožno zmazať: si jediný administrátor a vlastníš súťaže alebo články.');
+      await Season.update({ creatorId: heir.id }, { where: { creatorId: meId }, transaction: t });
+      await Article.update({ authorId: heir.id }, { where: { authorId: meId }, transaction: t });
+    }
+    // údaje, ktoré na používateľa odkazujú bez kaskádového mazania
+    await Notification.destroy({ where: { userId: meId }, transaction: t });
+    await PushSubscription.destroy({ where: { userId: meId }, transaction: t });
     await Tip.destroy({ where: { userId: meId }, transaction: t });
     await UserLeague.destroy({ where: { userId: meId }, transaction: t });
     await UserSeason.destroy({ where: { userId: meId }, transaction: t });

@@ -46,6 +46,7 @@ function toRow(r) {
     tips: Number(r.tips) || 0,
     evaluated: Number(r.evaluated) || 0,
     weightSum: Number(r.weightSum) || 0,
+    exact: Number(r.exact) || 0,
   };
 }
 
@@ -96,6 +97,8 @@ async function standings(opts = {}) {
   }
   if (opts.finishedOnly) where.push("m.status = 'finished'");
   if (opts.roundEndFrom) { where.push('r.end_date >= ?'); rep.push(opts.roundEndFrom); }
+  if (opts.roundEndBefore) { where.push('r.end_date < ?'); rep.push(opts.roundEndBefore); }
+  if (opts.matchTimeFrom) { where.push('m.match_time >= ?'); rep.push(opts.matchTimeFrom); }
 
   const byLeague = opts.groupBy === 'league';
   const sql = `
@@ -104,7 +107,9 @@ async function standings(opts = {}) {
            COALESCE(SUM(t.points), 0) AS points,
            COUNT(*) AS tips,
            SUM(CASE WHEN m.status = 'finished' THEN 1 ELSE 0 END) AS evaluated,
-           SUM(CASE WHEN m.status = 'finished' THEN ${WEIGHT_SQL} ELSE 0 END) AS weightSum
+           SUM(CASE WHEN m.status = 'finished' THEN ${WEIGHT_SQL} ELSE 0 END) AS weightSum,
+           SUM(CASE WHEN m.status = 'finished' AND m.tip_type = 'exact_score'
+                     AND t.home_score = m.home_score AND t.away_score = m.away_score THEN 1 ELSE 0 END) AS exact
       FROM tips t
       JOIN matches m ON m.id = t.match_id
       JOIN rounds r ON r.id = m.round_id
@@ -139,6 +144,7 @@ async function leaderboardWithUsers(opts, userAttrs = USER_ATTRS) {
     evaluated: r.evaluated,
     weightSum: r.weightSum,
     accuracy: accuracyOf(r),
+    exact: r.exact,
   }));
 }
 

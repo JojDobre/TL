@@ -1,0 +1,29 @@
+<%- include('_head') %>
+<header class="a-top"><h1>Notifikácie</h1><button class="a-ib" type="button" data-read-all aria-label="Označiť všetko ako prečítané"><svg class="i"><use href="#i-checks"/></svg></button></header>
+<main class="a-wrap a-in">
+  <div class="a-chips">
+    <a class="a-chip <%= f === 'vsetky' ? 'on' : '' %>" href="/app/notifikacie">Všetky</a>
+    <a class="a-chip <%= f === 'tipy' ? 'on' : '' %>" href="/app/notifikacie?f=tipy">Tipy<% if (unreadTips) { %> <span class="n"><%= unreadTips %></span><% } %></a>
+    <a class="a-chip <%= f === 'vysledky' ? 'on' : '' %>" href="/app/notifikacie?f=vysledky">Výsledky</a>
+    <a class="a-chip <%= f === 'ligy' ? 'on' : '' %>" href="/app/notifikacie?f=ligy">Ligy</a>
+    <a class="a-chip <%= f === 'ostatne' ? 'on' : '' %>" href="/app/notifikacie?f=ostatne">Ostatné</a>
+  </div>
+  <% if (!groups.length) { %><div class="a-card a-empty"><b>Žiadne notifikácie</b>Keď sa niečo udeje, nájdeš to tu.</div><% } %>
+  <%
+    const ICON = { deadline: ['clock', 'var(--a-warn-soft)', 'var(--a-warn)'], new_round: ['cal', 'var(--a-info-soft)', 'var(--a-info)'],
+      result: ['target', 'var(--a-ok-soft)', 'var(--a-ok)'], canceled: ['x', 'rgba(240,71,106,.14)', 'var(--a-bad)'],
+      member: ['users', 'var(--a-brand-soft)', 'var(--a-brand-b)'], season: ['trophy', 'var(--a-brand-soft)', 'var(--a-brand-b)'],
+      achievement: ['medal', 'var(--a-gold-soft)', 'var(--a-gold)'] };
+  %>
+  <% groups.forEach(function (g) { %>
+  <div class="a-label" style="margin:14px 2px 10px"><%= g.label %></div>
+  <% g.items.forEach(function (n) { const ic = ICON[n.type] || ['bell', 'var(--a-s2)', 'var(--a-t2)']; const isDeadline = n.type === 'deadline' && !n.read; %>
+  <a class="a-noti <%= n.read ? 'read' : '' %> <%= isDeadline ? 'deadline' : '' %>" data-noti="<%= n.id %>" href="<%= isDeadline ? '/app/tipovat' : (n.link || '#') %>">
+    <div class="a-ico" style="background:<%= ic[1] %>;color:<%= ic[2] %>"><svg class="i"><use href="#i-<%= ic[0] %>"/></svg></div>
+    <div class="tx"><b><%= n.title %></b><span><%= n.message %></span></div>
+    <% if (isDeadline) { %><span class="go">Tipovať</span><% } else { %><div class="tm"><%= n.time %><% if (!n.read) { %><br><span class="unread"></span><% } %></div><% } %>
+  </a>
+  <% }); %>
+  <% }); %>
+</main>
+<%- include('_foot') %>

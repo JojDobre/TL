@@ -1,0 +1,7 @@
+<% if (typeof hideTabbar === 'undefined' || !hideTabbar) { %>
+<%- include('../partials/app-tabbar', { appTab: typeof appTab !== 'undefined' ? appTab : '' }) %>
+<% } %>
+<script src="/js/push.js?v=<%= assetV %>"></script>
+<script src="/js/app.js?v=<%= assetV %>"></script>
+</body>
+</html>

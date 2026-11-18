@@ -1,0 +1,3 @@
+<%# erb ligy/tímu: c = { image|logo, grad, initials|abbr }, cls = extra trieda, st = extra štýl %>
+<% const _img = c.image || c.logo; %>
+<div class="a-crest <%= typeof cls !== 'undefined' ? cls : '' %>" style="<%= _img ? '' : 'background:' + c.grad + ';' %><%= typeof st !== 'undefined' ? st : '' %>"><% if (_img) { %><img src="<%= _img %>" alt="" loading="lazy"><% } else { %><%= c.initials || c.abbr %><% } %></div>

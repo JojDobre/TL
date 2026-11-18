@@ -1,0 +1,22 @@
+<%# Hlava appkovej obrazovky. Parametre: title, appTab (aktívna karta lišty),
+    screen (identifikátor obrazovky pre app.js). %>
+<!doctype html>
+<html lang="sk" data-theme="dark" class="is-app">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+<meta name="theme-color" content="#080b14">
+<title>Tifo — <%= title %></title>
+<script>try { sessionStorage.setItem('tifo-app', '1'); } catch (e) {}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/css/app.css?v=<%= assetV %>">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="manifest" href="/site.webmanifest">
+<style>@view-transition { navigation: auto; }</style>
+</head>
+<body class="a-screen" data-screen="<%= typeof screen !== 'undefined' ? screen : '' %>">
+<%- include('../partials/app-icons') %>
+<div class="a-glow"></div>
