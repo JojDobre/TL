@@ -1,4 +1,8 @@
 require('dotenv').config();
+// monitoring chýb (Sentry) — čo najskôr, aby zachytil aj chyby pri štarte
+const monitoring = require('./src/config/monitoring');
+monitoring.init();
+monitoring.installProcessHandlers();
 const express = require('express');
 const session = require('express-session');
 const helmet = require('helmet');
@@ -55,6 +59,18 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('view cache', process.env.VIEW_CACHE
   ? process.env.VIEW_CACHE !== 'false'
   : process.env.npm_lifecycle_event !== 'dev');
+
+// ---- health check (pre deploy a uptime monitoring, napr. UptimeRobot) ----
+// Odpovie 200, keď beží aplikácia aj databáza; inak 503. Bez session/DB zápisov.
+app.get('/health', async (req, res) => {
+  try {
+    const { sequelize } = require('./src/models');
+    await sequelize.query('SELECT 1', { type: sequelize.QueryTypes.SELECT });
+    res.set('Cache-Control', 'no-store').json({ status: 'ok', version: app.locals.assetV, uptime: Math.round(process.uptime()) });
+  } catch (e) {
+    res.status(503).set('Cache-Control', 'no-store').json({ status: 'error', message: 'databáza nedostupná' });
+  }
+});
 
 // ---- kompresia odpovedí (HTML, CSS, JS, JSON) ----
 // HTML stránky majú desiatky KB — gzip ich zmenší ~5–8×.

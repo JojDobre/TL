@@ -1,0 +1,80 @@
+# Automatické nasadenie na VPS po pushnutí do vetvy main.
+#
+# 1) check  — inštalácia závislostí a kontrola kódu (syntax JS, EJS šablóny)
+# 2) deploy — cez SSH spustí na serveri deploy/deploy.sh (git pull, npm ci,
+#             migrácie DB, pm2 reload, health check, pri chybe návrat späť)
+#
+# Potrebné GitHub Secrets (Settings → Secrets and variables → Actions):
+#   VPS_HOST      – IP adresa alebo doména servera
+#   VPS_USER      – používateľ na serveri (ten, pod ktorým beží pm2)
+#   VPS_SSH_KEY   – súkromný SSH kľúč (celý obsah, vrátane BEGIN/END riadkov)
+#   VPS_APP_DIR   – cesta k repozitáru na serveri, napr. /home/tifo/TL
+# Voliteľné:
+#   VPS_PORT      – SSH port (predvolene 22)
+#   PM2_APP       – názov procesu v pm2 (predvolene tiperliga)
+#
+# Ručné spustenie: záložka Actions → Deploy → Run workflow.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Kontrola nastavenia
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          KEY: ${{ secrets.VPS_SSH_KEY }}
+          DIR: ${{ secrets.VPS_APP_DIR }}
+        run: |
+          if [ -z "$HOST" ] || [ -z "$KEY" ] || [ -z "$DIR" ]; then
+            echo "::error::Chýbajú GitHub Secrets VPS_HOST / VPS_SSH_KEY / VPS_APP_DIR — návod je v deploy/README.md"
+            exit 1
+          fi
+      - name: Nasadenie cez SSH
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          PM2_APP: ${{ secrets.PM2_APP }}
+          APP_DIR: ${{ secrets.VPS_APP_DIR }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          envs: PM2_APP,APP_DIR
+          command_timeout: 12m
+          script: |
+            set -e
+            cd "$APP_DIR"
+            git fetch --quiet origin main
+            # vždy najnovší deploy skript z GitHubu (funguje aj pri prvom nasadení)
+            git show origin/main:deploy/deploy.sh > /tmp/tifo-deploy.sh
+            APP_ROOT="$APP_DIR" PM2_APP="${PM2_APP:-tiperliga}" bash /tmp/tifo-deploy.sh

@@ -79,4 +79,4 @@ tests
 /backend/test-results/
 
 
-backend/src/seeds/.tsdb-*.json"
+backend/src/seeds/.tsdb-*.json"/backups/
