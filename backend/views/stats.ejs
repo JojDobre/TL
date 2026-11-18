@@ -161,7 +161,7 @@
         var d = data[+b.dataset.i];
         var html = '<div class="tt-t">'+(d.leagueName?d.leagueName+' · ':'')+d.name+'</div>'+
           '<div class="tt-r"><span>Body</span><b>'+d.points+'</b></div>'+
-          (d.endDate?'<div class="tt-r"><span>Uzávierka</span><b>'+new Date(d.endDate).toLocaleDateString('sk-SK')+'</b></div>':'');
+          (d.endDate?'<div class="tt-r"><span>Uzávierka</span><b>'+new Date(d.endDate).toLocaleDateString('sk-SK',{timeZone:'Europe/Bratislava'})+'</b></div>':'');
         showTip(html, e.clientX, e.clientY);
       });
       b.addEventListener('mouseleave', hideTip);

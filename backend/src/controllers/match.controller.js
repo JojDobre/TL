@@ -21,58 +21,10 @@ const {
   propagateMatchTime, propagateMatchCreate, propagateMatchDelete,
 } = require('../utils/round-propagate.util');
 
-const DEFAULT_SCORING = { exactScore: 10, correctGoals: 1, correctWinner: 3, goalDifference: 2 };
+const { calculatePoints, applyResult } = require('../utils/match-evaluation');
 
-// výsledok zápasu z dvoch skóre: 'home' | 'away' | 'draw'
-const outcome = (home, away) => (home > away ? 'home' : home < away ? 'away' : 'draw');
-
-// typy, kde sa tipuje len víťaz (1/X/2 alebo 1/2 bez remízy)
-const isWinnerType = (t) => t === 'winner' || t === 'winner_no_draw';
-
-/**
- * Vypočíta body za JEDEN tip podľa skutočného výsledku a bodovacieho systému.
- * Jediné miesto pravdy pre bodovanie. Vracia celé číslo bodov.
- *
- * Pravidlá (predvolené): presný výsledok = exactScore (10) a NIČ ďalšie sa
- * nepripočítava (je to "plný zásah"). Inak sa sčítajú čiastkové body:
- *   - správny počet gólov domáceho tímu: correctGoals
- *   - správny počet gólov hosťujúceho tímu: correctGoals
- *   - správny víťaz/remíza: correctWinner
- *   - správny gólový rozdiel: goalDifference
- * Pri tipType 'winner' sa hodnotí len trafenie víťaza (correctWinner).
- */
-function calculatePoints(tip, match, scoring) {
-  const s = scoring || DEFAULT_SCORING;
-  const { homeScore, awayScore, tipType } = match;
-
-  // zrušený/nevyhodnotený zápas = 0 bodov nikomu
-  if (homeScore === null || homeScore === undefined || awayScore === null || awayScore === undefined) {
-    return 0;
-  }
-  const actual = outcome(homeScore, awayScore);
-
-  if (isWinnerType(tipType)) {
-    return tip.winner && tip.winner === actual ? s.correctWinner : 0;
-  }
-
-  // exact_score: potrebujeme tipnuté skóre
-  if (tip.homeScore === null || tip.homeScore === undefined || tip.awayScore === null || tip.awayScore === undefined) {
-    // hráč mal tipnúť presný výsledok, ale nemá skóre — skús aspoň víťaza, ak ho tipol
-    return tip.winner && tip.winner === actual ? s.correctWinner : 0;
-  }
-
-  // presný výsledok = plný počet bodov, nič ďalšie sa nepripočítava
-  if (tip.homeScore === homeScore && tip.awayScore === awayScore) {
-    return s.exactScore;
-  }
-
-  let points = 0;
-  if (tip.homeScore === homeScore) points += s.correctGoals;     // góly domáceho
-  if (tip.awayScore === awayScore) points += s.correctGoals;     // góly hosťa
-  if (outcome(tip.homeScore, tip.awayScore) === actual) points += s.correctWinner; // víťaz/remíza
-  if ((tip.homeScore - tip.awayScore) === (homeScore - awayScore)) points += s.goalDifference; // gólový rozdiel
-  return points;
-}
+// Bodovanie a zápis výsledku žijú v utils/match-evaluation.js (zdieľa ho
+// ručné vyhodnotenie aj automatické vyhodnocovanie výsledkov).
 
 // oprávnenie spravovať zápas (tvorca sezóny/ligy, admin sezóny, globálny admin)
 const canManageMatch = async (match, userId) => {
@@ -246,36 +198,7 @@ const updateMatch = asyncHandler(async (req, res) => {
   });
 });
 
-// POST /api/matches/:id/evaluate — zadá výsledok a PREPOČÍTA body (jediné miesto)
-// Po vyhodnotení ORIGINÁLNEHO zápasu prepočíta všetky KLONOVANÉ zápasy
-// (sourceMatchId = originál). Do klonov zapíše skóre/status z originálu (kvôli
-// zobrazeniu) a prepočíta ich tipy s bodovaním ICH vlastnej ligy.
-async function propagateToClones(sourceMatch) {
-  const clones = await Match.findAll({
-    where: { sourceMatchId: sourceMatch.id },
-    include: [{ model: Tip }, { model: Round, include: [{ model: League, attributes: ['scoringSystem'] }] }],
-  });
-  const tipperIds = [];
-  for (const clone of clones) {
-    clone.homeScore = sourceMatch.homeScore;
-    clone.awayScore = sourceMatch.awayScore;
-    clone.status = sourceMatch.status;
-    await clone.save();
-
-    const scoring = (clone.Round && clone.Round.League && clone.Round.League.scoringSystem) || DEFAULT_SCORING;
-    for (const tip of clone.Tips || []) {
-      tip.points = clone.status === 'canceled' ? 0 : calculatePoints(tip, clone, scoring);
-      await tip.save();
-      tipperIds.push(tip.userId);
-    }
-  }
-  return tipperIds;
-}
-
-// Automatické vyhodnotenie achievementov po vyhodnotení zápasu — zdieľaný
-// helper z achievement.engine (beží na pozadí, nesmie zhodiť HTTP odpoveď).
-const { evaluateInBackground: evaluateAchievementsInBackground } = require('../utils/achievement.engine');
-
+// POST /api/matches/:id/evaluate — zadá výsledok a PREPOČÍTA body
 const evaluateMatch = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { homeScore, awayScore, status } = req.body;
@@ -295,70 +218,24 @@ const evaluateMatch = asyncHandler(async (req, res) => {
 
   const newStatus = status || 'finished';
 
-  // zrušený zápas: 0 bodov všetkým, skóre sa neberie do úvahy
-  if (newStatus === 'canceled') {
-    match.status = 'canceled';
-    await match.save();
-    for (const tip of match.Tips || []) { tip.points = 0; await tip.save(); }
-    await propagateToClones(match);
-    await notify.matchCanceled(match, match.Round, match.Tips || []);
-    return res.status(200).json({ success: true, message: 'Zápas bol zrušený, body vynulované.', data: match });
-  }
-
-  // VYMAZANIE VÝSLEDKU: vráť zápas do stavu pred vyhodnotením — zmaž skóre,
-  // status späť na 'scheduled' a vynuluj body všetkým tipom (inak by ostali
-  // pridelené z predošlého vyhodnotenia a skreslili rebríček).
-  if (newStatus === 'scheduled') {
-    match.status = 'scheduled';
-    match.homeScore = null;
-    match.awayScore = null;
-    await match.save();
-    for (const tip of match.Tips || []) { tip.points = 0; await tip.save(); }
-    await propagateToClones(match);
-    return res.status(200).json({ success: true, message: 'Výsledok vymazaný, body vrátené späť.', data: match });
-  }
-
-  // inak vyžadujeme platné skóre
-  if (!validScore(homeScore) || !validScore(awayScore)) {
-    throw new ApiError(400, 'Zadaj platné skóre (celé nezáporné čísla).');
-  }
-
-  // zápas bez remízy (tenis, šípky…) nesmie skončiť nerozhodne
-  if (match.tipType === 'winner_no_draw' && Number(homeScore) === Number(awayScore)) {
-    throw new ApiError(400, 'Tento zápas nemôže skončiť remízou — musí mať víťaza.');
-  }
-
-  match.homeScore = homeScore;
-  match.awayScore = awayScore;
-  match.status = newStatus;
-  await match.save();
-
-  // prepočítaj body len ak je zápas dokončený
-  if (match.status === 'finished') {
-    const scoring = (match.Round && match.Round.League && match.Round.League.scoringSystem) || DEFAULT_SCORING;
-    for (const tip of match.Tips || []) {
-      tip.points = calculatePoints(tip, match, scoring);
-      await tip.save();
+  if (newStatus !== 'canceled' && newStatus !== 'scheduled') {
+    // vyžadujeme platné skóre
+    if (!validScore(homeScore) || !validScore(awayScore)) {
+      throw new ApiError(400, 'Zadaj platné skóre (celé nezáporné čísla).');
     }
-    await notify.matchEvaluated(match, match.Round, match.Tips || []);
+    // zápas bez remízy (tenis, šípky…) nesmie skončiť nerozhodne
+    if (match.tipType === 'winner_no_draw' && Number(homeScore) === Number(awayScore)) {
+      throw new ApiError(400, 'Tento zápas nemôže skončiť remízou — musí mať víťaza.');
+    }
   }
 
-  // prepíš výsledok aj do prípadných klonov a prepočítaj ich tipy
-  const cloneTipperIds = await propagateToClones(match);
-
-  // achievementy: vyhodnoť na pozadí všetkých tipujúcich (originál + klony)
-  if (match.status === 'finished') {
-    evaluateAchievementsInBackground([
-      ...(match.Tips || []).map((t) => t.userId),
-      ...cloneTipperIds,
-    ]);
-  }
-
-  res.status(200).json({
-    success: true,
-    message: 'Zápas bol vyhodnotený a body pripočítané.',
-    data: match,
-  });
+  // Ručný zásah má prednosť pred automatickým vyhodnocovaním: ručne zadaný
+  // výsledok sa neprepíše a ručne VYMAZANÝ výsledok vypne automatiku pre tento
+  // zápas (inak by ho o pár minút znova doplnila).
+  if (newStatus === 'scheduled' && Match.rawAttributes.autoResults) match.autoResults = false;
+  let { message } = await applyResult(match, { homeScore, awayScore, status: newStatus }, { source: 'manual' });
+  if (newStatus === 'scheduled' && match.externalId) message += ' Automatické vyhodnotenie tohto zápasu bolo vypnuté.';
+  res.status(200).json({ success: true, message, data: match });
 });
 
 // DELETE /api/matches/:id — zápas s tipmi sa nedá zmazať

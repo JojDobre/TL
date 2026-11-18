@@ -10,6 +10,7 @@ const { cloneTemplateInto } = require('../utils/league-clone.util');
 const { deleteLeague } = require('../utils/delete.util');
 const { SPORTS, COUNTRIES } = require('../utils/team.constants');
 const { asyncHandler } = require('../middleware/error.middleware');
+const { leaderboardWithUsers } = require('../utils/standings.util');
 const notify = require('../utils/notification.service');
 const achievements = require('../utils/achievement.engine');
 
@@ -81,36 +82,36 @@ const leagueDetailPage = asyncHandler(async (req, res) => {
   const meId = req.userId || null;
 
   // kolá so stavom a počtom zápasov + (voliteľne) koľko hráč už tipol
-  const rounds = await Promise.all((league.Rounds || [])
-    .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
-    .map(async (round) => {
-      const matchesCount = await Match.count({ where: { roundId: round.id } });
-      let myTips = 0;
-      if (meId) {
-        myTips = await Tip.count({
-          where: { userId: meId },
-          include: [{ model: Match, where: { roundId: round.id }, required: true }],
-        });
-      }
-      return { ...round.toJSON(), status: roundStatus(round), matchesCount, myTips };
-    }));
+  // (2 agregované dotazy pre všetky kolá naraz namiesto 2 dotazov na kolo)
+  const roundList = (league.Rounds || []).slice().sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+  const roundIdList = roundList.map((r) => r.id);
+  const [matchCountRows, myTipRows] = await Promise.all([
+    roundIdList.length
+      ? Match.findAll({ where: { roundId: roundIdList }, attributes: ['roundId', [Sequelize.fn('COUNT', Sequelize.col('id')), 'n']], group: ['roundId'], raw: true })
+      : [],
+    (meId && roundIdList.length)
+      ? Tip.findAll({
+        where: { userId: meId },
+        attributes: [[Sequelize.col('Match.round_id'), 'roundId'], [Sequelize.fn('COUNT', Sequelize.col('Tip.id')), 'n']],
+        include: [{ model: Match, attributes: [], where: { roundId: roundIdList }, required: true }],
+        group: [Sequelize.col('Match.round_id')],
+        raw: true,
+      })
+      : [],
+  ]);
+  const matchesByRound = new Map(matchCountRows.map((r) => [Number(r.roundId), Number(r.n)]));
+  const myTipsByRound = new Map(myTipRows.map((r) => [Number(r.roundId), Number(r.n)]));
+  const rounds = roundList.map((round) => ({
+    ...round.toJSON(),
+    status: roundStatus(round),
+    matchesCount: matchesByRound.get(round.id) || 0,
+    myTips: meId ? (myTipsByRound.get(round.id) || 0) : 0,
+  }));
 
-  // rebríček ligy
+  // rebríček ligy (SQL agregácia)
   const exactScore = (league.scoringSystem && league.scoringSystem.exactScore) || DEFAULT_SCORING.exactScore;
-  const tips = await Tip.findAll({
-    include: [
-      { model: Match, required: true, include: [{ model: Round, where: { leagueId: league.id }, required: true }] },
-      { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] },
-    ],
-  });
-  const byUser = {};
-  tips.forEach((tip) => {
-    if (!tip.User) return;
-    const uid = tip.User.id;
-    if (!byUser[uid]) byUser[uid] = { user: tip.User.toJSON(), totalPoints: 0 };
-    byUser[uid].totalPoints += tip.points || 0;
-  });
-  const leaderboard = Object.values(byUser).sort((a, b) => b.totalPoints - a.totalPoints);
+  const leaderboard = (await leaderboardWithUsers({ leagueIds: [league.id] }, ['id', 'username', 'firstName', 'lastName', 'profileImage']))
+    .map((r) => ({ user: r.user, totalPoints: r.totalPoints }));
 
   // členstvo a počty
   let membersCount = 0;
@@ -652,7 +653,15 @@ const manageLeaguePage = asyncHandler(async (req, res) => {
   const owner = await User.findByPk(league.creatorId, { attributes: ['username', 'firstName', 'lastName'] });
   const ownerName = owner ? ([owner.firstName, owner.lastName].filter(Boolean).join(' ') || owner.username) : '—';
 
+  // automatické výsledky — len webový admin pri oficiálnej (nie klonovanej) lige
+  let autoResults = null;
+  if (!req._standaloneManageView && league.type === 'official' && !league.templateId) {
+    const me = await User.findByPk(userId, { attributes: ['role'] });
+    if (me && me.role === 'admin') autoResults = await require('../utils/auto-results').leagueStatus(league.id);
+  }
+
   res.render(req._standaloneManageView ? 'manageStandalone' : 'manageLeague', {
+    autoResults,
     league: { ...league.toJSON(), scoringSystem: league.scoringSystem || DEFAULT_SCORING, scoringLocked },
     seasonName: league.Season ? league.Season.name : '',
     season: league.Season ? league.Season.toJSON() : null,

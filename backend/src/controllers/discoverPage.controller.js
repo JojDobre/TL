@@ -8,6 +8,7 @@ const { Season, League, Sequelize } = require('../models');
 const { Op } = Sequelize;
 const { seasonStatus } = require('../utils/season.utils');
 const { asyncHandler } = require('../middleware/error.middleware');
+const { seasonCounts } = require('../utils/standings.util');
 
 // GET /discover
 const discoverPage = asyncHandler(async (req, res) => {
@@ -50,10 +51,11 @@ const discoverPage = asyncHandler(async (req, res) => {
     order: [['createdAt', 'DESC']],
   });
 
-  let withCounts = await Promise.all(seasons.map(async (s) => {
-    const lc = await League.count({ where: { seasonId: s.id } });
-    let pc = 0;
-    try { pc = await s.countParticipants(); } catch { /* nič */ }
+  const counts = await seasonCounts(seasons.map((s) => s.id));
+  let withCounts = seasons.map((s) => {
+    const c = counts.get(s.id) || {};
+    const lc = c.leaguesCount || 0;
+    const pc = c.participantsCount || 0;
     return {
       id: s.id,
       name: s.name,
@@ -65,7 +67,7 @@ const discoverPage = asyncHandler(async (req, res) => {
       type: s.type,
       status: seasonStatus(s),
     };
-  }));
+  });
 
   // filter prístupu (ak je aspoň jeden odškrtnutý)
   withCounts = withCounts.filter((s) => (s.hasPassword ? showProtected : showPublic));

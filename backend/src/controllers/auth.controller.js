@@ -187,6 +187,7 @@ const updateProfile = async (req, res) => {
     
     // Uloženie zmien
     await user.save();
+    if (req.session) delete req.session.avatarCache;
     
     // Vrátenie aktualizovaného profilu
     res.status(200).json({

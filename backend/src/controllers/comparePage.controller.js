@@ -8,6 +8,7 @@
 const { Tip, Match, Round, League, Season, User, UserLeague, Sequelize } = require('../models');
 const { Op } = Sequelize;
 const { asyncHandler } = require('../middleware/error.middleware');
+const { standings } = require('../utils/standings.util');
 const { tipQualityWeight } = require('../utils/accuracy.util');
 const { evaluateUser } = require('../utils/achievement.engine');
 
@@ -58,15 +59,10 @@ async function playerStats(userId) {
 
 // rebríček ligy (userId -> body)
 async function leagueBoard(leagueId) {
-  const rounds = await Round.findAll({ where: { leagueId }, attributes: ['id'] });
-  const roundIds = rounds.map((r) => r.id);
+  // SQL agregácia namiesto načítania všetkých tipov ligy
+  const rows = await standings({ leagueIds: [leagueId] });
   const byUser = {};
-  if (!roundIds.length) return byUser;
-  const tips = await Tip.findAll({
-    include: [{ model: Match, attributes: ['id'], where: { roundId: { [Op.in]: roundIds } }, required: true }],
-    attributes: ['userId', 'points'],
-  });
-  tips.forEach((t) => { byUser[t.userId] = (byUser[t.userId] || 0) + (t.points || 0); });
+  rows.forEach((r) => { byUser[r.userId] = r.points; });
   return byUser;
 }
 function rankOf(board, userId) {

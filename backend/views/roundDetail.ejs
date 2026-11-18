@@ -124,7 +124,7 @@
 <%- include('partials/season-subnav', { seasonId: league.seasonId, seasonName: (league.Season && league.Season.name) || 'Sezóna', active: 'leagues' }) %>
 
 <%
-  function fmtDT(d){ if(!d) return ''; var dt=new Date(d); return dt.toLocaleDateString('sk-SK',{day:'numeric',month:'short'})+' · '+dt.toLocaleTimeString('sk-SK',{hour:'2-digit',minute:'2-digit'}); }
+  function fmtDT(d){ if(!d) return ''; var dt=new Date(d); return dt.toLocaleDateString('sk-SK',{timeZone:'Europe/Bratislava',day:'numeric',month:'short'})+' · '+dt.toLocaleTimeString('sk-SK',{timeZone:'Europe/Bratislava',hour:'2-digit',minute:'2-digit'}); }
   function initials(n){ return (n||'?').split(' ').map(function(w){return w[0];}).filter(Boolean).slice(0,2).join('').toUpperCase(); }
   var s = scoring || {};
   var deadline = new Date(round.endDate);

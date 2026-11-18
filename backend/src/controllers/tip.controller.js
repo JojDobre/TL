@@ -118,7 +118,16 @@ const createOrUpdateTip = asyncHandler(async (req, res) => {
     Object.assign(tip, values);
     await tip.save();
   } else {
-    tip = await Tip.create({ ...values, points: 0 });
+    try {
+      tip = await Tip.create({ ...values, points: 0 });
+    } catch (e) {
+      // súbeh (dvojklik): tip medzitým vznikol — unikátny index (user, match)
+      // zabránil duplicite, takže ho len aktualizujeme
+      if (e && e.name !== 'SequelizeUniqueConstraintError') throw e;
+      tip = await Tip.findOne({ where: { userId, matchId } });
+      Object.assign(tip, values);
+      await tip.save();
+    }
   }
 
   // achievementy viazané na podanie tipu (prvý tip, počty, denná séria)

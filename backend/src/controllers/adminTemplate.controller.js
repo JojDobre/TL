@@ -144,6 +144,7 @@ const templateEditPage = asyncHandler(async (req, res) => {
     rounds: roundData,
     sports: SPORTS,
     countries: COUNTRIES,
+    autoResults: await require('../utils/auto-results').leagueStatus(tpl.id),
   });
 });
 

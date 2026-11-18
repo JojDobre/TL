@@ -52,6 +52,10 @@ const errorHandler = (err, req, res, next) => {
   if (statusCode !== 404) {
     console.error(`[ERROR] ${req.method} ${req.originalUrl} ->`, err);
   }
+  // chyby servera pošli do monitoringu (Sentry), ak je zapnutý
+  if (statusCode >= 500) {
+    require('../config/monitoring').capture(err, { method: req.method, url: req.originalUrl });
+  }
 
   // Rozhodnutie JSON vs HTML:
   //  - API požiadavky (/api/*) a klienti, čo si pýtajú JSON → JSON odpoveď

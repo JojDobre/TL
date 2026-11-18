@@ -7,6 +7,7 @@
 const { Round, League, Season, Match, Team, Tip, User, UserSeason, UserLeague } = require('../models');
 const { isSeasonLocked } = require('../utils/season.utils');
 const { asyncHandler } = require('../middleware/error.middleware');
+const { leaderboardWithUsers } = require('../utils/standings.util');
 
 const DEFAULT_SCORING = { exactScore: 10, correctGoals: 1, correctWinner: 3, goalDifference: 2 };
 
@@ -115,20 +116,8 @@ const roundDetailPage = asyncHandler(async (req, res) => {
   const tippedCount = matchData.filter((m) => m.myTip && (m.myTip.homeScore != null || m.myTip.winner)).length;
 
   // rebríček kola
-  const lbTips = await Tip.findAll({
-    include: [
-      { model: Match, where: { roundId: round.id }, required: true, attributes: ['id'] },
-      { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] },
-    ],
-  });
-  const byUser = {};
-  lbTips.forEach((t) => {
-    if (!t.User) return;
-    const uid = t.User.id;
-    if (!byUser[uid]) byUser[uid] = { user: t.User.toJSON(), totalPoints: 0 };
-    byUser[uid].totalPoints += t.points || 0;
-  });
-  const leaderboard = Object.values(byUser).sort((a, b) => b.totalPoints - a.totalPoints);
+  const leaderboard = (await leaderboardWithUsers({ roundIds: [round.id] }, ['id', 'username', 'firstName', 'lastName', 'profileImage']))
+    .map((r) => ({ user: r.user, totalPoints: r.totalPoints }));
 
   const myPoints = matchData.reduce((sum, m) => sum + (m.myTip && m.myTip.points ? m.myTip.points : 0), 0);
 

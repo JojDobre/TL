@@ -46,7 +46,7 @@
 <%- include('partials/season-subnav', { seasonId: league.seasonId, seasonName: (league.Season && league.Season.name) || 'Sezóna', active: 'leagues' }) %>
 
 <%
-  function fmtDT(d){ if(!d) return ''; var dt=new Date(d); return dt.toLocaleDateString('sk-SK',{day:'numeric',month:'numeric'})+' · '+dt.toLocaleTimeString('sk-SK',{hour:'2-digit',minute:'2-digit'}); }
+  function fmtDT(d){ if(!d) return ''; var dt=new Date(d); return dt.toLocaleDateString('sk-SK',{timeZone:'Europe/Bratislava',day:'numeric',month:'numeric'})+' · '+dt.toLocaleTimeString('sk-SK',{timeZone:'Europe/Bratislava',hour:'2-digit',minute:'2-digit'}); }
 %>
 
 <div class="wrap form-head">
@@ -136,7 +136,7 @@
     return '<span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)">'
       + abbr(name) + '</span>';
   }
-  function fmtDT(d){ var dt=new Date(d); return dt.toLocaleDateString('sk-SK',{day:'numeric',month:'numeric'})+' · '+dt.toLocaleTimeString('sk-SK',{hour:'2-digit',minute:'2-digit'}); }
+  function fmtDT(d){ var dt=new Date(d); return dt.toLocaleDateString('sk-SK',{timeZone:'Europe/Bratislava',day:'numeric',month:'numeric'})+' · '+dt.toLocaleTimeString('sk-SK',{timeZone:'Europe/Bratislava',hour:'2-digit',minute:'2-digit'}); }
 
   var add = document.getElementById('addMatch');
   if (add) add.addEventListener('click', function () {
@@ -190,7 +190,7 @@
     var cur = span ? span.getAttribute('data-time') : '';
     // predvyplň do formátu datetime-local
     var def = '';
-    if (cur) { var d=new Date(cur); var off=d.getTimezoneOffset(); def=new Date(d.getTime()-off*60000).toISOString().slice(0,16); }
+    if (cur) { var d=new Date(cur); if (!isNaN(d)) def=d.toLocaleString('sv-SE',{timeZone:'Europe/Bratislava'}).replace(' ','T').slice(0,16); }
     var val = prompt('Nový čas zápasu (formát RRRR-MM-DDTHH:MM):', def);
     if (!val) return;
     fetch('/api/matches/'+id, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ matchTime: val }) })

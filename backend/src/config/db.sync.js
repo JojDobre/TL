@@ -3,6 +3,7 @@ const db = require('../models');
 const seedInitialData = require('../seeds/initial-data.seed');
 const { seedAchievements } = require('../seeds/achievements.seed');
 const { seedArticles } = require('../seeds/articles.seed');
+const { runMigrations } = require('./migrate');
 //const seedTeams = require('../seeds/teams.seed');
 
 
@@ -44,6 +45,9 @@ const syncDatabase = async () => {
       await db.sequelize.authenticate();
       console.log('Databáza pripravená (režim: off — bez zmeny schémy).');
     }
+
+    // Migrácie (indexy, nové stĺpce, dátové úpravy) — bežia vždy, každá len raz.
+    await runMigrations(db.sequelize);
 
     // Definičné dáta (odznaky) sa upsertujú VŽDY — sú idempotentné a nezávisia
     // od toho, či je DB prázdna. Tým sa nové/zmenené odznaky doplnia aj v "alter"

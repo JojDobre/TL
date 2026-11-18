@@ -27,7 +27,7 @@
 ` }) %>
 
 <%
-  function fmtMonth(d){ if(!d) return ''; var x=new Date(d); return x.toLocaleDateString('sk-SK',{month:'long',year:'numeric'}); }
+  function fmtMonth(d){ if(!d) return ''; var x=new Date(d); return x.toLocaleDateString('sk-SK',{timeZone:'Europe/Bratislava',month:'long',year:'numeric'}); }
 %>
 
 <div class="wrap">

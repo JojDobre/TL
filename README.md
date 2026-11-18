@@ -33,7 +33,7 @@ jeden celok, ktorý vracia hotové HTML stránky aj JSON API pre akcie cez `fetc
 - Sequelize ORM
 - **MariaDB** (10.11 LTS)
 - `express-session` autentifikácia (session cookie), `bcrypt` na hashovanie hesiel
-- `helmet`, `morgan`, `express-validator`
+- `helmet`, `morgan`, `express-validator`, `compression`
 - Resend na odosielanie e-mailov (voliteľné)
 
 **Frontend**
@@ -108,6 +108,9 @@ Aplikácia beží na `http://localhost:5000` — odtiaľ sa otvárajú všetky s
 | `npm run dev` | Vývojový režim s automatickým reštartom (nodemon) |
 | `npm start` | Produkčný štart (`node index.js`) |
 | `npm run seed:teams` | Voliteľné naseedovanie tímov samostatne |
+| `npm run migrate` | Spustí databázové migrácie (bežia aj automaticky pri štarte) |
+| `npm run check` | Kontrola kódu pred nasadením (syntax JS, EJS šablóny) |
+| `npm run bots:tick` | Jeden krok simulovaných hráčov (boti len vstupujú do oficiálnych sezón a tipujú) |
 
 ## Testovacie účty
 
@@ -138,12 +141,43 @@ Po seedovaní (`DB_SYNC=force`) sú k dispozícii prednastavené účty. Prihlas
 | `JWT_SECRET` | – | Voliteľné; len pre JWT-chránené API endpointy cez Bearer token |
 | `RESEND_API_KEY` | – | Voliteľné; bez neho sa e-maily (obnova hesla) neodošlú |
 | `EMAIL_FROM` / `CONTACT_TO` / `APP_URL` | – | Voliteľné nastavenia e-mailov a odkazov |
+| `TSDB_API_KEY` / `TSDB_DELAY_MS` | – | TheSportsDB (predvolene bezplatný kľúč `123`, pauza 3 s medzi volaniami) |
+| `AUTO_RESULTS_*` / `AUTO_SYNC_*` | – | Automatické výsledky a program zápasov (viď `.env.example`) |
+| `SENTRY_DSN` | – | Voliteľné; posielanie chýb servera do Sentry |
+| `SLOW_REQUEST_MS` | – | Hranica pre log pomalých requestov (predvolene 800 ms) |
 
 Tajný kľúč vygeneruješ napr.:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ```
+
+## Databázové migrácie
+
+Zmeny schémy (nové stĺpce, indexy) sú v `backend/src/migrations/` a spúšťajú
+sa automaticky pri štarte aplikácie (každá len raz, záznam je v tabuľke
+`schema_migrations`). V produkcii preto stačí `DB_SYNC=off`.
+
+## Automatické výsledky (TheSportsDB)
+
+Oficiálnu ligu alebo šablónu prepojíš so súťažou v
+[TheSportsDB](https://www.thesportsdb.com) (bezplatné API) v administrácii:
+**Úprava šablóny** alebo **Správa ligy → Nastavenia** → karta *Automatické výsledky*.
+Zadaj ID súťaže (napr. `4328` = Premier League, dá sa vyhľadať podľa krajiny) a sezónu.
+
+- **Program**: nové kolá a zápasy sa pridávajú automaticky (aj do líg
+  naklonovaných zo šablóny), preložené zápasy dostanú nový čas.
+- **Výsledky**: 3 hodiny po začiatku zápasu sa stiahne výsledok a zápas sa
+  vyhodnotí (body, klony, notifikácie). Ručne zadaný výsledok má prednosť.
+- **Limity bezplatného API**: jedno volanie = celé kolo, každý beh má
+  rozpočet volaní. Pri prekročení limitu sa beh preruší a pokračuje neskôr.
+  Zápasy, ktoré ani po 24 h nemajú výsledok, sa ukážu adminom v notifikáciách.
+
+## Nasadenie
+
+Push do `main` → GitHub Actions skontroluje kód a nasadí ho na server
+(pm2, migrácie, health check, automatický návrat pri chybe). Nastavenie,
+zálohy DB a monitoring sú opísané v [`deploy/README.md`](deploy/README.md).
 
 ## Zastavenie databázy
 

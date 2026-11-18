@@ -77,7 +77,7 @@ const updateAvatar = asyncHandler(async (req, res) => {
   await user.save();
 
   // aktualizuj cache fotky v session, aby ju navbar hneď zobrazil
-  if (req.session) req.session.userImage = user.profileImage;
+  if (req.session) { req.session.userImage = user.profileImage; delete req.session.avatarCache; }
 
   // achievement: nastavenie avatara
   if (user.profileImage) achievements.evaluateInBackground([meId]);

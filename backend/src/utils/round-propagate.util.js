@@ -10,7 +10,7 @@
 // Propagácia je ABSOLÚTNA: klon dostane presne ten čas, ktorý je v šablóne.
 // Robí sa aj pri kolách, kde už hráči tipovali (posun uzávierky je zámer admina).
 
-const { Round, Match, Tip } = require('../models');
+const { Round, Match, Tip, League } = require('../models');
 
 // Kolá klonov patriace k zdrojovému kolu šablóny.
 // Staré klony (vytvorené pred pridaním sourceRoundId) sa dohľadajú cez
@@ -143,7 +143,31 @@ async function propagateMatchDelete(sourceMatchId) {
   return { matches: clones.length, tips };
 }
 
+// Nové kolo pridané do ŠABLÓNY (napr. automatickou synchronizáciou programu)
+// sa vytvorí aj vo všetkých ligách naklonovaných z tejto šablóny.
+// Zápasy kola sa doplnia cez propagateMatchCreate. Vracia počet nových kôl.
+async function propagateRoundCreate(sourceRound) {
+  const clonesLeagues = await League.findAll({ where: { templateId: sourceRound.leagueId }, attributes: ['id'] });
+  let created = 0;
+  for (const cl of clonesLeagues) {
+    const exists = await Round.findOne({ where: { leagueId: cl.id, sourceRoundId: sourceRound.id } });
+    if (exists) continue;
+    await Round.create({
+      name: sourceRound.name,
+      description: sourceRound.description,
+      leagueId: cl.id,
+      startDate: sourceRound.startDate,
+      endDate: sourceRound.endDate,
+      active: sourceRound.active,
+      sourceRoundId: sourceRound.id,
+    });
+    created += 1;
+  }
+  return created;
+}
+
 module.exports = {
+  propagateRoundCreate,
   propagateRoundSchedule,
   propagateMatchTime,
   propagateMatchCreate,

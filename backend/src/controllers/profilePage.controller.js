@@ -5,6 +5,7 @@
 
 const { Tip, Match, Round, League, Team, User, UserLeague, Sequelize } = require('../models');
 const { asyncHandler } = require('../middleware/error.middleware');
+const { standings } = require('../utils/standings.util');
 const { evaluateUser } = require('../utils/achievement.engine');
 const { tipQualityWeight } = require('../utils/accuracy.util');
 
@@ -31,12 +32,11 @@ const profilePage = asyncHandler(async (req, res) => {
   });
 
   // súhrnné štatistiky (rovnaká vážená logika ako /stats)
-  const allTips = await Tip.findAll({ where: { userId: meId }, include: [{ model: Match, attributes: ['status', 'tipType', 'homeScore', 'awayScore'] }] });
-  let totalPoints = 0; let evaluated = 0; let weightSum = 0;
-  allTips.forEach((t) => {
-    totalPoints += t.points || 0;
-    if (t.Match && t.Match.status === 'finished') { evaluated += 1; weightSum += tipQualityWeight(t, t.Match); }
-  });
+  const [mine] = await standings({ userIds: [meId] });
+  const totalPoints = mine ? mine.points : 0;
+  const evaluated = mine ? mine.evaluated : 0;
+  const weightSum = mine ? mine.weightSum : 0;
+  const tipsCount = await Tip.count({ where: { userId: meId } });
   const accuracy = evaluated > 0 ? Math.round((weightSum / evaluated) * 100) : null;
 
   const abbr = (n) => (n || '?').substring(0, 3).toUpperCase();
@@ -64,18 +64,11 @@ const profilePage = asyncHandler(async (req, res) => {
   const topLeagues = [];
   if (myLeagueIds.length) {
     const leagues = await League.findAll({ where: { id: { [Op.in]: myLeagueIds } }, attributes: ['id', 'name', 'type'], limit: 3 });
+    const per = await standings({ leagueIds: leagues.map((l) => l.id), groupBy: 'league' });
     for (const l of leagues) {
-      const rounds = await Round.findAll({ where: { leagueId: l.id }, attributes: ['id'] });
-      const roundIds = rounds.map((r) => r.id);
-      let rank = null;
-      if (roundIds.length) {
-        const tips = await Tip.findAll({ include: [{ model: Match, attributes: ['id'], where: { roundId: { [Op.in]: roundIds } }, required: true }, { model: User, attributes: ['id'] }] });
-        const byUser = {};
-        tips.forEach((t) => { if (!t.User) return; byUser[t.User.id] = (byUser[t.User.id] || 0) + (t.points || 0); });
-        const board = Object.entries(byUser).map(([uid, pts]) => ({ uid: Number(uid), pts })).sort((a, b) => b.pts - a.pts);
-        const idx = board.findIndex((b) => b.uid === meId);
-        if (idx >= 0) rank = idx + 1;
-      }
+      const board = per.filter((r) => r.leagueId === l.id);   // už zoradené podľa bodov
+      const idx = board.findIndex((r) => r.userId === meId);
+      const rank = idx >= 0 ? idx + 1 : null;
       topLeagues.push({ id: l.id, name: l.name, type: l.type, rank, abbr: (l.name || '?').substring(0, 2).toUpperCase() });
     }
   }
@@ -106,7 +99,7 @@ const profilePage = asyncHandler(async (req, res) => {
       profileImage: user.profileImage || '',
       createdAt: user.createdAt,
     },
-    summary: { totalPoints, accuracy, tipsCount: allTips.length, evaluated },
+    summary: { totalPoints, accuracy, tipsCount, evaluated },
     recent,
     topLeagues,
     badges,

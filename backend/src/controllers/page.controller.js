@@ -11,6 +11,7 @@ const { seasonStatus, isSeasonLocked, canViewSeasonContent } = require('../utils
 const { deleteSeason } = require('../utils/delete.util');
 const { cloneTemplateInto } = require('../utils/league-clone.util');
 const { asyncHandler } = require('../middleware/error.middleware');
+const { seasonCounts, leaderboardWithUsers } = require('../utils/standings.util');
 const { leagueDetailPage, manageLeaguePage } = require('./leaguePage.controller');
 const achievements = require('../utils/achievement.engine');
 
@@ -45,21 +46,18 @@ const seasonsPage = asyncHandler(async (req, res) => {
     include: [{ model: User, as: 'creator', attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] }],
     order: [['createdAt', 'DESC']],
   });
-  const withCounts = await Promise.all(seasons.map(async (season) => {
-    const leaguesCount = await League.count({ where: { seasonId: season.id } });
-    let participantsCount = 0;
-    try { participantsCount = await season.countParticipants(); } catch { /* nič */ }
-    // Počet zápasov v sezóne = zápasy vo všetkých kolách líg patriacich sezóne.
-    let matchesCount = 0;
-    try {
-      const leagueIds = (await League.findAll({ where: { seasonId: season.id }, attributes: ['id'] })).map((l) => l.id);
-      if (leagueIds.length) {
-        const roundIds = (await Round.findAll({ where: { leagueId: leagueIds }, attributes: ['id'] })).map((r) => r.id);
-        if (roundIds.length) matchesCount = await Match.count({ where: { roundId: roundIds } });
-      }
-    } catch { /* počet zápasov je vedľajší — pri chybe necháme 0 */ }
-    return { ...season.toJSON(), leaguesCount, participantsCount, matchesCount, status: seasonStatus(season) };
-  }));
+  // počty líg / hráčov / zápasov pre všetky sezóny naraz (3 dotazy, nie N×5)
+  const counts = await seasonCounts(seasons.map((s) => s.id), { matches: true });
+  const withCounts = seasons.map((season) => {
+    const c = counts.get(season.id) || {};
+    return {
+      ...season.toJSON(),
+      leaguesCount: c.leaguesCount || 0,
+      participantsCount: c.participantsCount || 0,
+      matchesCount: c.matchesCount || 0,
+      status: seasonStatus(season),
+    };
+  });
 
   // skryté sezóny zo zoznamu vypadnú — okrem tých, kde je užívateľ člen/tvorca;
   // ukončené sa na /seasons nezobrazujú vôbec (sú dostupné cez detail/Centrum)
@@ -164,31 +162,22 @@ const seasonDetailPage = asyncHandler(async (req, res) => {
   try { participantsCount = await season.countParticipants(); } catch { /* nič */ }
   const leagues = await League.findAll({ where: { seasonId: season.id }, order: [['createdAt', 'ASC']] });
   // počet členov každej ligy (priamo z UserLeague)
-  const leaguesWithCounts = [];
-  for (const l of leagues) {
-    const mc = await UserLeague.count({ where: { leagueId: l.id } });
-    leaguesWithCounts.push({ ...l.toJSON(), membersCount: mc });
-  }
+  const memberRows = leagues.length
+    ? await UserLeague.findAll({
+      where: { leagueId: leagues.map((l) => l.id) },
+      attributes: ['leagueId', [Sequelize.fn('COUNT', Sequelize.col('user_id')), 'n']],
+      group: ['leagueId'],
+      raw: true,
+    })
+    : [];
+  const membersByLeague = new Map(memberRows.map((r) => [Number(r.leagueId), Number(r.n)]));
+  const leaguesWithCounts = leagues.map((l) => ({ ...l.toJSON(), membersCount: membersByLeague.get(l.id) || 0 }));
 
   // súhrnný rebríček (agregácia bodov z tipov vo všetkých ligách sezóny)
   let leaderboard = [];
   try {
-    const tips = await Tip.findAll({
-      include: [
-        // required:true na celej reťazi → INNER JOIN, takže where {seasonId}
-        // skutočne odfiltruje tipy z iných sezón (inak LEFT JOIN vráti všetky tipy).
-        { model: Match, required: true, include: [{ model: Round, required: true, include: [{ model: League, required: true, where: { seasonId: season.id } }] }] },
-        { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] },
-      ],
-    });
-    const byUser = {};
-    tips.forEach((tip) => {
-      if (!tip.User) return;
-      const uid = tip.User.id;
-      if (!byUser[uid]) byUser[uid] = { user: tip.User.toJSON(), totalPoints: 0 };
-      byUser[uid].totalPoints += tip.points || 0;
-    });
-    leaderboard = Object.values(byUser).sort((a, b) => b.totalPoints - a.totalPoints);
+    leaderboard = (await leaderboardWithUsers({ seasonId: season.id }, ['id', 'username', 'firstName', 'lastName', 'profileImage']))
+      .map((r) => ({ user: r.user, totalPoints: r.totalPoints }));
   } catch (e) { leaderboard = []; }
 
   // ===== NOVINKY V SEZÓNE (odvodené z existujúcich dát) =====

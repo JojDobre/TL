@@ -93,7 +93,7 @@
 ` }) %>
 
 <%
-  function fmtDT(d){ if(!d) return ''; var dt=new Date(d); return dt.toLocaleDateString('sk-SK',{day:'numeric',month:'short'})+' · '+dt.toLocaleTimeString('sk-SK',{hour:'2-digit',minute:'2-digit'}); }
+  function fmtDT(d){ if(!d) return ''; var dt=new Date(d); return dt.toLocaleDateString('sk-SK',{timeZone:'Europe/Bratislava',day:'numeric',month:'short'})+' · '+dt.toLocaleTimeString('sk-SK',{timeZone:'Europe/Bratislava',hour:'2-digit',minute:'2-digit'}); }
 %>
 
 <div class="wrap zp-head">

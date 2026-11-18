@@ -63,7 +63,7 @@
 <%
   function initials(u){ var n=[u.firstName,u.lastName].filter(Boolean).join(' ')||u.username||'?'; return n.split(' ').map(function(w){return w[0];}).filter(Boolean).slice(0,2).join('').toUpperCase(); }
   function fullName(u){ return [u.firstName,u.lastName].filter(Boolean).join(' ')||u.username; }
-  function fmtD(d){ if(!d) return ''; var x=new Date(d); return x.toLocaleDateString('sk-SK',{day:'numeric',month:'short'}); }
+  function fmtD(d){ if(!d) return ''; var x=new Date(d); return x.toLocaleDateString('sk-SK',{timeZone:'Europe/Bratislava',day:'numeric',month:'short'}); }
   var s = league.scoringSystem || {};
   var isOfficial = league.type === 'official';
 %>
@@ -205,6 +205,9 @@
 
     <!-- NASTAVENIA + NEBEZPEČNÁ ZÓNA -->
     <section data-cpanel="settings" hidden>
+      <% if (typeof autoResults !== 'undefined' && autoResults) { %>
+        <%- include('partials/auto-results-card', { leagueId: league.id, ar: autoResults }) %>
+      <% } %>
       <form class="card card-pad2" method="POST" action="/leagues/<%= league.id %>/edit">
         <h3>Základné nastavenia</h3>
         <p class="sub">Názov, popis a prístup k lige.</p>

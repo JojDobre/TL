@@ -163,6 +163,15 @@ router.post('/admin/templates/:id/meta', requireAdmin, templateUpdateMeta);
 router.post('/admin/templates/:id/delete', requireAdmin, templateDelete);
 router.get('/admin/templates/:id/evaluate', requireAdmin, templateEvaluatePage);
 
+// Admin API — automatické výsledky (TheSportsDB)
+const autoResultsCtl = require('../controllers/autoResults.controller');
+router.get('/api/admin/tsdb/league/:extId', apiRequireAdmin, autoResultsCtl.lookupLeague);
+router.get('/api/admin/tsdb/search', apiRequireAdmin, autoResultsCtl.searchLeagues);
+router.post('/api/leagues/:id/auto-results', apiRequireAdmin, autoResultsCtl.saveLink);
+router.delete('/api/leagues/:id/auto-results', apiRequireAdmin, autoResultsCtl.removeLink);
+router.post('/api/leagues/:id/auto-results/run', apiRequireAdmin, autoResultsCtl.runNow);
+router.post('/api/leagues/:id/auto-results/enable-matches', apiRequireAdmin, autoResultsCtl.enableMatches);
+
 // Admin API — tímy (JSON, cez session admin)
 router.get('/api/admin/teams', apiRequireAdmin, listTeams);
 router.post('/api/admin/teams', apiRequireAdmin, createTeam);

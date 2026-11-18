@@ -8,7 +8,7 @@ const { Season, League, Round, Match, Tip, User, UserSeason, Sequelize } = requi
 const Op = Sequelize.Op;
 const { asyncHandler } = require('../middleware/error.middleware');
 const { seasonStatus, canViewSeasonContent } = require('../utils/season.utils');
-const { tipQualityWeight } = require('../utils/accuracy.util');
+const { standings, pointsBefore, accuracyOf } = require('../utils/standings.util');
 
 // GET /seasons/:id/leaderboard
 const seasonLeaderboardPage = asyncHandler(async (req, res) => {
@@ -31,36 +31,22 @@ const seasonLeaderboardPage = asyncHandler(async (req, res) => {
     return res.redirect('/seasons/' + season.id); // späť na detail, kde sa pýta heslo
   }
 
-  // všetky tipy v sezóne (cez Match→Round→League where seasonId)
-  const tips = await Tip.findAll({
-    include: [
-      // required:true na celej reťazi → INNER JOIN, takže where {seasonId}
-      // skutočne odfiltruje tipy z iných sezón (inak LEFT JOIN vráti všetky tipy).
-      { model: Match, required: true, include: [{ model: Round, required: true, include: [{ model: League, required: true, where: { seasonId: season.id }, attributes: ['id'] }], attributes: ['id'] }], attributes: ['id', 'status', 'tipType', 'homeScore', 'awayScore'] },
-      { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'role', 'profileImage'] },
-    ],
-  });
+  // body + vážená presnosť po hráčoch — agregované v SQL (viď standings.util)
+  const rows = await standings({ seasonId: season.id });
+  const users = rows.length
+    ? await User.findAll({ where: { id: { [Op.in]: rows.map((r) => r.userId) } }, attributes: ['id', 'username', 'firstName', 'lastName', 'role', 'profileImage'] })
+    : [];
+  const userById = new Map(users.map((u) => [u.id, u.toJSON()]));
 
-  // agregácia podľa hráča: body + VÁŽENÁ presnosť (kvalita tipu, viď accuracy.util)
-  const byUser = {};
-  tips.forEach((tip) => {
-    if (!tip.User || !tip.Match) return;
-    const finished = tip.Match.status === 'finished';
-    const uid = tip.User.id;
-    if (!byUser[uid]) byUser[uid] = { user: tip.User.toJSON(), totalPoints: 0, evaluated: 0, weightSum: 0 };
-    byUser[uid].totalPoints += tip.points || 0;
-    if (finished) {
-      byUser[uid].evaluated += 1;
-      byUser[uid].weightSum += tipQualityWeight(tip, tip.Match);
-    }
-  });
-
-  const leaderboard = Object.values(byUser)
-    .map((row) => ({
-      ...row,
-      accuracy: row.evaluated > 0 ? Math.round((row.weightSum / row.evaluated) * 100) : null,
-    }))
-    .sort((a, b) => b.totalPoints - a.totalPoints);
+  const leaderboard = rows
+    .filter((r) => userById.has(r.userId))
+    .map((r) => ({
+      user: userById.get(r.userId),
+      totalPoints: r.points,
+      evaluated: r.evaluated,
+      weightSum: r.weightSum,
+      accuracy: accuracyOf(r),
+    }));
 
   // moje poradie
   let myRank = null;
@@ -115,37 +101,17 @@ const globalLeaderboardPage = asyncHandler(async (req, res) => {
   let board = [];
   let movers = [];
   if (offLeagueIds.length) {
-    const rounds = await Round.findAll({
-      where: { leagueId: { [Op.in]: offLeagueIds }, endDate: { [Op.gte]: yearAgo } },
-      attributes: ['id'],
-    });
-    const roundIds = rounds.map((r) => r.id);
-
-    if (roundIds.length) {
-      const tips = await Tip.findAll({
-        attributes: ['userId', 'points', 'winner', 'homeScore', 'awayScore'],
-        include: [
-          { model: Match, attributes: ['id', 'status', 'tipType', 'homeScore', 'awayScore'], where: { status: 'finished', roundId: { [Op.in]: roundIds } }, required: true,
-            include: [{ model: Round, attributes: ['id', 'endDate'] }] },
-          { model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'role', 'profileImage'] },
-        ],
-      });
-
-      const byUser = {};      // súčet k dnešku
-      const pointsWeekAgo = {}; // súčet k stavu pred 7 dňami (len kolá skončené pred týždňom)
-      tips.forEach((t) => {
-        if (!t.User) return;
-        const uid = t.User.id;
-        if (!byUser[uid]) byUser[uid] = { user: t.User.toJSON(), totalPoints: 0, evaluated: 0, weightSum: 0 };
-        byUser[uid].totalPoints += t.points || 0;
-        byUser[uid].evaluated += 1;
-        byUser[uid].weightSum += tipQualityWeight(t, t.Match);
-
-        // stav spred týždňa: započítaj len tipy, ktorých kolo skončilo pred weekAgo
-        const rEnd = t.Match && t.Match.Round ? t.Match.Round.endDate : null;
-        if (rEnd && new Date(rEnd) < weekAgo) {
-          pointsWeekAgo[uid] = (pointsWeekAgo[uid] || 0) + (t.points || 0);
-        }
+    // body z vyhodnotených tipov v kolách skončených za posledný rok (SQL agregácia)
+    const rows = await standings({ leagueIds: offLeagueIds, roundEndFrom: yearAgo, finishedOnly: true });
+    if (rows.length) {
+      const users = await User.findAll({ where: { id: { [Op.in]: rows.map((r) => r.userId) } }, attributes: ['id', 'username', 'firstName', 'lastName', 'role', 'profileImage'] });
+      const userById = new Map(users.map((u) => [u.id, u.toJSON()]));
+      // stav spred týždňa: len tipy, ktorých kolo skončilo pred weekAgo
+      const pointsWeekAgo = Object.fromEntries(await pointsBefore({ leagueIds: offLeagueIds, roundEndFrom: yearAgo, before: weekAgo }));
+      const byUser = {};
+      rows.forEach((r) => {
+        const u = userById.get(r.userId);
+        if (u) byUser[r.userId] = { user: u, totalPoints: r.points, evaluated: r.evaluated, weightSum: r.weightSum };
       });
 
       board = Object.values(byUser)
