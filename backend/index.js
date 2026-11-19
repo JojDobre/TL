@@ -276,6 +276,16 @@ syncDatabase()
     scheduler.start();
     // Automatické výsledky a program zápasov (TheSportsDB) — viď utils/auto-results.js
     require('./src/utils/auto-results').start();
+    // Príprava veľkých rebríčkov na pozadí, aby ani prvý návštevník po
+    // nasadení nečakal na výpočet (viď standings.util — precomputed).
+    setTimeout(async () => {
+      const t = Date.now();
+      try {
+        await require('./src/controllers/leaderboardPage.controller').warmGlobal();
+        const n = await require('./src/utils/standings.util').warmOfficial();
+        console.log(`[standings] rebríčky pripravené (${n} oficiálnych líg) za ${Date.now() - t} ms`);
+      } catch (e) { console.error('[standings] príprava rebríčkov zlyhala:', e.message); }
+    }, 3000);
   })
   .catch((error) => console.error('Chyba pri inicializácii databázy:', error));
 

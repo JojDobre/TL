@@ -343,6 +343,65 @@ async function leagueStandingsMap(leagueIds, opts = {}) {
 }
 const ids2 = (arr) => [...new Set((arr || []).map(Number).filter(Number.isFinite))];
 
+// Vývoj poradia v lige po každom z posledných n odohraných kôl (pre graf).
+// Jeden agregovaný dotaz (body hráča po kolách) + kumulatívne poradie v JS —
+// namiesto n samostatných výpočtov rebríčka. Výsledok:
+//   [{ roundId, ranks: Map(userId → poradie) }, …] od najstaršieho kola.
+// Poradie zodpovedá standings(): body zostupne, pri zhode userId vzostupne.
+async function computeRankHistory(leagueId, n) {
+  const rows = await select(`
+    SELECT m.round_id AS roundId, r.end_date AS endDate, t.user_id AS userId,
+           COALESCE(SUM(t.points), 0) AS points
+      FROM tips t
+      JOIN matches m ON m.id = t.match_id
+      JOIN rounds r ON r.id = m.round_id
+     WHERE r.league_id = ? AND r.end_date <= ?
+     GROUP BY m.round_id, r.end_date, t.user_id`, [Number(leagueId), new Date()]);
+  // kolá podľa konca; kolá s rovnakým koncom sa započítavajú spolu
+  const ends = [...new Set(rows.map((r) => new Date(r.endDate).getTime()))].sort((a, b) => a - b);
+  const byEnd = new Map(ends.map((e) => [e, []]));
+  rows.forEach((r) => byEnd.get(new Date(r.endDate).getTime()).push(r));
+  const total = new Map();
+  const out = [];
+  ends.forEach((e, idx) => {
+    byEnd.get(e).forEach((r) => total.set(Number(r.userId), (total.get(Number(r.userId)) || 0) + (Number(r.points) || 0)));
+    if (idx < ends.length - n) return;
+    const sorted = [...total.entries()].sort((a, b) => (b[1] - a[1]) || (a[0] - b[0]));
+    const ranks = new Map(sorted.map(([uid], i) => [uid, i + 1]));
+    out.push({ end: e, ranks });
+  });
+  return out;
+}
+async function leagueRankHistory(leagueId, n = 8) {
+  const id = Number(leagueId);
+  const official = await officialLeagueIds([id]);
+  const fn = () => computeRankHistory(id, n);
+  return official.has(id) ? precomputed(`rankhist:${id}:${n}`, fn) : fn();
+}
+
+// Príprava veľkých rebríčkov hneď po štarte servera (na pozadí, postupne),
+// aby ani prvý návštevník po nasadení nečakal na výpočet.
+async function warmOfficial() {
+  const { League, Season } = require('../models');
+  const leagues = await League.findAll({
+    where: { ended: false },
+    attributes: ['id', 'type', 'isTemplate', 'seasonId'],
+    include: [{ model: Season, attributes: ['id', 'type', 'ended'] }],
+  });
+  const official = leagues.filter((l) => (l.type === 'official' || (l.Season && l.Season.type === 'official'))
+    && !(l.Season && l.Season.ended));
+  for (const l of official) {
+    officialCache.set(l.id, true);
+    await leagueStandingsMap([l.id]);
+    await leagueStandingsMap([l.id], { weekAgo: true });
+    await leagueRankHistory(l.id);
+    await new Promise((r) => setTimeout(r, 30));
+  }
+  const seasonIds = [...new Set(official.map((l) => l.seasonId).filter(Boolean))];
+  for (const sid of seasonIds) { await seasonLeaderboard(sid); await new Promise((r) => setTimeout(r, 30)); }
+  return official.length;
+}
+
 // Rebríček jednej ligy aj s používateľmi (oficiálna → vopred prepočítaný).
 async function leagueLeaderboard(leagueId) {
   const id = Number(leagueId);
@@ -374,5 +433,7 @@ module.exports = {
   leagueStandingsMap,
   leagueLeaderboard,
   seasonLeaderboard,
+  leagueRankHistory,
+  warmOfficial,
   officialLeagueIds,
 };

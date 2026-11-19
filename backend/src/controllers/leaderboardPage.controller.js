@@ -70,6 +70,27 @@ const seasonLeaderboardPage = asyncHandler(async (req, res) => {
   });
 });
 
+// Celkový rebríček oficiálnych líg za posledný rok — vopred prepočítaný
+// (standings.util precomputed): prepočet beží na pozadí po vyhodnotení zápasov
+// a raz za hodinu, stránka len číta výsledok.
+function globalStandings(seasonFilter, offLeagueIds) {
+  return precomputed(`global:${seasonFilter || 'all'}`, async () => {
+    const nowT = new Date();
+    const yA = new Date(nowT); yA.setFullYear(yA.getFullYear() - 1);
+    const wA = new Date(nowT.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const r = await standings({ leagueIds: offLeagueIds, roundEndFrom: yA, finishedOnly: true });
+    const us = r.length ? await User.findAll({ where: { id: { [Op.in]: r.map((x) => x.userId) } }, attributes: ['id', 'username', 'firstName', 'lastName', 'role', 'profileImage'], raw: true }) : [];
+    const pw = Object.fromEntries(await pointsBefore({ leagueIds: offLeagueIds, roundEndFrom: yA, before: wA }));
+    return { rows: r, users: us, pointsWeekAgo: pw };
+  });
+}
+
+// príprava pri štarte servera
+async function warmGlobal() {
+  const ids = (await League.findAll({ where: { type: 'official', isTemplate: false }, attributes: ['id'] })).map((l) => l.id);
+  if (ids.length) await globalStandings(null, ids);
+}
+
 // GET /leaderboards — globálny rebríček z oficiálnych líg za posledný rok.
 // Súčet bodov všetkých hráčov z vyhodnotených tipov v oficiálnych ligách,
 // kde kolo skončilo za posledných 12 mesiacov. + presnosť a moja pozícia.
@@ -106,15 +127,7 @@ const globalLeaderboardPage = asyncHandler(async (req, res) => {
     // body z vyhodnotených tipov v kolách skončených za posledný rok (SQL agregácia)
     // Vopred prepočítané (viď standings.util — precomputed): prepočet beží na
     // pozadí po vyhodnotení zápasov a raz za hodinu, stránka len číta výsledok.
-    const pre = await precomputed(`global:${seasonFilter || 'all'}`, async () => {
-      const nowT = new Date();
-      const yA = new Date(nowT); yA.setFullYear(yA.getFullYear() - 1);
-      const wA = new Date(nowT.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const r = await standings({ leagueIds: offLeagueIds, roundEndFrom: yA, finishedOnly: true });
-      const us = r.length ? await User.findAll({ where: { id: { [Op.in]: r.map((x) => x.userId) } }, attributes: ['id', 'username', 'firstName', 'lastName', 'role', 'profileImage'], raw: true }) : [];
-      const pw = Object.fromEntries(await pointsBefore({ leagueIds: offLeagueIds, roundEndFrom: yA, before: wA }));
-      return { rows: r, users: us, pointsWeekAgo: pw };
-    });
+    const pre = await globalStandings(seasonFilter, offLeagueIds);
     const rows = pre.rows;
     if (rows.length) {
       const userById = new Map(pre.users.map((u) => [u.id, u]));
@@ -192,4 +205,4 @@ const globalLeaderboardPage = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { seasonLeaderboardPage, globalLeaderboardPage };
+module.exports = { seasonLeaderboardPage, globalLeaderboardPage, warmGlobal };
