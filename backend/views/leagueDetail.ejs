@@ -166,14 +166,14 @@
       </div>
     </div>
 
-    <div class="card card-pad" style="background:linear-gradient(135deg,var(--surface-1),color-mix(in srgb,var(--gold) 8%,var(--surface-1)))">
+    <div class="card card-pad aw-extra" style="background:linear-gradient(135deg,var(--surface-1),color-mix(in srgb,var(--gold) 8%,var(--surface-1)))">
       <b class="hi" style="display:block;margin-bottom:6px">Pozvi do ligy</b>
       <p class="muted" style="font-size:var(--fs-sm);margin-bottom:10px">Pošli kamošom ID ligy.</p>
       <div class="row g-2"><span class="id-chip" data-copy data-copy-val="<%= league.joinCode %>" style="flex:1;text-align:center"><%= league.joinCode %></span><button class="btn btn-primary btn-sm" data-copy data-copy-val="<%= league.joinCode %>">Kopírovať</button></div>
     </div>
 
     <% if (isMember) { %>
-    <div class="card card-pad">
+    <div class="card card-pad aw-extra">
       <div class="stat-label" style="margin-bottom:10px">Členstvo</div>
       <div class="between" style="margin-bottom:12px"><span class="muted" style="font-size:var(--fs-sm)">Tvoja pozícia</span><% if (myRank) { %><span class="tag tag-brand" style="padding:2px 8px">#<%= myRank %> · <%= myPoints %> b</span><% } else { %><span class="muted" style="font-size:var(--fs-sm)">—</span><% } %></div>
     </div>

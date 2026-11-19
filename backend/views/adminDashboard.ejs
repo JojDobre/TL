@@ -107,7 +107,7 @@
       <% (topPlayers||[]).forEach(function(p, i){ %>
         <div class="lst-row">
           <span class="av"><%= i+1 %></span>
-          <div class="bd"><div class="nm"><%= p.name %></div><div class="sub">@<%= p.username %></div></div>
+          <div class="bd"><div class="nm"><%= p.name %></div><div class="sub aw-keep">@<%= p.username %></div></div>
           <span class="val"><%= p.tipCount %> <span class="muted" style="font-weight:400;font-size:var(--fs-xs)">tipov</span></span>
         </div>
       <% }); %>
@@ -122,7 +122,7 @@
       <% (recentUsers||[]).forEach(function(u){ %>
         <div class="lst-row">
           <span class="av"><%= (u.name||'?').split(' ').map(function(w){return w[0];}).filter(Boolean).slice(0,2).join('').toUpperCase() %></span>
-          <div class="bd"><div class="nm"><%= u.name %><% if (u.role === 'admin') { %> <span class="tag tag-brand" style="padding:0 5px">admin</span><% } else if (u.role === 'vip') { %> <span class="tag tag-gold" style="padding:0 5px">VIP</span><% } %></div><div class="sub">@<%= u.username %><% if (u.createdAt) { %> · <%= fmtDateShort(u.createdAt) %><% } %></div></div>
+          <div class="bd"><div class="nm"><%= u.name %><% if (u.role === 'admin') { %> <span class="tag tag-brand" style="padding:0 5px">admin</span><% } else if (u.role === 'vip') { %> <span class="tag tag-gold" style="padding:0 5px">VIP</span><% } %></div><div class="sub aw-keep">@<%= u.username %><% if (u.createdAt) { %> · <%= fmtDateShort(u.createdAt) %><% } %></div></div>
         </div>
       <% }); %>
     </div>
