@@ -163,6 +163,11 @@ const updateMatch = asyncHandler(async (req, res) => {
     throw new ApiError(403, 'Nemáš oprávnenie upraviť tento zápas.');
   }
 
+  // Zápas prevzatý z oficiálnej súťaže (klon) — tímy, čas a stav preberá
+  // z originálu; meniť sa dá len typ tipovania.
+  if (match.sourceMatchId && (homeTeamId || awayTeamId || matchTime || status)) {
+    throw new ApiError(400, 'Zápas je prevzatý z oficiálnej súťaže — tímy, čas aj výsledok sa preberajú automaticky.');
+  }
   if (homeTeamId && awayTeamId && homeTeamId === awayTeamId) {
     throw new ApiError(400, 'Domáci a hosťujúci tím nemôžu byť rovnaké.');
   }
@@ -333,4 +338,5 @@ module.exports = {
   evaluateMatch,
   deleteMatch,
   calculatePoints, // exportované kvôli testom / znovupoužitiu
+  canManageMatch,
 };

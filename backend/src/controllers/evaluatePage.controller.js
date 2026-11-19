@@ -63,13 +63,15 @@ const evaluatePage = asyncHandler(async (req, res) => {
 
   const evaluated = matchData.filter((m) => m.status === 'finished').length;
   const canceled = matchData.filter((m) => m.status === 'canceled').length;
-  const pending = matchData.length - evaluated - canceled;
+  // zápasy prevzaté z oficiálnych súťaží sa vyhodnotia samy — nečakajú na správcu
+  const officialPending = matchData.filter((m) => m.sourceMatchId && m.status !== 'finished' && m.status !== 'canceled').length;
+  const pending = matchData.length - evaluated - canceled - officialPending;
 
   res.render('evaluate', {
     round: round.toJSON(),
     league: league.toJSON(),
     matches: matchData,
-    stats: { total: matchData.length, evaluated, canceled, pending },
+    stats: { total: matchData.length - officialPending, evaluated, canceled, pending },
   });
 });
 

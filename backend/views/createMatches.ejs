@@ -23,7 +23,22 @@
   .csv-table tr:last-child td { border:none; }
   .csv-ok { color:var(--success); }
   .code { font-family:var(--num); background:var(--surface-3); padding:2px 7px; border-radius:5px; font-size:var(--fs-xs); color:var(--text-2); }
+  /* zápasy z oficiálnych súťaží */
+  .om-list { max-height:420px; overflow-y:auto; border:1px solid var(--line); border-radius:var(--r-sm); margin-top:12px; }
+  .om-day { position:sticky; top:0; background:var(--surface-1); padding:8px 12px; font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.06em; color:var(--text-4); font-weight:700; border-bottom:1px solid var(--line); z-index:1; }
+  .om-row { display:flex; align-items:center; gap:12px; padding:10px 12px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .om-row:last-child { border-bottom:0; }
+  .om-row:hover { background:var(--surface-2); }
+  .om-row input { width:18px; height:18px; accent-color:var(--brand); flex:none; }
+  .om-row .om-t { flex:1; min-width:0; font-size:var(--fs-sm); color:var(--text-1); font-weight:600; }
+  .om-row .om-m { font-size:var(--fs-xs); color:var(--text-4); white-space:nowrap; }
+  .om-row.added { opacity:.55; cursor:default; }
+  .om-foot { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:14px; }
+  .om-badge { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--info); background:var(--info-soft); padding:2px 7px; border-radius:6px; margin-left:6px; vertical-align:middle; }
   @media (max-width:760px){
+    .om-row { flex-wrap:wrap; row-gap:2px; }
+    .om-row .om-t { flex:1 1 calc(100% - 40px); }
+    .om-row .om-m { width:100%; padding-left:30px; white-space:normal; }
     .match-builder { grid-template-columns:1fr; }
     .match-builder .vs-mid { display:none; }
     /* footer buttons: 50/50, row spans full width */
@@ -57,6 +72,23 @@
 
 <div class="wrap" style="padding-block:24px 64px">
   <section>
+    <% if (!league.isTemplate) { %>
+    <!-- ZÁPASY Z OFICIÁLNYCH SÚŤAŽÍ -->
+    <div class="card form-card" style="margin-bottom:18px" id="omCard">
+      <h3>Zápasy z oficiálnych súťaží</h3>
+      <p class="sub" style="margin-bottom:12px">Vyber zápasy z oficiálnych líg (napr. Premier League, Serie A). Výsledky sa doplnia automaticky a body sa spočítajú podľa pravidiel tvojej ligy.</p>
+      <div class="row g-3 wrap-gap" style="align-items:flex-end">
+        <div class="field" style="flex:1;min-width:220px"><label class="label">Súťaž</label><select class="select" id="omSource"><option value="">Načítavam…</option></select></div>
+        <div class="field" style="max-width:240px"><label class="label">Typ tipovania</label><select class="select" id="omTipType"><option value="exact_score">Presný výsledok</option><option value="winner">Iba víťaz (1/X/2)</option></select></div>
+      </div>
+      <div id="omBox"></div>
+      <div class="om-foot" id="omFoot" hidden>
+        <button type="button" class="btn btn-brand" id="omAdd" disabled>Pridať vybrané (0)</button>
+        <span class="muted" style="font-size:var(--fs-sm)" id="omInfo"></span>
+      </div>
+    </div>
+    <% } %>
+
     <div class="card form-card" style="margin-bottom:18px">
       <h3>Nový zápas</h3>
       <p class="sub">Vyber tímy, čas a typ tipovania.</p>
@@ -100,12 +132,12 @@
       <% if (matches.length === 0) { %><p class="muted" id="emptyMsg">Zatiaľ žiadne zápasy. Pridaj prvý vyššie.</p><% } %>
       <% matches.forEach(function(m){ %>
       <div class="built-match" data-match-id="<%= m.id %>">
-        <span class="built-team"><% if (m.homeTeam && m.homeTeam.logo) { %><span class="team-logo" style="width:30px;height:30px;background:none;border:none"><img src="<%= m.homeTeam.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)"><%= m.homeAbbr %></span><% } %><%= m.homeTeam ? m.homeTeam.name : '—' %></span>
+        <span class="built-team"><% if (m.homeTeam && m.homeTeam.logo) { %><span class="team-logo" style="width:30px;height:30px;background:none;border:none"><img src="<%= m.homeTeam.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)"><%= m.homeAbbr %></span><% } %><%= m.homeTeam ? m.homeTeam.name : '—' %><% if (m.sourceMatchId) { %><span class="om-badge" title="Prevzatý z oficiálnej súťaže — výsledok a čas sa preberajú automaticky">oficiálny</span><% } %></span>
         <span class="vs-mid">:</span>
         <span class="built-team r"><% if (m.awayTeam && m.awayTeam.logo) { %><span class="team-logo" style="width:30px;height:30px;background:none;border:none"><img src="<%= m.awayTeam.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)"><%= m.awayAbbr %></span><% } %><%= m.awayTeam ? m.awayTeam.name : '—' %></span>
         <span class="muted" style="font-size:var(--fs-xs)" data-time="<%= m.matchTime %>"><%= fmtDT(m.matchTime) %></span>
         <span class="built-acts">
-          <button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-edit-time title="Upraviť čas">✎</button>
+          <% if (!m.sourceMatchId) { %><button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-edit-time title="Upraviť čas">✎</button><% } %>
           <button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-del title="Odstrániť">✕</button>
         </span>
       </div>
@@ -200,6 +232,69 @@
         toast('Čas upravený ✓', true);
       }).catch(function(){ toast('Chyba pri úprave.'); });
   });
+
+  // ---- zápasy z oficiálnych súťaží ----
+  (function(){
+    var sel = document.getElementById('omSource'); if (!sel) return;
+    var box = document.getElementById('omBox'), foot = document.getElementById('omFoot');
+    var addBtn = document.getElementById('omAdd'), info = document.getElementById('omInfo');
+    function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+    function dayKey(d){ return new Date(d).toLocaleDateString('sk-SK',{timeZone:'Europe/Bratislava',weekday:'long',day:'numeric',month:'long'}); }
+    function hm(d){ return new Date(d).toLocaleTimeString('sk-SK',{timeZone:'Europe/Bratislava',hour:'2-digit',minute:'2-digit'}); }
+    function picked(){ return Array.prototype.slice.call(box.querySelectorAll('input[data-om]:checked:not(:disabled)')).map(function(i){ return Number(i.value); }); }
+    function refreshBtn(){ var n = picked().length; addBtn.disabled = n === 0; addBtn.textContent = 'Pridať vybrané (' + n + ')'; }
+    fetch('/api/rounds/' + roundId + '/official-sources', { headers: { Accept: 'application/json' } })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (res.success === false) { sel.innerHTML = '<option value="">' + esc(res.message || 'Nedostupné') + '</option>'; return; }
+        if (!res.data.length) { sel.innerHTML = '<option value="">Momentálne žiadna súťaž nemá nadchádzajúce zápasy</option>'; return; }
+        sel.innerHTML = '<option value="">— vyber súťaž —</option>' + res.data.map(function(t){ return '<option value="' + t.id + '">' + esc(t.name) + ' (' + t.upcoming + ')</option>'; }).join('');
+      })
+      .catch(function(){ sel.innerHTML = '<option value="">Nepodarilo sa načítať súťaže</option>'; });
+    sel.addEventListener('change', function(){
+      foot.hidden = true; box.innerHTML = '';
+      if (!sel.value) return;
+      box.innerHTML = '<p class="muted" style="margin-top:12px">Načítavam zápasy…</p>';
+      fetch('/api/rounds/' + roundId + '/official-matches?template=' + encodeURIComponent(sel.value), { headers: { Accept: 'application/json' } })
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+          if (res.success === false) { box.innerHTML = '<p class="muted" style="margin-top:12px">' + esc(res.message) + '</p>'; return; }
+          var ms = res.data.matches;
+          if (!ms.length) { box.innerHTML = '<p class="muted" style="margin-top:12px">Táto súťaž nemá žiadne nadchádzajúce zápasy.</p>'; return; }
+          var html = '<div class="om-list">', last = '';
+          ms.forEach(function(m){
+            var d = dayKey(m.time);
+            if (d !== last) { html += '<div class="om-day">' + esc(d) + '</div>'; last = d; }
+            html += '<label class="om-row' + (m.added ? ' added' : '') + '">'
+              + '<input type="checkbox" data-om value="' + m.id + '"' + (m.added ? ' disabled checked' : '') + '>'
+              + '<span class="om-t">' + esc(m.home.name) + ' – ' + esc(m.away.name) + '</span>'
+              + '<span class="om-m">' + (m.added ? 'už pridaný · ' : '') + esc(m.round) + ' · ' + hm(m.time) + '</span></label>';
+          });
+          box.innerHTML = html + '</div>';
+          foot.hidden = false; info.textContent = ''; refreshBtn();
+        })
+        .catch(function(){ box.innerHTML = '<p class="muted" style="margin-top:12px">Nepodarilo sa načítať zápasy.</p>'; });
+    });
+    box.addEventListener('change', function(e){ if (e.target.matches('input[data-om]')) refreshBtn(); });
+    addBtn.addEventListener('click', function(){
+      var ids = picked(); if (!ids.length) return;
+      addBtn.disabled = true; addBtn.textContent = 'Pridávam…';
+      fetch('/api/rounds/' + roundId + '/official-matches', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ matchIds: ids, tipType: document.getElementById('omTipType').value }) })
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+          if (res.added > 0) {
+            toast(res.message, true);
+            if (res.skipped && res.skipped.length) info.textContent = 'Preskočené: ' + res.skipped.join(' ');
+            setTimeout(function(){ window.location.reload(); }, res.skipped && res.skipped.length ? 2500 : 900);
+          } else {
+            toast(res.message || 'Nepodarilo sa pridať.');
+            info.textContent = (res.skipped || []).join(' ');
+            refreshBtn();
+          }
+        })
+        .catch(function(){ toast('Chyba pri pridávaní.'); refreshBtn(); });
+    });
+  })();
 
   function updateCount(){ var n = document.querySelectorAll('#builtList .built-match').length; document.getElementById('matchCount').textContent = '('+n+')'; if(n===0){ var l=document.getElementById('builtList'); if(!document.getElementById('emptyMsg')){ var p=document.createElement('p'); p.className='muted'; p.id='emptyMsg'; p.textContent='Zatiaľ žiadne zápasy. Pridaj prvý vyššie.'; l.appendChild(p);} } }
 

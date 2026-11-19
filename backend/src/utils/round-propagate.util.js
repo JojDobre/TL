@@ -34,7 +34,13 @@ async function findCloneRounds(sourceRound) {
     });
     const roundIds = cloneMatches.map((m) => m.roundId).filter((id) => !seen.has(id));
     if (roundIds.length) {
-      const extra = await Round.findAll({ where: { id: roundIds } });
+      // Len kolá v ligách NAKLONOVANÝCH z tejto šablóny. Vlastné kolá, do
+      // ktorých si hráč vybral jednotlivé zápasy z oficiálnych súťaží, nie sú
+      // kópiou kola šablóny — nesmú dostať jej názov, termíny ani ďalšie zápasy.
+      const cloneLeagueIds = (await League.findAll({ where: { templateId: sourceRound.leagueId }, attributes: ['id'] })).map((l) => l.id);
+      const extra = cloneLeagueIds.length
+        ? await Round.findAll({ where: { id: roundIds, leagueId: cloneLeagueIds } })
+        : [];
       for (const r of extra) {
         if (r.id === sourceRound.id) continue;   // šablóna samotná
         r.sourceRoundId = sourceRound.id;
@@ -69,6 +75,14 @@ async function propagateMatchTime(sourceMatch) {
   for (const clone of clones) {
     clone.matchTime = sourceMatch.matchTime;
     await clone.save();
+    // Vlastné kolo (zápasy vybrané z oficiálnych súťaží, bez sourceRoundId):
+    // ak sa zápas presunul za koniec kola, kolo sa predĺži, aby sa dal tipovať
+    // až do výkopu. Kolá klonov šablóny riadi propagateRoundSchedule.
+    const round = await Round.findByPk(clone.roundId);
+    if (round && !round.sourceRoundId && new Date(round.endDate) < new Date(clone.matchTime)) {
+      round.endDate = clone.matchTime;
+      await round.save();
+    }
   }
   return clones.length;
 }
