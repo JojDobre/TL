@@ -383,6 +383,105 @@
   }
 
   // ============================================================ NOTIFIKÁCIE
+  // ================================================= LIGY: PRIDAŤ SA / VYTVORIŤ
+  if (screen === 'pridat') {
+    var T = window.TIFO_ADD || {};
+    var showErr = function (el, msg) { el.textContent = msg || T.err || ''; el.hidden = !msg && !T.err; haptic(40); };
+    // pridanie cez kód
+    var jf = document.getElementById('joinForm');
+    var jCode = document.getElementById('joinCode');
+    var jPwBox = document.getElementById('joinPwBox');
+    var jErr = document.getElementById('joinErr');
+    var jBtn = document.getElementById('joinBtn');
+    jCode.addEventListener('input', function () {
+      var v = jCode.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (v !== jCode.value) jCode.value = v;
+      jErr.hidden = true;
+    });
+    jf.addEventListener('submit', function (e) {
+      e.preventDefault();
+      jErr.hidden = true;
+      var label = jBtn.textContent;
+      jBtn.disabled = true;
+      api('/api/app/join', { method: 'POST', body: { code: jCode.value, password: document.getElementById('joinPw').value } })
+        .then(function (r) { haptic(14); toast(r.leagueId ? T.joined : T.joinedSeason); setTimeout(function () { location.href = r.redirect; }, 500); })
+        .catch(function (err) {
+          jBtn.disabled = false; jBtn.textContent = label;
+          if (err.status === 401) { jPwBox.hidden = false; document.getElementById('joinPw').focus(); }
+          showErr(jErr, err.message);
+        });
+    });
+    // oficiálne súťaže jedným ťuknutím
+    document.querySelectorAll('[data-join-league]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        b.disabled = true;
+        api('/api/app/join', { method: 'POST', body: { leagueId: Number(b.getAttribute('data-join-league')) } })
+          .then(function (r) { haptic(14); toast(T.joined); setTimeout(function () { location.href = r.redirect; }, 500); })
+          .catch(function (err) { b.disabled = false; toast(err.message, true); haptic(40); });
+      });
+    });
+    if (jCode.value) jCode.focus();
+
+    // vytvorenie ligy
+    var cf = document.getElementById('createForm');
+    if (cf) {
+      var src = document.querySelector('#srcChoice .on') ? document.querySelector('#srcChoice .on').getAttribute('data-src') : 'own';
+      var tip = 'exact_score';
+      var tplBox = document.getElementById('tplBox');
+      var cErr = document.getElementById('createErr');
+      var cBtn = document.getElementById('createBtn');
+      document.getElementById('srcChoice').addEventListener('click', function (e) {
+        var b = e.target.closest('[data-src]'); if (!b || b.disabled) return;
+        src = b.getAttribute('data-src');
+        this.querySelectorAll('[data-src]').forEach(function (x) { x.classList.toggle('on', x === b); });
+        tplBox.hidden = src !== 'tpl';
+        haptic(5);
+      });
+      var tc = document.getElementById('tipChoice');
+      if (tc) tc.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-tip]'); if (!b) return;
+        tip = b.getAttribute('data-tip');
+        tc.querySelectorAll('[data-tip]').forEach(function (x) { x.classList.toggle('on', x === b); });
+        haptic(5);
+      });
+      cf.addEventListener('submit', function (e) {
+        e.preventDefault();
+        cErr.hidden = true;
+        var name = document.getElementById('lgName').value.trim();
+        var picked = cf.querySelector('input[name=templateId]:checked');
+        var body = { name: name, password: document.getElementById('lgPw').value };
+        if (src === 'tpl' && picked) { body.templateId = Number(picked.value); body.tipType = tip; }
+        var label = cBtn.textContent;
+        cBtn.disabled = true;
+        api('/api/app/leagues', { method: 'POST', body: body })
+          .then(function (r) {
+            haptic(20);
+            document.getElementById('createBox').hidden = true;
+            var done = document.getElementById('createDone');
+            done.hidden = false;
+            var codeBtn = document.getElementById('doneCode');
+            codeBtn.textContent = r.joinCode;
+            document.getElementById('doneOpen').href = r.redirect;
+            if (!r.fromTemplate) { var fr = document.getElementById('doneRound'); fr.hidden = false; fr.href = '/rounds/create?league=' + r.leagueId; }
+            var link = location.origin + '/join?code=' + encodeURIComponent(r.joinCode);
+            var text = (T.shareText || '').replace('{name}', name).replace('{code}', r.joinCode);
+            var copy = function () {
+              var ok = function () { toast(T.copied); haptic(8); };
+              if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(r.joinCode).then(ok, ok); else ok();
+            };
+            codeBtn.addEventListener('click', copy);
+            document.getElementById('doneShare').addEventListener('click', function () {
+              haptic(8);
+              if (navigator.share) navigator.share({ title: 'Tifo', text: text, url: link }).catch(function () {});
+              else if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text + ' ' + link).then(function () { toast(T.copied); });
+            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          })
+          .catch(function (err) { cBtn.disabled = false; cBtn.textContent = label; showErr(cErr, err.message); });
+      });
+    }
+  }
+
   if (screen === 'notifikacie') {
     document.addEventListener('click', function (e) {
       var n = e.target.closest('[data-noti]');

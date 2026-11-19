@@ -1,10 +1,10 @@
 <%- include('_head') %>
-<header class="a-top"><h1><%= t('title.ranks') %></h1></header>
+<header class="a-top"><h1><%= t('title.ranks') %></h1><a class="a-ib" href="/app/pridat" aria-label="<%= t('add.aria') %>"><svg class="i"><use href="#i-plus"/></svg></a></header>
 <main class="a-wrap a-in">
   <div class="a-seg"><a class="on" href="/app/rebricky"><%= t('rbs.mine') %></a><a href="/app/rebricky/celkovo"><%= t('rbs.global') %></a></div>
 
   <% if (!active.length && !ended.length) { %>
-    <div class="a-card a-empty" style="margin-top:14px"><b><%= t('rbs.none') %></b><%= t('rbs.noneTx') %><div style="margin-top:14px"><a class="a-btn gold" href="/seasons"><%= t('home.browse') %></a></div></div>
+    <div class="a-card a-empty" style="margin-top:14px"><b><%= t('rbs.none') %></b><%= t('rbs.noneTx') %><div style="margin-top:14px"><a class="a-btn gold" href="/app/pridat"><%= t('home.browse') %></a></div></div>
   <% } %>
 
   <% active.forEach(function (l) { %>

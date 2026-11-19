@@ -361,3 +361,82 @@ html.is-app .tip-step-btn svg { width: 17px; height: 17px; }
 html.is-app .tip-step.off { opacity: .5; }
 html.is-app .tip-step.off .tip-step-btn { visibility: hidden; height: 10px; }
 html.is-app .tip-step:has(.tip-num.hit) { border-color: var(--success); box-shadow: 0 0 0 1px var(--success); }
+
+/* ── Ligy: pridať sa / vytvoriť (app/pridat.ejs) ── */
+.a-form { padding: 18px; margin-top: 16px; }
+.a-form .a-label { display: block; margin-bottom: 8px; }
+.a-input, .a-code { width: 100%; background: var(--a-bg2); border: 1.5px solid var(--a-line2); border-radius: 15px; color: var(--a-t1);
+  font: 600 16px var(--a-body); padding: 0 15px; height: 50px; outline: none; transition: border-color .15s, box-shadow .15s; -webkit-appearance: none; }
+.a-input:focus, .a-code:focus { border-color: var(--a-brand); box-shadow: 0 0 0 3px rgba(124, 92, 255, .22); }
+.a-code { height: 64px; text-align: center; font: 700 30px var(--a-disp); letter-spacing: .32em; text-transform: uppercase; padding-left: calc(15px + .32em); }
+.a-code::placeholder { color: var(--a-t4, #3d4763); letter-spacing: .32em; }
+.a-hint { color: var(--a-t3); font-size: 12.5px; margin-top: 8px; line-height: 1.45; }
+.a-err { margin-top: 12px; padding: 11px 13px; border-radius: 13px; background: rgba(240, 71, 106, .12); color: #ff8aa2; font: 600 13.5px var(--a-body); }
+.a-screen .a-mini { flex: none; height: 36px; padding: 0 15px; border-radius: 12px; background: var(--a-brand); color: #fff; font: 700 13.5px var(--a-body); border: 0; box-shadow: 0 6px 16px rgba(124, 92, 255, .35); }
+.a-mini:active { transform: scale(.95); }
+.a-mini[disabled] { opacity: .6; }
+.a-choice { display: grid; gap: 8px; }
+.a-choice.two { grid-template-columns: 1fr 1fr; }
+.a-choice button { display: grid; grid-template-columns: auto 1fr; column-gap: 12px; align-items: center; text-align: left; padding: 13px 14px;
+  border-radius: 16px; border: 1.5px solid var(--a-line2); background: var(--a-bg2); color: var(--a-t2); -webkit-tap-highlight-color: transparent; }
+.a-choice button svg { grid-row: span 2; width: 22px; height: 22px; color: var(--a-t3); }
+.a-choice button b { font: 700 14.5px var(--a-body); color: var(--a-t1); }
+.a-choice button span { font-size: 12px; color: var(--a-t3); line-height: 1.35; }
+.a-choice.two button { grid-template-columns: 1fr; text-align: center; }
+.a-choice button.on { border-color: var(--a-brand); background: rgba(124, 92, 255, .13); }
+.a-choice button.on svg { color: var(--a-brand-b); }
+.a-choice button[disabled] { opacity: .45; }
+.a-tpls { display: grid; gap: 6px; max-height: 300px; overflow-y: auto; }
+.a-tpl { display: flex; align-items: center; gap: 12px; padding: 9px 12px 9px 9px; border-radius: 15px; border: 1.5px solid var(--a-line); background: var(--a-bg2); cursor: pointer; }
+.a-tpl input { position: absolute; opacity: 0; pointer-events: none; }
+.a-tpl .a-crest { width: 34px; height: 34px; border-radius: 11px; font-size: 11px; }
+.a-tpl .nm { flex: 1; min-width: 0; font-weight: 700; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.a-tpl .rd { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--a-line2); flex: none; }
+.a-tpl:has(input:checked) { border-color: var(--a-brand); background: rgba(124, 92, 255, .1); }
+.a-tpl:has(input:checked) .rd { border: 6px solid var(--a-brand); }
+.a-done { padding: 26px 20px 20px; margin-top: 16px; text-align: center; }
+.a-done .ok { width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 50%; display: grid; place-items: center; background: var(--a-ok-soft); color: var(--a-ok); }
+.a-done .ok svg { width: 30px; height: 30px; }
+.a-done h2 { font: 700 22px var(--a-disp); margin: 0 0 6px; }
+.a-screen .a-codebox { width: 100%; margin-top: 8px; height: 66px; border-radius: 16px; border: 1.5px dashed var(--a-line2); background: var(--a-bg2); color: var(--a-t1);
+  font: 700 32px var(--a-disp); letter-spacing: .3em; padding-left: .3em; }
+.a-codebox:active { transform: scale(.98); }
+.a-quick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.a-quick a { display: flex; align-items: center; justify-content: center; gap: 7px; height: 44px; border-radius: 14px; background: var(--a-s1); border: 1px solid var(--a-line2); font: 700 13.5px var(--a-body); color: var(--a-t1); }
+.a-quick a svg { width: 17px; height: 17px; color: var(--a-brand-b); }
+
+/* ── Tipovanie: karty a názvy tímov (dlhý názov na 2 riadky) ── */
+.a-match .teams { align-items: start; gap: 8px; }
+.a-match .teams .a-score { align-self: center; }
+.a-match .team b { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+  white-space: normal; overflow: hidden; text-overflow: clip; overflow-wrap: break-word; word-break: normal; hyphens: manual;
+  font-size: 13.5px; line-height: 1.22; min-height: 2.44em; max-width: 100%; }
+.a-match .teams { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 6px; }
+.a-match .team .a-crest { width: 46px; height: 46px; border-radius: 16px; font-size: 13px; }
+.a-match .a-score { gap: 6px; }
+.a-match .a-step { width: 50px; }
+.a-match .a-step .v { font-size: 28px; }
+.a-match .row1x2 { align-items: center; }
+.a-match .row1x2 b { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+  white-space: normal; overflow-wrap: break-word; line-height: 1.22; font-size: 14.5px; }
+.a-match .meta > span:first-child { min-width: 0; }
+
+/* webové stránky tipovania v appke (kolo, Moje tipy, zápasy sezóny) */
+html.is-app .match-row { padding: 14px 14px 16px; border-radius: 22px; }
+html.is-app .match-row .match-head { flex-direction: row; justify-content: space-between; align-items: center; text-align: left; gap: 8px; margin-bottom: 12px; }
+html.is-app .match-row .match-head .match-meta { font-size: 12px; letter-spacing: 0; color: var(--text-3); }
+html.is-app .match-row .match-head .tag { font-size: 10px; padding: 3px 8px; }
+html.is-app .match-row .match-teams { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 8px; }
+html.is-app .match-row .match-teams > .tip-inputs, html.is-app .match-row .match-teams > .pick-1x2 { align-self: center; }
+html.is-app .match-row .match-teams .team { flex-direction: column; align-items: center; text-align: center; gap: 7px; }
+html.is-app .match-row .team-logo { width: 44px; height: 44px; }
+html.is-app .match-row .team-name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+  white-space: normal; overflow: hidden; text-overflow: clip; overflow-wrap: break-word; word-break: normal; hyphens: manual;
+  font-size: 13px; line-height: 1.22; min-height: 2.44em; max-width: 100%; text-align: center; }
+html.is-app .match-row .tip-step { width: 50px; }
+
+/* atribút hidden musí platiť aj pre prvky s vlastným display (napr. .a-btn) */
+.a-screen [hidden] { display: none !important; }
+/* .a-screen button (reset) by inak prebil písmo tlačidiel s triedou .a-btn */
+.a-screen button.a-btn { font: 700 16px var(--a-body); }
+.a-screen button.a-btn.ghost { background: var(--a-s2); }

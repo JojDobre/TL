@@ -2,6 +2,7 @@
 <header class="a-top">
   <a href="/app/profil"><%- include('_av', { u: me, size: 42, st: 'box-shadow:0 0 0 2px #080b14,0 0 0 3.5px rgba(124,92,255,.45)' }) %></a>
   <div style="flex:1;min-width:0"><div class="a-muted a-small" style="font-weight:600"><%= greeting %></div><div style="font:700 19px var(--a-disp)"><%= me.name %></div></div>
+  <a class="a-ib" href="/app/pridat" aria-label="<%= t('add.aria') %>"><svg class="i"><use href="#i-plus"/></svg></a>
   <a class="a-ib" href="/app/notifikacie" aria-label="<%= t('title.noti') %>"><svg class="i"><use href="#i-bell"/></svg></a>
 </header>
 <main class="a-wrap a-in">
@@ -24,7 +25,7 @@
     <div class="k"><svg class="i" width="15" height="15"><use href="#i-cal"/></svg><%= t('home.noOpen') %></div>
     <h3><%= t('home.nothing') %></h3>
     <p><%= t('home.joinNext') %></p>
-    <a class="a-btn gold" href="/seasons"><%= t('home.find') %></a>
+    <a class="a-btn gold" href="/app/pridat"><%= t('home.find') %></a>
   </div>
   <% } %>
 
@@ -45,7 +46,7 @@
 
   <div class="a-sec"><%= t('home.myLeagues') %> <a href="/app/rebricky"><%= t('title.ranks') %></a></div>
   <% if (!leagues.length) { %>
-    <div class="a-card a-empty"><b><%= t('home.noLeagues') %></b><%= t('home.noLeaguesTx') %><div style="margin-top:14px"><a class="a-btn gold" href="/seasons"><%= t('home.browse') %></a></div></div>
+    <div class="a-card a-empty"><b><%= t('home.noLeagues') %></b><%= t('home.noLeaguesTx') %><div style="margin-top:14px"><a class="a-btn gold" href="/app/pridat"><%= t('home.browse') %></a></div></div>
   <% } else { %>
   <div class="a-card a-list">
     <% leagues.forEach(function (l) { %>
@@ -60,5 +61,9 @@
     <% }); %>
   </div>
   <% } %>
+  <div class="a-quick">
+    <a class="a-press" href="/app/pridat"><svg class="i"><use href="#i-users"/></svg><%= t('home.joinCode') %></a>
+    <a class="a-press" href="/app/pridat?tab=vytvorit"><svg class="i"><use href="#i-plus"/></svg><%= t('home.create') %></a>
+  </div>
 </main>
 <%- include('_foot') %>
