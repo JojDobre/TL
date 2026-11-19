@@ -1,8 +1,8 @@
 <%- include('_head') %>
 <script>document.body.setAttribute('data-total', '<%= total %>');</script>
 <header class="a-top">
-  <h1>Tipovať</h1>
-  <div class="a-ring" aria-label="Natipované <%= tipped %> z <%= total %>">
+  <h1><%= t('title.tip') %></h1>
+  <div class="a-ring" aria-label="<%= t('tip.ring', { a: tipped, b: total }) %>">
     <svg viewBox="0 0 46 46"><circle cx="23" cy="23" r="19" stroke="#212a43"/><circle cx="23" cy="23" r="19" stroke="#9d83ff" data-ring stroke-dasharray="0 119.4" stroke-linecap="round"/></svg>
     <span data-ring-text><%= tipped %>/<%= total %></span>
   </div>
@@ -10,13 +10,13 @@
 <main class="a-wrap a-in">
   <% if (chips.length > 1) { %>
   <div class="a-chips">
-    <a class="a-chip <%= !leagueFilter ? 'on' : '' %>" href="/app/tipovat">Všetky <span class="n"><%= chips.reduce(function (s, c) { return s + c.count; }, 0) %></span></a>
+    <a class="a-chip <%= !leagueFilter ? 'on' : '' %>" href="/app/tipovat"><%= t('tip.all') %> <span class="n"><%= chips.reduce(function (s, c) { return s + c.count; }, 0) %></span></a>
     <% chips.forEach(function (c) { %><a class="a-chip <%= leagueFilter === c.id ? 'on' : '' %>" href="/app/tipovat?liga=<%= c.id %>"><%= c.name %> <span class="n"><%= c.count %></span></a><% }); %>
   </div>
   <% } %>
 
   <% if (!groups.length) { %>
-    <div class="a-card a-empty" style="margin-top:10px"><b>Nič na tipovanie</b>Momentálne nie je otvorené žiadne kolo. Keď sa otvorí, dáme ti vedieť.<div style="margin-top:14px"><a class="a-btn ghost" href="/seasons">Pridať sa do súťaže</a></div></div>
+    <div class="a-card a-empty" style="margin-top:10px"><b><%= t('tip.nothing') %></b><%= t('tip.nothingTx') %><div style="margin-top:14px"><a class="a-btn ghost" href="/seasons"><%= t('tip.join') %></a></div></div>
   <% } else { %>
   <% if (groups.length > 1) { %>
   <div class="a-days">
@@ -27,7 +27,7 @@
   <% } %>
 
   <% groups.forEach(function (g) { %>
-  <div class="a-dayhead" id="day-<%= g.key %>"><%= g.title %> · uzávierka pri výkope</div>
+  <div class="a-dayhead" id="day-<%= g.key %>"><%= g.title %> · <%= t('tip.atKickoff') %></div>
   <% g.matches.forEach(function (m) { %>
   <article class="a-match <%= m.tipped ? 'tipped' : 'untipped' %>" data-match="<%= m.id %>" data-type="<%= m.type %>">
     <div class="meta"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><%= m.leagueName %> · <%= m.roundName %></span><span class="when <%= m.soon ? 'soon' : '' %>"><svg class="i" width="13" height="13"><use href="#i-clock"/></svg><%= m.when %></span></div>
@@ -35,9 +35,9 @@
     <div class="teams">
       <div class="team"><%- include('_crest', { c: m.home }) %><b><%= m.home.name %></b></div>
       <div class="a-score">
-        <div class="a-step"><button type="button" data-side="0" data-delta="1" aria-label="Domáci +1"><svg class="i"><use href="#i-up"/></svg></button><div class="v"><%= m.tip && m.tip.home != null ? m.tip.home : '–' %></div><button type="button" data-side="0" data-delta="-1" aria-label="Domáci −1"><svg class="i"><use href="#i-down"/></svg></button></div>
+        <div class="a-step"><button type="button" data-side="0" data-delta="1" aria-label="<%= t('tip.homePlus') %>"><svg class="i"><use href="#i-up"/></svg></button><div class="v"><%= m.tip && m.tip.home != null ? m.tip.home : '–' %></div><button type="button" data-side="0" data-delta="-1" aria-label="<%= t('tip.homeMinus') %>"><svg class="i"><use href="#i-down"/></svg></button></div>
         <span class="colon">:</span>
-        <div class="a-step"><button type="button" data-side="1" data-delta="1" aria-label="Hostia +1"><svg class="i"><use href="#i-up"/></svg></button><div class="v"><%= m.tip && m.tip.away != null ? m.tip.away : '–' %></div><button type="button" data-side="1" data-delta="-1" aria-label="Hostia −1"><svg class="i"><use href="#i-down"/></svg></button></div>
+        <div class="a-step"><button type="button" data-side="1" data-delta="1" aria-label="<%= t('tip.awayPlus') %>"><svg class="i"><use href="#i-up"/></svg></button><div class="v"><%= m.tip && m.tip.away != null ? m.tip.away : '–' %></div><button type="button" data-side="1" data-delta="-1" aria-label="<%= t('tip.awayMinus') %>"><svg class="i"><use href="#i-down"/></svg></button></div>
       </div>
       <div class="team"><%- include('_crest', { c: m.away }) %><b><%= m.away.name %></b></div>
     </div>
@@ -49,7 +49,7 @@
       <button type="button" data-w="away" class="<%= m.tip && m.tip.winner === 'away' ? 'on' : '' %>">2</button>
     </div>
     <% } %>
-    <div class="a-saved <%= m.tipped ? '' : 'busy' %>"><% if (m.tipped) { %><svg class="i"><use href="#i-check"/></svg>Uložené<% } else { %>Ešte netipnuté<% } %></div>
+    <div class="a-saved <%= m.tipped ? '' : 'busy' %>"><% if (m.tipped) { %><svg class="i"><use href="#i-check"/></svg><%= t('tip.saved') %><% } else { %><%= t('tip.notYet') %><% } %></div>
   </article>
   <% }); %>
   <% }); %>

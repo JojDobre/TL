@@ -3,6 +3,7 @@
     Appka = režim standalone ALEBO karta otvorená z appky (sessionStorage —
     platí len pre danú kartu, takže web v Chrome na tom istom telefóne
     ostane webom; cookie by sa s Chrome zdieľala). %>
+<%- include('app-lang') %>
 <script>
 (function () {
   try {
@@ -15,6 +16,13 @@
     if (!app) return;
     s.setItem('tifo-app', '1');
     d.classList.add('is-app');
+    var lang = window.tifoLang();
+    // plynulé prechody medzi stránkami ako na obrazovkách appky (obe strany
+    // prechodu ho musia mať zapnutý, inak ho prehliadač zruší s chybou)
+    var vt = document.createElement('style');
+    vt.textContent = '@view-transition { navigation: auto; }';
+    document.head.appendChild(vt);
+    if (lang === 'en') d.lang = 'en';
     // webová úvodka a „Centrum" majú v appke vlastnú obrazovku
     var p = location.pathname;
     if (p === '/' || p === '/my') location.replace('/app');

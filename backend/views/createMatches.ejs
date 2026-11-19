@@ -23,7 +23,102 @@
   .csv-table tr:last-child td { border:none; }
   .csv-ok { color:var(--success); }
   .code { font-family:var(--num); background:var(--surface-3); padding:2px 7px; border-radius:5px; font-size:var(--fs-xs); color:var(--text-2); }
+  /* ── zápasy z oficiálnych súťaží ── */
+  .om-tabs { display:inline-flex; gap:3px; padding:4px; background:var(--surface-1); border:1px solid var(--line); border-radius:14px; margin-bottom:18px; }
+  .om-tabs button { border:0; background:none; padding:9px 16px; border-radius:10px; font:700 var(--fs-sm) var(--font-body); color:var(--text-3); cursor:pointer; }
+  .om-tabs button.on { background:var(--surface-3); color:var(--text-1); box-shadow:var(--shadow-sm); }
+  .om-lay { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:22px; align-items:start; }
+  .om-label { font-size:var(--fs-xs); font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--text-4); margin-bottom:10px; }
+  .om-comps { display:flex; gap:8px; flex-wrap:wrap; }
+  .om-comp { display:flex; align-items:center; gap:9px; height:44px; padding:0 13px 0 8px; border-radius:14px; background:var(--surface-1); border:1px solid var(--line); font:700 var(--fs-sm) var(--font-body); color:var(--text-2); cursor:pointer; transition:border-color .15s, background .15s, box-shadow .15s; }
+  .om-comp:hover { border-color:var(--line-strong); }
+  .om-comp em { font-style:normal; font-size:11.5px; color:var(--text-3); background:var(--surface-3); border-radius:99px; padding:1px 8px; }
+  .om-comp.on { border-color:var(--brand-line); background:var(--brand-soft); color:var(--text-1); box-shadow:0 0 0 3px color-mix(in srgb, var(--brand) 14%, transparent); }
+  .om-comp.on em { background:var(--brand); color:#fff; }
+  .om-logo { width:26px; height:26px; border-radius:8px; flex:none; display:flex; align-items:center; justify-content:center; font:800 9.5px var(--font-body); color:#fff; overflow:hidden; }
+  .om-logo img { width:100%; height:100%; object-fit:contain; }
+  .om-tools { display:flex; gap:10px; margin:14px 0 4px; flex-wrap:wrap; }
+  .om-search { flex:1; min-width:200px; position:relative; }
+  .om-search input { padding-left:38px; height:44px; }
+  .om-search svg { position:absolute; left:13px; top:13px; width:18px; height:18px; color:var(--text-4); pointer-events:none; }
+  .om-range { display:inline-flex; gap:3px; padding:4px; background:var(--surface-1); border:1px solid var(--line); border-radius:14px; }
+  .om-range button { border:0; background:none; padding:7px 13px; border-radius:10px; font:700 13px var(--font-body); color:var(--text-3); cursor:pointer; }
+  .om-range button.on { background:var(--surface-3); color:var(--text-1); }
+  .om-dayh { display:flex; align-items:center; gap:12px; margin:20px 4px 10px; font-size:var(--fs-xs); font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); }
+  .om-dayh i { flex:1; height:1px; background:var(--line); }
+  .om-dayh span:last-child { color:var(--text-4); }
+  .om-match { display:flex; align-items:center; gap:14px; width:100%; text-align:left; padding:11px 14px 11px 11px; border-radius:18px; background:var(--surface-1); border:1px solid var(--line); margin-bottom:8px; cursor:pointer; color:inherit; font:inherit; transition:border-color .15s, background .15s; }
+  .om-match:hover { border-color:var(--line-strong); }
+  .om-match:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
+  .om-match .tm { width:56px; height:50px; flex:none; border-radius:13px; background:var(--surface-2); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
+  .om-match .tm b { font:700 14px var(--font-display); color:var(--text-1); }
+  .om-match .tm .om-logo { width:18px; height:18px; border-radius:6px; font-size:7px; }
+  .om-teams { flex:1; min-width:0; display:grid; grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr); align-items:center; gap:10px; }
+  .om-team { display:flex; align-items:center; gap:10px; min-width:0; font-weight:700; color:var(--text-1); }
+  .om-team span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .om-team.r { justify-content:flex-end; text-align:right; }
+  .om-vs { text-align:center; font-size:11px; font-weight:800; text-transform:uppercase; color:var(--text-4); }
+  .om-crest { width:32px; height:32px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center; font:800 10px var(--font-body); color:#fff; overflow:hidden; box-shadow:inset 0 0 0 1px rgba(255,255,255,.14); }
+  .om-crest.img { background:none; box-shadow:none; }
+  .om-crest img { width:100%; height:100%; object-fit:contain; }
+  .om-chk { width:26px; height:26px; flex:none; border-radius:8px; border:2px solid var(--line-strong); display:flex; align-items:center; justify-content:center; color:#fff; transition:background .15s, border-color .15s; }
+  .om-chk svg { width:15px; height:15px; opacity:0; }
+  .om-match.sel { border-color:var(--brand-line); background:linear-gradient(90deg, var(--brand-soft), transparent 65%), var(--surface-1); }
+  .om-match.sel .om-chk { background:var(--brand); border-color:var(--brand); box-shadow:0 4px 14px color-mix(in srgb, var(--brand) 50%, transparent); }
+  .om-match.sel .om-chk svg { opacity:1; }
+  .om-match.added { opacity:.5; cursor:default; }
+  .om-in { font-size:11.5px; font-weight:800; color:var(--success); background:var(--success-soft); padding:3px 9px; border-radius:99px; flex:none; }
+  .om-empty { padding:34px 20px; text-align:center; color:var(--text-3); border:1px dashed var(--line-strong); border-radius:18px; margin-top:14px; }
+  .om-empty b { display:block; color:var(--text-1); margin-bottom:4px; }
+  .om-tray { position:sticky; top:140px; padding:20px; max-height:calc(100vh - 160px); overflow-y:auto; }
+  .om-tray-hd { display:flex; align-items:center; gap:10px; }
+  .om-tray-hd h3 { flex:1; margin:0; }
+  .om-count { font-size:12px; font-weight:800; color:var(--brand-bright); background:var(--brand-soft); padding:3px 10px; border-radius:99px; }
+  .om-group { margin-top:12px; padding:12px; border-radius:16px; background:var(--surface-2); }
+  .om-group-hd { display:flex; align-items:center; gap:9px; font-weight:800; font-size:13px; color:var(--text-1); }
+  .om-group-hd .om-logo { width:22px; height:22px; font-size:8px; border-radius:7px; }
+  .om-group-hd em { margin-left:auto; font-style:normal; font-size:11.5px; background:var(--surface-3); color:var(--text-2); padding:1px 8px; border-radius:99px; }
+  .om-item { display:flex; align-items:center; gap:8px; padding:6px 0 0 31px; font-size:13px; color:var(--text-2); }
+  .om-item span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .om-item button { border:0; background:none; color:var(--text-4); cursor:pointer; width:24px; height:24px; border-radius:7px; flex:none; font-size:14px; line-height:1; }
+  .om-item button:hover { background:var(--surface-3); color:var(--text-1); }
+  .om-none { margin-top:12px; padding:18px 12px; text-align:center; font-size:var(--fs-sm); color:var(--text-3); border:1px dashed var(--line-strong); border-radius:14px; }
+  .om-types { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .om-types button { border:1px solid var(--line); background:none; padding:10px 8px; border-radius:13px; text-align:center; font:800 13px var(--font-body); color:var(--text-2); cursor:pointer; }
+  .om-types button small { display:block; font-weight:600; font-size:11px; color:var(--text-4); margin-top:2px; }
+  .om-types button.on { border-color:var(--brand); background:var(--brand-soft); color:var(--text-1); }
+  .om-ext { display:flex; gap:9px; margin-top:12px; padding:10px 12px; border-radius:13px; background:var(--info-soft); color:var(--text-2); font-size:12.5px; font-weight:600; }
+  .om-ext svg { flex:none; width:16px; height:16px; color:var(--info); margin-top:1px; }
+  .om-go { width:100%; margin-top:14px; height:48px; }
+  .om-msg { margin-top:10px; font-size:12.5px; color:var(--text-3); text-align:center; }
+  .om-msg.err { color:var(--danger); text-align:left; }
+  .om-mob { display:none; }
+  .om-more { width:100%; margin-top:6px; }
   @media (max-width:760px){
+    .om-lay { grid-template-columns:1fr; }
+    .om-comps { flex-wrap:nowrap; overflow-x:auto; margin:0 -16px; padding:2px 16px 4px; scrollbar-width:none; }
+    .om-comp { flex:none; }
+    .om-range { width:100%; } .om-range button { flex:1; }
+    .om-match { gap:11px; padding:10px 11px; }
+    .om-match .tm { width:46px; }
+    .om-teams { grid-template-columns:1fr; gap:6px; }
+    .om-team.r { flex-direction:row-reverse; justify-content:flex-end; text-align:left; }
+    .om-vs { display:none; }
+    .om-crest { width:24px; height:24px; font-size:8px; }
+    .om-tray { position:fixed; left:10px; right:10px; bottom:calc(70px + env(safe-area-inset-bottom)); top:auto; z-index:60; padding:14px; max-height:75vh; overflow-y:auto; box-shadow:0 -10px 40px rgba(0,0,0,.45); }
+    html.is-app .om-tray { bottom:calc(92px + env(safe-area-inset-bottom)); }
+    .om-tray:not(.open) .om-detail, .om-tray:not(.open) .om-ext, .om-tray:not(.open) .om-msg:not(.err), .om-tray:not(.open) .om-types small { display:none; }
+    .om-tray:not(.open) .om-types { margin-top:10px; }
+    .om-tray:not(.open) .om-types button { padding:8px; }
+    .om-tray:not(.open) .om-go { margin-top:8px; height:44px; }
+    .om-tray .om-types { margin-top:4px; }
+    .om-tray .om-tray-hd h3 { font-size:15px; }
+    .om-mob { display:block; border:0; background:none; color:var(--brand-bright); font:700 12.5px var(--font-body); cursor:pointer; padding:0; }
+    .om-pane-off { padding-bottom:0; }
+    body.om-has-tray { padding-bottom:230px; }
+    .om-row { flex-wrap:wrap; row-gap:2px; }
+    .om-row .om-t { flex:1 1 calc(100% - 40px); }
+    .om-row .om-m { width:100%; padding-left:30px; white-space:normal; }
     .match-builder { grid-template-columns:1fr; }
     .match-builder .vs-mid { display:none; }
     /* footer buttons: 50/50, row spans full width */
@@ -52,16 +147,54 @@
 <div class="wrap form-head">
   <div class="crumb"><a href="/leagues/<%= league.id %>"><%= league.name %></a> › <a href="/rounds/<%= round.id %>"><%= round.name %></a> › Vytvoriť zápasy</div>
   <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Vytvoriť zápasy</h1>
-  <p class="muted" style="margin-top:6px">Pridaj zápasy do kola „<%= round.name %>". Vyber tímy, čas a typ tipovania.</p>
+  <p class="muted" style="margin-top:6px"><%= league.isTemplate ? 'Pridaj zápasy do kola „' + round.name + '". Vyber tímy, čas a typ tipovania.' : 'Vyber zápasy z oficiálnych líg — výsledky a body sa doplnia samy. Alebo pridaj vlastný zápas.' %></p>
 </div>
 
 <div class="wrap" style="padding-block:24px 64px">
   <section>
+    <% if (!league.isTemplate) { %>
+    <div class="om-tabs" role="tablist">
+      <button type="button" class="on" data-om-tab="oficialne" role="tab">Z oficiálnych súťaží</button>
+      <button type="button" data-om-tab="vlastny" role="tab">Vlastný zápas</button>
+    </div>
+    <!-- ZÁPASY Z OFICIÁLNYCH SÚŤAŽÍ -->
+    <div data-om-pane="oficialne" id="omPane" style="margin-bottom:28px">
+      <div class="om-lay">
+        <div>
+          <div class="om-label">Súťaže</div>
+          <div class="om-comps" id="omComps"><span class="muted" style="font-size:var(--fs-sm)">Načítavam súťaže…</span></div>
+          <div class="om-tools" id="omTools" hidden>
+            <label class="om-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input class="input" type="search" id="omQ" placeholder="Hľadať tím, napr. „Inter“" autocomplete="off"></label>
+            <div class="om-range" id="omRange"><button type="button" data-r="dnes">Dnes</button><button type="button" data-r="vikend">Víkend</button><button type="button" data-r="7">7 dní</button><button type="button" data-r="vsetko" class="on">Všetko</button></div>
+          </div>
+          <div id="omList"></div>
+        </div>
+        <aside class="card om-tray" id="omTray">
+          <div class="om-tray-hd"><h3>Výber do kola</h3><button type="button" class="om-mob" id="omToggle">Zobraziť</button><span class="om-count" id="omCount">0 zápasov</span></div>
+          <div class="om-detail">
+            <div id="omGroups"><div class="om-none">Zatiaľ nič. Klikni na zápasy, ktoré chceš pridať.</div></div>
+            <div class="om-label" style="margin-top:16px">Typ tipovania</div>
+          </div>
+          <div class="om-types" id="omTypes">
+            <button type="button" class="on" data-t="exact_score">Presný výsledok<small>napr. 2 : 1</small></button>
+            <button type="button" data-t="winner">Víťaz 1X2<small>domáci / remíza / hostia</small></button>
+          </div>
+          <div class="om-ext" id="omExt" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span></span></div>
+          <button type="button" class="btn btn-brand om-go" id="omAdd" disabled>Vyber zápasy</button>
+          <div class="om-msg" id="omMsg">Tip sa uzavrie pri výkope každého zápasu. Výsledky a body sa doplnia samy.</div>
+        </aside>
+      </div>
+    </div>
+    <div data-om-pane="vlastny" hidden>
+    <% } else { %>
+    <div>
+    <% } %>
+
     <div class="card form-card" style="margin-bottom:18px">
       <h3>Nový zápas</h3>
       <p class="sub">Vyber tímy, čas a typ tipovania.</p>
       <% if (teams.length < 2) { %>
-        <div class="tag tag-warning" style="display:block;padding:12px 14px;margin-bottom:16px">Súpiska tímov ligy má menej ako 2 tímy. Najprv pridaj tímy do ligy v <a href="/leagues/<%= league.id %>/edit" style="text-decoration:underline">úprave ligy</a>.</div>
+        <div class="tag tag-warning" style="display:block;padding:12px 14px;margin-bottom:16px">Súpiska tímov ligy má menej ako 2 tímy. Vlastný zápas pridáš po doplnení tímov v <a href="/leagues/<%= league.id %>/edit" style="text-decoration:underline">úprave ligy</a><% if (!league.isTemplate) { %> — zápasy z oficiálnych súťaží môžeš pridať hneď v prvej záložke<% } %>.</div>
       <% } %>
       <div class="match-builder">
         <div class="team-select"><label class="label">Domáci tím</label>
@@ -95,17 +228,19 @@
     </div>
     <% } %>
 
+    </div>
+
     <div class="between" style="margin-bottom:14px"><h3 style="font-size:var(--fs-h4)">Pridané zápasy <span class="muted num" id="matchCount">(<%= matches.length %>)</span></h3></div>
     <div id="builtList">
       <% if (matches.length === 0) { %><p class="muted" id="emptyMsg">Zatiaľ žiadne zápasy. Pridaj prvý vyššie.</p><% } %>
       <% matches.forEach(function(m){ %>
       <div class="built-match" data-match-id="<%= m.id %>">
-        <span class="built-team"><% if (m.homeTeam && m.homeTeam.logo) { %><span class="team-logo" style="width:30px;height:30px;background:none;border:none"><img src="<%= m.homeTeam.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)"><%= m.homeAbbr %></span><% } %><%= m.homeTeam ? m.homeTeam.name : '—' %></span>
+        <span class="built-team"><% if (m.homeTeam && m.homeTeam.logo) { %><span class="team-logo" style="width:30px;height:30px;background:none;border:none"><img src="<%= m.homeTeam.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)"><%= m.homeAbbr %></span><% } %><%= m.homeTeam ? m.homeTeam.name : '—' %><% if (m.sourceMatchId) { %><span class="om-badge" title="Prevzatý z oficiálnej súťaže — výsledok a čas sa preberajú automaticky">oficiálny</span><% } %></span>
         <span class="vs-mid">:</span>
         <span class="built-team r"><% if (m.awayTeam && m.awayTeam.logo) { %><span class="team-logo" style="width:30px;height:30px;background:none;border:none"><img src="<%= m.awayTeam.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="width:30px;height:30px;font-size:11px;background:var(--surface-3)"><%= m.awayAbbr %></span><% } %><%= m.awayTeam ? m.awayTeam.name : '—' %></span>
         <span class="muted" style="font-size:var(--fs-xs)" data-time="<%= m.matchTime %>"><%= fmtDT(m.matchTime) %></span>
         <span class="built-acts">
-          <button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-edit-time title="Upraviť čas">✎</button>
+          <% if (!m.sourceMatchId) { %><button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-edit-time title="Upraviť čas">✎</button><% } %>
           <button class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-del title="Odstrániť">✕</button>
         </span>
       </div>
@@ -200,6 +335,208 @@
         toast('Čas upravený ✓', true);
       }).catch(function(){ toast('Chyba pri úprave.'); });
   });
+
+  // ---- zápasy z oficiálnych súťaží ----
+  (function(){
+    var pane = document.getElementById('omPane'); if (!pane) return;
+    var TZ = 'Europe/Bratislava';
+    var roundEnd = new Date(<%- JSON.stringify(round.endDate) %>);
+    var compsEl = document.getElementById('omComps'), listEl = document.getElementById('omList');
+    var tools = document.getElementById('omTools'), q = document.getElementById('omQ');
+    var tray = document.getElementById('omTray'), groupsEl = document.getElementById('omGroups');
+    var countEl = document.getElementById('omCount'), addBtn = document.getElementById('omAdd');
+    var extEl = document.getElementById('omExt'), msgEl = document.getElementById('omMsg');
+    var sources = [], active = [], cache = {}, picked = {}, range = 'vsetko', tipType = 'exact_score';
+    var PAGE = 40, limit = PAGE;
+    var MSG0 = msgEl.textContent;
+    var SKEY = 'om-src-' + roundId;
+
+    // na mobile je výber plávajúci panel dole: presunie sa priamo pod <body>,
+    // lebo nábehová animácia stránky (transform) by position:fixed pokazila
+    var trayHome = tray.parentNode, mq = window.matchMedia('(max-width:760px)');
+    function placeTray(){
+      if (mq.matches) { if (tray.parentNode !== document.body) document.body.appendChild(tray); }
+      else if (tray.parentNode !== trayHome) trayHome.appendChild(tray);
+    }
+    placeTray();
+    if (mq.addEventListener) mq.addEventListener('change', placeTray); else if (mq.addListener) mq.addListener(placeTray);
+
+    // prepínanie Oficiálne / Vlastný zápas (pamätá sa v #vlastny)
+    var tabs = document.querySelectorAll('[data-om-tab]');
+    function showTab(name){
+      tabs.forEach(function(t){ t.classList.toggle('on', t.getAttribute('data-om-tab') === name); t.setAttribute('aria-selected', t.getAttribute('data-om-tab') === name); });
+      document.querySelectorAll('[data-om-pane]').forEach(function(p){ p.hidden = p.getAttribute('data-om-pane') !== name; });
+      document.body.classList.toggle('om-has-tray', name === 'oficialne');
+      tray.hidden = name !== 'oficialne';
+    }
+    tabs.forEach(function(t){ t.addEventListener('click', function(){ var n = t.getAttribute('data-om-tab'); showTab(n); try { history.replaceState(null, '', n === 'vlastny' ? '#vlastny' : location.pathname + location.search); } catch (e) {} }); });
+    showTab(location.hash === '#vlastny' ? 'vlastny' : 'oficialne');
+
+    function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+    function norm(s){ return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+    function hash(s){ var h = 0; s = String(s || ''); for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; }
+    var COLORS = ['#7c5cff','#1d8a99','#c2702c','#d43545','#2a6fd6','#25874b','#b8327a','#5a2ca0'];
+    function initials(n, max){ var w = String(n || '?').split(/\s+/).filter(Boolean); if (/^[A-ZÁ-Ž]{2,4}$/.test(w[0] || '')) return w[0]; return (w.length > 1 ? w.slice(0, max || 2).map(function(x){ return x[0]; }).join('') : (w[0] || '?').slice(0, 3)).toUpperCase(); }
+    function compLogo(src){ var c = COLORS[hash(src.name) % COLORS.length]; return '<span class="om-logo" style="' + (src.image ? '' : 'background:linear-gradient(135deg,' + c + ',' + c + '99)') + '">' + (src.image ? '<img src="' + esc(src.image) + '" alt="">' : esc(initials(src.name))) + '</span>'; }
+    function crest(t){ if (t.logo) return '<span class="om-crest img"><img src="' + esc(t.logo) + '" alt="" loading="lazy"></span>'; var c = COLORS[hash(t.name) % COLORS.length]; return '<span class="om-crest" style="background:radial-gradient(circle at 30% 25%,' + c + ',' + c + '99 75%)">' + esc(initials(t.name, 3).slice(0, 3)) + '</span>'; }
+    function dayKey(d){ return new Date(d).toLocaleDateString('en-CA', { timeZone: TZ }); }
+    function dayTitle(d){ var s = new Date(d).toLocaleDateString('sk-SK', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long' }); return s.charAt(0).toUpperCase() + s.slice(1); }
+    function hm(d){ return new Date(d).toLocaleTimeString('sk-SK', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }); }
+    function fmtEnd(d){ return new Date(d).toLocaleDateString('sk-SK', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'numeric' }) + ' ' + hm(d); }
+    function pl(n){ return n === 1 ? 'zápas' : (n >= 2 && n <= 4 ? 'zápasy' : 'zápasov'); }
+    function weekday(d){ return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(new Date(d).toLocaleDateString('en-US', { timeZone: TZ, weekday: 'short' })); }
+    function inRange(m){
+      if (range === 'vsetko') return true;
+      var now = Date.now(), t = new Date(m.time).getTime();
+      if (range === 'dnes') return dayKey(m.time) === dayKey(now);
+      if (range === '7') return t - now <= 7 * 864e5;
+      // víkend: najbližšia sobota a nedeľa (v nedeľu len dnešok)
+      var wd = weekday(m.time);
+      return (wd === 6 || wd === 0) && t - now <= 7 * 864e5 && (weekday(now) !== 0 || dayKey(m.time) === dayKey(now));
+    }
+
+    function load(id){
+      if (cache[id]) return Promise.resolve(cache[id]);
+      return fetch('/api/rounds/' + roundId + '/official-matches?template=' + id, { headers: { Accept: 'application/json' } })
+        .then(function(r){ return r.json(); })
+        .then(function(res){ if (res.success === false) throw new Error(res.message); cache[id] = res.data.matches.map(function(m){ m.src = id; return m; }); return cache[id]; });
+    }
+    function srcById(id){ for (var i = 0; i < sources.length; i++) if (sources[i].id === id) return sources[i]; return null; }
+
+    function renderComps(){
+      compsEl.innerHTML = sources.map(function(s){
+        return '<button type="button" class="om-comp' + (active.indexOf(s.id) >= 0 ? ' on' : '') + '" data-src="' + s.id + '" aria-pressed="' + (active.indexOf(s.id) >= 0) + '">' + compLogo(s) + '<span>' + esc(s.name) + '</span><em>' + s.upcoming + '</em></button>';
+      }).join('');
+    }
+    function renderList(){
+      if (!active.length) { listEl.innerHTML = '<div class="om-empty"><b>Vyber súťaž</b>Klikni na jednu alebo viac súťaží vyššie — zobrazia sa ich nadchádzajúce zápasy.</div>'; return; }
+      var missing = active.filter(function(id){ return !cache[id]; });
+      if (missing.length) { listEl.innerHTML = '<div class="om-empty">Načítavam zápasy…</div>'; return; }
+      var qq = norm(q.value.trim());
+      var all = [];
+      active.forEach(function(id){ all = all.concat(cache[id]); });
+      all = all.filter(function(m){ return inRange(m) && (!qq || norm(m.home.name + ' ' + m.away.name).indexOf(qq) >= 0); })
+        .sort(function(a, b){ return new Date(a.time) - new Date(b.time) || a.id - b.id; });
+      if (!all.length) { listEl.innerHTML = '<div class="om-empty"><b>Žiadne zápasy</b>' + (qq ? 'Nič nezodpovedá hľadaniu.' : 'V tomto období nie sú žiadne zápasy. Skús „Všetko“.') + '</div>'; return; }
+      var total = all.length;
+      all = all.slice(0, limit);
+      var groups = [], last = null;
+      all.forEach(function(m){ var k = dayKey(m.time); if (!last || last.k !== k) { last = { k: k, t: m.time, ms: [] }; groups.push(last); } last.ms.push(m); });
+      listEl.innerHTML = groups.map(function(g){
+        return '<div class="om-dayh"><span>' + esc(dayTitle(g.t)) + '</span><i></i><span>' + g.ms.length + ' ' + pl(g.ms.length) + '</span></div>' + g.ms.map(function(m){
+          var src = srcById(m.src) || { name: '' };
+          var sel = !!picked[m.id];
+          return '<button type="button" class="om-match' + (m.added ? ' added' : (sel ? ' sel' : '')) + '" data-mid="' + m.id + '"' + (m.added ? ' disabled' : '') + ' aria-pressed="' + sel + '" title="' + esc(src.name + ' · ' + m.round) + '">'
+            + '<span class="tm"><b>' + hm(m.time) + '</b>' + compLogo(src) + '</span>'
+            + '<span class="om-teams"><span class="om-team">' + crest(m.home) + '<span>' + esc(m.home.name) + '</span></span><span class="om-vs">vs</span><span class="om-team r"><span>' + esc(m.away.name) + '</span>' + crest(m.away) + '</span></span>'
+            + (m.added ? '<span class="om-in">V lige</span>' : '<span class="om-chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>')
+            + '</button>';
+        }).join('');
+      }).join('') + (total > all.length ? '<button type="button" class="btn btn-secondary om-more" id="omMore">Zobraziť ďalšie zápasy (' + (total - all.length) + ')</button>' : '');
+    }
+    function pickedList(){ return Object.keys(picked).map(function(k){ return picked[k]; }); }
+    function renderTray(){
+      var ms = pickedList(), n = ms.length;
+      countEl.textContent = n + ' ' + pl(n);
+      if (!n) groupsEl.innerHTML = '<div class="om-none">Zatiaľ nič. Klikni na zápasy, ktoré chceš pridať.</div>';
+      else {
+        var by = {};
+        ms.forEach(function(m){ (by[m.src] = by[m.src] || []).push(m); });
+        groupsEl.innerHTML = Object.keys(by).map(function(sid){
+          var src = srcById(Number(sid)) || { name: '?' };
+          var arr = by[sid].sort(function(a, b){ return new Date(a.time) - new Date(b.time); });
+          return '<div class="om-group"><div class="om-group-hd">' + compLogo(src) + '<span>' + esc(src.name) + '</span><em>' + arr.length + '</em></div>'
+            + arr.map(function(m){ return '<div class="om-item"><span>' + esc(m.home.name) + ' – ' + esc(m.away.name) + '</span><button type="button" data-rm="' + m.id + '" aria-label="Odobrať">✕</button></div>'; }).join('') + '</div>';
+        }).join('');
+      }
+      var lastT = ms.reduce(function(a, m){ var t = new Date(m.time); return t > a ? t : a; }, new Date(0));
+      if (n && lastT > roundEnd) { extEl.hidden = false; extEl.querySelector('span').textContent = 'Kolo sa predĺži do ' + fmtEnd(lastT) + ' — do výkopu posledného zápasu.'; }
+      else extEl.hidden = true;
+      addBtn.disabled = !n;
+      addBtn.textContent = n ? 'Pridať ' + n + ' ' + pl(n) + ' do kola' : 'Vyber zápasy';
+      document.getElementById('omToggle').textContent = tray.classList.contains('open') ? 'Skryť' : 'Zobraziť';
+    }
+
+    compsEl.addEventListener('click', function(e){
+      var b = e.target.closest('[data-src]'); if (!b) return;
+      var id = Number(b.getAttribute('data-src')), i = active.indexOf(id);
+      if (i >= 0) active.splice(i, 1); else active.push(id);
+      limit = PAGE;
+      renderComps(); renderList();
+      if (i < 0) load(id).then(renderList).catch(function(err){ active.splice(active.indexOf(id), 1); renderComps(); renderList(); toast(err.message || 'Nepodarilo sa načítať zápasy.'); });
+    });
+    listEl.addEventListener('click', function(e){
+      if (e.target.closest('#omMore')) { limit += PAGE * 2; renderList(); return; }
+      var b = e.target.closest('[data-mid]'); if (!b || b.disabled) return;
+      var id = Number(b.getAttribute('data-mid'));
+      if (picked[id]) delete picked[id];
+      else { var m = null; active.forEach(function(s){ (cache[s] || []).forEach(function(x){ if (x.id === id) m = x; }); }); if (m) picked[id] = m; }
+      var on = !!picked[id];
+      b.classList.toggle('sel', on); b.setAttribute('aria-pressed', on);
+      msgEl.className = 'om-msg'; msgEl.textContent = MSG0;
+      renderTray();
+    });
+    groupsEl.addEventListener('click', function(e){
+      var b = e.target.closest('[data-rm]'); if (!b) return;
+      delete picked[b.getAttribute('data-rm')];
+      var card = listEl.querySelector('[data-mid="' + b.getAttribute('data-rm') + '"]');
+      if (card) { card.classList.remove('sel'); card.setAttribute('aria-pressed', 'false'); }
+      renderTray();
+    });
+    document.getElementById('omTypes').addEventListener('click', function(e){
+      var b = e.target.closest('[data-t]'); if (!b) return;
+      tipType = b.getAttribute('data-t');
+      this.querySelectorAll('[data-t]').forEach(function(x){ x.classList.toggle('on', x === b); });
+    });
+    document.getElementById('omRange').addEventListener('click', function(e){
+      var b = e.target.closest('[data-r]'); if (!b) return;
+      range = b.getAttribute('data-r'); limit = PAGE;
+      this.querySelectorAll('[data-r]').forEach(function(x){ x.classList.toggle('on', x === b); });
+      renderList();
+    });
+    q.addEventListener('input', function(){ limit = PAGE; renderList(); });
+    document.getElementById('omToggle').addEventListener('click', function(){ tray.classList.toggle('open'); renderTray(); });
+
+    addBtn.addEventListener('click', function(){
+      var ids = Object.keys(picked).map(Number); if (!ids.length) return;
+      addBtn.disabled = true; addBtn.textContent = 'Pridávam…';
+      try { sessionStorage.setItem(SKEY, JSON.stringify(active)); } catch (e) {}
+      fetch('/api/rounds/' + roundId + '/official-matches', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ matchIds: ids, tipType: tipType }) })
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+          if (res.added > 0) {
+            toast(res.message, true);
+            var sk = res.skipped || [];
+            msgEl.className = sk.length ? 'om-msg err' : 'om-msg';
+            msgEl.textContent = sk.length ? 'Preskočené: ' + sk.join(' ') : 'Hotovo, obnovujem…';
+            setTimeout(function(){ window.location.reload(); }, sk.length ? 3000 : 800);
+          } else {
+            msgEl.className = 'om-msg err';
+            msgEl.textContent = (res.skipped && res.skipped.length ? res.skipped.join(' ') : (res.message || 'Nepodarilo sa pridať.'));
+            renderTray();
+          }
+        })
+        .catch(function(){ toast('Chyba pri pridávaní.'); renderTray(); });
+    });
+
+    fetch('/api/rounds/' + roundId + '/official-sources', { headers: { Accept: 'application/json' } })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (res.success === false) { compsEl.innerHTML = '<span class="muted">' + esc(res.message || 'Nedostupné') + '</span>'; return; }
+        sources = res.data;
+        if (!sources.length) { compsEl.innerHTML = ''; listEl.innerHTML = '<div class="om-empty"><b>Žiadne zápasy</b>Momentálne žiadna oficiálna súťaž nemá nadchádzajúce zápasy.</div>'; return; }
+        tools.hidden = false;
+        // súťaže zvolené pred posledným pridaním (po obnovení stránky), inak prvá
+        var saved = [];
+        try { saved = JSON.parse(sessionStorage.getItem(SKEY) || '[]'); } catch (e) { saved = []; }
+        active = saved.filter(function(id){ return !!srcById(id); });
+        if (!active.length) active = [sources[0].id];
+        renderComps(); renderList();
+        Promise.all(active.map(load)).then(renderList).catch(function(){ listEl.innerHTML = '<div class="om-empty">Nepodarilo sa načítať zápasy.</div>'; });
+      })
+      .catch(function(){ compsEl.innerHTML = '<span class="muted">Nepodarilo sa načítať súťaže.</span>'; });
+    renderTray();
+  })();
 
   function updateCount(){ var n = document.querySelectorAll('#builtList .built-match').length; document.getElementById('matchCount').textContent = '('+n+')'; if(n===0){ var l=document.getElementById('builtList'); if(!document.getElementById('emptyMsg')){ var p=document.createElement('p'); p.className='muted'; p.id='emptyMsg'; p.textContent='Zatiaľ žiadne zápasy. Pridaj prvý vyššie.'; l.appendChild(p);} } }
 

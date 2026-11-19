@@ -1,35 +1,35 @@
 <%- include('_head') %>
 <script>try { if (localStorage.getItem('tifo-onboarded')) location.replace('/login'); } catch (e) {}</script>
 <div class="a-onb">
-  <div class="skip"><a href="/login" data-onb-skip>Preskočiť</a></div>
+  <div class="skip"><a href="/login" data-onb-skip><%= t('onb.skip') %></a></div>
   <div class="slides">
     <section class="slide">
-      <div class="art"><img src="/branding/identity/tifo-mascot-512.webp" alt="Maskot Tifo"></div>
-      <div class="step">KROK 1 Z 3</div>
-      <h2>Tipuj výsledky<br>svojich zápasov</h2>
-      <p>Pridaj sa do ligy s kamarátmi alebo do oficiálnej súťaže. Tip zmeníš kedykoľvek až do výkopu.</p>
+      <div class="art"><img src="/branding/identity/tifo-mascot-512.webp" alt="<%= t('onb.mascot') %>"></div>
+      <div class="step"><%= t('onb.step', { n: 1 }) %></div>
+      <h2><%- t('onb.h1') %></h2>
+      <p><%= t('onb.p1') %></p>
     </section>
     <section class="slide">
       <div class="art"><svg class="i"><use href="#i-trophy"/></svg></div>
-      <div class="step">KROK 2 Z 3</div>
-      <h2>Zbieraj body<br>a stúpaj v rebríčku</h2>
+      <div class="step"><%= t('onb.step', { n: 2 }) %></div>
+      <h2><%- t('onb.h2') %></h2>
       <div class="a-pts-list">
-        <div><span>Presný výsledok</span><b>10 b</b></div>
-        <div><span>Správny víťaz alebo remíza</span><b>3 b</b></div>
-        <div><span>Gólový rozdiel</span><b>2 b</b></div>
+        <div><span><%= t('onb.exact') %></span><b>10 <%= t('common.pts') %></b></div>
+        <div><span><%= t('onb.winner') %></span><b>3 <%= t('common.pts') %></b></div>
+        <div><span><%= t('onb.diff') %></span><b>2 <%= t('common.pts') %></b></div>
       </div>
     </section>
     <section class="slide">
       <div class="art"><svg class="i"><use href="#i-bell"/></svg></div>
-      <div class="step">KROK 3 Z 3</div>
-      <h2>Nezmeškaj<br>žiadnu uzávierku</h2>
-      <p>Pripomenieme ti netipnuté zápasy a dáme vedieť, keď dostaneš body. Výsledky sa vyhodnocujú automaticky.</p>
+      <div class="step"><%= t('onb.step', { n: 3 }) %></div>
+      <h2><%- t('onb.h3') %></h2>
+      <p><%= t('onb.p3') %></p>
     </section>
   </div>
   <div class="dots"><i class="on"></i><i></i><i></i></div>
   <div class="foot">
-    <button class="a-btn gold" type="button" data-onb-next data-done="/register">Pokračovať</button>
-    <div class="alt">Už máš účet? <a href="/login" data-onb-skip>Prihlásiť sa</a></div>
+    <button class="a-btn gold" type="button" data-onb-next data-done="/register"><%= t('onb.continue') %></button>
+    <div class="alt"><%= t('onb.have') %> <a href="/login" data-onb-skip><%= t('onb.login') %></a></div>
   </div>
 </div>
 <%- include('_foot') %>

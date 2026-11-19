@@ -1,10 +1,13 @@
 <%# Plávajúca spodná lišta appky. Na webe skrytá (viď css/app.css).
     Parameter: appTab = home | tip | rank | noti | profile %>
-<% const _t = typeof appTab !== 'undefined' ? appTab : ''; %>
-<nav class="app-tabbar" aria-label="Navigácia aplikácie">
-  <a href="/app/home" class="<%= _t === 'home' ? 'on' : '' %>" aria-label="Domov"><svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/></svg><span class="t">Domov</span></a>
-  <a href="/app/tipovat" class="main <%= _t === 'tip' ? 'on' : '' %>" aria-label="Tipovať"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7l3.5 2.5-1.3 4h-4.4l-1.3-4z"/><path d="M12 7V3.5M15.5 9.5l3-1.5M14.2 13.5l2 3M9.8 13.5l-2 3M8.5 9.5l-3-1.5"/></svg><span class="t">Tipovať</span></a>
-  <a href="/app/rebricky" class="<%= _t === 'rank' ? 'on' : '' %>" aria-label="Rebríčky"><svg viewBox="0 0 24 24"><path d="M5 21V10M12 21V4M19 21v-7"/></svg><span class="t">Rebríčky</span></a>
-  <a href="/app/notifikacie" class="<%= _t === 'noti' ? 'on' : '' %>" aria-label="Notifikácie"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="t">Notifikácie</span><i class="dot" data-unread-dot hidden></i></a>
-  <a href="/app/profil" class="<%= _t === 'profile' ? 'on' : '' %>" aria-label="Profil"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg><span class="t">Profil</span></a>
+<% const _t = typeof appTab !== 'undefined' ? appTab : '';
+   // na obrazovkách appky preloží server (t), na webových stránkach v appke
+   // preloží js/app-lang.js podľa data-en
+   const _l = (k, sk) => (typeof t === 'function' && typeof tn === 'function' ? t(k) : sk); %>
+<nav class="app-tabbar" aria-label="<%= _l('tab.nav', 'Navigácia aplikácie') %>">
+  <a href="/app/home" class="<%= _t === 'home' ? 'on' : '' %>" aria-label="<%= _l('tab.home', 'Domov') %>" data-en-label="Home"><svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/></svg><span class="t" data-en="Home"><%= _l('tab.home', 'Domov') %></span></a>
+  <a href="/app/tipovat" class="main <%= _t === 'tip' ? 'on' : '' %>" aria-label="<%= _l('tab.tip', 'Tipovať') %>" data-en-label="Predict"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7l3.5 2.5-1.3 4h-4.4l-1.3-4z"/><path d="M12 7V3.5M15.5 9.5l3-1.5M14.2 13.5l2 3M9.8 13.5l-2 3M8.5 9.5l-3-1.5"/></svg><span class="t" data-en="Predict"><%= _l('tab.tip', 'Tipovať') %></span></a>
+  <a href="/app/rebricky" class="<%= _t === 'rank' ? 'on' : '' %>" aria-label="<%= _l('tab.ranks', 'Rebríčky') %>" data-en-label="Rankings"><svg viewBox="0 0 24 24"><path d="M5 21V10M12 21V4M19 21v-7"/></svg><span class="t" data-en="Rankings"><%= _l('tab.ranks', 'Rebríčky') %></span></a>
+  <a href="/app/notifikacie" class="<%= _t === 'noti' ? 'on' : '' %>" aria-label="<%= _l('tab.noti', 'Notifikácie') %>" data-en-label="Alerts"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="t" data-en="Alerts"><%= _l('tab.noti', 'Notifikácie') %></span><i class="dot" data-unread-dot hidden></i></a>
+  <a href="/app/profil" class="<%= _t === 'profile' ? 'on' : '' %>" aria-label="<%= _l('tab.profile', 'Profil') %>" data-en-label="Profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg><span class="t" data-en="Profile"><%= _l('tab.profile', 'Profil') %></span></a>
 </nav>

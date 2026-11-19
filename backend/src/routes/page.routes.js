@@ -147,6 +147,11 @@ router.put('/api/rounds/:id', apiRequireLogin, updateRound);
 router.delete('/api/rounds/:id', apiRequireLogin, deleteRound);
 router.put('/api/matches/:id', apiRequireLogin, updateMatch);
 router.post('/api/rounds/:id/matches/bulk', apiRequireLogin, bulkCreateMatches);
+// zápasy z oficiálnych súťaží do vlastného kola
+const officialMatchesCtl = require('../controllers/officialMatches.controller');
+router.get('/api/rounds/:id/official-sources', apiRequireLogin, officialMatchesCtl.sources);
+router.get('/api/rounds/:id/official-matches', apiRequireLogin, officialMatchesCtl.upcoming);
+router.post('/api/rounds/:id/official-matches', apiRequireLogin, officialMatchesCtl.add);
 
 // Admin
 router.get('/admin', requireAdmin, adminDashboardPage);

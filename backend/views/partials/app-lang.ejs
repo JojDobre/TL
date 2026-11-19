@@ -1,0 +1,18 @@
+<%# Jazyk APPKY (nie webu): pri prvom spustení podľa zariadenia — sk/cs →
+    slovenčina, inak angličtina. Uloží sa do localStorage (pamätá sa) a do
+    cookie tifo_lang, ktorú server číta LEN pri obrazovkách /app/*. Zmena
+    v Profile prepíše localStorage aj cookie. %>
+<script>
+window.tifoLang = function (set) {
+  var l = null;
+  try { l = set || localStorage.getItem('tifo-lang'); } catch (e) { l = set || null; }
+  if (l !== 'sk' && l !== 'en') {
+    var n = (navigator.languages && navigator.languages[0]) || navigator.language || '';
+    l = /^(sk|cs)(-|_|$)/i.test(n) ? 'sk' : 'en';
+  }
+  try { localStorage.setItem('tifo-lang', l); } catch (e) { /* bez úložiska rozhodne zariadenie */ }
+  if (document.cookie.indexOf('tifo_lang=' + l) < 0) document.cookie = 'tifo_lang=' + l + '; path=/; max-age=31536000; samesite=lax';
+  document.documentElement.setAttribute('data-lang', l);
+  return l;
+};
+</script>

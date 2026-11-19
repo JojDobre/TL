@@ -16,6 +16,7 @@ const {
 const { isLeagueLocked } = require('../utils/league.utils');
 const { seasonStatus } = require('../utils/season.utils');
 const dt = require('../utils/datetime.util');
+const i18n = require('../utils/app-i18n');
 
 const { Op } = Sequelize;
 const DAY = 24 * 3600 * 1000;
@@ -73,34 +74,46 @@ function userInitials(u) {
 const dayKey = (d) => new Date(d).toLocaleDateString('en-CA', { timeZone: TZ });
 const hm = (d) => dt.fmtTime(d);
 
-// "o 45 min", "o 2 h 14 min", "o 3 dni"
-function untilLabel(ms) {
+const SK = i18n.forLang('sk');
+// "o 45 min", "o 2 h 14 min", "o 3 dni" (en: "in 45 min", "in 3 days")
+function untilLabel(ms, L = SK) {
   const m = Math.max(0, Math.round(ms / 60000));
-  if (m < 60) return `o ${m} min`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `o ${h} h ${m % 60} min`;
-  const d = Math.round(h / 24);
-  return `o ${d} ${d === 1 ? 'deň' : (d < 5 ? 'dni' : 'dní')}`;
+  let x;
+  if (m < 60) x = `${m} min`;
+  else if (m < 24 * 60) x = `${Math.floor(m / 60)} h ${m % 60} min`;
+  else { const d = Math.round(m / 60 / 24); x = `${d} ${L.tn(d, 'day')}`; }
+  return L.t('when.in', { x });
 }
-const WD = ['ne', 'po', 'ut', 'st', 'št', 'pi', 'so'];
+const WD_BY = { sk: ['ne', 'po', 'ut', 'st', 'št', 'pi', 'so'], en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] };
+const LOCALE = { sk: 'sk-SK', en: 'en-GB' };
 function weekdayIdx(d) {
   const wd = new Date(d).toLocaleDateString('en-US', { timeZone: TZ, weekday: 'short' });
   return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(wd);
 }
-function whenLabel(d, now) {
+function whenLabel(d, now, L = SK) {
   const k = dayKey(d);
   const today = dayKey(now);
   const tomorrow = dayKey(new Date(now.getTime() + DAY));
-  if (k === today) return `dnes ${hm(d)}`;
-  if (k === tomorrow) return `zajtra ${hm(d)}`;
-  const date = new Date(d).toLocaleDateString('sk-SK', { timeZone: TZ, day: 'numeric', month: 'numeric' });
-  return `${WD[weekdayIdx(d)]} ${date} ${hm(d)}`;
+  if (k === today) return `${L.t('when.today')} ${hm(d)}`;
+  if (k === tomorrow) return `${L.t('when.tomorrow')} ${hm(d)}`;
+  const date = new Date(d).toLocaleDateString(LOCALE[L.lang], L.lang === 'en'
+    ? { timeZone: TZ, day: 'numeric', month: 'short' } : { timeZone: TZ, day: 'numeric', month: 'numeric' });
+  return `${WD_BY[L.lang][weekdayIdx(d)]} ${date} ${hm(d)}`;
+}
+
+// jazyk obrazovky (sk/en podľa zariadenia) — req.L + premenné pre šablóny
+function useLang(req, res) {
+  const L = i18n.forLang(i18n.resolveLang(req));
+  req.L = L;
+  Object.assign(res.locals, { lang: L.lang, t: L.t, tn: L.tn, pl, jsStrings: L.clientStrings() });
+  res.vary('Accept-Language');
+  return L;
 }
 
 // prihlásenie pre appku — neprihlásený ide na úvodné obrazovky
 function appLogin(req, res, next) {
   if (!req.session || !req.session.userId) return res.redirect('/app/welcome');
-  res.locals.pl = pl;
+  useLang(req, res);
   return next();
 }
 
@@ -253,11 +266,13 @@ const entry = (req, res) => res.redirect(req.session && req.session.userId ? '/a
 // GET /app/welcome — úvodné obrazovky (len pri prvom spustení)
 const welcome = (req, res) => {
   if (req.session && req.session.userId) return res.redirect('/app/home');
-  res.render('app/welcome', { title: 'Vitaj', screen: 'welcome', hideTabbar: true });
+  const L = useLang(req, res);
+  res.render('app/welcome', { title: L.t('title.welcome'), screen: 'welcome', hideTabbar: true });
 };
 
 // GET /app/home — Domov
 const home = asyncHandler(async (req, res) => {
+  const { L } = req;
   const meId = Number(req.session.userId);
   const now = new Date();
   const [me, leagues, matches] = await Promise.all([
@@ -279,7 +294,7 @@ const home = asyncHandler(async (req, res) => {
   let deadline = null;
   if (pending.length) {
     const r = pending[0];
-    deadline = { ...r, missing: r.total - r.tipped, until: untilLabel(r.next - now), pct: r.total ? Math.round((r.tipped / r.total) * 100) : 0 };
+    deadline = { ...r, missing: r.total - r.tipped, until: untilLabel(r.next - now, L), pct: r.total ? Math.round((r.tipped / r.total) * 100) : 0 };
   }
   const allTipped = !deadline && matches.length > 0;
 
@@ -308,11 +323,11 @@ const home = asyncHandler(async (req, res) => {
   const best = active.filter((l) => l.rank).sort((a, b) => a.rank - b.rank)[0] || null;
 
   res.render('app/home', {
-    title: 'Domov', screen: 'home', appTab: 'home',
+    title: L.t('title.home'), screen: 'home', appTab: 'home',
     me: { name: (me && (me.firstName || me.username)) || '', initials: userInitials(me), image: me && me.profileImage, color: avColor(meId) },
     greeting: (() => {
       const h = Number(now.toLocaleString('en-GB', { timeZone: TZ, hour: '2-digit', hour12: false }));
-      return h < 10 ? 'Dobré ráno' : (h < 18 ? 'Dobrý deň' : 'Dobrý večer');
+      return L.t(h < 10 ? 'greet.morning' : (h < 18 ? 'greet.day' : 'greet.evening'));
     })(),
     deadline,
     allTipped,
@@ -327,6 +342,7 @@ const home = asyncHandler(async (req, res) => {
 
 // GET /app/tipovat — všetky otvorené zápasy
 const tipovat = asyncHandler(async (req, res) => {
+  const { L } = req;
   const meId = Number(req.session.userId);
   const now = new Date();
   const all = await openMatches(meId);
@@ -350,22 +366,22 @@ const tipovat = asyncHandler(async (req, res) => {
       const d = new Date(m.deadline);
       const g = {
         key: k,
-        short: k === today ? 'dnes' : WD[weekdayIdx(d)],
+        short: k === today ? L.t('when.today') : WD_BY[L.lang][weekdayIdx(d)],
         num: Number(d.toLocaleDateString('en-GB', { timeZone: TZ, day: 'numeric' })),
-        title: k === today ? 'Dnes' : (k === tomorrow ? 'Zajtra'
-          : d.toLocaleDateString('sk-SK', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long' })),
+        title: k === today ? L.t('day.today') : (k === tomorrow ? L.t('day.tomorrow')
+          : d.toLocaleDateString(LOCALE[L.lang], { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long' })),
         matches: [], untipped: 0,
       };
       gmap.set(k, g); groups.push(g);
     }
     const g = gmap.get(k);
     const ms = m.deadline - now;
-    g.matches.push({ ...m, soon: ms < 3 * 3600 * 1000, when: ms < 3 * 3600 * 1000 ? `${hm(m.deadline)} · ${untilLabel(ms)}` : whenLabel(m.deadline, now) });
+    g.matches.push({ ...m, soon: ms < 3 * 3600 * 1000, when: ms < 3 * 3600 * 1000 ? `${hm(m.deadline)} · ${untilLabel(ms, L)}` : whenLabel(m.deadline, now, L) });
     if (!m.tipped) g.untipped += 1;
   });
 
   res.render('app/tipovat', {
-    title: 'Tipovať', screen: 'tipovat', appTab: 'tip',
+    title: L.t('title.tip'), screen: 'tipovat', appTab: 'tip',
     chips, leagueFilter, groups,
     total: list.length,
     tipped: list.filter((m) => m.tipped).length,
@@ -385,7 +401,7 @@ const rebricky = asyncHandler(async (req, res) => {
     l.bestRank = hist.length ? Math.min(...hist) : null;
     l.histLen = hist.length;
   }
-  res.render('app/rebricky', { title: 'Rebríčky', screen: 'rebricky', appTab: 'rank', active, ended });
+  res.render('app/rebricky', { title: req.L.t('title.ranks'), screen: 'rebricky', appTab: 'rank', active, ended });
 });
 
 // prístup k rebríčku/lige: člen, admin, alebo verejná súťaž
@@ -408,7 +424,7 @@ const rebricek = asyncHandler(async (req, res) => {
   let title; let opts; let prevOpts = null; let leagueId = null;
 
   if (req.params.id === 'celkovo') {
-    title = 'Celkový rebríček';
+    title = req.L.t('title.global');
     const ids = await cached('app:official-leagues', 5 * 60 * 1000, async () => (await League.findAll({
       where: { type: 'official', isTemplate: false }, attributes: ['id'],
     })).map((l) => l.id));
@@ -520,8 +536,8 @@ const liga = asyncHandler(async (req, res) => {
     return {
       id: r.id, name: r.name, status: st,
       matches: m.n, done: m.done, myTips: tBy.get(r.id) || 0,
-      when: st === 'scheduled' ? `otvorí sa ${whenLabel(r.startDate, now)}`
-        : (st === 'open' ? `uzávierka ${whenLabel(r.endDate, now)}` : dt.fmtDate(r.endDate)),
+      when: st === 'scheduled' ? req.L.t('round.opens', { x: whenLabel(r.startDate, now, req.L) })
+        : (st === 'open' ? req.L.t('round.deadline', { x: whenLabel(r.endDate, now, req.L) }) : dt.fmtDate(r.endDate)),
     };
   });
   // najprv otvorené, potom naplánované, nakoniec odohrané (najnovšie hore)
@@ -585,7 +601,7 @@ const notifikacie = asyncHandler(async (req, res) => {
   const groups = [];
   rows.forEach((n) => {
     const k = dayKey(n.createdAt);
-    const label = k === today ? 'Dnes' : (k === yest ? 'Včera' : 'Staršie');
+    const label = req.L.t(k === today ? 'day.today' : (k === yest ? 'day.yesterday' : 'day.older'));
     let g = groups[groups.length - 1];
     if (!g || g.label !== label) { g = { label, items: [] }; groups.push(g); }
     g.items.push({
@@ -594,7 +610,7 @@ const notifikacie = asyncHandler(async (req, res) => {
       time: k === today || k === yest ? hm(n.createdAt) : dt.fmtDateShort(n.createdAt),
     });
   });
-  res.render('app/notifikacie', { title: 'Notifikácie', screen: 'notifikacie', appTab: 'noti', groups, f, unreadTips });
+  res.render('app/notifikacie', { title: req.L.t('title.noti'), screen: 'notifikacie', appTab: 'noti', groups, f, unreadTips });
 });
 
 // GET /app/profil
@@ -625,10 +641,11 @@ const profil = asyncHandler(async (req, res) => {
     name: d.name, icon: ICON_BY_CRITERIA[d.criteria] || 'medal', style: RARITY_STYLE[d.rarity] || RARITY_STYLE.common,
   }));
   res.render('app/profil', {
-    title: 'Profil', screen: 'profil', appTab: 'profile',
+    title: req.L.t('title.profile'), screen: 'profil', appTab: 'profile',
     me: {
       name: userName(me), username: me ? me.username : '', initials: userInitials(me), image: me && me.profileImage,
       since: me ? (() => {
+        if (req.L.lang === 'en') return new Date(me.createdAt).toLocaleDateString('en-GB', { timeZone: TZ, month: 'long', year: 'numeric' });
         const [y, m] = new Date(me.createdAt).toLocaleDateString('en-CA', { timeZone: TZ }).split('-');
         return `${MONTHS_GEN[Number(m) - 1]} ${y}`;
       })() : '',
