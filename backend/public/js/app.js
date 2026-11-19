@@ -90,6 +90,30 @@
   document.addEventListener('touchstart', prefetch, { passive: true });
   document.addEventListener('mouseover', prefetch, { passive: true });
 
+  // -------------------------- príprava ďalších kariet na pozadí (keď je telefón v pokoji)
+  // Rebríčky a Profil sa tipovaním nemenia, preto si ich appka po otvorení
+  // potichu stiahne vopred → prepnutie karty je okamžité. Najviac raz za 3 min,
+  // aby to nezaťažovalo server; na pomalom/šetriacom pripojení sa nerobí.
+  if (isAppScreen && screen && screen !== 'welcome') {
+    var conn = navigator.connection || {};
+    var lastWarm = 0;
+    try { lastWarm = Number(sessionStorage.getItem('tifo-warm') || 0); } catch (e) { /* nič */ }
+    if (!conn.saveData && !/2g/.test(conn.effectiveType || '') && Date.now() - lastWarm > 3 * 60 * 1000) {
+      var warm = function () {
+        try { sessionStorage.setItem('tifo-warm', String(Date.now())); } catch (e) { /* nič */ }
+        ['/app/rebricky', '/app/profil'].forEach(function (href) {
+          if (location.pathname === href || prefetched[href]) return;
+          prefetched[href] = true;
+          var l = document.createElement('link');
+          l.rel = 'prefetch'; l.href = href;
+          document.head.appendChild(l);
+        });
+      };
+      if ('requestIdleCallback' in window) requestIdleCallback(warm, { timeout: 3000 });
+      else setTimeout(warm, 1500);
+    }
+  }
+
   // ------------------------------------------------- potiahnutie na obnovenie
   if (isAppScreen && 'ontouchstart' in window) {
     var ptr = document.createElement('div');

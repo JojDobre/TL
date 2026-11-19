@@ -11,7 +11,7 @@ const {
 } = require('../models');
 const { asyncHandler } = require('../middleware/error.middleware');
 const {
-  standings, leaderboardWithUsers, roundCounts, accuracyOf, cached, precomputed, leagueStandingsMap, leagueLeaderboard, officialLeagueIds,
+  standings, leaderboardWithUsers, roundCounts, accuracyOf, cached, precomputed, leagueStandingsMap, leagueLeaderboard, officialLeagueIds, leagueRankHistory,
 } = require('../utils/standings.util');
 const { isLeagueLocked } = require('../utils/league.utils');
 const { seasonStatus } = require('../utils/season.utils');
@@ -178,17 +178,9 @@ async function myLeagueCards(meId) {
 
 // Moje poradie po každom z posledných n odohraných kôl ligy (pre graf).
 async function rankHistory(leagueId, meId, n = 8) {
-  const rounds = await Round.findAll({
-    where: { leagueId, endDate: { [Op.lte]: new Date() } },
-    attributes: ['id', 'endDate'], order: [['endDate', 'DESC']], limit: n,
-  });
-  const out = [];
-  for (const r of rounds.reverse()) {
-    const rows = await standings({ leagueIds: [leagueId], roundEndBefore: new Date(new Date(r.endDate).getTime() + 1000) });
-    const i = rows.findIndex((x) => x.userId === meId);
-    if (i >= 0) out.push(i + 1);
-  }
-  return out;
+  // jeden dotaz na celú ligu; oficiálne ligy z vopred prepočítanej pamäte
+  const hist = await leagueRankHistory(leagueId, n);
+  return hist.map((h) => h.ranks.get(meId)).filter((r) => r != null);
 }
 
 // SVG cesta pre malý graf (hodnoty → body v ramčeku w×h). invert: menšie = vyššie (poradie)
