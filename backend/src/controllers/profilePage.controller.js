@@ -5,7 +5,7 @@
 
 const { Tip, Match, Round, League, Team, User, UserLeague, Sequelize } = require('../models');
 const { asyncHandler } = require('../middleware/error.middleware');
-const { standings } = require('../utils/standings.util');
+const { standings, leagueStandingsMap } = require('../utils/standings.util');
 const { evaluateUser } = require('../utils/achievement.engine');
 const { tipQualityWeight } = require('../utils/accuracy.util');
 
@@ -64,9 +64,9 @@ const profilePage = asyncHandler(async (req, res) => {
   const topLeagues = [];
   if (myLeagueIds.length) {
     const leagues = await League.findAll({ where: { id: { [Op.in]: myLeagueIds } }, attributes: ['id', 'name', 'type'], limit: 3 });
-    const per = await standings({ leagueIds: leagues.map((l) => l.id), groupBy: 'league' });
+    const per = await leagueStandingsMap(leagues.map((l) => l.id));
     for (const l of leagues) {
-      const board = per.filter((r) => r.leagueId === l.id);   // už zoradené podľa bodov
+      const board = per.get(l.id) || [];   // už zoradené podľa bodov
       const idx = board.findIndex((r) => r.userId === meId);
       const rank = idx >= 0 ? idx + 1 : null;
       topLeagues.push({ id: l.id, name: l.name, type: l.type, rank, abbr: (l.name || '?').substring(0, 2).toUpperCase() });

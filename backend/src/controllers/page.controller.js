@@ -11,7 +11,7 @@ const { seasonStatus, isSeasonLocked, canViewSeasonContent } = require('../utils
 const { deleteSeason } = require('../utils/delete.util');
 const { cloneTemplateInto } = require('../utils/league-clone.util');
 const { asyncHandler } = require('../middleware/error.middleware');
-const { seasonCounts, leaderboardWithUsers } = require('../utils/standings.util');
+const { seasonCounts, seasonLeaderboard } = require('../utils/standings.util');
 const { leagueDetailPage, manageLeaguePage } = require('./leaguePage.controller');
 const achievements = require('../utils/achievement.engine');
 
@@ -176,7 +176,7 @@ const seasonDetailPage = asyncHandler(async (req, res) => {
   // súhrnný rebríček (agregácia bodov z tipov vo všetkých ligách sezóny)
   let leaderboard = [];
   try {
-    leaderboard = (await leaderboardWithUsers({ seasonId: season.id }, ['id', 'username', 'firstName', 'lastName', 'profileImage']))
+    leaderboard = (await seasonLeaderboard(season.id))
       .map((r) => ({ user: r.user, totalPoints: r.totalPoints }));
   } catch (e) { leaderboard = []; }
 

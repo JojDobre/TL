@@ -11,7 +11,7 @@ const { Season, User, League, Match, Round, Tip, UserSeason } = require('../mode
 const { v4: uuidv4 } = require('uuid');
 const { ApiError, asyncHandler } = require('../middleware/error.middleware');
 const { tipQualityWeight } = require('../utils/accuracy.util');
-const { seasonCounts, leaderboardWithUsers } = require('../utils/standings.util');
+const { seasonCounts, seasonLeaderboard } = require('../utils/standings.util');
 
 // 6-znakový alfanumerický kód pozvánky
 const generateInviteCode = () => uuidv4().substring(0, 6).toUpperCase();
@@ -205,7 +205,7 @@ const getSeasonLeaderboard = asyncHandler(async (req, res) => {
   if (!season) throw new ApiError(404, 'Sezóna nebola nájdená.');
 
   // body a presnosť agregované v SQL (len tipy z líg tejto sezóny)
-  const leaderboard = (await leaderboardWithUsers({ seasonId: id }, ['id', 'username', 'firstName', 'lastName', 'profileImage']))
+  const leaderboard = (await seasonLeaderboard(id))
     .map((entry, index) => ({
       user: entry.user,
       totalPoints: entry.totalPoints,

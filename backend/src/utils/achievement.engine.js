@@ -15,7 +15,7 @@
 const { Achievement, UserAchievement, Tip, Match, Round, League, Season, Team, User, Sequelize } = require('../models');
 const { Op } = Sequelize;
 
-const { standings } = require('./standings.util');
+const { leagueStandingsMap } = require('./standings.util');
 const DEFAULT_EXACT = 10;
 
 // Spočíta agregáty potrebné pre kritériá. Vracia objekt so štatistikami.
@@ -213,7 +213,7 @@ async function computeStats(userId) {
       for (const lg of leagues) {
         if (!lg.ended) continue; // rebríčkové odznaky až po ukončení ligy
         // rebríček ligy agregovaný v SQL (zoradený: body ↓, pri zhode userId ↑)
-        const board = (await standings({ leagueIds: [lg.id] })).map((r) => ({ uid: r.userId, pts: r.points }));
+        const board = ((await leagueStandingsMap([lg.id])).get(lg.id) || []).map((r) => ({ uid: r.userId, pts: r.points }));
         const idx = board.findIndex((b) => b.uid === uid);
         if (idx < 0) continue;
         const rank = idx + 1;

@@ -10,7 +10,7 @@ const { cloneTemplateInto } = require('../utils/league-clone.util');
 const { deleteLeague } = require('../utils/delete.util');
 const { SPORTS, COUNTRIES } = require('../utils/team.constants');
 const { asyncHandler } = require('../middleware/error.middleware');
-const { leaderboardWithUsers } = require('../utils/standings.util');
+const { leagueLeaderboard } = require('../utils/standings.util');
 const notify = require('../utils/notification.service');
 const achievements = require('../utils/achievement.engine');
 
@@ -110,7 +110,7 @@ const leagueDetailPage = asyncHandler(async (req, res) => {
 
   // rebríček ligy (SQL agregácia)
   const exactScore = (league.scoringSystem && league.scoringSystem.exactScore) || DEFAULT_SCORING.exactScore;
-  const leaderboard = (await leaderboardWithUsers({ leagueIds: [league.id] }, ['id', 'username', 'firstName', 'lastName', 'profileImage']))
+  const leaderboard = (await leagueLeaderboard(league.id))
     .map((r) => ({ user: r.user, totalPoints: r.totalPoints }));
 
   // členstvo a počty

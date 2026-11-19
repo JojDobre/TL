@@ -8,7 +8,7 @@
 const { Tip, Match, Round, League, Season, Team, User, UserLeague, Sequelize } = require('../models');
 const { Op } = Sequelize;
 const { asyncHandler } = require('../middleware/error.middleware');
-const { standings } = require('../utils/standings.util');
+const { leagueStandingsMap } = require('../utils/standings.util');
 const { evaluateUser } = require('../utils/achievement.engine');
 const { tipQualityWeight } = require('../utils/accuracy.util');
 
@@ -18,7 +18,7 @@ const abbr2 = (n) => (n || '?').substring(0, 2).toUpperCase();
 // rebríček ligy (mapa userId -> body) z bodov tipov vo všetkých kolách ligy
 async function leagueBoard(leagueId) {
   // SQL agregácia namiesto načítania všetkých tipov ligy
-  const rows = await standings({ leagueIds: [leagueId] });
+  const rows = (await leagueStandingsMap([leagueId])).get(Number(leagueId)) || [];
   const byUser = {};
   rows.forEach((r) => { byUser[r.userId] = r.points; });
   return byUser;
