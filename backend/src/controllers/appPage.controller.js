@@ -657,7 +657,52 @@ const profil = asyncHandler(async (req, res) => {
   });
 });
 
+// GET /app/pridat — pridať sa do ligy (kód / oficiálne súťaže) alebo vytvoriť ligu
+const appLeague = require('../utils/app-league');
+const pridat = asyncHandler(async (req, res) => {
+  const meId = Number(req.session.userId);
+  const [official, templates, allow] = await Promise.all([
+    appLeague.listOfficial(meId), appLeague.listTemplates(), appLeague.createAllowance(meId),
+  ]);
+  const tab = req.query.tab === 'vytvorit' ? 'vytvorit' : 'pridat';
+  const code = String(req.query.code || req.query.kod || '').trim().toUpperCase().slice(0, 32);
+  res.render('app/pridat', {
+    title: req.L.t('title.add'), screen: 'pridat', appTab: 'home',
+    tab, code,
+    official: official.map((l) => ({ ...l, grad: grad(l.name), initials: initials(l.name) })),
+    templates: templates.map((t) => ({ ...t, grad: grad(t.name), initials: initials(t.name) })),
+    allow, nameMax: appLeague.NAME_MAX,
+  });
+});
+
+function appLeagueFail(req, res, e) {
+  if (!(e instanceof appLeague.AppLeagueError)) throw e;
+  const L = i18n.forLang(i18n.resolveLang(req));
+  const msg = L.t('join.err.' + e.code, { n: e.limit });
+  return res.status(e.status || 400).json({ success: false, code: e.code, needPassword: !!e.needPassword, message: msg });
+}
+const leagueDest = (r) => (r.leagueId ? `/app/liga/${r.leagueId}` : `/seasons/${r.seasonId}`);
+
+// POST /api/app/join { code, password } | { leagueId }
+const apiJoin = asyncHandler(async (req, res) => {
+  const meId = Number(req.session.userId);
+  const b = req.body || {};
+  try {
+    const r = b.leagueId ? await appLeague.joinOfficial(meId, b.leagueId) : await appLeague.joinByCode(meId, b.code, b.password);
+    res.json({ success: true, created: r.created, leagueId: r.leagueId || null, redirect: leagueDest(r) });
+  } catch (e) { appLeagueFail(req, res, e); }
+});
+
+// POST /api/app/leagues { name, templateId, tipType, password }
+const apiCreate = asyncHandler(async (req, res) => {
+  const meId = Number(req.session.userId);
+  try {
+    const r = await appLeague.createLeague(meId, req.body || {});
+    res.status(201).json({ success: true, ...r, redirect: `/app/liga/${r.leagueId}` });
+  } catch (e) { appLeagueFail(req, res, e); }
+});
+
 module.exports = {
-  appLogin, entry, welcome, home, tipovat, rebricky, rebricek, liga, notifikacie, profil,
+  appLogin, entry, welcome, home, tipovat, rebricky, rebricek, liga, notifikacie, profil, pridat, apiJoin, apiCreate,
   _internal: { initials, teamAbbr, untilLabel, whenLabel, sparkPath, pl },
 };

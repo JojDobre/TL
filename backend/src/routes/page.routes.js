@@ -179,6 +179,9 @@ router.get('/app/rebricky/:id', appCtl.appLogin, appCtl.rebricek);
 router.get('/app/liga/:id', appCtl.appLogin, appCtl.liga);
 router.get('/app/notifikacie', appCtl.appLogin, appCtl.notifikacie);
 router.get('/app/profil', appCtl.appLogin, appCtl.profil);
+router.get('/app/pridat', appCtl.appLogin, appCtl.pridat);
+router.post('/api/app/join', apiRequireLogin, appCtl.apiJoin);
+router.post('/api/app/leagues', apiRequireLogin, appCtl.apiCreate);
 
 // Admin API — automatické výsledky (TheSportsDB)
 const autoResultsCtl = require('../controllers/autoResults.controller');

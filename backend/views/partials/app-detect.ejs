@@ -26,6 +26,8 @@
     // webová úvodka a „Centrum" majú v appke vlastnú obrazovku
     var p = location.pathname;
     if (p === '/' || p === '/my') location.replace('/app');
+    // pozvánka do ligy (tifo.sk/join?code=…) sa v appke otvorí na obrazovke Ligy
+    else if (p === '/join') location.replace('/app/pridat' + location.search);
   } catch (e) { /* bez sessionStorage ostáva web */ }
 })();
 </script>
