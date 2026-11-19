@@ -218,8 +218,146 @@ async function cached(key, ttlMs, fn) {
   return value;
 }
 function invalidate(prefix) {
-  if (!prefix) { memo.clear(); return; }
+  if (!prefix) { memo.clear(); markPrecomputedStale(); return; }
   for (const k of memo.keys()) if (k.startsWith(prefix)) memo.delete(k);
+}
+
+// ── VOPRED PREPOČÍTANÉ VEĽKÉ REBRÍČKY ───────────────────────────────────────
+//
+// Rebríčky s tisíckami tipov (celkový rebríček, oficiálne ligy a sezóny) sa
+// nepočítajú pri každom otvorení stránky. Výsledok sa drží v pamäti a:
+//   • po vyhodnotení zápasu (invalidate) sa označí ako zastaraný a o pár
+//     sekúnd sa na pozadí prepočíta (PRECOMPUTE_DELAY_MS),
+//   • pre istotu sa všetky používané rebríčky prepočítajú raz za hodinu,
+//   • kým beží prepočet, stránka dostane posledný hotový výsledok — nikto
+//     nečaká na výpočet (okrem úplne prvého otvorenia po štarte servera).
+// Komunitné ligy (málo hráčov) sa počítajú živo pri každom otvorení.
+const PRECOMPUTE_DELAY_MS = Number(process.env.PRECOMPUTE_DELAY_MS || 15000);
+const PRECOMPUTE_MAX_AGE = 60 * 60 * 1000;     // hodinový prepočet
+const PRECOMPUTE_KEEP = 48 * 60 * 60 * 1000;   // nepoužívané dlhšie → zahodiť
+const PRECOMPUTE_MAX_KEYS = 400;
+const big = new Map();   // key → { value, at, stale, pending, fn, used }
+let warmTimer = null;
+
+function refreshKey(key, entry) {
+  if (entry.pending) return entry.pending;
+  entry.pending = (async () => {
+    try {
+      const value = await entry.fn();
+      entry.value = value;
+      entry.hasValue = true;
+      entry.at = Date.now();
+      entry.stale = false;
+      return value;
+    } finally {
+      entry.pending = null;
+    }
+  })();
+  entry.pending.catch((e) => {
+    console.error(`[standings] prepočet ${key} zlyhal:`, e.message);
+    if (!entry.hasValue) big.delete(key);
+  });
+  return entry.pending;
+}
+
+// Vráti vopred prepočítaný výsledok. fn musí byť samostatná (časové hranice
+// si počíta sama), aby sa dala neskôr zavolať znova na pozadí.
+function precomputed(key, fn) {
+  let e = big.get(key);
+  if (!e) {
+    if (big.size >= PRECOMPUTE_MAX_KEYS) {
+      // vyhoď najdlhšie nepoužitý
+      let oldest = null;
+      for (const [k, v] of big) if (!v.pending && (!oldest || v.used < oldest[1].used)) oldest = [k, v];
+      if (oldest) big.delete(oldest[0]);
+    }
+    e = { fn, used: Date.now(), stale: false, hasValue: false };
+    big.set(key, e);
+  }
+  e.fn = fn;
+  e.used = Date.now();
+  if (e.hasValue) {
+    if (e.stale || Date.now() - e.at > PRECOMPUTE_MAX_AGE) refreshKey(key, e).catch(() => {});
+    return Promise.resolve(e.value);
+  }
+  return refreshKey(key, e);
+}
+
+// Po vyhodnotení: všetko označ ako zastarané a po krátkej pauze prepočítaj
+// (viac vyhodnotení za sebou → jeden prepočet).
+function markPrecomputedStale() {
+  for (const e of big.values()) e.stale = true;
+  if (warmTimer) clearTimeout(warmTimer);
+  warmTimer = setTimeout(() => { warmTimer = null; warmAll(true).catch(() => {}); }, PRECOMPUTE_DELAY_MS);
+  if (warmTimer.unref) warmTimer.unref();
+}
+
+async function warmAll(onlyStale) {
+  const now = Date.now();
+  for (const [key, e] of [...big]) {
+    if (now - e.used > PRECOMPUTE_KEEP) { big.delete(key); continue; }
+    if (onlyStale && !e.stale && now - (e.at || 0) < PRECOMPUTE_MAX_AGE) continue;
+    try { await refreshKey(key, e); } catch (err) { /* zalogované v refreshKey */ }
+    await new Promise((r) => setTimeout(r, 50));   // nech prepočet nezahltí server
+  }
+}
+
+const hourly = setInterval(() => { warmAll(false).catch(() => {}); }, PRECOMPUTE_MAX_AGE);
+if (hourly.unref) hourly.unref();
+
+// Je liga „veľká" (oficiálna) → rebríček sa berie z vopred prepočítaných.
+const officialCache = new Map();
+async function officialLeagueIds(ids) {
+  const want = ids.filter((id) => !officialCache.has(id));
+  if (want.length) {
+    const { League, Season } = require('../models');
+    const rows = await League.findAll({
+      where: { id: want }, attributes: ['id', 'type', 'isTemplate'],
+      include: [{ model: Season, attributes: ['type'] }],
+    });
+    rows.forEach((l) => officialCache.set(l.id, l.type === 'official' || l.isTemplate || !!(l.Season && l.Season.type === 'official')));
+  }
+  return new Set(ids.filter((id) => officialCache.get(id)));
+}
+
+// Rebríček (body, presnosť, presné tipy) pre viac líg naraz: Map(leagueId → rows).
+// Oficiálne ligy z vopred prepočítaných rebríčkov, komunitné živo jedným dotazom.
+//   opts.weekAgo = true → stav spred týždňa (kolá skončené pred týždňom)
+async function leagueStandingsMap(leagueIds, opts = {}) {
+  const ids = ids2(leagueIds);
+  const out = new Map(ids.map((id) => [id, []]));
+  if (!ids.length) return out;
+  const official = await officialLeagueIds(ids);
+  const live = ids.filter((id) => !official.has(id));
+  const weekBound = () => new Date(Date.now() - 7 * 24 * 3600 * 1000);
+  const tasks = [...official].map((id) => precomputed(
+    `league:${id}:${opts.weekAgo ? 'week' : 'all'}`,
+    () => standings(opts.weekAgo ? { leagueIds: [id], roundEndBefore: weekBound() } : { leagueIds: [id] }),
+  ).then((rows) => out.set(id, rows)));
+  if (live.length) {
+    tasks.push(standings({ leagueIds: live, groupBy: 'league', ...(opts.weekAgo ? { roundEndBefore: weekBound() } : {}) })
+      .then((rows) => rows.forEach((r) => out.get(r.leagueId).push(r))));
+  }
+  await Promise.all(tasks);
+  return out;
+}
+const ids2 = (arr) => [...new Set((arr || []).map(Number).filter(Number.isFinite))];
+
+// Rebríček jednej ligy aj s používateľmi (oficiálna → vopred prepočítaný).
+async function leagueLeaderboard(leagueId) {
+  const id = Number(leagueId);
+  const official = await officialLeagueIds([id]);
+  const fn = () => leaderboardWithUsers({ leagueIds: [id] });
+  return official.has(id) ? precomputed(`leagueU:${id}`, fn) : fn();
+}
+
+// Rebríček sezóny aj s používateľmi (oficiálna → vopred prepočítaný).
+async function seasonLeaderboard(seasonId) {
+  const id = Number(seasonId);
+  const { Season } = require('../models');
+  const season = await Season.findByPk(id, { attributes: ['id', 'type'] });
+  const fn = () => leaderboardWithUsers({ seasonId: id });
+  return season && season.type === 'official' ? precomputed(`seasonU:${id}`, fn) : fn();
 }
 
 module.exports = {
@@ -232,4 +370,9 @@ module.exports = {
   roundCounts,
   cached,
   invalidate,
+  precomputed,
+  leagueStandingsMap,
+  leagueLeaderboard,
+  seasonLeaderboard,
+  officialLeagueIds,
 };

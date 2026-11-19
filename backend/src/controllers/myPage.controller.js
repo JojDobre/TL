@@ -8,7 +8,7 @@
 const { Season, League, Round, Match, Tip, User, UserSeason, UserLeague, Team, Sequelize } = require('../models');
 const { asyncHandler } = require('../middleware/error.middleware');
 const { seasonStatus } = require('../utils/season.utils');
-const { standings, accuracyOf, roundCounts } = require('../utils/standings.util');
+const { leagueStandingsMap, accuracyOf, roundCounts } = require('../utils/standings.util');
 
 const Op = Sequelize.Op;
 
@@ -44,15 +44,11 @@ const myPage = asyncHandler(async (req, res) => {
 
   // JEDEN agregovaný dotaz: body každého hráča v každej relevantnej lige
   const allLeagueIds = [...new Set([...myLeagueIds, ...seasonLeagues.map((l) => l.id)])];
-  const [perLeague, rCounts] = await Promise.all([
-    standings({ leagueIds: allLeagueIds, groupBy: 'league' }),
+  // (oficiálne ligy z vopred prepočítaných rebríčkov, komunitné živo)
+  const [rowsByLeague, rCounts] = await Promise.all([
+    leagueStandingsMap(allLeagueIds),
     roundCounts(allLeagueIds),
   ]);
-  const rowsByLeague = new Map();
-  perLeague.forEach((r) => {
-    if (!rowsByLeague.has(r.leagueId)) rowsByLeague.set(r.leagueId, []);
-    rowsByLeague.get(r.leagueId).push(r);
-  });
 
   // poradie a body hráča v rebríčku zloženom z daných líg
   function myStanding(leagueIds) {

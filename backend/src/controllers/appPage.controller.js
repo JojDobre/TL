@@ -10,7 +10,9 @@ const {
   Achievement, UserAchievement, Sequelize,
 } = require('../models');
 const { asyncHandler } = require('../middleware/error.middleware');
-const { standings, leaderboardWithUsers, roundCounts, accuracyOf, cached } = require('../utils/standings.util');
+const {
+  standings, leaderboardWithUsers, roundCounts, accuracyOf, cached, precomputed, leagueStandingsMap, leagueLeaderboard, officialLeagueIds,
+} = require('../utils/standings.util');
 const { isLeagueLocked } = require('../utils/league.utils');
 const { seasonStatus } = require('../utils/season.utils');
 const dt = require('../utils/datetime.util');
@@ -112,10 +114,10 @@ async function myLeagueCards(meId) {
     include: [{ model: Season, attributes: ['id', 'name', 'type', 'mode', 'ended', 'endDate', 'startDate', 'prizes', 'showPrizes', 'image'] }],
     order: [['createdAt', 'DESC']],
   });
-  const weekAgo = new Date(Date.now() - 7 * DAY);
-  const [now, then, rounds, memberRows] = await Promise.all([
-    standings({ leagueIds: ids, groupBy: 'league' }),
-    standings({ leagueIds: ids, groupBy: 'league', roundEndBefore: weekAgo }),
+  // oficiálne ligy z vopred prepočítaných rebríčkov, komunitné živo
+  const [nowBy, thenBy, rounds, memberRows] = await Promise.all([
+    leagueStandingsMap(ids),
+    leagueStandingsMap(ids, { weekAgo: true }),
     roundCounts(ids),
     UserLeague.findAll({
       where: { leagueId: ids },
@@ -123,13 +125,6 @@ async function myLeagueCards(meId) {
       group: ['leagueId'], raw: true,
     }),
   ]);
-  const byLeague = (rows) => {
-    const m = new Map();
-    rows.forEach((r) => { if (!m.has(r.leagueId)) m.set(r.leagueId, []); m.get(r.leagueId).push(r); });
-    return m;
-  };
-  const nowBy = byLeague(now);
-  const thenBy = byLeague(then);
   const members = new Map(memberRows.map((r) => [Number(r.leagueId), Number(r.n)]));
 
   // avatary prvých troch zo všetkých líg naraz
@@ -447,18 +442,25 @@ const rebricek = asyncHandler(async (req, res) => {
     }
   }
 
-  const key = `app:rb:${req.params.id}:${period}`;
-  // celkový rebríček je drahý — krátka cache (invaliduje sa po vyhodnotení)
-  const rows = req.params.id === 'celkovo'
-    ? await cached(key, 2 * 60 * 1000, () => leaderboardWithUsers(opts))
-    : await leaderboardWithUsers(opts);
+  // celkový rebríček a oficiálne ligy: vopred prepočítané (standings.util —
+  // precomputed); komunitné ligy živo. Časové hranice si funkcia počíta sama,
+  // aby sa dala na pozadí prepočítať znova.
+  const big = req.params.id === 'celkovo' || (leagueId && (await officialLeagueIds([leagueId])).has(leagueId));
+  const key = `app:rb:${req.params.id}:${period}:${(opts.roundIds || []).join(',')}`;
+  const build = async () => {
+    const n = new Date();
+    const wA = new Date(n - 7 * DAY);
+    const o = { ...opts };
+    if (o.matchTimeFrom) o.matchTimeFrom = new Date(n - 30 * DAY);
+    if (o.roundEndFrom) { const y = new Date(n); y.setFullYear(y.getFullYear() - 1); o.roundEndFrom = y; }
+    const rows = await leaderboardWithUsers(o);
+    let prev = [];
+    if (prevOpts) prev = await standings({ ...prevOpts, ...(o.roundEndFrom ? { roundEndFrom: o.roundEndFrom } : {}), roundEndBefore: wA });
+    return { rows, prev };
+  };
+  const { rows, prev } = big ? await precomputed(key, build) : await build();
   const prevRank = new Map();
-  if (prevOpts) {
-    const prev = req.params.id === 'celkovo'
-      ? await cached(`${key}:prev`, 2 * 60 * 1000, () => standings(prevOpts))
-      : await standings(prevOpts);
-    prev.forEach((r, i) => prevRank.set(r.userId, i + 1));
-  }
+  prev.forEach((r, i) => prevRank.set(r.userId, i + 1));
   const list = rows.map((r, i) => ({
     rank: i + 1,
     userId: r.user.id,
@@ -516,7 +518,7 @@ const liga = asyncHandler(async (req, res) => {
       group: [Sequelize.col('Match.round_id')], raw: true,
     }) : [],
     UserLeague.count({ where: { leagueId: league.id } }),
-    leaderboardWithUsers({ leagueIds: [league.id] }),
+    leagueLeaderboard(league.id),
   ]);
   const mBy = new Map(matchRows.map((r) => [Number(r.roundId), { n: Number(r.n), done: Number(r.done) }]));
   const tBy = new Map(myTipRows.map((r) => [Number(r.roundId), Number(r.n)]));

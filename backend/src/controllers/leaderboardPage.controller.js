@@ -8,7 +8,7 @@ const { Season, League, Round, Match, Tip, User, UserSeason, Sequelize } = requi
 const Op = Sequelize.Op;
 const { asyncHandler } = require('../middleware/error.middleware');
 const { seasonStatus, canViewSeasonContent } = require('../utils/season.utils');
-const { standings, pointsBefore, accuracyOf } = require('../utils/standings.util');
+const { standings, pointsBefore, accuracyOf, precomputed } = require('../utils/standings.util');
 
 // GET /seasons/:id/leaderboard
 const seasonLeaderboardPage = asyncHandler(async (req, res) => {
@@ -32,7 +32,9 @@ const seasonLeaderboardPage = asyncHandler(async (req, res) => {
   }
 
   // body + vážená presnosť po hráčoch — agregované v SQL (viď standings.util)
-  const rows = await standings({ seasonId: season.id });
+  const rows = season.type === 'official'
+    ? await precomputed(`season:${season.id}`, () => standings({ seasonId: season.id }))
+    : await standings({ seasonId: season.id });
   const users = rows.length
     ? await User.findAll({ where: { id: { [Op.in]: rows.map((r) => r.userId) } }, attributes: ['id', 'username', 'firstName', 'lastName', 'role', 'profileImage'] })
     : [];
@@ -102,12 +104,22 @@ const globalLeaderboardPage = asyncHandler(async (req, res) => {
   let movers = [];
   if (offLeagueIds.length) {
     // body z vyhodnotených tipov v kolách skončených za posledný rok (SQL agregácia)
-    const rows = await standings({ leagueIds: offLeagueIds, roundEndFrom: yearAgo, finishedOnly: true });
+    // Vopred prepočítané (viď standings.util — precomputed): prepočet beží na
+    // pozadí po vyhodnotení zápasov a raz za hodinu, stránka len číta výsledok.
+    const pre = await precomputed(`global:${seasonFilter || 'all'}`, async () => {
+      const nowT = new Date();
+      const yA = new Date(nowT); yA.setFullYear(yA.getFullYear() - 1);
+      const wA = new Date(nowT.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const r = await standings({ leagueIds: offLeagueIds, roundEndFrom: yA, finishedOnly: true });
+      const us = r.length ? await User.findAll({ where: { id: { [Op.in]: r.map((x) => x.userId) } }, attributes: ['id', 'username', 'firstName', 'lastName', 'role', 'profileImage'], raw: true }) : [];
+      const pw = Object.fromEntries(await pointsBefore({ leagueIds: offLeagueIds, roundEndFrom: yA, before: wA }));
+      return { rows: r, users: us, pointsWeekAgo: pw };
+    });
+    const rows = pre.rows;
     if (rows.length) {
-      const users = await User.findAll({ where: { id: { [Op.in]: rows.map((r) => r.userId) } }, attributes: ['id', 'username', 'firstName', 'lastName', 'role', 'profileImage'] });
-      const userById = new Map(users.map((u) => [u.id, u.toJSON()]));
+      const userById = new Map(pre.users.map((u) => [u.id, u]));
       // stav spred týždňa: len tipy, ktorých kolo skončilo pred weekAgo
-      const pointsWeekAgo = Object.fromEntries(await pointsBefore({ leagueIds: offLeagueIds, roundEndFrom: yearAgo, before: weekAgo }));
+      const pointsWeekAgo = pre.pointsWeekAgo;
       const byUser = {};
       rows.forEach((r) => {
         const u = userById.get(r.userId);
