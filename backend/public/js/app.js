@@ -118,6 +118,16 @@
       else location.href = '/app/home';
     });
     body.insertBefore(bar, body.firstChild);
+    // ako na obrazovkách appky: veľký nadpis je na stránke, do lišty sa
+    // presunie až keď ho používateľ odscrolluje; lišta dostane pozadie
+    var big = h1 && h1.getBoundingClientRect().top < window.innerHeight ? h1 : null;
+    function topState() {
+      var y = window.scrollY || 0;
+      bar.classList.toggle('solid', y > 4);
+      if (big) bar.classList.toggle('big', big.getBoundingClientRect().bottom > bar.offsetHeight);
+    }
+    topState();
+    window.addEventListener('scroll', topState, { passive: true });
   }
 
   // ----------------------------------------------------- neprečítané notifikácie

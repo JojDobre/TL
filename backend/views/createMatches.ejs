@@ -9,6 +9,7 @@
   .match-builder { display:grid; grid-template-columns:1fr auto 1fr auto auto; gap:12px; align-items:end; }
   .team-select { display:flex; flex-direction:column; gap:7px; }
   .vs-mid { font-family:var(--font-display); font-weight:700; color:var(--text-4); padding-bottom:12px; }
+  .om-badge { display:inline-block; margin-left:8px; padding:2px 7px; border-radius:6px; font-size:10.5px; font-weight:700; color:var(--brand-bright); background:var(--brand-soft); vertical-align:middle; }
   .built-match { display:grid; grid-template-columns:1fr auto 1fr auto auto; gap:12px; align-items:center; padding:13px 16px; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--r-sm); margin-bottom:8px; }
   .built-acts { display:flex; gap:4px; align-items:center; }
   .built-team { display:flex; align-items:center; gap:9px; font-weight:600; color:var(--text-1); font-size:var(--fs-sm); }
@@ -360,8 +361,18 @@
       if (mq.matches) { if (tray.parentNode !== document.body) document.body.appendChild(tray); }
       else if (tray.parentNode !== trayHome) trayHome.appendChild(tray);
     }
+    // plávajúci panel nesmie zakryť koniec stránky (tlačidlo „Hotovo"): spodný
+    // okraj stránky = skutočná výška panela (v appke je nižšie aj spodná lišta)
+    function padForTray(){
+      if (mq.matches && !tray.hidden) {
+        var b = parseFloat(getComputedStyle(tray).bottom) || 0;
+        document.body.style.paddingBottom = Math.ceil(tray.offsetHeight + b + 24) + 'px';
+      } else document.body.style.paddingBottom = '';
+    }
     placeTray();
-    if (mq.addEventListener) mq.addEventListener('change', placeTray); else if (mq.addListener) mq.addListener(placeTray);
+    if (mq.addEventListener) mq.addEventListener('change', function(){ placeTray(); padForTray(); }); else if (mq.addListener) mq.addListener(function(){ placeTray(); padForTray(); });
+    if (window.ResizeObserver) new ResizeObserver(padForTray).observe(tray);
+    window.addEventListener('resize', padForTray);
 
     // prepínanie Oficiálne / Vlastný zápas (pamätá sa v #vlastny)
     var tabs = document.querySelectorAll('[data-om-tab]');
@@ -370,6 +381,7 @@
       document.querySelectorAll('[data-om-pane]').forEach(function(p){ p.hidden = p.getAttribute('data-om-pane') !== name; });
       document.body.classList.toggle('om-has-tray', name === 'oficialne');
       tray.hidden = name !== 'oficialne';
+      padForTray();
     }
     tabs.forEach(function(t){ t.addEventListener('click', function(){ var n = t.getAttribute('data-om-tab'); showTab(n); try { history.replaceState(null, '', n === 'vlastny' ? '#vlastny' : location.pathname + location.search); } catch (e) {} }); });
     showTab(location.hash === '#vlastny' ? 'vlastny' : 'oficialne');

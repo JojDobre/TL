@@ -1,0 +1,259 @@
+/* =====================================================================
+   TIFO — NOVÝ APPKOVÝ DIZAJN PRE WEBOVÉ STRÁNKY OTVORENÉ V APPKE
+   ---------------------------------------------------------------------
+   Všetko je pod html.is-app (nastaví partials/app-detect.ejs), takže web
+   v prehliadači sa nemení. Cieľ: každá stránka v appke vyzerá ako appkové
+   obrazovky /app/* (css/app.css, prefix .a-): tmavé karty so zaoblením
+   22 px, tlačidlá 46–52 px, zlaté hlavné akcie, segmentové prepínače,
+   veľký nadpis, ktorý sa pri posúvaní presunie do hornej lišty.
+   Funkcie stránok ostávajú — mení sa len vzhľad.
+   ===================================================================== */
+
+/* ---------- 1) farby, zaoblenia a písmo ako na appkových obrazovkách ---------- */
+html.is-app {
+  --bg: #080b14; --bg-deep: #05070d;
+  --surface-1: #0f1424; --surface-2: #161d31; --surface-3: #212a43; --surface-4: #2c3858;
+  --line: rgba(150, 165, 215, .10); --line-strong: rgba(150, 165, 215, .2);
+  --text-1: #eef1f9; --text-2: #b8c0d6; --text-3: #7f89a8; --text-4: #545c78;
+  --r-xs: 9px; --r-sm: 14px; --r-md: 16px; --r-lg: 22px; --r-xl: 24px; --r-2xl: 28px;
+  --fs-display: 30px; --fs-h1: 26px; --fs-h2: 19px; --fs-h3: 18px; --fs-h4: 16px;
+  --shadow-sm: none; --shadow-md: none; --shadow-lg: 0 14px 34px -14px rgba(0, 0, 0, .6);
+  --text-glow-brand: none; --text-glow-gold: none;
+  --nav-h: 0px;
+  background: #080b14;
+}
+html.is-app body {
+  background: #080b14; color: var(--text-2);
+  -webkit-tap-highlight-color: transparent; overscroll-behavior-y: contain;
+}
+/* jemná fialová žiara hore ako na obrazovkách appky (namiesto webového pozadia) */
+html.is-app .bg-field {
+  background: radial-gradient(90% 320px at 100% 0%, rgba(124, 92, 255, .16), transparent 70%);
+}
+html.is-app .wrap { max-width: 600px; padding-inline: 18px !important; }
+html.is-app h1, html.is-app h2, html.is-app h3 { letter-spacing: -.015em; }
+html.is-app h1 { font-size: 26px; line-height: 1.15; }
+html.is-app h2 { font-size: 19px; line-height: 1.2; }
+html.is-app h3 { font-size: 17px; line-height: 1.25; }
+
+/* webové „nadpisy nad nadpisom", omrvinky a dekorácie appka nemá —
+   späť ide šípka v hornej lište, nadpis je jeden */
+html.is-app .eyebrow,
+html.is-app .crumb,
+html.is-app .crumbs,
+html.is-app .breadcrumb,
+html.is-app .breadcrumbs { display: none !important; }
+html.is-app .card-accent::before { display: none; }
+
+/* bez nábehových animácií webu (appka má vlastný prechod obrazoviek) */
+html.is-app.has-reveal .reveal { opacity: 1 !important; transform: none !important; }
+html.is-app body > main, html.is-app body > .wrap, html.is-app body > .form-layout { animation-duration: .25s; }
+
+/* ---------- 2) horná lišta: veľký nadpis sa pri posúvaní presunie do lišty ---------- */
+html.is-app .app-topbar {
+  background: transparent; border-bottom-color: transparent;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  transition: background .2s, border-color .2s;
+  padding: calc(12px + env(safe-area-inset-top)) 18px 10px;
+}
+html.is-app .app-topbar.solid {
+  background: rgba(8, 11, 20, .88); border-bottom-color: rgba(150, 165, 215, .10);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+}
+html.is-app .app-topbar b { font: 700 17px var(--font-display); transition: opacity .2s, transform .2s; }
+html.is-app .app-topbar.big b { opacity: 0; transform: translateY(6px); }
+html.is-app .app-topbar .a-ib { width: 40px; height: 40px; border-radius: 14px; }
+
+/* ---------- 3) podnavigácia sezóny / správy → appkové čipy ---------- */
+html.is-app .subnav {
+  position: sticky; top: calc(62px + env(safe-area-inset-top)); z-index: 55;
+  background: rgba(8, 11, 20, .88); border: 0;
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  -webkit-mask-image: none; mask-image: none;
+}
+html.is-app .subnav-inner { height: auto; padding-block: 8px 10px; gap: 8px; }
+html.is-app .subnav-inner > span[style*="width:1px"] { display: none; }
+html.is-app .subnav-inner > a.row { padding-right: 0 !important; }
+html.is-app .subnav-brand-name { display: none; }
+html.is-app .subnav-link {
+  height: 34px; padding: 0 14px; border-radius: 12px; display: inline-flex; align-items: center; flex: none;
+  background: var(--surface-1); border: 1px solid var(--line); color: var(--text-2);
+  font: 600 13px var(--font-body); white-space: nowrap;
+}
+html.is-app .subnav-link.active { background: #eef1f9; border-color: #eef1f9; color: #0b0f1c; }
+html.is-app .subnav.admin-bar .subnav-link.active { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+/* ---------- 4) tlačidlá ---------- */
+html.is-app .btn {
+  min-height: 46px; padding: 13px 18px; border-radius: 15px; line-height: 1.25;
+  align-items: center; justify-content: center; text-align: center;
+  font: 700 15px/1.25 var(--font-body); letter-spacing: 0; box-shadow: none;
+}
+html.is-app .btn:active { transform: scale(.97); }
+html.is-app .btn-sm { min-height: 36px; padding: 8px 14px; border-radius: 12px; font-size: 13.5px; }
+html.is-app .btn-lg { min-height: 52px; border-radius: 16px; font-size: 16px; }
+html.is-app .btn-icon { min-height: 0; padding: 0; width: 40px; height: 40px; border-radius: 13px; }
+html.is-app .btn-primary { --_bg: #facc15; --_fg: #1c1605; border-color: transparent; box-shadow: 0 0 22px rgba(250, 204, 21, .28); }
+html.is-app .btn-brand { --_bg: #7c5cff; --_fg: #fff; border-color: transparent; box-shadow: 0 6px 18px rgba(124, 92, 255, .38); }
+html.is-app .btn-secondary { --_bg: var(--surface-2); --_fg: var(--text-1); border-color: var(--line-strong); }
+html.is-app .btn-ghost { --_bg: transparent; --_fg: var(--text-2); }
+html.is-app .btn-danger { --_bg: rgba(240, 71, 106, .12); --_fg: #ff8aa2; border-color: rgba(240, 71, 106, .3); }
+html.is-app .btn:hover { box-shadow: none; }
+html.is-app .btn-primary:hover { box-shadow: 0 0 22px rgba(250, 204, 21, .28); }
+html.is-app .btn-brand:hover { box-shadow: 0 6px 18px rgba(124, 92, 255, .38); }
+html.is-app .btn-secondary:hover { background: var(--surface-2); }
+html.is-app .btn:disabled, html.is-app .btn[aria-disabled="true"] { opacity: .5; }
+
+/* ---------- 5) karty ---------- */
+html.is-app .card { background: var(--surface-1); border: 1px solid var(--line); border-radius: 22px; box-shadow: none; }
+html.is-app .card-pad { padding: 18px; }
+html.is-app .card-hover:hover { transform: none; box-shadow: none; border-color: var(--line); }
+html.is-app .card-hover:active { transform: scale(.985); }
+html.is-app .card-glow { box-shadow: none; border-color: var(--brand-line); }
+
+/* ---------- 6) štítky → appkové „pilulky" ---------- */
+html.is-app .tag {
+  font: 700 11px var(--font-body); letter-spacing: .01em; text-transform: none;
+  padding: 4px 9px; border-radius: 9px; border-color: transparent;
+}
+html.is-app .tag-muted { background: var(--surface-2); }
+html.is-app .tag[style*="display:block"] { font-size: 13px; font-weight: 600; padding: 12px 14px !important; border-radius: 14px; line-height: 1.45; }
+html.is-app .chip-role { border-radius: 8px; letter-spacing: .02em; }
+
+/* ---------- 7) formuláre ---------- */
+html.is-app .label { font: 700 12px var(--font-body); color: var(--text-3); letter-spacing: .02em; }
+html.is-app .hint { font-size: 12.5px; color: var(--text-3); line-height: 1.45; }
+html.is-app .input, html.is-app .select, html.is-app .textarea {
+  background-color: #05070d; border: 1.5px solid var(--line-strong); border-radius: 15px;
+  min-height: 50px; padding-block: 12px; font-size: 16px; font-weight: 600; color: var(--text-1); box-shadow: none;
+}
+html.is-app .textarea { min-height: 110px; font-weight: 500; }
+html.is-app .input:focus, html.is-app .select:focus, html.is-app .textarea:focus {
+  border-color: #7c5cff; box-shadow: 0 0 0 3px rgba(124, 92, 255, .22);
+}
+html.is-app input[type="datetime-local"].input, html.is-app input[type="date"].input { width: 100% !important; }
+html.is-app .input-icon .input { padding-left: 42px; }
+html.is-app .search { max-width: none; }
+html.is-app .check input { border-radius: 7px; width: 22px; height: 22px; }
+html.is-app .switch { width: 48px; height: 28px; }
+
+/* segmentový prepínač (webový .segment aj „tab" tlačidlá) → .a-seg */
+html.is-app .segment {
+  display: flex; width: 100%; gap: 4px; padding: 4px; border-radius: 16px;
+  background: var(--surface-1); border: 1px solid var(--line);
+}
+html.is-app .segment button, html.is-app .segment a {
+  flex: 1; min-height: 40px; border-radius: 12px; font: 700 13.5px var(--font-body); color: var(--text-3);
+}
+html.is-app .segment button.active, html.is-app .segment a.active {
+  background: var(--surface-3); color: var(--text-1); box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
+}
+
+/* ---------- 8) zápasy, rebríčky, štatistiky ---------- */
+html.is-app .match { border-radius: 22px; background: var(--surface-1); box-shadow: none; }
+html.is-app .team-logo { border-radius: 14px; }
+html.is-app .lb-row { border-radius: 16px; padding-block: 11px; }
+html.is-app .lb-row.me { background: rgba(124, 92, 255, .16); border-color: rgba(124, 92, 255, .45); }
+html.is-app .lb-rank.top1 { text-shadow: none; }
+html.is-app .stat { padding: 14px 16px; }
+html.is-app .stat-label { font: 700 11px var(--font-body); letter-spacing: .06em; color: var(--text-3); }
+html.is-app .stat-value { font-size: 24px; }
+html.is-app .stat-value.brand, html.is-app .stat-value.gold { text-shadow: none; }
+html.is-app .pts-pill { border-radius: 9px; }
+html.is-app .progress { height: 7px; border-radius: 4px; }
+html.is-app .progress > i { box-shadow: none; }
+html.is-app .cd-box { background: #05070d; border: 1px solid var(--line-strong); border-radius: 14px; padding: 8px 10px; min-width: 52px; }
+html.is-app .cd-num { font-size: 22px; }
+html.is-app .empty { padding: 34px 18px; }
+html.is-app .empty-icon { border-radius: 20px; }
+html.is-app .hr { background: var(--line); }
+
+/* ---------- 9) dialógy → spodný panel ako v appke ---------- */
+html.is-app .scrim { align-items: flex-end !important; justify-content: center; padding: 0 !important; backdrop-filter: none; background: rgba(5, 7, 13, .6); }
+html.is-app .dialog {
+  width: 100% !important; max-width: 560px !important; margin: 0 auto;
+  border-radius: 26px 26px 0 0 !important; border: 0; border-top: 1px solid var(--line-strong);
+  background: #111728; box-shadow: 0 -18px 50px rgba(0, 0, 0, .5);
+  padding: 22px 20px calc(26px + env(safe-area-inset-bottom)) !important;
+  max-height: 88vh; overflow-y: auto;
+  animation: aw-sheet .26s ease both;
+}
+html.is-app .dialog::before { content: ""; display: block; width: 40px; height: 5px; border-radius: 3px; background: #2c3858; margin: -10px auto 16px; }
+html.is-app .dialog-title { font-size: 20px; }
+@keyframes aw-sheet { from { transform: translateY(40px); opacity: .4; } to { transform: none; opacity: 1; } }
+html.is-app .dialog .btn { flex: 1; }
+
+/* toast ako v appke */
+html.is-app .toast { border-radius: 16px; border-left-width: 0; background: #232d47; box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }
+html.is-app .toast-wrap, html.is-app #toastWrap { left: 16px !important; right: 16px !important; align-items: center; }
+
+/* ---------- 10) tabuľky (správa, admin) sa posúvajú vodorovne, stránka nie ---------- */
+html.is-app table { font-size: 13.5px; }
+html.is-app .table-wrap, html.is-app .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* ---------- 11) lepivé spodné panely (uloženie tipov a pod.) ---------- */
+html.is-app .savebar {
+  left: 12px !important; right: 12px !important; max-width: 536px; margin: 0 auto;
+  border-radius: 22px !important; background: rgba(20, 26, 44, .94) !important;
+  border: 1px solid var(--line-strong) !important; box-shadow: 0 16px 36px rgba(0, 0, 0, .55) !important;
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+}
+
+/* ---------- 12) poistka: nič nesmie rozšíriť stránku (inak sa celá zmenší) ---------- */
+html.is-app, html.is-app body { overflow-x: clip; }
+html.is-app .ad-row3 { grid-template-columns: minmax(0, 1fr); }
+
+/* ---------- 13) rebríčky: stupne víťazov ako kompaktné riadky (ako .a-top3) ---------- */
+html.is-app .podium { display: flex; flex-direction: column; gap: 8px; margin: 16px 0 18px; }
+html.is-app .podium > div:empty { display: none; }
+html.is-app .pod {
+  display: grid; grid-template-columns: 30px 42px minmax(0, 1fr) auto; grid-template-areas: "r a n p" "r a s p";
+  align-items: center; column-gap: 12px; text-align: left; padding: 11px 14px; border-radius: 20px; box-shadow: none;
+}
+html.is-app .pod1 { order: -1; background: linear-gradient(90deg, rgba(250, 204, 21, .24), rgba(250, 204, 21, .04) 70%); border: 1px solid rgba(250, 204, 21, .5); box-shadow: 0 8px 24px -10px rgba(250, 204, 21, .45); }
+html.is-app .pod2 { background: linear-gradient(90deg, rgba(184, 192, 214, .18), rgba(184, 192, 214, .03) 70%); border: 1px solid rgba(184, 192, 214, .35); }
+html.is-app .pod3 { order: 1; background: linear-gradient(90deg, rgba(201, 140, 85, .2), rgba(201, 140, 85, .03) 70%); border: 1px solid rgba(201, 140, 85, .38); }
+html.is-app .pod .pod-rank {
+  grid-area: r; position: static; opacity: 1; width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center;
+  font: 700 14px var(--font-display); background: #c9cfde; color: #14182a;
+}
+html.is-app .pod1 .pod-rank { background: #facc15; color: #1c1605; }
+html.is-app .pod3 .pod-rank { background: #c98c55; color: #1f1206; }
+html.is-app .pod .avatar { grid-area: a; width: 42px !important; height: 42px !important; font-size: 15px !important; margin: 0 !important; }
+html.is-app .pod .pod-name { grid-area: n; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; align-self: end; }
+html.is-app .pod .pod-sub { grid-area: s; margin: 0; font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; align-self: start; }
+html.is-app .pod .pod-pts { grid-area: p; font-size: 22px; text-shadow: none; }
+html.is-app .pod .pod-crown { display: none; }
+html.is-app .pod[data-me="1"] { outline: 2px solid #7c5cff; outline-offset: -2px; }
+html.is-app .podium { align-items: stretch; }
+html.is-app .pod { width: 100%; }
+
+/* ---------- 14) súhrnné štatistiky po dvoch vedľa seba (ako bento v appke) ---------- */
+html.is-app .summary { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+html.is-app .filters { grid-template-columns: 1fr 1fr; }
+
+/* ---------- 15) výber zápasov do kola ---------- */
+html.is-app .builder-foot .btn { --_bg: #facc15; --_fg: #1c1605; border-color: transparent; box-shadow: 0 0 22px rgba(250, 204, 21, .28); min-height: 52px; }
+html.is-app .built-match { border-radius: 20px; background: var(--surface-1); }
+html.is-app .om-badge { font: 700 10.5px var(--font-body) !important; letter-spacing: 0 !important; text-transform: none !important;
+  color: #9d83ff !important; background: rgba(124, 92, 255, .16) !important; border: 0 !important; border-radius: 8px !important; padding: 3px 8px !important; margin-left: 8px; vertical-align: middle; }
+
+/* ---------- 16) karty sezón: nižší farebný pás (appka má kompaktné karty) ---------- */
+html.is-app .season-cover, html.is-app .dc-cover { height: 58px !important; padding: 10px 12px; }
+html.is-app .season-cover > .tag:first-child { top: 10px; left: 12px; }
+html.is-app .pf-cover { height: 120px; border-radius: 24px; }
+
+/* ---------- 17) odznaky: kompaktná mriežka po dvoch ---------- */
+html.is-app .ach-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+html.is-app .ach { padding: 14px; border-radius: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+html.is-app .ach.earned::before { display: none; }
+html.is-app .ach-ico { width: 52px; height: 52px; border-radius: 18px; font-size: 26px; margin: 0 0 10px; }
+html.is-app .ach-name { font-size: 14px; line-height: 1.25; }
+html.is-app .ach-desc { font-size: 12px; min-height: 0; margin-bottom: 10px; line-height: 1.4; }
+html.is-app .ach-foot { margin-top: auto; width: 100%; flex-direction: column; gap: 6px; }
+html.is-app .ach .ac-progress, html.is-app .ach .progress { width: 100%; }
+html.is-app .ac-summary { gap: 10px; margin-bottom: 18px; }
+html.is-app .rarity { border-radius: 8px; letter-spacing: .04em; }
+
+/* webový prúžok priebehu posúvania appka nemá */
+html.is-app .scroll-prog { display: none !important; }
