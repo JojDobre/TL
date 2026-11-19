@@ -194,7 +194,7 @@
       <h3>Nový zápas</h3>
       <p class="sub">Vyber tímy, čas a typ tipovania.</p>
       <% if (teams.length < 2) { %>
-        <div class="tag tag-warning" style="display:block;padding:12px 14px;margin-bottom:16px">Súpiska tímov ligy má menej ako 2 tímy. Najprv pridaj tímy do ligy v <a href="/leagues/<%= league.id %>/edit" style="text-decoration:underline">úprave ligy</a>.</div>
+        <div class="tag tag-warning" style="display:block;padding:12px 14px;margin-bottom:16px">Súpiska tímov ligy má menej ako 2 tímy. Vlastný zápas pridáš po doplnení tímov v <a href="/leagues/<%= league.id %>/edit" style="text-decoration:underline">úprave ligy</a><% if (!league.isTemplate) { %> — zápasy z oficiálnych súťaží môžeš pridať hneď v prvej záložke<% } %>.</div>
       <% } %>
       <div class="match-builder">
         <div class="team-select"><label class="label">Domáci tím</label>

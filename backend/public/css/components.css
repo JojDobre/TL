@@ -103,6 +103,9 @@
   border: 1px solid transparent;
   white-space: nowrap;
 }
+/* štítok použitý ako hláška (display:block) — dlhý text sa musí zalomiť,
+   inak pretečie mimo obrazovku a rozbije šírku celej stránky na mobile */
+.tag[style*="display:block"] { white-space: normal; overflow-wrap: anywhere; line-height: 1.5; }
 .tag .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .tag-brand   { color: var(--brand-bright); background: var(--brand-soft); border-color: var(--brand-line); }
 .tag-gold    { color: var(--gold);    background: var(--gold-soft);    border-color: rgba(250,204,21,.3); }
