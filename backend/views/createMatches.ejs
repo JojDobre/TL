@@ -32,6 +32,7 @@
   .om-comps { display:flex; gap:8px; flex-wrap:wrap; }
   .om-comp { display:flex; align-items:center; gap:9px; height:44px; padding:0 13px 0 8px; border-radius:14px; background:var(--surface-1); border:1px solid var(--line); font:700 var(--fs-sm) var(--font-body); color:var(--text-2); cursor:pointer; transition:border-color .15s, background .15s, box-shadow .15s; }
   .om-comp:hover { border-color:var(--line-strong); }
+  .om-comp > span:not(.om-logo) { max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .om-comp em { font-style:normal; font-size:11.5px; color:var(--text-3); background:var(--surface-3); border-radius:99px; padding:1px 8px; }
   .om-comp.on { border-color:var(--brand-line); background:var(--brand-soft); color:var(--text-1); box-shadow:0 0 0 3px color-mix(in srgb, var(--brand) 14%, transparent); }
   .om-comp.on em { background:var(--brand); color:#fff; }
@@ -95,7 +96,8 @@
   .om-mob { display:none; }
   .om-more { width:100%; margin-top:6px; }
   @media (max-width:760px){
-    .om-lay { grid-template-columns:1fr; }
+    .om-lay { grid-template-columns:minmax(0,1fr); }
+    .om-lay > div { min-width:0; }
     .om-comps { flex-wrap:nowrap; overflow-x:auto; margin:0 -16px; padding:2px 16px 4px; scrollbar-width:none; }
     .om-comp { flex:none; }
     .om-range { width:100%; } .om-range button { flex:1; }
@@ -165,7 +167,7 @@
           <div class="om-comps" id="omComps"><span class="muted" style="font-size:var(--fs-sm)">Načítavam súťaže…</span></div>
           <div class="om-tools" id="omTools" hidden>
             <label class="om-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input class="input" type="search" id="omQ" placeholder="Hľadať tím, napr. „Inter“" autocomplete="off"></label>
-            <div class="om-range" id="omRange"><button type="button" data-r="dnes">Dnes</button><button type="button" data-r="vikend">Víkend</button><button type="button" data-r="7">7 dní</button><button type="button" data-r="vsetko" class="on">Všetko</button></div>
+            <div class="om-range" id="omRange"><button type="button" data-r="dnes">Dnes</button><button type="button" data-r="vikend">Víkend</button><button type="button" data-r="7" class="on">7 dní</button><button type="button" data-r="vsetko">Všetko</button></div>
           </div>
           <div id="omList"></div>
         </div>
@@ -346,7 +348,7 @@
     var tray = document.getElementById('omTray'), groupsEl = document.getElementById('omGroups');
     var countEl = document.getElementById('omCount'), addBtn = document.getElementById('omAdd');
     var extEl = document.getElementById('omExt'), msgEl = document.getElementById('omMsg');
-    var sources = [], active = [], cache = {}, picked = {}, range = 'vsetko', tipType = 'exact_score';
+    var sources = [], active = [], cache = {}, picked = {}, range = '7', tipType = 'exact_score';
     var PAGE = 40, limit = PAGE;
     var MSG0 = msgEl.textContent;
     var SKEY = 'om-src-' + roundId;
@@ -417,7 +419,7 @@
       active.forEach(function(id){ all = all.concat(cache[id]); });
       all = all.filter(function(m){ return inRange(m) && (!qq || norm(m.home.name + ' ' + m.away.name).indexOf(qq) >= 0); })
         .sort(function(a, b){ return new Date(a.time) - new Date(b.time) || a.id - b.id; });
-      if (!all.length) { listEl.innerHTML = '<div class="om-empty"><b>Žiadne zápasy</b>' + (qq ? 'Nič nezodpovedá hľadaniu.' : 'V tomto období nie sú žiadne zápasy. Skús „Všetko“.') + '</div>'; return; }
+      if (!all.length) { listEl.innerHTML = '<div class="om-empty"><b>Žiadne zápasy</b>' + (qq ? 'Nič nezodpovedá hľadaniu.' : (range === 'vsetko' ? 'Táto súťaž nemá nadchádzajúce zápasy.' : 'V tomto období nie sú žiadne zápasy. Skús „Všetko“.')) + '</div>'; return; }
       var total = all.length;
       all = all.slice(0, limit);
       var groups = [], last = null;

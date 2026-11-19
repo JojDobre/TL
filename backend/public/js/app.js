@@ -54,6 +54,55 @@
   function haptic(ms) { try { if (navigator.vibrate) navigator.vibrate(ms || 8); } catch (e) { /* nič */ } }
   window.tifoApp = { api: api, toast: toast, haptic: haptic };
 
+  // ------------------------------------- zadávanie skóre šípkami (webové stránky)
+  // Na stránkach kola, Moje tipy a zápasoch sezóny sa v appke skóre zadáva
+  // ako na obrazovke Tipovať: šípka hore / dole s haptickou odozvou, bez
+  // klávesnice. Existujúca logika stránky (počítadlo, Uložiť) ostáva — na
+  // každú zmenu sa vyvolá udalosť input ako pri písaní.
+  var ARROW = { up: '<path d="M18 15l-6-6-6 6"/>', down: '<path d="M6 9l6 6 6-6"/>' };
+  function stepBtn(dir, label) {
+    return '<button type="button" class="tip-step-btn" data-step="' + (dir === 'up' ? 1 : -1) + '" aria-label="' + label + '">'
+      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' + ARROW[dir] + '</svg></button>';
+  }
+  document.querySelectorAll('.tip-inputs').forEach(function (box) {
+    var h = box.querySelector('.tip-num[data-home]');
+    var a = box.querySelector('.tip-num[data-away]');
+    if (!h || !a || box.classList.contains('tip-stepper')) return;
+    box.classList.add('tip-stepper');
+    [h, a].forEach(function (inp) {
+      var wrap = document.createElement('span');
+      wrap.className = 'tip-step' + (inp.disabled ? ' off' : '');
+      inp.parentNode.insertBefore(wrap, inp);
+      wrap.insertAdjacentHTML('beforeend', stepBtn('up', '+1'));
+      wrap.appendChild(inp);
+      wrap.insertAdjacentHTML('beforeend', stepBtn('down', '−1'));
+      inp.readOnly = true;            // bez vyskakovacej klávesnice
+      inp.setAttribute('tabindex', '-1');
+      if (inp.disabled) wrap.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+    });
+    box.addEventListener('click', function (e) {
+      var b = e.target.closest('.tip-step-btn');
+      if (!b || b.disabled) return;
+      var inp = b.parentNode.querySelector('.tip-num');
+      if (!inp || inp.disabled) return;
+      // prvé ťuknutie na prázdny tip nastaví 0 : 0 (ako na obrazovke Tipovať)
+      if (h.value === '' && a.value === '') { h.value = '0'; a.value = '0'; }
+      else if (h.value === '') h.value = '0';
+      else if (a.value === '') a.value = '0';
+      var v = Math.max(0, Math.min(20, (parseInt(inp.value, 10) || 0) + Number(b.getAttribute('data-step'))));
+      inp.value = String(v);
+      [h, a].forEach(function (x) { x.dispatchEvent(new Event('input', { bubbles: true })); });
+      haptic(6);
+    });
+  });
+  // hmatová odozva aj pri výbere 1 / X / 2 a uložení tipov
+  document.addEventListener('click', function (e) {
+    var p = e.target.closest('.pick-w');
+    if (p && !p.disabled) { haptic(8); return; }
+    var sv = e.target.closest('#saveTips');
+    if (sv && !sv.disabled) haptic(14);
+  });
+
   // ------------------------------------------- horná lišta na webových stránkach
   if (!isAppScreen) {
     var h1 = document.querySelector('main h1, .wrap h1, h1');
