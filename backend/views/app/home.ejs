@@ -2,56 +2,56 @@
 <header class="a-top">
   <a href="/app/profil"><%- include('_av', { u: me, size: 42, st: 'box-shadow:0 0 0 2px #080b14,0 0 0 3.5px rgba(124,92,255,.45)' }) %></a>
   <div style="flex:1;min-width:0"><div class="a-muted a-small" style="font-weight:600"><%= greeting %></div><div style="font:700 19px var(--a-disp)"><%= me.name %></div></div>
-  <a class="a-ib" href="/app/notifikacie" aria-label="Notifikácie"><svg class="i"><use href="#i-bell"/></svg></a>
+  <a class="a-ib" href="/app/notifikacie" aria-label="<%= t('title.noti') %>"><svg class="i"><use href="#i-bell"/></svg></a>
 </header>
 <main class="a-wrap a-in">
   <% if (deadline) { %>
   <a class="a-deadline a-press" href="/app/tipovat?liga=<%= deadline.leagueId %>">
-    <div class="k"><svg class="i" width="15" height="15"><use href="#i-clock"/></svg>Uzávierka <%= deadline.until %></div>
+    <div class="k"><svg class="i" width="15" height="15"><use href="#i-clock"/></svg><%= t('home.deadline', { x: deadline.until }) %></div>
     <h3><%= deadline.leagueName %> · <%= deadline.roundName %></h3>
-    <p>Máš natipované <%= deadline.tipped %> z <%= deadline.total %> <%= pl(deadline.total, 'zápasu', 'zápasov', 'zápasov') %></p>
+    <p><%= t('home.tippedOf', { a: deadline.tipped, b: deadline.total, m: tn(deadline.total, 'matchGen') }) %></p>
     <div class="bar"><i style="width:<%= deadline.pct %>%"></i></div>
-    <span class="a-btn gold">Dotipovať <%= deadline.missing %> <%= deadline.missing === 1 ? 'zápas' : (deadline.missing < 5 ? 'zápasy' : 'zápasov') %></span>
+    <span class="a-btn gold"><%= t('home.finish', { n: deadline.missing, m: tn(deadline.missing, 'match') }) %></span>
   </a>
   <% } else if (allTipped) { %>
   <a class="a-deadline a-press" href="/app/tipovat" style="background:linear-gradient(135deg,#0f7a55,#1fd497)">
-    <div class="k"><svg class="i" width="15" height="15"><use href="#i-check"/></svg>Všetko natipované</div>
-    <h3>Máš otipovaných <%= openCount %> <%= pl(openCount, 'zápas', 'zápasy', 'zápasov') %></h3>
-    <p>Tipy môžeš meniť až do výkopu.</p>
+    <div class="k"><svg class="i" width="15" height="15"><use href="#i-check"/></svg><%= t('home.allTipped') %></div>
+    <h3><%= t('home.tippedN', { n: openCount, m: tn(openCount, 'match') }) %></h3>
+    <p><%= t('home.canChange') %></p>
   </a>
   <% } else { %>
   <div class="a-deadline" style="background:linear-gradient(135deg,#1b2440,#232d47)">
-    <div class="k"><svg class="i" width="15" height="15"><use href="#i-cal"/></svg>Žiadne otvorené kolo</div>
-    <h3>Momentálne nie je čo tipovať</h3>
-    <p>Pridaj sa do ďalšej súťaže a tipuj s ostatnými.</p>
-    <a class="a-btn gold" href="/seasons">Nájsť súťaž</a>
+    <div class="k"><svg class="i" width="15" height="15"><use href="#i-cal"/></svg><%= t('home.noOpen') %></div>
+    <h3><%= t('home.nothing') %></h3>
+    <p><%= t('home.joinNext') %></p>
+    <a class="a-btn gold" href="/seasons"><%= t('home.find') %></a>
   </div>
   <% } %>
 
   <div class="a-bento">
     <div class="a-glass big">
-      <div class="a-muted a-small" style="font-weight:700">Posledných 7 dní</div>
+      <div class="a-muted a-small" style="font-weight:700"><%= t('home.last7') %></div>
       <div>
-        <div style="font:700 34px var(--a-disp);letter-spacing:-.02em"><%= week > 0 ? '+' : '' %><%= week %><span style="font-size:16px;color:var(--a-t3)"> b</span></div>
+        <div style="font:700 34px var(--a-disp);letter-spacing:-.02em"><%= week > 0 ? '+' : '' %><%= week %><span style="font-size:16px;color:var(--a-t3)"> <%= t('common.pts') %></span></div>
         <% if (spark) { %><svg class="a-spark" viewBox="0 0 120 34" style="stroke:var(--a-ok)"><path d="<%= spark %>"/></svg><% } %>
       </div>
       <% if (weekDiff !== 0) { %>
-      <div style="font:700 12px var(--a-body);display:flex;align-items:center;gap:4px" class="<%= weekDiff > 0 ? 'a-up' : 'a-down' %>"><svg class="i" width="14" height="14"><use href="#i-<%= weekDiff > 0 ? 'up' : 'down' %>"/></svg>o <%= Math.abs(weekDiff) %> b <%= weekDiff > 0 ? 'viac' : 'menej' %> ako týždeň predtým</div>
-      <% } else { %><div class="a-muted a-small">rovnako ako týždeň predtým</div><% } %>
+      <div style="font:700 12px var(--a-body);display:flex;align-items:center;gap:4px" class="<%= weekDiff > 0 ? 'a-up' : 'a-down' %>"><svg class="i" width="14" height="14"><use href="#i-<%= weekDiff > 0 ? 'up' : 'down' %>"/></svg><%= t(weekDiff > 0 ? 'home.more' : 'home.less', { n: Math.abs(weekDiff) }) %></div>
+      <% } else { %><div class="a-muted a-small"><%= t('home.same') %></div><% } %>
     </div>
-    <div class="a-glass sm"><div class="a-muted a-small" style="font-weight:700">Presnosť</div><div class="v"><%= accuracy != null ? accuracy + ' %' : '–' %></div></div>
-    <div class="a-glass sm"><div class="a-muted a-small" style="font-weight:700">Najlepšie</div><div class="v" style="color:var(--a-gold)"><%= best ? best.rank + '.' : '–' %></div></div>
+    <div class="a-glass sm"><div class="a-muted a-small" style="font-weight:700"><%= t('home.accuracy') %></div><div class="v"><%= accuracy != null ? accuracy + ' %' : '–' %></div></div>
+    <div class="a-glass sm"><div class="a-muted a-small" style="font-weight:700"><%= t('home.best') %></div><div class="v" style="color:var(--a-gold)"><%= best ? best.rank + '.' : '–' %></div></div>
   </div>
 
-  <div class="a-sec">Moje ligy <a href="/app/rebricky">Rebríčky</a></div>
+  <div class="a-sec"><%= t('home.myLeagues') %> <a href="/app/rebricky"><%= t('title.ranks') %></a></div>
   <% if (!leagues.length) { %>
-    <div class="a-card a-empty"><b>Zatiaľ nie si v žiadnej lige</b>Vyber si oficiálnu súťaž alebo sa pridaj ku kamarátom.<div style="margin-top:14px"><a class="a-btn gold" href="/seasons">Prehľadať súťaže</a></div></div>
+    <div class="a-card a-empty"><b><%= t('home.noLeagues') %></b><%= t('home.noLeaguesTx') %><div style="margin-top:14px"><a class="a-btn gold" href="/seasons"><%= t('home.browse') %></a></div></div>
   <% } else { %>
   <div class="a-card a-list">
     <% leagues.forEach(function (l) { %>
     <a class="a-row" href="/app/liga/<%= l.id %>">
       <%- include('_crest', { c: l }) %>
-      <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><%= l.name %></div><div class="a-muted a-small"><%= l.players %> <%= pl(l.players, 'hráč', 'hráči', 'hráčov') %> · <%= l.points %> b</div></div>
+      <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><%= l.name %></div><div class="a-muted a-small"><%= l.players %> <%= tn(l.players, 'player') %> · <%= l.points %> <%= t('common.pts') %></div></div>
       <div style="text-align:right">
         <div class="a-num" style="font-size:18px;<%= l.rank && l.rank <= 3 ? 'color:var(--a-gold)' : '' %>"><%= l.rank ? l.rank + '.' : '–' %></div>
         <% if (l.move) { %><div class="<%= l.move > 0 ? 'a-up' : 'a-down' %>" style="font:700 11px var(--a-body);display:flex;align-items:center;gap:2px;justify-content:flex-end"><svg class="i" width="12" height="12"><use href="#i-<%= l.move > 0 ? 'up' : 'down' %>"/></svg><%= Math.abs(l.move) %></div><% } %>

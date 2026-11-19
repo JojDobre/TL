@@ -37,26 +37,27 @@
   <!-- FORM -->
   <div class="auth-form">
     <div class="auth-card">
-      <h1>Vitaj späť 👋</h1>
-      <p class="muted" style="margin:8px 0 26px">Prihlás sa a pokračuj v tipovaní.</p>
+      <h1 data-en="Welcome back">Vitaj späť 👋</h1>
+      <p class="muted" style="margin:8px 0 26px" data-en="Log in and keep predicting.">Prihlás sa a pokračuj v tipovaní.</p>
       <% if (typeof error !== 'undefined' && error) { %>
-        <div class="tag tag-danger" style="display:block;padding:10px 12px;margin-bottom:16px"><%= error %></div>
+        <div class="tag tag-danger" style="display:block;padding:10px 12px;margin-bottom:16px" data-en-msg><%= error %></div>
       <% } %>
       <form action="/login" method="POST">
         <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
-        <div class="field" style="margin-bottom:16px"><label class="label">E-mail alebo prezývka</label><input class="input" type="text" name="email" placeholder="martin.novak@email.sk" value="<%= typeof oldEmail !== 'undefined' ? oldEmail : '' %>" required></div>
+        <div class="field" style="margin-bottom:16px"><label class="label" data-en="E-mail or username">E-mail alebo prezývka</label><input class="input" type="text" name="email" placeholder="martin.novak@email.sk" data-en-ph="name@email.com" value="<%= typeof oldEmail !== 'undefined' ? oldEmail : '' %>" required></div>
         <div class="field" style="margin-bottom:10px">
-          <div class="between"><label class="label">Heslo</label><a href="/forgot-password" class="brand" style="font-size:var(--fs-sm)">Zabudol si heslo?</a></div>
+          <div class="between"><label class="label" data-en="Password">Heslo</label><a href="/forgot-password" class="brand" style="font-size:var(--fs-sm)" data-en="Forgot password?">Zabudol si heslo?</a></div>
           <input class="input" type="password" name="password" placeholder="••••••••" required>
         </div>
-        <label class="check" style="margin:6px 0 22px"><input type="checkbox" name="remember" checked> Zapamätať si ma</label>
-        <button class="btn btn-primary btn-lg btn-block" type="submit">Prihlásiť sa</button>
+        <label class="check" style="margin:6px 0 22px"><input type="checkbox" name="remember" checked> <span data-en="Remember me">Zapamätať si ma</span></label>
+        <button class="btn btn-primary btn-lg btn-block" type="submit" data-en="Log in">Prihlásiť sa</button>
       </form>
-      <div class="divider-or">alebo</div>
-      <p class="muted center" style="margin-top:26px;font-size:var(--fs-sm)">Nemáš účet? <a href="/register" class="brand" style="font-weight:700">Zaregistruj sa</a></p>
+      <div class="divider-or" data-en="or">alebo</div>
+      <p class="muted center" style="margin-top:26px;font-size:var(--fs-sm)"><span data-en="No account yet?">Nemáš účet?</span> <a href="/register" class="brand" style="font-weight:700" data-en="Sign up">Zaregistruj sa</a></p>
     </div>
   </div>
 </div>
 <script src="/js/enhance.js?v=<%= assetV %>"></script>
+<script src="/js/app-lang.js?v=<%= assetV %>"></script>
 </body>
 </html>

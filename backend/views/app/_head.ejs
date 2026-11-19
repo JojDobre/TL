@@ -1,7 +1,7 @@
 <%# Hlava appkovej obrazovky. Parametre: title, appTab (aktívna karta lišty),
     screen (identifikátor obrazovky pre app.js). %>
 <!doctype html>
-<html lang="sk" data-theme="dark" class="is-app">
+<html lang="<%= lang %>" data-lang="<%= lang %>" data-theme="dark" class="is-app">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -9,6 +9,18 @@
 <meta name="theme-color" content="#080b14">
 <title>Tifo — <%= title %></title>
 <script>try { sessionStorage.setItem('tifo-app', '1'); } catch (e) {}</script>
+<%- include('../partials/app-lang') %>
+<script>
+(function () {
+  // server vykreslil podľa cookie/Accept-Language; ak sa líši od uloženej
+  // voľby (napr. vymazané cookies), raz načítaj znova už so správnym jazykom
+  var l = window.tifoLang();
+  if (l !== '<%= lang %>') {
+    try { if (!sessionStorage.getItem('tifo-lang-rl')) { sessionStorage.setItem('tifo-lang-rl', '1'); location.replace(location.href); } } catch (e) { /* nič */ }
+  }
+})();
+window.TIFO_I18N = <%- JSON.stringify(jsStrings).replace(/</g, '\\u003c') %>;
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">

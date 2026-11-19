@@ -48,6 +48,7 @@
 <script src="/js/install.js?v=<%= assetV %>"></script>
 <%# appková lišta a správanie — na webe skryté, zapnú sa len v appke (html.is-app) %>
 <% if (typeof currentUserId !== 'undefined' && currentUserId) { %><%- include('app-tabbar', { appTab: '' }) %><% } %>
+<script src="/js/app-lang.js?v=<%= assetV %>"></script>
 <script src="/js/app.js?v=<%= assetV %>" defer></script>
 </body>
 </html>

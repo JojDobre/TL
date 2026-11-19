@@ -16,6 +16,10 @@
     var m = document.querySelector('meta[name="csrf-token"]');
     return m ? m.getAttribute('content') : '';
   }
+  // texty v jazyku appky (window.TIFO_I18N z app/_head.ejs); na webových
+  // stránkach chýbajú → slovenčina
+  var I18N = window.TIFO_I18N || {};
+  function tr(k, sk) { return I18N[k] || sk; }
   function api(url, opts) {
     opts = opts || {};
     var headers = { Accept: 'application/json' };
@@ -29,7 +33,7 @@
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (j) {
         if (!r.ok || j.success === false) {
-          var e = new Error(j.message || 'Nepodarilo sa. Skús to znova.');
+          var e = new Error(j.message || tr('error', 'Nepodarilo sa. Skús to znova.'));
           e.status = r.status;
           throw e;
         }
@@ -199,7 +203,7 @@
       idx = Math.max(0, Math.min(slides.length - 1, i));
       slides.forEach(function (s) { s.style.transform = 'translateX(' + (-100 * idx) + '%)'; });
       dots.forEach(function (d, k) { d.classList.toggle('on', k === idx); });
-      next.textContent = idx === slides.length - 1 ? 'Začať' : 'Pokračovať';
+      next.textContent = idx === slides.length - 1 ? tr('start', 'Začať') : tr('continue', 'Pokračovať');
     };
     next.addEventListener('click', function () {
       haptic(6);
@@ -240,12 +244,12 @@
         localStorage.setItem('tifo-push-asked', '1');
       } catch (e) { return; }
       setTimeout(function () {
-        var s = sheet('<h3>Pripomenúť uzávierku?</h3><p>Pošleme ti upozornenie, keď sa blíži uzávierka a keď dostaneš body za tip.</p>'
-          + '<button class="a-btn gold" data-push-yes>Zapnúť upozornenia</button>'
-          + '<button class="a-btn ghost" style="margin-top:10px" data-close>Teraz nie</button>');
+        var s = sheet('<h3>' + tr('pushTitle', 'Pripomenúť uzávierku?') + '</h3><p>' + tr('pushTx', 'Pošleme ti upozornenie, keď sa blíži uzávierka a keď dostaneš body za tip.') + '</p>'
+          + '<button class="a-btn gold" data-push-yes>' + tr('pushYes', 'Zapnúť upozornenia') + '</button>'
+          + '<button class="a-btn ghost" style="margin-top:10px" data-close>' + tr('pushNo', 'Teraz nie') + '</button>');
         s.el.querySelector('[data-push-yes]').addEventListener('click', function () {
-          window.tifoPush.subscribe().then(function () { toast('Upozornenia zapnuté'); })
-            .catch(function (e) { toast(e.message || 'Nepodarilo sa zapnúť upozornenia.', true); });
+          window.tifoPush.subscribe().then(function () { toast(tr('pushOn', 'Upozornenia zapnuté')); })
+            .catch(function (e) { toast(e.message || tr('pushErr', 'Nepodarilo sa zapnúť upozornenia.'), true); });
           s.close();
         });
       }, 700);
@@ -262,12 +266,12 @@
       }
       function save(payload) {
         var my = ++seq;
-        setStatus('busy', 'Ukladám…');
+        setStatus('busy', tr('saving', 'Ukladám…'));
         api('/api/tips', { method: 'POST', body: Object.assign({ matchId: Number(id) }, payload) })
           .then(function () {
             if (my !== seq) return;
             card.classList.add('tipped'); card.classList.remove('untipped');
-            setStatus('', 'Uložené');
+            setStatus('', tr('saved', 'Uložené'));
             updateRing();
             haptic(12);
             maybeAskPush();
@@ -291,7 +295,7 @@
             card.classList.remove('untipped');
             haptic(5);
             clearTimeout(timer);
-            setStatus('busy', 'Ukladám…');
+            setStatus('busy', tr('saving', 'Ukladám…'));
             timer = setTimeout(function () {
               save({ homeScore: parseInt(vals[0].textContent, 10) || 0, awayScore: parseInt(vals[1].textContent, 10) || 0 });
             }, 650);
@@ -349,8 +353,19 @@
       api('/notifications/read-all', { method: 'POST', body: {} }).then(function () {
         document.querySelectorAll('[data-noti]').forEach(function (n) { n.classList.add('read'); });
         document.querySelectorAll('.a-noti .unread').forEach(function (u) { u.remove(); });
-        toast('Všetko prečítané');
+        toast(tr('allRead', 'Všetko prečítané'));
       }).catch(function (err) { toast(err.message, true); });
     });
   }
+  // ------------------------------------------------- prepínač jazyka (Profil)
+  document.querySelectorAll('[data-set-lang]').forEach(function (b) {
+    b.addEventListener('click', function (e) {
+      e.preventDefault();
+      var l = b.getAttribute('data-set-lang');
+      if (window.tifoLang) window.tifoLang(l);
+      try { sessionStorage.removeItem('tifo-lang-rl'); } catch (e) { /* nič */ }
+      // replace (nie reload) — reload ruší animáciu prechodu a hlási chybu
+      location.replace(location.pathname + location.search);
+    });
+  });
 })();

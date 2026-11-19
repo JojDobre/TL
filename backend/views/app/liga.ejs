@@ -1,38 +1,38 @@
 <%- include('_head') %>
 <div style="position:absolute;left:0;right:0;top:0;height:280px;background:radial-gradient(100% 90% at 50% 0%,<%= league.grad.replace('linear-gradient(135deg,', '').split(',')[0] %>88,transparent 70%);z-index:0"></div>
 <header class="a-top">
-  <a class="a-ib" href="javascript:history.length>1?history.back():location.href='/app/home'" aria-label="Späť"><svg class="i"><use href="#i-back"/></svg></a>
+  <a class="a-ib" href="javascript:history.length>1?history.back():location.href='/app/home'" aria-label="<%= t('common.back') %>"><svg class="i"><use href="#i-back"/></svg></a>
   <div style="flex:1"></div>
-  <a class="a-ib" href="/leagues/<%= league.id %>" aria-label="Webová verzia ligy"><svg class="i"><use href="#i-list"/></svg></a>
+  <a class="a-ib" href="/leagues/<%= league.id %>" aria-label="<%= t('liga.web') %>"><svg class="i"><use href="#i-list"/></svg></a>
 </header>
 <main class="a-wrap a-in" data-tabs-scope>
   <div class="a-hero">
     <%- include('_crest', { c: league }) %>
     <h2><%= league.name %></h2>
-    <div class="a-muted a-small" style="margin-top:3px"><%= league.isOfficial ? 'Oficiálna liga' : 'Komunitná liga' %> · <%= membersCount %> <%= pl(membersCount, 'hráč', 'hráči', 'hráčov') %><% if (roundsTotal) { %> · kolo <%= Math.min(roundsPlayed + 1, roundsTotal) %> z <%= roundsTotal %><% } %></div>
+    <div class="a-muted a-small" style="margin-top:3px"><%= t(league.isOfficial ? 'liga.official' : 'liga.community') %> · <%= membersCount %> <%= tn(membersCount, 'player') %><% if (roundsTotal) { %> · <%= t('liga.roundOf', { a: Math.min(roundsPlayed + 1, roundsTotal), b: roundsTotal }) %><% } %></div>
     <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;justify-content:center">
-      <% if (league.ended) { %><span class="a-pill warn">Ukončená</span>
-      <% } else if (hasOpen) { %><span class="a-pill ok"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>Kolo otvorené</span><% } %>
-      <% if (league.auto) { %><span class="a-pill info">Automatické výsledky</span><% } %>
-      <% if (myRank) { %><span class="a-pill gold">Si <%= myRank %>. · <%= myPoints %> b</span><% } %>
+      <% if (league.ended) { %><span class="a-pill warn"><%= t('liga.ended') %></span>
+      <% } else if (hasOpen) { %><span class="a-pill ok"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span><%= t('liga.open') %></span><% } %>
+      <% if (league.auto) { %><span class="a-pill info"><%= t('liga.auto') %></span><% } %>
+      <% if (myRank) { %><span class="a-pill gold"><%= t('liga.youAre', { r: myRank, p: myPoints }) %></span><% } %>
     </div>
   </div>
 
   <div class="a-seg" data-tabs style="margin-top:18px">
-    <a href="#kola" data-tab="kola" class="on">Kolá</a>
-    <a href="#rebricek" data-tab="rebricek">Rebríček</a>
-    <% if (prizes.length) { %><a href="#ceny" data-tab="ceny">Ceny</a><% } %>
-    <a href="#pravidla" data-tab="pravidla">Pravidlá</a>
+    <a href="#kola" data-tab="kola" class="on"><%= t('liga.rounds') %></a>
+    <a href="#rebricek" data-tab="rebricek"><%= t('liga.board') %></a>
+    <% if (prizes.length) { %><a href="#ceny" data-tab="ceny"><%= t('liga.prizes') %></a><% } %>
+    <a href="#pravidla" data-tab="pravidla"><%= t('liga.rules') %></a>
   </div>
 
   <section class="a-pane" data-pane="kola" style="margin-top:14px">
-    <% if (!rounds.length) { %><div class="a-card a-empty"><b>Zatiaľ žiadne kolá</b>Kolá pridá správca ligy.</div><% } %>
+    <% if (!rounds.length) { %><div class="a-card a-empty"><b><%= t('liga.noRounds') %></b><%= t('liga.noRoundsTx') %></div><% } %>
     <% if (rounds.length) { %>
     <div class="a-card a-list">
       <% rounds.forEach(function (r) { %>
       <a class="a-row" href="<%= r.status === 'open' && league.member ? '/app/tipovat?liga=' + league.id : '/rounds/' + r.id %>">
         <div class="a-ico" style="width:36px;height:36px;border-radius:12px;<%= r.status === 'open' ? 'background:var(--a-ok-soft);color:var(--a-ok)' : (r.status === 'scheduled' ? 'background:var(--a-info-soft);color:var(--a-info)' : 'background:var(--a-s2);color:var(--a-t3)') %>"><svg class="i"><use href="#i-<%= r.status === 'open' ? 'ball' : (r.status === 'scheduled' ? 'cal' : 'check') %>"/></svg></div>
-        <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14.5px"><%= r.name %></div><div class="a-muted a-small"><%= r.when %> · <%= r.matches %> <%= pl(r.matches, 'zápas', 'zápasy', 'zápasov') %></div></div>
+        <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14.5px"><%= r.name %></div><div class="a-muted a-small"><%= r.when %> · <%= r.matches %> <%= tn(r.matches, 'match') %></div></div>
         <% if (r.status === 'open') { %><span class="a-pill <%= r.myTips >= r.matches ? 'ok' : 'warn' %>"><%= r.myTips %>/<%= r.matches %></span><% } else { %><svg class="i a-muted" width="18" height="18"><use href="#i-chev"/></svg><% } %>
       </a>
       <% }); %>
@@ -41,13 +41,13 @@
   </section>
 
   <section class="a-pane" data-pane="rebricek" hidden style="margin-top:14px">
-    <% if (!top5.length) { %><div class="a-card a-empty"><b>Zatiaľ bez bodov</b>Rebríček sa zobrazí po prvých vyhodnotených zápasoch.</div><% } else { %>
+    <% if (!top5.length) { %><div class="a-card a-empty"><b><%= t('liga.noPoints') %></b><%= t('liga.noPointsTx') %></div><% } else { %>
     <div class="a-card" style="padding:2px 0">
       <% top5.forEach(function (r) { %>
-      <div class="a-rrow <%= r.me ? 'me' : '' %>"><span class="r" style="<%= r.rank === 1 ? 'color:var(--a-gold)' : '' %>"><%= r.rank %></span><%- include('_av', { u: r, size: 34 }) %><span class="nm"><%= r.me ? 'Ty' : r.name %></span><span class="a-pts"><%= r.points %></span></div>
+      <div class="a-rrow <%= r.me ? 'me' : '' %>"><span class="r" style="<%= r.rank === 1 ? 'color:var(--a-gold)' : '' %>"><%= r.rank %></span><%- include('_av', { u: r, size: 34 }) %><span class="nm"><%= r.me ? t('common.you') : r.name %></span><span class="a-pts"><%= r.points %></span></div>
       <% }); %>
     </div>
-    <a class="a-btn ghost" style="margin-top:12px" href="/app/rebricky/<%= league.id %>">Celý rebríček</a>
+    <a class="a-btn ghost" style="margin-top:12px" href="/app/rebricky/<%= league.id %>"><%= t('liga.fullBoard') %></a>
     <% } %>
   </section>
 
@@ -55,7 +55,7 @@
   <section class="a-pane" data-pane="ceny" hidden>
     <div class="a-prize1">
       <svg class="i bg"><use href="#i-trophy"/></svg>
-      <div class="a-label" style="color:var(--a-gold)"><%= prizes[0].place || 1 %>. miesto</div>
+      <div class="a-label" style="color:var(--a-gold)"><%= t('liga.place', { n: prizes[0].place || 1 }) %></div>
       <div style="font:700 19px var(--a-disp);margin-top:6px;position:relative"><%= prizes[0].prize %></div>
     </div>
     <% if (prizes.length > 1) { %>
@@ -63,26 +63,26 @@
       <% prizes.slice(1).forEach(function (p, i) { %>
       <div class="a-glass">
         <div class="a-ico" style="width:36px;height:36px;border-radius:12px;<%= i === 0 ? 'background:rgba(184,192,214,.14);color:#cfd5e6' : (i === 1 ? 'background:rgba(176,122,74,.18);color:#d9a273' : 'background:var(--a-s2);color:var(--a-t3)') %>"><svg class="i"><use href="#i-<%= i === 0 ? 'gift' : (i === 1 ? 'ticket' : 'medal') %>"/></svg></div>
-        <div class="a-label" style="margin-top:10px"><%= p.place || (i + 2) %>. miesto</div>
+        <div class="a-label" style="margin-top:10px"><%= t('liga.place', { n: p.place || (i + 2) }) %></div>
         <div style="font:700 14.5px var(--a-disp);margin-top:3px"><%= p.prize %></div>
       </div>
       <% }); %>
     </div>
     <% } %>
-    <div class="a-note"><svg class="i"><use href="#i-info"/></svg><div>Účasť je zadarmo, nehrá sa o peniaze. Ceny venuje organizátor ligy, podrobnosti sú v časti <a href="#pravidla" style="color:var(--a-brand-b);font-weight:700" onclick="document.querySelector('[data-tab=pravidla]').click();return false;">Pravidlá</a>.</div></div>
+    <div class="a-note"><svg class="i"><use href="#i-info"/></svg><div><%= t('liga.prizeNote') %> <a href="#pravidla" style="color:var(--a-brand-b);font-weight:700" onclick="document.querySelector('[data-tab=pravidla]').click();return false;"><%= t('liga.rules') %></a>.</div></div>
   </section>
   <% } %>
 
   <section class="a-pane" data-pane="pravidla" hidden style="margin-top:14px">
-    <div class="a-sec" style="margin-top:4px">Bodovanie</div>
+    <div class="a-sec" style="margin-top:4px"><%= t('liga.scoring') %></div>
     <div class="a-card a-list">
-      <div class="a-row"><span style="flex:1">Presný výsledok</span><b class="a-num" style="color:var(--a-gold)"><%= scoring.exactScore %> b</b></div>
-      <div class="a-row"><span style="flex:1">Správny víťaz alebo remíza</span><b class="a-num"><%= scoring.correctWinner %> b</b></div>
-      <div class="a-row"><span style="flex:1">Správny gólový rozdiel</span><b class="a-num"><%= scoring.goalDifference %> b</b></div>
-      <div class="a-row"><span style="flex:1">Presný počet gólov tímu</span><b class="a-num"><%= scoring.correctGoals %> b</b></div>
+      <div class="a-row"><span style="flex:1"><%= t('liga.exact') %></span><b class="a-num" style="color:var(--a-gold)"><%= scoring.exactScore %> <%= t('common.pts') %></b></div>
+      <div class="a-row"><span style="flex:1"><%= t('liga.winner') %></span><b class="a-num"><%= scoring.correctWinner %> <%= t('common.pts') %></b></div>
+      <div class="a-row"><span style="flex:1"><%= t('liga.diff') %></span><b class="a-num"><%= scoring.goalDifference %> <%= t('common.pts') %></b></div>
+      <div class="a-row"><span style="flex:1"><%= t('liga.goals') %></span><b class="a-num"><%= scoring.correctGoals %> <%= t('common.pts') %></b></div>
     </div>
     <% if (rules) { %>
-    <div class="a-sec">Pravidlá súťaže</div>
+    <div class="a-sec"><%= t('liga.seasonRules') %></div>
     <div class="a-card a-rules"><%= rules %></div>
     <% } %>
   </section>

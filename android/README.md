@@ -87,6 +87,37 @@ Tifo je tipovacia liga pre fanúšikov futbalu, hokeja a ďalších športov. Ti
 
 Kategória: **Šport**. Kontakt: e-mail podpory, web `https://tifo.sk`.
 
+### Anglický preklad záznamu (English, en-US)
+
+Appka sa pri prvom spustení prepne do jazyka zariadenia (slovenčina pre sk/cs,
+inak angličtina), preto pridaj v Play Console → *Hlavný záznam v obchode* →
+*Spravovať preklady* aj angličtinu:
+
+**Short description** (max. 80 characters):
+
+```
+Predict match scores, compete with friends and climb the leaderboards.
+```
+
+**Full description:**
+
+```
+Tifo is a prediction league for fans of football, ice hockey and other sports. Predict match scores, collect points and compare yourself with your friends and the whole community.
+
+• Official competitions and private leagues for your friends or colleagues
+• Predict the exact score or the winner – change your prediction until kick-off
+• Results are scored automatically and points are awarded instantly
+• League, season and overall leaderboards with position changes
+• Deadline reminders, so you never miss a match
+• Statistics, prediction accuracy and achievement badges
+
+Taking part is free and no money is involved – Tifo is not a betting app. In some leagues the organisers may offer non-cash prizes; the rules are shown in each league.
+```
+
+Poznámka: obrazovky appky, prihlásenie, registrácia a spodná lišta sú
+preložené; podstránky otvárané z appky (detail kola, nastavenia, sezóny)
+sú zatiaľ po slovensky.
+
 ## 4. Obsah aplikácie (dotazníky v Play Console)
 
 - **Zásady ochrany súkromia:** `https://tifo.sk/sukromie`
