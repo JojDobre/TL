@@ -224,6 +224,14 @@ function render(d) {
   }
   out.append(catWrap);
 
+  /* --- Ponuka EAA auditu --- */
+  const a11yScore = cats.accessibility.score;
+  out.append(h('a', { class: 'card span-12 eaa-promo', href: `/pristupnost.html?url=${encodeURIComponent(d.inputUrl)}` },
+    h('div', {},
+      h('b', {}, a11yScore < 90 ? 'Prístupnosť webu má nedostatky – spĺňa požiadavky zákona EAA?' : 'Overte súlad s Európskym aktom o prístupnosti (EAA)'),
+      h('p', { class: 'sub' }, 'Hĺbkový test podľa WCAG 2.1 AA v reálnom prehliadači, až 40 podstránok a PDF správa s návodom na opravu.')),
+    h('span', { class: 'cta' }, 'Bezplatný EAA test →')));
+
   /* --- 5. Odporúčania --- */
   out.append(h('article', { class: 'card span-7 row-2' },
     cardHead('Najdôležitejšie odporúčania', 'bulb', 'var(--ok)', h('span', { class: 'chip' }, `${d.recommendations.length} úloh`)),

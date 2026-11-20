@@ -1,7 +1,7 @@
 {
   "name": "web-analyzer",
-  "version": "1.0.0",
-  "description": "Webová aplikácia na kompletný audit webu – bezpečnosť, SEO, výkon, prístupnosť, sociálne siete a technológie.",
+  "version": "1.1.0",
+  "description": "Webová aplikácia na audit webu (bezpečnosť, SEO, výkon) a platený audit prístupnosti podľa EAA/WCAG s PDF správou.",
   "main": "server.js",
   "private": true,
   "scripts": {
@@ -9,7 +9,11 @@
     "dev": "node --watch server.js"
   },
   "engines": {
-    "node": ">=18.17"
+    "node": ">=20"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "axe-core": "^4.10.0",
+    "playwright": "1.48.2"
+  }
 }
