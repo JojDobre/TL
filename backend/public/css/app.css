@@ -604,3 +604,6 @@ html.is-app .match-row .tip-step { width: 50px; }
 .a-crest.lg { position: relative; isolation: isolate; background: #fff; }
 .a-crest.lg .lg-bg { position: absolute; inset: -20%; z-index: -1; background-size: cover; background-position: center; filter: blur(10px) saturate(1.3); opacity: .9; }
 .a-crest.lg img { position: relative; padding: 0; background: transparent; object-fit: contain; }
+/* logo ligy/súťaže roztiahnuté na celú výšku aj šírku okienka */
+.a-crest.lg img { width: 100%; height: 100%; object-fit: cover; }
+.a-crest.lg .lg-bg { display: none; }
