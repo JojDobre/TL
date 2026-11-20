@@ -414,6 +414,48 @@
     updateRing();
   }
 
+  // ============================================= ÚVODNÝ NÁVOD (Domov, raz)
+  if (screen === 'home') {
+    var tour = document.querySelector('[data-tour]');
+    if (tour) {
+      var track = tour.querySelector('.tour-track');
+      var tdots = tour.querySelectorAll('.tour-dots i');
+      var tnext = tour.querySelector('[data-tour-next]');
+      var tn = tdots.length; var ti = 0;
+      var seen = false;
+      try { seen = !!localStorage.getItem('tifo-tour'); } catch (e) { seen = true; }
+      var tshow = function (i) {
+        ti = Math.max(0, Math.min(tn - 1, i));
+        track.style.transform = 'translateX(' + (-100 * ti) + '%)';
+        tdots.forEach(function (d, k) { d.classList.toggle('on', k === ti); });
+        tnext.textContent = tnext.getAttribute(ti === tn - 1 ? 'data-last' : 'data-next');
+      };
+      var topen = function () { tshow(0); tour.hidden = false; haptic(8); };
+      var tclose = function () {
+        tour.hidden = true;
+        try { localStorage.setItem('tifo-tour', '1'); } catch (e) { /* nič */ }
+        if (/[?&]tour=1/.test(location.search)) { try { history.replaceState(null, '', location.pathname); } catch (e) { /* nič */ } }
+      };
+      tnext.addEventListener('click', function () {
+        haptic(6);
+        if (ti < tn - 1) return tshow(ti + 1);
+        tclose();
+        if (tour.getAttribute('data-has') === '0') location.href = '/app/pridat';
+      });
+      tour.querySelector('[data-tour-close]').addEventListener('click', tclose);
+      tour.addEventListener('click', function (e) { if (e.target === tour) tclose(); });
+      var sx = null;
+      track.addEventListener('touchstart', function (e) { sx = e.touches[0].clientX; }, { passive: true });
+      track.addEventListener('touchend', function (e) {
+        if (sx == null) return;
+        var dx = e.changedTouches[0].clientX - sx; sx = null;
+        if (Math.abs(dx) > 40) tshow(ti + (dx < 0 ? 1 : -1));
+      });
+      document.querySelectorAll('[data-tour-open]').forEach(function (b) { b.addEventListener('click', topen); });
+      if (!seen || /[?&]tour=1/.test(location.search)) setTimeout(topen, 350);
+    }
+  }
+
   // ================================================================== KOLO
   if (screen === 'kolo') {
     var go = document.querySelector('[data-kolo-go]');

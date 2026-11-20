@@ -44,26 +44,68 @@
     <div class="a-glass sm"><div class="a-muted a-small" style="font-weight:700"><%= t('home.best') %></div><div class="v" style="color:var(--a-gold)"><%= best ? best.rank + '.' : '–' %></div></div>
   </div>
 
-  <div class="a-sec"><%= t('home.myLeagues') %> <a href="/app/rebricky"><%= t('title.ranks') %></a></div>
-  <% if (!leagues.length) { %>
+  <div class="a-sec"><%= t('home.mySeasons') %> <a href="/app/rebricky"><%= t('title.ranks') %></a></div>
+  <% if (!seasons.length) { %>
     <div class="a-card a-empty"><b><%= t('home.noLeagues') %></b><%= t('home.noLeaguesTx') %><div style="margin-top:14px"><a class="a-btn gold" href="/app/pridat"><%= t('home.browse') %></a></div></div>
-  <% } else { %>
-  <div class="a-card a-list">
-    <% leagues.forEach(function (l) { %>
-    <a class="a-row" href="/app/liga/<%= l.id %>">
-      <%- include('_crest', { c: l }) %>
-      <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><%= l.name %></div><div class="a-muted a-small"><%= l.players %> <%= tn(l.players, 'player') %> · <%= l.points %> <%= t('common.pts') %></div></div>
-      <div style="text-align:right">
-        <div class="a-num" style="font-size:18px;<%= l.rank && l.rank <= 3 ? 'color:var(--a-gold)' : '' %>"><%= l.rank ? l.rank + '.' : '–' %></div>
-        <% if (l.move) { %><div class="<%= l.move > 0 ? 'a-up' : 'a-down' %>" style="font:700 11px var(--a-body);display:flex;align-items:center;gap:2px;justify-content:flex-end"><svg class="i" width="12" height="12"><use href="#i-<%= l.move > 0 ? 'up' : 'down' %>"/></svg><%= Math.abs(l.move) %></div><% } %>
+  <% } %>
+  <div class="a-bento" style="<%= seasons.length ? '' : 'margin-top:10px' %>">
+  <% if (seasons.length) { %>
+    <% var smalls = seasons.length - 1; seasons.forEach(function (c, i) { var wide = i > 0 && smalls % 2 === 1 && i === seasons.length - 1; %>
+    <a class="bt a-press <%= i === 0 ? 'big' : '' %> <%= wide ? 'wide' : '' %>" href="<%= c.href %>" style="--bn:<%= c.grad %>" data-wm="<%= c.initials %>">
+      <div class="bt-top">
+        <%- include('_crest', { c: c }) %>
+        <% if (c.untipped) { %><span class="bt-badge"><%= i === 0 ? t('home.toTip', { n: c.untipped }) : c.untipped %></span><% } %>
+      </div>
+      <div class="bt-name"><%= c.name %></div>
+      <div class="bt-sub"><%= c.leagues %> <%= tn(c.leagues, 'league') %> · <%= c.players %> <%= tn(c.players, 'player') %></div>
+      <div class="bt-foot">
+        <b class="bt-rank"><%= c.bestRank ? c.bestRank + '.' : '–' %></b>
+        <span class="bt-pts"><%= c.bestRank ? t('home.place') + ' · ' + c.points + ' ' + t('common.pts') : t('home.noRank') %></span>
+        <% if (c.move) { %><span class="bt-move <%= c.move > 0 ? 'a-up' : 'a-down' %>"><svg class="i" width="13" height="13"><use href="#i-<%= c.move > 0 ? 'up' : 'down' %>"/></svg><%= Math.abs(c.move) %></span><% } %>
       </div>
     </a>
     <% }); %>
-  </div>
   <% } %>
-  <div class="a-quick">
-    <a class="a-press" href="/app/pridat"><svg class="i"><use href="#i-users"/></svg><%= t('home.joinCode') %></a>
-    <a class="a-press" href="/app/pridat?tab=vytvorit"><svg class="i"><use href="#i-plus"/></svg><%= t('home.create') %></a>
+    <a class="bt add a-press" href="/app/pridat"><svg class="i"><use href="#i-users"/></svg><span><%= t('home.joinCode') %></span></a>
+    <a class="bt add a-press" href="/app/pridat?tab=vytvorit"><svg class="i"><use href="#i-plus"/></svg><span><%= t('home.create') %></span></a>
   </div>
+  <% if (seasonsTotal > seasons.length) { %><a class="a-btn ghost" style="margin-top:10px" href="/app/rebricky"><%= t('home.allSeasons', { n: seasonsTotal }) %></a><% } %>
+  <button type="button" class="a-howto a-press" data-tour-open><svg class="i"><use href="#i-info"/></svg><span><%= t('home.howItWorks') %></span><svg class="i" width="16" height="16"><use href="#i-chev"/></svg></button>
 </main>
+<div class="a-tour" data-tour hidden data-has="<%= seasons.length ? 1 : 0 %>">
+  <div class="tour-card">
+    <button type="button" class="tour-skip" data-tour-close><%= t('tour.skip') %></button>
+    <div class="tour-track">
+      <section class="tour-slide">
+        <div class="tour-art"><img src="/branding/identity/tifo-mascot-512.webp" alt=""></div>
+        <h2><%= t('tour.h1') %></h2><p><%= t('tour.p1') %></p>
+      </section>
+      <section class="tour-slide">
+        <div class="tour-flow"><span><svg class="i"><use href="#i-trophy"/></svg><%= t('tour.season') %></span><i></i><span><svg class="i"><use href="#i-users"/></svg><%= t('tour.league') %></span><i></i><span><svg class="i"><use href="#i-ball"/></svg><%= t('tour.round') %></span></div>
+        <h2><%= t('tour.h2') %></h2><p><%= t('tour.p2') %></p>
+      </section>
+      <section class="tour-slide">
+        <div class="tour-score"><div class="st"><svg class="i"><use href="#i-up"/></svg><b>2</b><svg class="i"><use href="#i-down"/></svg></div><span>:</span><div class="st"><svg class="i"><use href="#i-up"/></svg><b>1</b><svg class="i"><use href="#i-down"/></svg></div></div>
+        <h2><%= t('tour.h3') %></h2><p><%= t('tour.p3') %></p>
+      </section>
+      <section class="tour-slide">
+        <div class="a-pts-list tour-pts">
+          <div><span><%= t('liga.exact') %></span><b>10 <%= t('common.pts') %></b></div>
+          <div><span><%= t('liga.winner') %></span><b>3 <%= t('common.pts') %></b></div>
+          <div><span><%= t('liga.diff') %></span><b>2 <%= t('common.pts') %></b></div>
+          <div><span><%= t('liga.goals') %></span><b>1 <%= t('common.pts') %></b></div>
+        </div>
+        <h2><%= t('tour.h4') %></h2><p><%= t('tour.p4') %></p>
+      </section>
+      <section class="tour-slide">
+        <div class="tour-art gold"><svg class="i"><use href="#i-trophy"/></svg></div>
+        <h2><%= t('tour.h5') %></h2><p><%= t('tour.p5') %></p>
+        <% if (!seasons.length) { %><p class="tour-note"><%= t('tour.join') %></p><% } %>
+      </section>
+    </div>
+    <div class="tour-dots"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+    <button type="button" class="a-btn gold" data-tour-next data-next="<%= t('tour.next') %>" data-last="<%= t(seasons.length ? 'tour.start' : 'tour.find') %>"><%= t('tour.next') %></button>
+  </div>
+</div>
+
 <%- include('_foot') %>

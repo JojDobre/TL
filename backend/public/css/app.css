@@ -531,3 +531,71 @@ html.is-app .match-row .tip-step { width: 50px; }
 .a-others .o + .o { border-top: 1px solid var(--a-line); }
 .a-others .o .p { padding: 3px 7px; border-radius: 8px; background: var(--a-s2); min-width: 0; }
 .a-others .o .p.on { background: var(--a-gold-soft); }
+
+/* ================= DOMOV: moje sezóny ako bento ================= */
+.a-bento { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.a-bento .bt { position: relative; overflow: hidden; isolation: isolate; display: flex; flex-direction: column; min-height: 156px; padding: 14px; border-radius: 24px; color: #fff;
+  background: var(--bn); box-shadow: 0 12px 28px rgba(0, 0, 0, .4), inset 0 0 0 1px rgba(255, 255, 255, .12); }
+.a-bento .bt::before { content: ''; position: absolute; inset: 0; z-index: -1;
+  background: radial-gradient(100% 80% at 100% 0%, rgba(255, 255, 255, .2), transparent 55%), linear-gradient(180deg, rgba(5, 7, 13, .05) 20%, rgba(5, 7, 13, .55)); }
+.a-bento .bt::after { content: attr(data-wm); position: absolute; z-index: -1; right: -6px; bottom: -20px; font: 800 78px/1 var(--a-disp); letter-spacing: -.04em; color: rgba(255, 255, 255, .07); }
+.a-bento .bt.big, .a-bento .bt.wide { grid-column: span 2; }
+.a-bento .bt.big { min-height: 178px; padding: 18px; border-radius: 28px; }
+.a-bento .bt.big::after { font-size: 120px; bottom: -30px; }
+.a-bento .bt-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.a-bento .bt .a-crest { width: 42px; height: 42px; border-radius: 14px; font-size: 12px; box-shadow: 0 8px 18px rgba(0, 0, 0, .35), inset 0 0 0 1px rgba(255, 255, 255, .25); }
+.a-bento .bt.big .a-crest { width: 52px; height: 52px; border-radius: 17px; font-size: 14px; }
+.a-bento .bt-badge { padding: 4px 9px; border-radius: 10px; background: #facc15; color: #1c1605; font: 800 11.5px var(--a-body); box-shadow: 0 0 16px rgba(250, 204, 21, .45); white-space: nowrap; }
+.a-bento .bt-name { margin-top: 12px; font: 700 15px/1.2 var(--a-disp); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.a-bento .bt.big .bt-name { font-size: 21px; -webkit-line-clamp: 1; }
+.a-bento .bt-sub { margin-top: 3px; font: 600 11.5px var(--a-body); color: rgba(255, 255, 255, .7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.a-bento .bt-foot { display: flex; align-items: baseline; gap: 6px; margin-top: auto; padding-top: 10px; min-width: 0; }
+.a-bento .bt-rank { font: 700 26px/1 var(--a-disp); }
+.a-bento .bt.big .bt-rank { font-size: 36px; }
+.a-bento .bt-pts { font: 600 11.5px var(--a-body); color: rgba(255, 255, 255, .75); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.a-bento .bt-move { margin-left: auto; display: inline-flex; align-items: center; gap: 2px; font: 700 12px var(--a-body); padding: 3px 7px; border-radius: 8px; background: rgba(5, 7, 13, .35); }
+.a-bento .bt.add { min-height: 0; padding: 14px; flex-direction: row; align-items: center; justify-content: center; gap: 8px; background: var(--a-s1); border: 1.5px dashed var(--a-line2); box-shadow: none; font: 700 13.5px var(--a-body); color: var(--a-t1); text-align: center; }
+.a-bento .bt.add::before, .a-bento .bt.add::after { display: none; }
+.a-bento .bt.add svg { width: 18px; height: 18px; color: var(--a-brand-b); flex: none; }
+.a-screen .a-howto { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 14px; padding: 13px 16px; border-radius: 18px; background: var(--a-s1); border: 1px solid var(--a-line); color: var(--a-t2); font: 700 14px var(--a-body); text-align: left; }
+.a-howto span { flex: 1; }
+.a-howto svg { width: 18px; height: 18px; color: var(--a-info); }
+
+/* ================= ÚVODNÝ NÁVOD (po prvom prihlásení) ================= */
+.a-tour { position: fixed; inset: 0; z-index: 120; display: flex; align-items: flex-end; justify-content: center; padding: 16px 12px calc(16px + env(safe-area-inset-bottom));
+  background: rgba(5, 7, 13, .72); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); animation: a-fade .25s ease; }
+.a-tour[hidden] { display: none; }
+@keyframes a-fade { from { opacity: 0; } }
+.tour-card { position: relative; width: 100%; max-width: 480px; overflow: hidden; border-radius: 30px; padding: 22px 20px 20px;
+  background: radial-gradient(120% 70% at 50% 0%, rgba(124, 92, 255, .35), transparent 60%), #111728; border: 1px solid rgba(150, 165, 215, .2); box-shadow: 0 30px 60px rgba(0, 0, 0, .6); animation: a-up .3s ease; }
+@keyframes a-up { from { transform: translateY(30px); opacity: 0; } }
+.a-screen .tour-skip { position: absolute; top: 14px; right: 16px; z-index: 2; padding: 6px 10px; border-radius: 10px; font: 700 13px var(--a-body); color: var(--a-t3); }
+.tour-track { display: flex; transition: transform .35s cubic-bezier(.2, .8, .2, 1); }
+.tour-slide { flex: 0 0 100%; min-width: 0; text-align: center; padding: 8px 4px 0; }
+.tour-slide h2 { margin: 18px 0 8px; font: 700 23px var(--a-disp); color: #eef1f9; }
+.tour-slide p { margin: 0 auto; max-width: 360px; color: #b8c0d6; font-size: 14.5px; line-height: 1.55; }
+.tour-slide .tour-note { margin-top: 12px; padding: 10px 12px; border-radius: 14px; background: rgba(250, 204, 21, .1); color: #ffe27a; font-size: 13.5px; }
+.tour-art { width: 128px; height: 128px; margin: 6px auto 0; border-radius: 36px; display: grid; place-items: center; background: rgba(255, 255, 255, .05); border: 1px solid rgba(150, 165, 215, .18); }
+.tour-art img { width: 108px; height: 108px; object-fit: contain; }
+.tour-art.gold { color: #facc15; background: rgba(250, 204, 21, .1); border-color: rgba(250, 204, 21, .3); box-shadow: 0 0 40px rgba(250, 204, 21, .2); }
+.tour-art svg { width: 56px; height: 56px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tour-flow { display: flex; align-items: center; justify-content: center; gap: 6px; height: 134px; }
+.tour-flow span { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 82px; padding: 14px 6px; border-radius: 20px; background: rgba(255, 255, 255, .05); border: 1px solid rgba(150, 165, 215, .2); font: 700 12.5px var(--a-body); color: #eef1f9; }
+.tour-flow span:nth-child(1) { background: linear-gradient(135deg, rgba(124, 92, 255, .4), rgba(124, 92, 255, .1)); }
+.tour-flow span:nth-child(3) { background: linear-gradient(135deg, rgba(42, 111, 214, .4), rgba(42, 111, 214, .1)); }
+.tour-flow span:nth-child(5) { background: linear-gradient(135deg, rgba(31, 212, 151, .35), rgba(31, 212, 151, .08)); }
+.tour-flow svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tour-flow i { width: 12px; height: 2px; border-radius: 2px; background: rgba(150, 165, 215, .4); }
+.tour-score { display: flex; align-items: center; justify-content: center; gap: 12px; height: 134px; }
+.tour-score > span { font: 700 26px var(--a-disp); color: var(--a-t4); }
+.tour-score .st { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 62px; padding: 8px 0; border-radius: 18px; background: #05070d; border: 1px solid rgba(124, 92, 255, .5); box-shadow: 0 0 24px rgba(124, 92, 255, .3); }
+.tour-score .st b { font: 700 34px var(--a-disp); color: #fff; }
+.tour-score svg { width: 18px; height: 18px; stroke: #9d83ff; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.tour-pts { max-width: 320px; margin: 8px auto 0; text-align: left; }
+.tour-dots { display: flex; justify-content: center; gap: 6px; margin: 18px 0 14px; }
+.tour-dots i { width: 7px; height: 7px; border-radius: 4px; background: #2c3858; transition: width .25s, background .25s; }
+.tour-dots i.on { width: 22px; background: #facc15; }
+/* návod: susedné snímky nesmú presvitať do okrajov karty */
+.tour-card { padding-left: 0; padding-right: 0; }
+.tour-slide { padding: 8px 20px 0; }
+.tour-card > .a-btn { width: calc(100% - 40px); margin: 0 20px; }
