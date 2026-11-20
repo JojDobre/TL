@@ -83,26 +83,30 @@ html.is-app .subnav-link {
 html.is-app .subnav-link.active { background: #eef1f9; border-color: #eef1f9; color: #0b0f1c; }
 html.is-app .subnav.admin-bar .subnav-link.active { background: var(--danger); border-color: var(--danger); color: #fff; }
 
-/* ---------- 4) tlačidlá ---------- */
+/* ---------- 4) tlačidlá ----------
+   JEDEN systém tlačidiel ako na obrazovkách appky (.a-btn / .a-ib):
+   hlavná akcia = zlatá, ostatné = tmavé s jemným okrajom, nebezpečné = červené.
+   Fialová (btn-brand) sa v appke správa ako hlavná akcia — žiadne ďalšie farby. */
 html.is-app .btn {
-  min-height: 46px; padding: 13px 18px; border-radius: 15px; line-height: 1.25;
-  align-items: center; justify-content: center; text-align: center;
+  --_bg: #161d31; --_fg: #eef1f9;
+  min-height: 48px; padding: 12px 18px; border-radius: 16px; line-height: 1.25;
+  align-items: center; justify-content: center; text-align: center; gap: 8px;
   font: 700 15px/1.25 var(--font-body); letter-spacing: 0; box-shadow: none;
+  border: 1px solid rgba(150, 165, 215, .2);
 }
 html.is-app .btn:active { transform: scale(.97); }
-html.is-app .btn-sm { min-height: 36px; padding: 8px 14px; border-radius: 12px; font-size: 13.5px; }
+html.is-app .btn-sm { min-height: 38px; padding: 8px 14px; border-radius: 12px; font-size: 13.5px; }
 html.is-app .btn-lg { min-height: 52px; border-radius: 16px; font-size: 16px; }
-html.is-app .btn-icon { min-height: 0; padding: 0; width: 40px; height: 40px; border-radius: 13px; }
-html.is-app .btn-primary { --_bg: #facc15; --_fg: #1c1605; border-color: transparent; box-shadow: 0 0 22px rgba(250, 204, 21, .28); }
-html.is-app .btn-brand { --_bg: #7c5cff; --_fg: #fff; border-color: transparent; box-shadow: 0 6px 18px rgba(124, 92, 255, .38); }
-html.is-app .btn-secondary { --_bg: var(--surface-2); --_fg: var(--text-1); border-color: var(--line-strong); }
-html.is-app .btn-ghost { --_bg: transparent; --_fg: var(--text-2); }
+html.is-app .btn-icon { min-height: 0; padding: 0; width: 40px; height: 40px; border-radius: 14px; --_bg: rgba(255, 255, 255, .04); }
+html.is-app .btn-primary, html.is-app .btn-brand { --_bg: #facc15; --_fg: #1c1605; border-color: transparent; box-shadow: 0 0 24px rgba(250, 204, 21, .3); }
+html.is-app .btn-secondary { --_bg: #161d31; --_fg: #eef1f9; border-color: rgba(150, 165, 215, .2); }
+html.is-app .btn-ghost { --_bg: transparent; --_fg: #b8c0d6; border-color: transparent; }
 html.is-app .btn-danger { --_bg: rgba(240, 71, 106, .12); --_fg: #ff8aa2; border-color: rgba(240, 71, 106, .3); }
-html.is-app .btn:hover { box-shadow: none; }
-html.is-app .btn-primary:hover { box-shadow: 0 0 22px rgba(250, 204, 21, .28); }
-html.is-app .btn-brand:hover { box-shadow: 0 6px 18px rgba(124, 92, 255, .38); }
-html.is-app .btn-secondary:hover { background: var(--surface-2); }
-html.is-app .btn:disabled, html.is-app .btn[aria-disabled="true"] { opacity: .5; }
+html.is-app .btn:hover { box-shadow: none; filter: none; }
+html.is-app .btn-primary:hover, html.is-app .btn-brand:hover { box-shadow: 0 0 24px rgba(250, 204, 21, .3); background: #facc15; }
+html.is-app .btn-secondary:hover { background: #161d31; }
+/* nedostupné tlačidlo = sivé (nie „vyblednutá zlatá") */
+html.is-app .btn:disabled, html.is-app .btn[aria-disabled="true"] { --_bg: #161d31; --_fg: #7d87a3; background: #161d31; color: #7d87a3; border-color: rgba(150, 165, 215, .14); box-shadow: none; opacity: 1; }
 
 /* ---------- 5) karty ---------- */
 html.is-app .card { background: var(--surface-1); border: 1px solid var(--line); border-radius: 22px; box-shadow: none; }
@@ -233,7 +237,8 @@ html.is-app .summary { grid-template-columns: 1fr 1fr !important; gap: 10px !imp
 html.is-app .filters { grid-template-columns: 1fr 1fr; }
 
 /* ---------- 15) výber zápasov do kola ---------- */
-html.is-app .builder-foot .btn { --_bg: #facc15; --_fg: #1c1605; border-color: transparent; box-shadow: 0 0 22px rgba(250, 204, 21, .28); min-height: 52px; }
+html.is-app .builder-foot .btn:not(:disabled) { --_bg: #facc15; --_fg: #1c1605; border-color: transparent; box-shadow: 0 0 24px rgba(250, 204, 21, .3); }
+html.is-app .builder-foot .btn { min-height: 52px; }
 html.is-app .built-match { border-radius: 20px; background: var(--surface-1); }
 html.is-app .om-badge { font: 700 10.5px var(--font-body) !important; letter-spacing: 0 !important; text-transform: none !important;
   color: #9d83ff !important; background: rgba(124, 92, 255, .16) !important; border: 0 !important; border-radius: 8px !important; padding: 3px 8px !important; margin-left: 8px; vertical-align: middle; }
@@ -311,7 +316,6 @@ html.is-app .round-head .row.g-2.wrap-gap > .btn {
   width: auto !important; flex: none; min-height: 36px; padding: 8px 13px; border-radius: 12px; font-size: 13px;
   background: rgba(5, 7, 13, .45); border: 1px solid rgba(255, 255, 255, .12); color: #eef1f9; box-shadow: none;
 }
-html.is-app .round-head .row.g-2.wrap-gap > .btn-brand { background: #7c5cff; border-color: #7c5cff; }
 html.is-app .round-head .row.g-2.wrap-gap > #delRoundBtn { color: #ff8aa2 !important; }
 html.is-app .round-layout { padding-top: 18px !important; }
 
@@ -450,3 +454,13 @@ html.is-app .post-img { height: 110px !important; font-size: 36px; }
 html.is-app .se-cover { height: 40px !important; }
 /* rebríček sezóny: prvé tri miesta sú hore (stupne víťazov) — v zozname sa neopakujú */
 html.is-app body:has(.podium .pod) #lbTable > .lb-row:nth-child(-n+3) { display: none; }
+
+/* nastavenia: sekcie ako čipy (rovnako ako všade inde v appke) */
+html.is-app .set-nav { position: static !important; flex-direction: row !important; gap: 8px !important; overflow-x: auto; scrollbar-width: none; margin: 0 -18px 14px; padding: 0 18px; }
+html.is-app .set-nav::-webkit-scrollbar { display: none; }
+html.is-app .set-nav a { flex: none; height: 34px; padding: 0 14px !important; border-radius: 12px !important; background: #0f1424; border: 1px solid rgba(150, 165, 215, .1); color: #b8c0d6; font: 600 13px var(--font-body) !important; white-space: nowrap; }
+html.is-app .set-nav a.active { background: #eef1f9 !important; border-color: #eef1f9; color: #0b0f1c !important; }
+html.is-app .set-nav a.danger { color: #ff8aa2; }
+/* ikony v tlačidlách sa nesmú zmrštiť (napr. akcie v správe blogu) */
+html.is-app .btn svg { flex: none; }
+html.is-app .btn-ico { padding: 0 !important; min-height: 0 !important; }

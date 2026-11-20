@@ -18,7 +18,7 @@
   <% groups.forEach(function (g) { %>
   <div class="a-label" style="margin:14px 2px 10px"><%= g.label %></div>
   <% g.items.forEach(function (n) { const ic = ICON[n.type] || ['bell', 'var(--a-s2)', 'var(--a-t2)']; const isDeadline = n.type === 'deadline' && !n.read; %>
-  <a class="a-noti <%= n.read ? 'read' : '' %> <%= isDeadline ? 'deadline' : '' %>" data-noti="<%= n.id %>" href="<%= isDeadline ? '/app/tipovat' : (n.link || '#') %>">
+  <a class="a-noti <%= n.read ? 'read' : '' %> <%= isDeadline ? 'deadline' : '' %>" data-noti="<%= n.id %>" href="<%= n.link || (isDeadline ? '/app/tipovat' : '#') %>">
     <div class="a-ico" style="background:<%= ic[1] %>;color:<%= ic[2] %>"><svg class="i"><use href="#i-<%= ic[0] %>"/></svg></div>
     <div class="tx"><b><%= n.title %></b><span><%= n.message %></span></div>
     <% if (isDeadline) { %><span class="go"><%= t('noti.tip') %></span><% } else { %><div class="tm"><%= n.time %><% if (!n.read) { %><br><span class="unread"></span><% } %></div><% } %>

@@ -102,84 +102,8 @@ const seasonsPage = asyncHandler(async (req, res) => {
 });
 
 // GET /seasons/:id
-const seasonDetailPage = asyncHandler(async (req, res) => {
-  const season = await Season.findByPk(req.params.id, {
-    include: [{ model: User, as: 'creator', attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] }],
-  });
-  if (!season) return res.status(404).render('error-page', { message: 'Sezóna nebola nájdená.' });
-
-  // POZN.: standalone delegácia na leagueDetailPage je až NIŽŠIE — najprv treba
-  // vyhodnotiť prístup (heslo sezóny). Inak by heslovaný standalone turnaj
-  // zobrazil celý obsah komukoľvek.
-
-  const meId = req.userId ? Number(req.userId) : null;
-
-  // je prihlásený členom / tvorcom / globálnym adminom?
-  let isMember = false;
-  let isGlobalAdmin = false;
-  let isSeasonAdmin = false;
-  if (meId) {
-    const membership = await UserSeason.findOne({ where: { userId: meId, seasonId: season.id } });
-    isMember = !!membership;
-    isSeasonAdmin = !!(membership && membership.role === 'admin');
-    const u = await User.findByPk(meId);
-    isGlobalAdmin = u && u.role === 'admin';
-  }
-  const isCreator = meId && season.creatorId === meId;
-  const canManage = isCreator || isGlobalAdmin || false;
-  // tvorba ligy: rovnaké oprávnenie ako backend createLeagueSubmit —
-  // tvorca sezóny / season-admin / globálny admin; nikdy ak ended
-  const ended = seasonStatus(season) === 'ended';
-  const canCreateLeague = !ended && (canManage || isSeasonAdmin);
-
-  const status = seasonStatus(season);
-
-  // SÚKROMIE: ak je súkromná a nemám prístup → zamknutý detail (len pole na heslo)
-  const canView = canViewSeasonContent(season, { isMember, isCreator, isGlobalAdmin });
-  if (!canView) {
-    return res.render('seasonDetail', {
-      season: { ...season.toJSON(), status, locked: true, participantsCount: null, leaguesCount: null },
-      leagues: [], leaderboard: [], joinError: null,
-      restricted: true, canManage: false, status,
-    });
-  }
-
-  // STANDALONE (samostatná liga / turnaj): sezóna je len obal pre jednu ligu.
-  // Detail vykreslíme cez leagueDetailPage so šablónou standaloneDetail.
-  // Delegujeme AŽ PO overení prístupu vyššie — heslovaný turnaj tak nečlenovi
-  // ukáže zamknutú obrazovku, nie obsah.
-  if (season.mode === 'standalone') {
-    const league = await League.findOne({ where: { seasonId: season.id }, order: [['createdAt', 'ASC']] });
-    if (league) {
-      req.params.id = String(league.id);
-      req._standaloneView = true;
-      return leagueDetailPage(req, res);
-    }
-    // ak by liga chýbala (nemalo by nastať), pokračuj klasickým detailom sezóny
-  }
-
-  let participantsCount = 0;
-  try { participantsCount = await season.countParticipants(); } catch { /* nič */ }
-  const leagues = await League.findAll({ where: { seasonId: season.id }, order: [['createdAt', 'ASC']] });
-  // počet členov každej ligy (priamo z UserLeague)
-  const memberRows = leagues.length
-    ? await UserLeague.findAll({
-      where: { leagueId: leagues.map((l) => l.id) },
-      attributes: ['leagueId', [Sequelize.fn('COUNT', Sequelize.col('user_id')), 'n']],
-      group: ['leagueId'],
-      raw: true,
-    })
-    : [];
-  const membersByLeague = new Map(memberRows.map((r) => [Number(r.leagueId), Number(r.n)]));
-  const leaguesWithCounts = leagues.map((l) => ({ ...l.toJSON(), membersCount: membersByLeague.get(l.id) || 0 }));
-
-  // súhrnný rebríček (agregácia bodov z tipov vo všetkých ligách sezóny)
-  let leaderboard = [];
-  try {
-    leaderboard = (await seasonLeaderboard(season.id))
-      .map((r) => ({ user: r.user, totalPoints: r.totalPoints }));
-  } catch (e) { leaderboard = []; }
-
+// novinky v sezóne odvodené z existujúcich dát (web detail sezóny aj appka)
+async function seasonNews(leagues) {
   // ===== NOVINKY V SEZÓNE (odvodené z existujúcich dát) =====
   // typy: nová liga, nové kolo (vytvorené), spustené kolo (otvorené na tip),
   // vyhodnotené kolo (všetky zápasy finished), zrušený zápas.
@@ -270,7 +194,89 @@ const seasonDetailPage = asyncHandler(async (req, res) => {
     }
   }
   activity.sort((x, y) => new Date(y.at) - new Date(x.at));
-  const news = activity.slice(0, 5);
+  return activity.slice(0, 5);
+}
+
+const seasonDetailPage = asyncHandler(async (req, res) => {
+  const season = await Season.findByPk(req.params.id, {
+    include: [{ model: User, as: 'creator', attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] }],
+  });
+  if (!season) return res.status(404).render('error-page', { message: 'Sezóna nebola nájdená.' });
+
+  // POZN.: standalone delegácia na leagueDetailPage je až NIŽŠIE — najprv treba
+  // vyhodnotiť prístup (heslo sezóny). Inak by heslovaný standalone turnaj
+  // zobrazil celý obsah komukoľvek.
+
+  const meId = req.userId ? Number(req.userId) : null;
+
+  // je prihlásený členom / tvorcom / globálnym adminom?
+  let isMember = false;
+  let isGlobalAdmin = false;
+  let isSeasonAdmin = false;
+  if (meId) {
+    const membership = await UserSeason.findOne({ where: { userId: meId, seasonId: season.id } });
+    isMember = !!membership;
+    isSeasonAdmin = !!(membership && membership.role === 'admin');
+    const u = await User.findByPk(meId);
+    isGlobalAdmin = u && u.role === 'admin';
+  }
+  const isCreator = meId && season.creatorId === meId;
+  const canManage = isCreator || isGlobalAdmin || false;
+  // tvorba ligy: rovnaké oprávnenie ako backend createLeagueSubmit —
+  // tvorca sezóny / season-admin / globálny admin; nikdy ak ended
+  const ended = seasonStatus(season) === 'ended';
+  const canCreateLeague = !ended && (canManage || isSeasonAdmin);
+
+  const status = seasonStatus(season);
+
+  // SÚKROMIE: ak je súkromná a nemám prístup → zamknutý detail (len pole na heslo)
+  const canView = canViewSeasonContent(season, { isMember, isCreator, isGlobalAdmin });
+  if (!canView) {
+    return res.render('seasonDetail', {
+      season: { ...season.toJSON(), status, locked: true, participantsCount: null, leaguesCount: null },
+      leagues: [], leaderboard: [], joinError: null,
+      restricted: true, canManage: false, status,
+    });
+  }
+
+  // STANDALONE (samostatná liga / turnaj): sezóna je len obal pre jednu ligu.
+  // Detail vykreslíme cez leagueDetailPage so šablónou standaloneDetail.
+  // Delegujeme AŽ PO overení prístupu vyššie — heslovaný turnaj tak nečlenovi
+  // ukáže zamknutú obrazovku, nie obsah.
+  if (season.mode === 'standalone') {
+    const league = await League.findOne({ where: { seasonId: season.id }, order: [['createdAt', 'ASC']] });
+    if (league) {
+      req.params.id = String(league.id);
+      req._standaloneView = true;
+      return leagueDetailPage(req, res);
+    }
+    // ak by liga chýbala (nemalo by nastať), pokračuj klasickým detailom sezóny
+  }
+
+  let participantsCount = 0;
+  try { participantsCount = await season.countParticipants(); } catch { /* nič */ }
+  const leagues = await League.findAll({ where: { seasonId: season.id }, order: [['createdAt', 'ASC']] });
+  // počet členov každej ligy (priamo z UserLeague)
+  const memberRows = leagues.length
+    ? await UserLeague.findAll({
+      where: { leagueId: leagues.map((l) => l.id) },
+      attributes: ['leagueId', [Sequelize.fn('COUNT', Sequelize.col('user_id')), 'n']],
+      group: ['leagueId'],
+      raw: true,
+    })
+    : [];
+  const membersByLeague = new Map(memberRows.map((r) => [Number(r.leagueId), Number(r.n)]));
+  const leaguesWithCounts = leagues.map((l) => ({ ...l.toJSON(), membersCount: membersByLeague.get(l.id) || 0 }));
+
+  // súhrnný rebríček (agregácia bodov z tipov vo všetkých ligách sezóny)
+  let leaderboard = [];
+  try {
+    leaderboard = (await seasonLeaderboard(season.id))
+      .map((r) => ({ user: r.user, totalPoints: r.totalPoints }));
+  } catch (e) { leaderboard = []; }
+
+  const news = await seasonNews(leagues);
+  const leagueIds = leagues.map((l) => l.id);
 
   // ===== TVOJ PROGRESS V SEZÓNE (pre prihláseného člena) =====
   let progress = null;
@@ -942,6 +948,7 @@ const joinSubmit = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  seasonNews,
   seasonsPage,
   seasonDetailPage,
   createSeasonPage,

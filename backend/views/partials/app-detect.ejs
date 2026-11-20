@@ -33,6 +33,12 @@
     else if (p === '/profile') location.replace('/app/profil');
     else if (p === '/notifications') location.replace('/app/notifikacie');
     else if (p === '/moje-tipy') location.replace('/app/tipovat');
+    else if (p === '/leaderboards') location.replace('/app/rebricky');
+    else if (/^\/leagues\/\d+\/?$/.test(p)) location.replace('/app/liga/' + p.split('/')[2]);
+    else if (/^\/rounds\/\d+(\/results)?\/?$/.test(p)) location.replace('/app/kolo/' + p.split('/')[2]);
+    else if (/^\/seasons\/\d+\/leaderboard\/?$/.test(p)) location.replace('/app/sezona/' + p.split('/')[2] + '#rebricek');
+    else if (/^\/seasons\/\d+\/?$/.test(p)) location.replace('/app/sezona/' + p.split('/')[2]);
+    else if (/^\/seasons\/\d+\/zapasy\/?$/.test(p)) location.replace('/app/tipovat?sezona=' + p.split('/')[2]);
   } catch (e) { /* bez sessionStorage ostáva web */ }
 })();
 </script>

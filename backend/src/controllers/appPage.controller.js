@@ -6,7 +6,7 @@
 // je len iný vzhľad nad tými istými dátami.
 
 const {
-  User, League, Season, Round, Match, Tip, Team, UserLeague, Notification,
+  User, League, Season, Round, Match, Tip, Team, UserLeague, UserSeason, Notification,
   Achievement, UserAchievement, Sequelize,
 } = require('../models');
 const { asyncHandler } = require('../middleware/error.middleware');
@@ -14,7 +14,7 @@ const {
   standings, leaderboardWithUsers, roundCounts, accuracyOf, cached, precomputed, leagueStandingsMap, leagueLeaderboard, officialLeagueIds, leagueRankHistory,
 } = require('../utils/standings.util');
 const { isLeagueLocked } = require('../utils/league.utils');
-const { seasonStatus } = require('../utils/season.utils');
+const { seasonStatus, canViewSeasonContent } = require('../utils/season.utils');
 const dt = require('../utils/datetime.util');
 const i18n = require('../utils/app-i18n');
 
@@ -218,7 +218,7 @@ async function openMatches(meId) {
   if (!leagueIds.length) return [];
   const rounds = await Round.findAll({
     where: { leagueId: leagueIds, startDate: { [Op.lte]: now }, endDate: { [Op.gt]: now } },
-    include: [{ model: League, attributes: ['id', 'name', 'ended', 'image'], include: [{ model: Season, attributes: ['id', 'ended', 'endDate', 'startDate'] }] }],
+    include: [{ model: League, attributes: ['id', 'name', 'ended', 'image'], include: [{ model: Season, attributes: ['id', 'name', 'ended', 'endDate', 'startDate'] }] }],
   });
   const openRounds = rounds.filter((r) => !isLeagueLocked(r.League));
   if (!openRounds.length) return [];
@@ -247,6 +247,8 @@ async function openMatches(meId) {
       deadline,
       leagueId: r.League.id,
       leagueName: r.League.name,
+      seasonId: r.League.Season ? r.League.Season.id : null,
+      seasonName: r.League.Season ? r.League.Season.name : null,
       roundId: r.id,
       roundName: r.name,
       roundEnd: r.endDate,
@@ -284,7 +286,7 @@ const home = asyncHandler(async (req, res) => {
   // karta uzávierky: kolo s najbližšou uzávierkou netipnutého zápasu
   const byRound = new Map();
   matches.forEach((m) => {
-    if (!byRound.has(m.roundId)) byRound.set(m.roundId, { leagueId: m.leagueId, leagueName: m.leagueName, roundName: m.roundName, total: 0, tipped: 0, next: null });
+    if (!byRound.has(m.roundId)) byRound.set(m.roundId, { roundId: m.roundId, leagueId: m.leagueId, leagueName: m.leagueName, roundName: m.roundName, total: 0, tipped: 0, next: null });
     const r = byRound.get(m.roundId);
     r.total += 1;
     if (m.tipped) r.tipped += 1;
@@ -347,6 +349,13 @@ const tipovat = asyncHandler(async (req, res) => {
   const now = new Date();
   const all = await openMatches(meId);
   const leagueFilter = req.query.liga ? Number(req.query.liga) : null;
+  // ?kolo=ID — kolo má vlastnú obrazovku (rovnaké karty zápasov)
+  if (req.query.kolo) return res.redirect(`/app/kolo/${Number(req.query.kolo)}`);
+  // ?sezona=ID — zápasy jednej sezóny (web /seasons/:id/zapasy)
+  const seasonFilter = req.query.sezona ? Number(req.query.sezona) : null;
+  const round = null;
+  const seasonName = seasonFilter ? ((all.find((m) => m.seasonId === seasonFilter) || {}).seasonName
+    || ((await Season.findByPk(seasonFilter, { attributes: ['name'] })) || {}).name || null) : null;
 
   const chips = [];
   const seen = new Map();
@@ -354,7 +363,8 @@ const tipovat = asyncHandler(async (req, res) => {
     if (!seen.has(m.leagueId)) { seen.set(m.leagueId, { id: m.leagueId, name: m.leagueName, count: 0 }); chips.push(seen.get(m.leagueId)); }
     seen.get(m.leagueId).count += 1;
   });
-  const list = leagueFilter ? all.filter((m) => m.leagueId === leagueFilter) : all;
+  const list = seasonFilter ? all.filter((m) => m.seasonId === seasonFilter)
+    : (leagueFilter ? all.filter((m) => m.leagueId === leagueFilter) : all);
 
   const today = dayKey(now);
   const tomorrow = dayKey(new Date(now.getTime() + DAY));
@@ -382,7 +392,7 @@ const tipovat = asyncHandler(async (req, res) => {
 
   res.render('app/tipovat', {
     title: L.t('title.tip'), screen: 'tipovat', appTab: 'tip',
-    chips, leagueFilter, groups,
+    chips: seasonFilter ? [] : chips, leagueFilter, groups, round, seasonFilter, seasonName,
     total: list.length,
     tipped: list.filter((m) => m.tipped).length,
   });
@@ -437,7 +447,7 @@ const rebricek = asyncHandler(async (req, res) => {
     const league = await League.findByPk(leagueId, { include: [{ model: Season, attributes: ['id', 'hasPassword', 'hidden'] }] });
     if (!league) return res.redirect('/app/rebricky');
     const access = await canSeeLeague(league, meId);
-    if (!access.ok) return res.redirect(`/leagues/${leagueId}`);
+    if (!access.ok) return res.redirect(`/app/liga/${leagueId}`);
     title = league.name;
     if (period === 'kolo') {
       const last = await Round.findOne({ where: { leagueId, startDate: { [Op.lte]: now } }, order: [['startDate', 'DESC']], attributes: ['id', 'name'] });
@@ -506,9 +516,12 @@ const liga = asyncHandler(async (req, res) => {
   });
   if (!league) return res.redirect('/app/home');
   const access = await canSeeLeague(league, meId);
-  if (!access.ok) return res.redirect(`/leagues/${league.id}`);
-  const now = new Date();
   const season = league.Season;
+  // súkromná/skrytá SEZÓNA → zamknutá obrazovka sezóny (pole na heslo);
+  // liga len s heslom → appková obrazovka so zámkom a pripojením cez heslo
+  if (!access.ok && season && (season.hasPassword || season.hidden)) return res.redirect(`/app/sezona/${season.id}`);
+  const now = new Date();
+  const canManage = await require('./leaguePage.controller').isLeagueManager(league, meId);
 
   const rounds = await Round.findAll({ where: { leagueId: league.id }, order: [['startDate', 'ASC']] });
   const roundIds = rounds.map((r) => r.id);
@@ -563,12 +576,23 @@ const liga = asyncHandler(async (req, res) => {
       ended: isLeagueLocked(league),
       auto: !!(league.externalLeagueId || league.templateId),
       member: access.member,
+      locked: !access.ok,
+      hasPassword: !!league.hasPassword,
+      creator: league.creatorId === meId,
+      joinCode: access.ok ? league.joinCode : null,
+      description: access.ok ? (league.description || '') : '',
+      seasonId: league.seasonId,
+      standalone: !!(season && season.mode === 'standalone'),
+      template: !!league.templateId,
     },
+    canManage,
+    noTeams: canManage && !league.templateId ? (await league.countTeams()) === 0 : false,
     seasonName: season ? season.name : null,
     membersCount,
     roundsTotal: rounds.length,
     roundsPlayed: played,
     hasOpen: roundList.some((r) => r.status === 'open'),
+    openRoundId: (roundList.find((r) => r.status === 'open') || {}).id || null,
     rounds: roundList,
     top5: top.slice(0, 5).map((r, i) => ({ rank: i + 1, name: userName(r.user), initials: userInitials(r.user), image: r.user.profileImage, color: avColor(r.user.id), points: r.totalPoints, me: r.user.id === meId })),
     myRank: meIdx >= 0 ? meIdx + 1 : null,
@@ -576,6 +600,170 @@ const liga = asyncHandler(async (req, res) => {
     prizes,
     rules,
     scoring: s,
+  });
+});
+
+// GET /app/kolo/:id — detail kola: tipovanie (rovnaké karty ako Tipovať),
+// výsledky s mojimi bodmi a tipmi ostatných, rebríček kola, bodovanie
+const kolo = asyncHandler(async (req, res) => {
+  const { L } = req;
+  const meId = Number(req.session.userId);
+  const now = new Date();
+  const round = await Round.findByPk(req.params.id, {
+    include: [{ model: League, include: [{ model: Season }] }],
+  });
+  if (!round || !round.League) return res.redirect('/app/home');
+  const league = round.League;
+  const access = await canSeeLeague(league, meId);
+  if (!access.ok) return res.redirect(`/app/liga/${league.id}`);
+  const isManager = await require('./roundPage.controller').canManageRound(league, meId);
+  const locked = isLeagueLocked(league);
+  const status = now < new Date(round.startDate) ? 'scheduled' : (now <= new Date(round.endDate) ? 'open' : 'finished');
+  const canTip = access.member && status === 'open' && !locked;
+
+  const matches = await Match.findAll({
+    where: { roundId: round.id },
+    include: [
+      { model: Team, as: 'homeTeam', attributes: ['id', 'name', 'shortName', 'logo'] },
+      { model: Team, as: 'awayTeam', attributes: ['id', 'name', 'shortName', 'logo'] },
+    ],
+    order: [['matchTime', 'ASC']],
+  });
+  const ids = matches.map((m) => m.id);
+  const tips = ids.length ? await Tip.findAll({
+    where: { matchId: ids },
+    include: [{ model: User, attributes: ['id', 'username', 'firstName', 'lastName', 'profileImage'] }],
+  }) : [];
+  const mine = new Map();
+  const others = new Map();
+  tips.forEach((t) => {
+    if (t.userId === meId) mine.set(t.matchId, t);
+    else { if (!others.has(t.matchId)) others.set(t.matchId, []); others.get(t.matchId).push(t); }
+  });
+  const team = (tm) => ({ name: tm ? tm.name : '?', abbr: teamAbbr(tm), logo: tm && tm.logo, grad: grad(tm && tm.name) });
+  const tipText = (type, t) => {
+    if (!t) return null;
+    if (type === 'exact_score') return t.homeScore != null && t.awayScore != null ? `${t.homeScore}:${t.awayScore}` : null;
+    return t.winner ? ({ home: '1', draw: 'X', away: '2' })[t.winner] : null;
+  };
+
+  const open = [];
+  const done = [];
+  matches.forEach((m) => {
+    const t = mine.get(m.id);
+    const deadline = new Date(Math.min(new Date(m.matchTime).getTime(), new Date(round.endDate).getTime()));
+    const tipped = !!tipText(m.tipType, t);
+    if (canTip && m.status === 'scheduled' && deadline > now) {
+      const ms = deadline - now;
+      open.push({
+        id: m.id, type: m.tipType, home: team(m.homeTeam), away: team(m.awayTeam),
+        tip: t ? { home: t.homeScore, away: t.awayScore, winner: t.winner } : null, tipped,
+        soon: ms < 3 * 3600 * 1000, when: ms < 3 * 3600 * 1000 ? `${hm(deadline)} · ${untilLabel(ms, L)}` : whenLabel(deadline, now, L),
+      });
+      return;
+    }
+    const started = new Date(m.matchTime) <= now || m.status !== 'scheduled';
+    // tipy ostatných až po začiatku zápasu (dovtedy by sa dali odpísať)
+    const os = started ? (others.get(m.id) || []).map((o) => ({
+      name: userName(o.User), initials: userInitials(o.User), image: o.User && o.User.profileImage, color: avColor(o.userId),
+      tip: tipText(m.tipType, o), points: o.points,
+    })).sort((a, b) => (b.points || 0) - (a.points || 0)) : [];
+    done.push({
+      id: m.id, type: m.tipType, home: team(m.homeTeam), away: team(m.awayTeam),
+      state: m.status === 'finished' ? 'finished' : (m.status === 'canceled' ? 'canceled' : (started ? 'live' : 'waiting')),
+      result: m.status === 'finished' && m.homeScore != null ? `${m.homeScore}:${m.awayScore}` : null,
+      when: dt.fmtDate(m.matchTime) + ' · ' + hm(m.matchTime),
+      myTip: tipText(m.tipType, t), myPoints: t && m.status === 'finished' ? (t.points || 0) : null,
+      others: os,
+    });
+  });
+  // ešte netipovateľné (naplánované) hore, odohrané od najnovšieho
+  done.sort((a, b) => ({ waiting: 0, live: 1, finished: 2, canceled: 3 })[a.state] - ({ waiting: 0, live: 1, finished: 2, canceled: 3 })[b.state]);
+
+  const board = (await leaderboardWithUsers({ roundIds: [round.id] }, ['id', 'username', 'firstName', 'lastName', 'profileImage']))
+    .map((r, i) => ({ rank: i + 1, name: userName(r.user), initials: userInitials(r.user), image: r.user.profileImage, color: avColor(r.user.id), points: r.totalPoints, me: r.user.id === meId }));
+  const meRow = board.find((r) => r.me);
+  const myPoints = [...mine.values()].reduce((sum, t) => sum + (t.points || 0), 0);
+  const s = league.scoringSystem || { exactScore: 10, correctWinner: 3, goalDifference: 2, correctGoals: 1 };
+  const season = league.Season;
+
+  res.render('app/kolo', {
+    title: round.name, screen: 'kolo', appTab: 'home',
+    round: {
+      id: round.id, name: round.name, description: round.description || '', status,
+      opens: whenLabel(round.startDate, now, L), deadline: whenLabel(round.endDate, now, L),
+    },
+    league: {
+      id: league.id, name: league.name, image: league.image || (season && season.image) || null,
+      grad: grad(league.name), initials: initials(league.name), member: access.member, locked,
+    },
+    isManager, canEdit: isManager && !league.templateId,
+    canTip, open, done,
+    total: open.length + done.length,
+    tippedOpen: open.filter((m) => m.tipped).length,
+    myPoints, myRank: meRow ? meRow.rank : null,
+    board: board.slice(0, 20), meRow: meRow && meRow.rank > 20 ? meRow : null,
+    scoring: s,
+  });
+});
+
+// GET /app/sezona/:id — detail sezóny v dizajne obrazovky ligy
+const sezona = asyncHandler(async (req, res) => {
+  const meId = Number(req.session.userId);
+  const season = await Season.findByPk(req.params.id);
+  if (!season) return res.redirect('/app/home');
+  const leagues = await League.findAll({ where: { seasonId: season.id, isTemplate: false }, order: [['createdAt', 'ASC']] });
+  // samostatná liga (turnaj) = sezóna s jedinou ligou → obrazovka ligy
+  if (season.mode === 'standalone' && leagues.length) return res.redirect(`/app/liga/${leagues[0].id}`);
+
+  const [membership, me] = await Promise.all([
+    UserSeason.findOne({ where: { userId: meId, seasonId: season.id } }),
+    User.findByPk(meId, { attributes: ['role'] }),
+  ]);
+  const isMember = !!membership;
+  const isAdmin = !!(me && me.role === 'admin');
+  const isCreator = season.creatorId === meId;
+  const canManage = isCreator || isAdmin;
+  const status = seasonStatus(season);
+  const ended = status === 'ended';
+  const canCreateLeague = !ended && (canManage || !!(membership && membership.role === 'admin'));
+  const canView = canViewSeasonContent(season, { isMember, isCreator, isGlobalAdmin: isAdmin });
+
+  const base = {
+    title: season.name, screen: 'sezona', appTab: 'home',
+    season: {
+      id: season.id, name: season.name, description: canView ? (season.description || '') : '',
+      image: season.image || null, grad: grad(season.name), initials: initials(season.name),
+      official: season.type === 'official', status, ended, hasPassword: !!season.hasPassword,
+      inviteCode: canView ? season.inviteCode : null,
+    },
+    isMember, isCreator, canManage, canCreateLeague, locked: !canView,
+  };
+  if (!canView) return res.render('app/sezona', { ...base, leagues: [], board: [], news: [], rules: '', participants: 0, myRank: null, myPoints: 0 });
+
+  const ids = leagues.map((l) => l.id);
+  const [memberRows, myRows, participants, board, news] = await Promise.all([
+    ids.length ? UserLeague.findAll({ where: { leagueId: ids }, attributes: ['leagueId', [Sequelize.fn('COUNT', Sequelize.col('user_id')), 'n']], group: ['leagueId'], raw: true }) : [],
+    ids.length ? UserLeague.findAll({ where: { leagueId: ids, userId: meId }, attributes: ['leagueId'], raw: true }) : [],
+    UserSeason.count({ where: { seasonId: season.id } }),
+    require('../utils/standings.util').seasonLeaderboard(season.id).catch(() => []),
+    season.showNews !== false ? require('./page.controller').seasonNews(leagues) : [],
+  ]);
+  const cnt = new Map(memberRows.map((r) => [Number(r.leagueId), Number(r.n)]));
+  const mineSet = new Set(myRows.map((r) => Number(r.leagueId)));
+  const rows = board.map((r, i) => ({ rank: i + 1, name: userName(r.user), initials: userInitials(r.user), image: r.user && r.user.profileImage, color: avColor(r.user && r.user.id), points: r.totalPoints, me: !!(r.user && r.user.id === meId) }));
+  const meRow = rows.find((r) => r.me);
+  res.render('app/sezona', {
+    ...base,
+    leagues: leagues.map((l) => ({
+      id: l.id, name: l.name, image: l.image || season.image || null, grad: grad(l.name), initials: initials(l.name),
+      players: cnt.get(l.id) || 0, member: mineSet.has(l.id), ended: isLeagueLocked(l), hasPassword: !!l.hasPassword,
+    })),
+    board: rows.slice(0, 100), meRow: meRow && meRow.rank > 100 ? meRow : null,
+    myRank: meRow ? meRow.rank : null, myPoints: meRow ? meRow.points : 0,
+    participants,
+    rules: season.showRules !== false ? (season.rules || '') : '',
+    news: news.map((n) => ({ title: n.title, tag: n.tagText, when: dt.fmtDate(n.at) })),
   });
 });
 
@@ -688,7 +876,18 @@ const apiJoin = asyncHandler(async (req, res) => {
   const meId = Number(req.session.userId);
   const b = req.body || {};
   try {
-    const r = b.leagueId ? await appLeague.joinOfficial(meId, b.leagueId) : await appLeague.joinByCode(meId, b.code, b.password);
+    let code = b.code;
+    // zamknutá liga (bez zobrazeného kódu): pripojenie cez id + HESLO ligy;
+    // bez hesla by id obišlo kód, preto len pre ligy s heslom
+    if (b.sid) {
+      const se = await Season.findByPk(Number(b.sid), { attributes: ['inviteCode', 'hasPassword'] });
+      code = se && se.hasPassword ? se.inviteCode : '__none__';
+    }
+    if (b.lid) {
+      const l = await League.findByPk(Number(b.lid), { attributes: ['joinCode', 'hasPassword'] });
+      code = l && l.hasPassword ? l.joinCode : '__none__';
+    }
+    const r = b.leagueId ? await appLeague.joinOfficial(meId, b.leagueId) : await appLeague.joinByCode(meId, code, b.password);
     res.json({ success: true, created: r.created, leagueId: r.leagueId || null, redirect: leagueDest(r) });
   } catch (e) { appLeagueFail(req, res, e); }
 });
@@ -703,6 +902,6 @@ const apiCreate = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
-  appLogin, entry, welcome, home, tipovat, rebricky, rebricek, liga, notifikacie, profil, pridat, apiJoin, apiCreate,
+  appLogin, entry, welcome, home, tipovat, rebricky, rebricek, liga, kolo, sezona, notifikacie, profil, pridat, apiJoin, apiCreate,
   _internal: { initials, teamAbbr, untilLabel, whenLabel, sparkPath, pl },
 };

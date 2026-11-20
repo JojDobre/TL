@@ -372,7 +372,7 @@ html.is-app .tip-step:has(.tip-num.hit) { border-color: var(--success); box-shad
 .a-code::placeholder { color: var(--a-t4, #3d4763); letter-spacing: .32em; }
 .a-hint { color: var(--a-t3); font-size: 12.5px; margin-top: 8px; line-height: 1.45; }
 .a-err { margin-top: 12px; padding: 11px 13px; border-radius: 13px; background: rgba(240, 71, 106, .12); color: #ff8aa2; font: 600 13.5px var(--a-body); }
-.a-screen .a-mini { flex: none; height: 36px; padding: 0 15px; border-radius: 12px; background: var(--a-brand); color: #fff; font: 700 13.5px var(--a-body); border: 0; box-shadow: 0 6px 16px rgba(124, 92, 255, .35); }
+.a-screen .a-mini { flex: none; height: 36px; padding: 0 15px; border-radius: 12px; background: var(--a-s2); color: var(--a-t1); font: 700 13.5px var(--a-body); border: 1px solid var(--a-line2); }
 .a-mini:active { transform: scale(.95); }
 .a-mini[disabled] { opacity: .6; }
 .a-choice { display: grid; gap: 8px; }
@@ -440,3 +440,94 @@ html.is-app .match-row .tip-step { width: 50px; }
 /* .a-screen button (reset) by inak prebil písmo tlačidiel s triedou .a-btn */
 .a-screen button.a-btn { font: 700 16px var(--a-body); }
 .a-screen button.a-btn.ghost { background: var(--a-s2); }
+
+/* liga: možnosti (spodný panel) */
+.a-sheet { max-height: 88vh; overflow-y: auto; }
+.a-idrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 16px; background: var(--a-bg2); border: 1.5px dashed var(--a-line2); }
+.a-idrow b { display: block; margin-top: 3px; font-size: 22px; letter-spacing: .16em; }
+.a-sheet .a-card { background: var(--a-s1); }
+/* .a-screen button (reset) by inak zrušil pozadie ikonových tlačidiel a čipov */
+.a-screen button.a-ib { background: rgba(255, 255, 255, .04); border: 1px solid rgba(150, 165, 215, .2); }
+.a-screen button.a-chip { background: var(--a-s2); border: 1px solid var(--a-line2); display: inline-flex; align-items: center; font: 700 13px var(--a-body); }
+
+/* kolo: karty zápasov bez tipovania (rovnaký tvar ako karta na tipovanie) */
+.a-match.done .meta .a-pill { padding: 3px 8px; font-size: 11px; }
+.a-match.done .meta .a-pill:not(.ok):not(.warn):not(.info) { background: var(--a-s2); color: var(--a-t3); }
+.a-match.done .team .a-crest { width: 44px; height: 44px; border-radius: 15px; font-size: 12.5px; }
+.a-res { min-width: 86px; text-align: center; font: 700 30px var(--a-disp); letter-spacing: .02em; color: var(--a-t1); }
+.a-match.waiting .a-res, .a-match.canceled .a-res, .a-match.live .a-res { color: var(--a-t4); font-size: 24px; }
+.a-mytip { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 12px; border-radius: 14px; background: var(--a-bg2); font-size: 13.5px; }
+.a-mytip b { font: 700 15px var(--a-disp); }
+.a-others { margin-top: 10px; }
+.a-others summary { list-style: none; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 6px; cursor: pointer; font: 700 12.5px var(--a-body); color: var(--a-brand-b); }
+.a-others summary::-webkit-details-marker { display: none; }
+.a-others[open] summary svg { transform: rotate(180deg); }
+.a-others .o { display: flex; align-items: center; gap: 10px; padding: 7px 4px; border-top: 1px solid var(--a-line); font-size: 13.5px; }
+.a-others .o .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.a-others .o b { font: 700 14px var(--a-disp); }
+.a-others .o .p { min-width: 36px; text-align: right; font: 700 12px var(--a-body); color: var(--a-t4); }
+.a-others .o .p.on { color: var(--a-gold); }
+.a-sec .a-small { font-family: var(--a-body); }
+.a-pill:not(.ok):not(.warn):not(.info):not(.gold) { background: var(--a-s2); color: var(--a-t2); }
+.a-screen button.a-row { justify-content: flex-start; text-align: left; }
+.a-screen button.a-row .lbl { flex: 1; }
+
+/* ================= BANNER (sezóna, liga, kolo, zamknutý obsah) =================
+   Jedno farebné okno: erb + názov, stav, tri čísla a tlačidlá. Farba z erbu (--bn). */
+.a-banner { position: relative; overflow: hidden; isolation: isolate; border-radius: 28px; padding: 18px; margin-top: 2px; color: #fff;
+  background: var(--bn, linear-gradient(135deg, #5a2ca0, #2a1450));
+  box-shadow: 0 20px 44px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(255, 255, 255, .12); }
+.a-banner::before { content: ''; position: absolute; inset: 0; z-index: -1;
+  background: radial-gradient(90% 80% at 100% 0%, rgba(255, 255, 255, .22), transparent 55%), linear-gradient(180deg, rgba(5, 7, 13, 0) 30%, rgba(5, 7, 13, .45)); }
+.a-banner::after { content: attr(data-wm); position: absolute; z-index: -1; right: -6px; top: -22px; font: 800 120px/1 var(--a-disp); letter-spacing: -.04em; color: rgba(255, 255, 255, .06); pointer-events: none; }
+.a-banner .bn-top { display: flex; gap: 14px; align-items: center; }
+.a-banner .bn-top .a-crest { width: 60px; height: 60px; border-radius: 20px; font-size: 17px; flex: none; box-shadow: 0 10px 24px rgba(0, 0, 0, .35), inset 0 0 0 1px rgba(255, 255, 255, .25); }
+.a-banner .bn-eyebrow { display: block; font: 700 11px var(--a-body); letter-spacing: .08em; text-transform: uppercase; color: rgba(255, 255, 255, .72); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.a-banner .bn-title { margin: 3px 0 0; font: 700 23px/1.15 var(--a-disp); letter-spacing: -.01em; color: #fff; overflow-wrap: anywhere; }
+.a-banner .bn-desc { margin: 12px 0 0; font-size: 13.5px; line-height: 1.5; color: rgba(255, 255, 255, .78); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.a-banner .bn-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.a-banner .bn-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 10px; font: 700 11.5px var(--a-body);
+  background: rgba(5, 7, 13, .32); border: 1px solid rgba(255, 255, 255, .14); color: #fff; }
+.a-banner .bn-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: #2fe0a2; box-shadow: 0 0 8px #2fe0a2; }
+.a-banner .bn-pill.gold { background: rgba(250, 204, 21, .18); border-color: rgba(250, 204, 21, .4); color: #ffe27a; }
+.a-banner .bn-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.a-banner .bn-stats > div { min-width: 0; padding: 10px 6px; border-radius: 16px; text-align: center; background: rgba(5, 7, 13, .34); border: 1px solid rgba(255, 255, 255, .1); }
+.a-banner .bn-stats b { display: block; font: 700 19px/1.2 var(--a-disp); color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.a-banner .bn-stats span { display: block; margin-top: 2px; font: 600 11px var(--a-body); color: rgba(255, 255, 255, .7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.a-banner .bn-actions { display: flex; gap: 8px; margin-top: 14px; }
+.a-banner .bn-actions .a-btn { flex: 1; width: auto; height: 50px; font-size: 15.5px; }
+.a-banner .bn-actions .a-btn.ghost { background: rgba(5, 7, 13, .34); border-color: rgba(255, 255, 255, .16); color: #fff; }
+.a-screen .bn-ib { flex: none; width: 50px; height: 50px; border-radius: 16px; display: grid; place-items: center; color: #fff;
+  background: rgba(5, 7, 13, .34); border: 1px solid rgba(255, 255, 255, .16); }
+.bn-ib svg { width: 20px; height: 20px; }
+.bn-ib:active { transform: scale(.94); }
+.a-banner .a-input { background: rgba(5, 7, 13, .5); border-color: rgba(255, 255, 255, .18); margin-top: 14px; }
+.a-banner .a-err { margin-top: 10px; }
+.a-banner .bn-lock { display: flex; gap: 10px; align-items: center; margin-top: 14px; padding: 12px; border-radius: 16px; background: rgba(5, 7, 13, .34); font-size: 13.5px; color: rgba(255, 255, 255, .85); }
+.a-banner .bn-lock svg { width: 20px; height: 20px; flex: none; }
+.a-banner a { color: inherit; }
+
+/* karty zápasov: tímy symetricky okolo skóre / VS, všetko na stred */
+.a-match .teams { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; }
+.a-match .team { justify-self: stretch; }
+.a-vs { width: 46px; height: 46px; border-radius: 15px; display: grid; place-items: center; font: 700 13px var(--a-disp); letter-spacing: .06em;
+  color: var(--a-t3); background: var(--a-bg2); border: 1px solid var(--a-line2); }
+.a-match .a-pick { margin-top: 14px; }
+.a-match .meta { min-height: 22px; }
+.a-match .meta > :first-child:empty { display: none; }
+.a-match .meta:has(> :first-child:empty) { justify-content: center; }
+
+/* výsledky v kole ako moderné bloky */
+.a-match.done { position: relative; overflow: hidden; background: radial-gradient(120% 90% at 50% 0%, rgba(124, 92, 255, .14), transparent 60%), var(--a-s1); border: 1px solid var(--a-line2); }
+.a-match.done.finished { background: radial-gradient(120% 90% at 50% 0%, rgba(47, 224, 162, .12), transparent 60%), var(--a-s1); }
+.a-match.done .a-res { min-width: 0; padding: 8px 16px; border-radius: 16px; background: rgba(5, 7, 13, .6); border: 1px solid var(--a-line2); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05); }
+.a-match.done.finished .a-res { box-shadow: 0 0 24px rgba(47, 224, 162, .12), inset 0 1px 0 rgba(255, 255, 255, .06); }
+.a-mytip { border: 1px solid var(--a-line); }
+.a-match.done .a-mytip:has(.a-pill.gold) { background: linear-gradient(135deg, rgba(250, 204, 21, .16), rgba(5, 7, 13, .6)); border-color: rgba(250, 204, 21, .3); }
+.a-others { margin-top: 10px; border-radius: 16px; background: rgba(5, 7, 13, .45); border: 1px solid var(--a-line); overflow: hidden; }
+.a-others summary { padding: 10px; }
+.a-others[open] summary { border-bottom: 1px solid var(--a-line); }
+.a-others .o { padding: 8px 12px; border-top: 0; }
+.a-others .o + .o { border-top: 1px solid var(--a-line); }
+.a-others .o .p { padding: 3px 7px; border-radius: 8px; background: var(--a-s2); min-width: 0; }
+.a-others .o .p.on { background: var(--a-gold-soft); }

@@ -177,6 +177,8 @@ router.get('/app/tipovat', appCtl.appLogin, appCtl.tipovat);
 router.get('/app/rebricky', appCtl.appLogin, appCtl.rebricky);
 router.get('/app/rebricky/:id', appCtl.appLogin, appCtl.rebricek);
 router.get('/app/liga/:id', appCtl.appLogin, appCtl.liga);
+router.get('/app/kolo/:id', appCtl.appLogin, appCtl.kolo);
+router.get('/app/sezona/:id', appCtl.appLogin, appCtl.sezona);
 router.get('/app/notifikacie', appCtl.appLogin, appCtl.notifikacie);
 router.get('/app/profil', appCtl.appLogin, appCtl.profil);
 router.get('/app/pridat', appCtl.appLogin, appCtl.pridat);
