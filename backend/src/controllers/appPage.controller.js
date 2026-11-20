@@ -167,6 +167,11 @@ async function myLeagueCards(meId) {
       initials: initials(l.name),
       type: l.type,
       seasonName: l.Season ? l.Season.name : null,
+      seasonId: l.Season ? l.Season.id : null,
+      seasonMode: l.Season ? l.Season.mode : null,
+      seasonType: l.Season ? l.Season.type : null,
+      seasonImage: l.Season ? l.Season.image : null,
+      seasonEnded: l.Season ? seasonStatus(l.Season) === 'ended' : false,
       isOfficial: l.type === 'official' || (l.Season && l.Season.type === 'official'),
       ended: isLeagueLocked(l),
       players: members.get(l.id) || rows.length,
@@ -324,6 +329,32 @@ const home = asyncHandler(async (req, res) => {
   const active = leagues.filter((l) => !l.ended);
   const best = active.filter((l) => l.rank).sort((a, b) => a.rank - b.rank)[0] || null;
 
+  // MOJE SEZÓNY (bento): ligy zoskupené podľa sezóny; samostatná liga = jedna dlaždica
+  const untippedBySeason = new Map();
+  matches.forEach((m) => { if (!m.tipped && m.seasonId) untippedBySeason.set(m.seasonId, (untippedBySeason.get(m.seasonId) || 0) + 1); });
+  const sMap = new Map();
+  leagues.forEach((l) => {
+    const key = l.seasonId || `l${l.id}`;
+    if (!sMap.has(key)) {
+      const standalone = l.seasonMode === 'standalone' || !l.seasonId;
+      const name = standalone ? l.name : (l.seasonName || l.name);
+      sMap.set(key, {
+        id: l.seasonId, name, image: l.seasonImage || l.image || null, grad: grad(name), initials: initials(name),
+        href: standalone ? `/app/liga/${l.id}` : `/app/sezona/${l.seasonId}`,
+        official: l.seasonType === 'official' || l.isOfficial, ended: l.seasonEnded && l.ended,
+        leagues: 0, bestRank: null, bestLeague: null, points: 0, players: 0, move: 0,
+        untipped: untippedBySeason.get(l.seasonId) || 0,
+      });
+    }
+    const c = sMap.get(key);
+    c.leagues += 1;
+    c.ended = c.ended && l.ended;
+    c.players = Math.max(c.players, l.players);
+    if (l.rank && (!c.bestRank || l.rank < c.bestRank)) { c.bestRank = l.rank; c.bestLeague = l.name; c.points = l.points; c.move = l.move; c.topPct = l.topPct; }
+  });
+  const seasons = [...sMap.values()].filter((c) => !c.ended)
+    .sort((a, b) => (b.untipped > 0) - (a.untipped > 0) || (a.bestRank || 1e9) - (b.bestRank || 1e9));
+
   res.render('app/home', {
     title: L.t('title.home'), screen: 'home', appTab: 'home',
     me: { name: (me && (me.firstName || me.username)) || '', initials: userInitials(me), image: me && me.profileImage, color: avColor(meId) },
@@ -339,6 +370,8 @@ const home = asyncHandler(async (req, res) => {
     accuracy: mine ? accuracyOf(mine) : null,
     best,
     leagues: active.slice(0, 6),
+    seasons: seasons.slice(0, 7),
+    seasonsTotal: seasons.length,
   });
 });
 

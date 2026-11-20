@@ -1,3 +1,5 @@
-<%# erb ligy/tímu: c = { image|logo, grad, initials|abbr }, cls = extra trieda, st = extra štýl %>
-<% const _img = c.image || c.logo; %>
-<div class="a-crest <%= typeof cls !== 'undefined' ? cls : '' %>" style="<%= _img ? '' : 'background:' + c.grad + ';' %><%= typeof st !== 'undefined' ? st : '' %>"><% if (_img) { %><img src="<%= _img %>" alt="" loading="lazy"><% } else { %><%= c.initials || c.abbr %><% } %></div>
+<%# erb ligy/tímu: c = { image|logo, grad, initials|abbr }, cls = extra trieda, st = extra štýl.
+    c.image = logo LIGY / SÚŤAŽE → roztiahnuté na celú výšku aj šírku okienka (cover);
+    c.logo  = logo TÍMU → biely podklad s okrajom ako doteraz. %>
+<% const _lg = !!c.image; const _img = c.image || c.logo; %>
+<div class="a-crest <%= _lg ? 'lg' : '' %> <%= typeof cls !== 'undefined' ? cls : '' %>" style="<%= _img ? '' : 'background:' + c.grad + ';' %><%= typeof st !== 'undefined' ? st : '' %>"><% if (_lg) { %><span class="lg-bg" style="background-image:url('<%= _img %>')"></span><img src="<%= _img %>" alt="" loading="lazy"><% } else if (_img) { %><img src="<%= _img %>" alt="" loading="lazy"><% } else { %><%= c.initials || c.abbr %><% } %></div>
