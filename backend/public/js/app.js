@@ -324,7 +324,7 @@
       if (ringTxt) ringTxt.textContent = done + '/' + total;
       if (ring) ring.setAttribute('stroke-dasharray', (total ? (C * done / total) : 0).toFixed(1) + ' ' + C.toFixed(1));
       var kc = document.querySelector('[data-kolo-count]');
-      if (kc) kc.textContent = done + '/' + total;
+      if (kc && total) kc.textContent = done + '/' + total;
     }
     var askedPush = false;
     function maybeAskPush() {
@@ -416,6 +416,13 @@
 
   // ================================================================== KOLO
   if (screen === 'kolo') {
+    var go = document.querySelector('[data-kolo-go]');
+    if (go) go.addEventListener('click', function () {
+      var first = document.querySelector('.a-match.untipped') || document.getElementById('naTip');
+      var tab = document.querySelector('[data-tab="zapasy"]'); if (tab) tab.click();
+      if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      haptic(6);
+    });
     var kTpl = document.getElementById('koloMenu');
     var kBtn = document.querySelector('[data-kolo-menu]');
     if (kTpl && kBtn) kBtn.addEventListener('click', function () {
@@ -452,25 +459,26 @@
       var ok = function () { toast(TL.copied); haptic(8); };
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(ok, ok); else ok();
     };
+    // kopírovanie kódu a zdieľanie (banner aj menu možností)
+    document.addEventListener('click', function (e) {
+      var c = e.target.closest('[data-copy-code]');
+      if (c) { copyCode(c.getAttribute('data-copy-code')); return; }
+      var s = e.target.closest('[data-share-league]');
+      if (!s) return;
+      e.preventDefault();
+      haptic(6);
+      var code = s.getAttribute('data-code');
+      var text = (TL.shareText || '').replace('{name}', s.getAttribute('data-name')).replace('{code}', code);
+      var link = location.origin + '/join?code=' + encodeURIComponent(code);
+      if (navigator.share) navigator.share({ title: 'Tifo', text: text, url: link }).catch(function () {});
+      else if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text + ' ' + link).then(function () { toast(TL.copied); });
+    });
     var menuBtn = document.querySelector('[data-liga-menu],[data-sez-menu]');
     var tpl = document.getElementById('ligaMenu') || document.getElementById('sezMenu');
     if (menuBtn && tpl) {
       menuBtn.addEventListener('click', function () {
         haptic(6);
         var sh = sheet(tpl.innerHTML);
-        sh.el.addEventListener('click', function (e) {
-          var c = e.target.closest('[data-copy-code]');
-          if (c) { copyCode(c.getAttribute('data-copy-code')); return; }
-          var s = e.target.closest('[data-share-league]');
-          if (s) {
-            e.preventDefault();
-            var code = s.getAttribute('data-code');
-            var text = (TL.shareText || '').replace('{name}', s.getAttribute('data-name')).replace('{code}', code);
-            var link = location.origin + '/join?code=' + encodeURIComponent(code);
-            if (navigator.share) navigator.share({ title: 'Tifo', text: text, url: link }).catch(function () {});
-            else if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text + ' ' + link).then(function () { toast(TL.copied); });
-          }
-        });
         sh.el.querySelectorAll('form[data-confirm]').forEach(function (f) {
           f.addEventListener('submit', function (e) { if (!window.confirm(f.getAttribute('data-confirm'))) e.preventDefault(); });
         });

@@ -1,36 +1,48 @@
 <%- include('_head') %>
-<div style="position:absolute;left:0;right:0;top:0;height:280px;background:radial-gradient(100% 90% at 50% 0%,<%= league.grad.replace('linear-gradient(135deg,', '').split(',')[0] %>88,transparent 70%);z-index:0"></div>
 <header class="a-top">
   <a class="a-ib" href="javascript:history.length>1?history.back():location.href='/app/home'" aria-label="<%= t('common.back') %>"><svg class="i"><use href="#i-back"/></svg></a>
   <div style="flex:1"></div>
-  <% if (!league.locked) { %><button class="a-ib" type="button" data-liga-menu aria-label="<%= t('liga.menu') %>"><svg class="i"><use href="#i-list"/></svg></button><% } %>
 </header>
 <main class="a-wrap a-in" data-tabs-scope>
-  <div class="a-hero">
-    <%- include('_crest', { c: league }) %>
-    <h2><%= league.name %></h2>
-    <div class="a-muted a-small" style="margin-top:3px"><%= t(league.isOfficial ? 'liga.official' : 'liga.community') %> · <%= membersCount %> <%= tn(membersCount, 'player') %><% if (roundsTotal) { %> · <%= t('liga.roundOf', { a: Math.min(roundsPlayed + 1, roundsTotal), b: roundsTotal }) %><% } %></div>
-    <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;justify-content:center">
-      <% if (league.ended) { %><span class="a-pill warn"><%= t('liga.ended') %></span>
-      <% } else if (hasOpen) { %><span class="a-pill ok"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span><%= t('liga.open') %></span><% } %>
-      <% if (league.auto) { %><span class="a-pill info"><%= t('liga.auto') %></span><% } %>
-      <% if (myRank) { %><span class="a-pill gold"><%= t('liga.youAre', { r: myRank, p: myPoints }) %></span><% } %>
+  <section class="a-banner" style="--bn:<%= league.grad %>" data-wm="<%= league.initials %>">
+    <div class="bn-top">
+      <%- include('_crest', { c: league }) %>
+      <div style="min-width:0">
+        <span class="bn-eyebrow"><%= t(league.isOfficial ? 'liga.official' : 'liga.community') %><% if (league.auto) { %> · <%= t('liga.auto') %><% } %></span>
+        <h1 class="bn-title"><%= league.name %></h1>
+      </div>
     </div>
-    <% if (league.description) { %><p class="a-muted a-small" style="margin:10px auto 0;max-width:420px;text-align:center;line-height:1.5"><%= league.description %></p><% } %>
-  </div>
+    <% if (league.description) { %><p class="bn-desc"><%= league.description %></p><% } %>
+    <% if (league.locked) { %>
+    <form data-liga-join>
+      <div class="bn-lock"><svg class="i"><use href="#i-users"/></svg><div><b><%= t('liga.locked') %></b><br><%= t('liga.lockedTx') %></div></div>
+      <input type="hidden" name="leagueId" value="<%= league.id %>">
+      <input class="a-input" type="password" name="password" placeholder="<%= t('liga.password') %>" autocomplete="off" required>
+      <div class="a-err" data-join-err hidden></div>
+      <div class="bn-actions"><button class="a-btn gold" type="submit"><%= t('liga.join') %></button></div>
+    </form>
+    <% } else { %>
+    <div class="bn-pills">
+      <% if (league.ended) { %><span class="bn-pill"><%= t('liga.ended') %></span>
+      <% } else if (hasOpen) { %><span class="bn-pill"><span class="dot"></span><%= t('liga.open') %></span><% } %>
+      <% if (myRank) { %><span class="bn-pill gold"><%= t('liga.youAre', { r: myRank, p: myPoints }) %></span><% } %>
+    </div>
+    <div class="bn-stats">
+      <div><b><%= membersCount %></b><span><%= tn(membersCount, 'player') %></span></div>
+      <div><b><%= roundsTotal ? Math.min(roundsPlayed + 1, roundsTotal) + '/' + roundsTotal : 0 %></b><span><%= t('liga.rounds').toLowerCase() %></span></div>
+      <div><b><%= myRank ? myRank + '.' : '–' %></b><span><%= myRank ? myPoints + ' ' + t('common.pts') : t('liga.board').toLowerCase() %></span></div>
+    </div>
+    <div class="bn-actions">
+      <% if (!league.member && !league.ended) { %><button class="a-btn gold" type="button" data-liga-join-now data-code="<%= league.joinCode %>"><%= t('liga.join') %></button>
+      <% } else if (league.member && openRoundId && !league.ended) { %><a class="a-btn gold" href="/app/kolo/<%= openRoundId %>"><svg class="i" width="18" height="18"><use href="#i-ball"/></svg><%= t('noti.tip') %></a>
+      <% } else { %><a class="a-btn ghost" href="/app/rebricky/<%= league.id %>"><%= t('liga.fullBoard') %></a><% } %>
+      <button class="bn-ib" type="button" data-share-league data-code="<%= league.joinCode %>" data-name="<%= league.name %>" aria-label="<%= t('liga.invite') %>"><svg class="i"><use href="#i-share"/></svg></button>
+      <button class="bn-ib" type="button" data-liga-menu aria-label="<%= t('liga.menu') %>"><svg class="i"><use href="#i-list"/></svg></button>
+    </div>
+    <% } %>
+  </section>
 
-  <% if (league.locked) { %>
-  <form class="a-card" style="margin-top:18px;padding:18px" data-liga-join data-code="">
-    <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px"><div class="a-ico" style="width:40px;height:40px;border-radius:13px;background:var(--a-s2);color:var(--a-t2)"><svg class="i"><use href="#i-users"/></svg></div><div><b><%= t('liga.locked') %></b><div class="a-muted a-small"><%= t('liga.lockedTx') %></div></div></div>
-    <input type="hidden" name="leagueId" value="<%= league.id %>">
-    <input class="a-input" type="password" name="password" placeholder="<%= t('liga.password') %>" autocomplete="off" required>
-    <div class="a-err" data-join-err hidden></div>
-    <button class="a-btn gold" type="submit" style="margin-top:12px"><%= t('liga.join') %></button>
-  </form>
-  <% } else { %>
-  <% if (!league.member && !league.ended) { %>
-  <button class="a-btn gold" type="button" style="margin-top:16px" data-liga-join-now data-code="<%= league.joinCode %>"><%= t('liga.join') %></button>
-  <% } %>
+  <% if (!league.locked) { %>
 
   <div class="a-seg" data-tabs style="margin-top:18px">
     <a href="#kola" data-tab="kola" class="on"><%= t('liga.rounds') %></a>

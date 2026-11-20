@@ -592,6 +592,7 @@ const liga = asyncHandler(async (req, res) => {
     roundsTotal: rounds.length,
     roundsPlayed: played,
     hasOpen: roundList.some((r) => r.status === 'open'),
+    openRoundId: (roundList.find((r) => r.status === 'open') || {}).id || null,
     rounds: roundList,
     top5: top.slice(0, 5).map((r, i) => ({ rank: i + 1, name: userName(r.user), initials: userInitials(r.user), image: r.user.profileImage, color: avColor(r.user.id), points: r.totalPoints, me: r.user.id === meId })),
     myRank: meIdx >= 0 ? meIdx + 1 : null,

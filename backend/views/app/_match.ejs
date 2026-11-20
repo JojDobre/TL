@@ -13,7 +13,11 @@
     <div class="team"><%- include('_crest', { c: m.away }) %><b><%= m.away.name %></b></div>
   </div>
   <% } else { %>
-  <div class="row1x2"><%- include('_crest', { c: m.home }) %><b><%= m.home.name %></b><span class="a-muted a-small">–</span><b style="text-align:right"><%= m.away.name %></b><%- include('_crest', { c: m.away }) %></div>
+  <div class="teams">
+    <div class="team"><%- include('_crest', { c: m.home }) %><b><%= m.home.name %></b></div>
+    <div class="a-vs">VS</div>
+    <div class="team"><%- include('_crest', { c: m.away }) %><b><%= m.away.name %></b></div>
+  </div>
   <div class="a-pick">
     <button type="button" data-w="home" class="<%= m.tip && m.tip.winner === 'home' ? 'on' : '' %>">1</button>
     <% if (m.type === 'winner') { %><button type="button" data-w="draw" class="<%= m.tip && m.tip.winner === 'draw' ? 'on' : '' %>">X</button><% } %>

@@ -1,24 +1,37 @@
 <%- include('_head') %>
 <script>document.body.setAttribute('data-total', '<%= open.length %>');</script>
-<div style="position:absolute;left:0;right:0;top:0;height:280px;background:radial-gradient(100% 90% at 50% 0%,<%= league.grad.replace('linear-gradient(135deg,', '').split(',')[0] %>88,transparent 70%);z-index:0"></div>
 <header class="a-top">
   <a class="a-ib" href="javascript:history.length>1?history.back():location.href='/app/liga/<%= league.id %>'" aria-label="<%= t('common.back') %>"><svg class="i"><use href="#i-back"/></svg></a>
   <div style="flex:1"></div>
-  <button class="a-ib" type="button" data-kolo-menu aria-label="<%= t('kolo.menu') %>"><svg class="i"><use href="#i-list"/></svg></button>
 </header>
 <main class="a-wrap a-in" data-tabs-scope>
-  <div class="a-hero">
-    <a href="/app/liga/<%= league.id %>" style="display:inline-block"><%- include('_crest', { c: league }) %></a>
-    <h2><%= round.name %></h2>
-    <div class="a-muted a-small" style="margin-top:3px"><a href="/app/liga/<%= league.id %>"><%= league.name %></a> · <%= total %> <%= tn(total, 'match') %></div>
-    <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;justify-content:center">
-      <% if (round.status === 'open') { %><span class="a-pill ok"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span><%= t('kolo.st.open') %> · <%= t('round.deadline', { x: round.deadline }) %></span>
-      <% } else if (round.status === 'scheduled') { %><span class="a-pill info"><%= t('round.opens', { x: round.opens }) %></span>
-      <% } else { %><span class="a-pill"><%= t('kolo.st.finished') %></span><% } %>
-      <% if (myRank) { %><span class="a-pill gold"><%= t('kolo.rank', { r: myRank }) %> · <%= myPoints %> <%= t('common.pts') %></span><% } %>
+  <section class="a-banner" style="--bn:<%= league.grad %>" data-wm="<%= league.initials %>">
+    <div class="bn-top">
+      <a href="/app/liga/<%= league.id %>"><%- include('_crest', { c: league }) %></a>
+      <div style="min-width:0">
+        <a class="bn-eyebrow" href="/app/liga/<%= league.id %>"><%= league.name %></a>
+        <h1 class="bn-title"><%= round.name %></h1>
+      </div>
     </div>
-    <% if (round.description) { %><p class="a-muted a-small" style="margin:10px auto 0;max-width:420px;line-height:1.5"><%= round.description %></p><% } %>
-  </div>
+    <% if (round.description) { %><p class="bn-desc"><%= round.description %></p><% } %>
+    <div class="bn-pills">
+      <% if (round.status === 'open') { %><span class="bn-pill"><span class="dot"></span><%= t('kolo.st.open') %> · <%= t('round.deadline', { x: round.deadline }) %></span>
+      <% } else if (round.status === 'scheduled') { %><span class="bn-pill"><%= t('round.opens', { x: round.opens }) %></span>
+      <% } else { %><span class="bn-pill"><%= t('kolo.st.finished') %></span><% } %>
+      <% if (myRank) { %><span class="bn-pill gold"><%= t('kolo.rank', { r: myRank }) %></span><% } %>
+    </div>
+    <div class="bn-stats">
+      <div><b><%= total %></b><span><%= tn(total, 'match') %></span></div>
+      <div><b data-kolo-count><%= open.length ? tippedOpen + '/' + open.length : '–' %></b><span><%= t('kolo.toTip').toLowerCase() %></span></div>
+      <div><b><%= myPoints %></b><span><%= t('prof.points') %></span></div>
+    </div>
+    <div class="bn-actions">
+      <% if (open.length) { %><button class="a-btn gold" type="button" data-kolo-go><svg class="i" width="18" height="18"><use href="#i-ball"/></svg><%= t('noti.tip') %></button>
+      <% } else { %><button class="a-btn ghost" type="button" onclick="document.querySelector('[data-tab=rebricek]').click()"><%= t('kolo.board') %></button><% } %>
+      <a class="bn-ib" href="/app/liga/<%= league.id %>" aria-label="<%= t('kolo.openLeague') %>"><svg class="i"><use href="#i-trophy"/></svg></a>
+      <button class="bn-ib" type="button" data-kolo-menu aria-label="<%= t('kolo.menu') %>"><svg class="i"><use href="#i-list"/></svg></button>
+    </div>
+  </section>
 
   <div class="a-seg" data-tabs style="margin-top:18px">
     <a href="#zapasy" data-tab="zapasy" class="on"><%= t('kolo.matches') %></a>
@@ -35,7 +48,7 @@
     <% } %>
 
     <% if (open.length) { %>
-    <div class="a-sec" style="margin-top:4px"><span><%= t('kolo.toTip') %></span><span class="a-muted a-small" data-kolo-count><%= tippedOpen %>/<%= open.length %></span></div>
+    <div class="a-sec" style="margin-top:4px" id="naTip"><span><%= t('kolo.toTip') %></span></div>
     <% open.forEach(function (m) { %><%- include('_match', { m: m, meta: '' }) %><% }); %>
     <div class="a-muted a-small" style="text-align:center;margin:10px 0 4px"><%= t('kolo.canChange') %></div>
     <% } %>
