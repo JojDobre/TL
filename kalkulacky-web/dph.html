@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DPH kalkulačka 2026 – výpočet DPH 23 %, 19 %, 5 % | SpočítajSi</title>
+<meta name="description" content="Bezplatná DPH kalkulačka: pripočítajte alebo odpočítajte DPH zo sumy. Slovenské sadzby 2026: základná 23 %, znížené 19 % a 5 %.">
+<link rel="canonical" href="https://www.VASA-DOMENA.sk/dph.html">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b6bcb'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3E%E2%82%AC%3C/text%3E%3C/svg%3E">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "Aké sú sadzby DPH na Slovensku v roku 2026?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Základná sadzba DPH je 23 %. Znížené sadzby sú 19 % a 5 % a uplatňujú sa len na tovary a služby vymenované v zákone o DPH."}},
+    {"@type": "Question", "name": "Ako vypočítam sumu bez DPH zo sumy s DPH?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Sumu s DPH vydeľte koeficientom 1 + sadzba. Pri 23 % je to suma / 1,23. Napríklad 123 € / 1,23 = 100 € bez DPH a DPH je 23 €."}}
+  ]
+}
+</script>
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="logo" href="./">Spočítaj<span>Si</span></a>
+  <nav class="main">
+    <a href="cista-mzda.html">Čistá mzda</a>
+    <a href="dph.html" aria-current="page">DPH</a>
+    <a href="odvody-szco.html">Odvody SZČO</a>
+    <a href="e-faktura-2027.html">E-faktúra 2027</a>
+  </nav>
+</div></header>
+
+<main><div class="wrap">
+  <h1>DPH kalkulačka 2026</h1>
+  <p class="lead">Pripočítajte DPH k cene alebo zistite, koľko DPH je v sume, ktorú ste zaplatili.</p>
+
+  <div class="grid calc">
+    <div class="card">
+      <div class="seg" role="group" aria-label="Smer výpočtu">
+        <button type="button" id="m-add" aria-pressed="true">Pripočítať DPH</button>
+        <button type="button" id="m-sub" aria-pressed="false">Odpočítať DPH</button>
+      </div>
+      <label for="suma" id="suma-label" style="margin-top:16px">Suma bez DPH (€)</label>
+      <input id="suma" type="text" inputmode="decimal" value="100" autocomplete="off">
+      <label>Sadzba DPH</label>
+      <div class="seg" role="group" aria-label="Sadzba DPH">
+        <button type="button" data-rate="23" aria-pressed="true">23 %</button>
+        <button type="button" data-rate="19" aria-pressed="false">19 %</button>
+        <button type="button" data-rate="5" aria-pressed="false">5 %</button>
+      </div>
+    </div>
+
+    <div class="card" aria-live="polite">
+      <div class="result-main">
+        <div class="label" id="res-label">Suma s DPH</div>
+        <div class="value" id="res-value">–</div>
+      </div>
+      <table class="breakdown">
+        <tr><td>Základ (bez DPH)</td><td id="r-bez"></td></tr>
+        <tr><td>DPH <span id="r-rate">23</span> %</td><td id="r-dph"></td></tr>
+        <tr class="total"><td>Spolu s DPH</td><td id="r-s"></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="ad-slot"></div>
+
+  <section class="content">
+    <h2>Sadzby DPH na Slovensku v roku 2026</h2>
+    <div class="table-scroll">
+    <table class="data">
+      <thead><tr><th>Sadzba</th><th>Na čo sa uplatňuje (zjednodušene)</th><th>Koeficient</th></tr></thead>
+      <tbody>
+        <tr><td><strong>23 %</strong></td><td>Základná sadzba, väčšina tovarov a služieb</td><td>× 1,23</td></tr>
+        <tr><td><strong>19 %</strong></td><td>Prvá znížená sadzba – vybrané tovary a služby vymenované v prílohe zákona o DPH</td><td>× 1,19</td></tr>
+        <tr><td><strong>5 %</strong></td><td>Druhá znížená sadzba – užší okruh vybraných položiek (napr. vybrané základné potraviny, lieky a knihy)</td><td>× 1,05</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p>Presné zaradenie konkrétneho tovaru alebo služby určuje zákon č. 222/2004 Z. z. o DPH a jeho prílohy. Pri pochybnostiach si zaradenie overte na stránke Finančnej správy.</p>
+
+    <h2>Vzorce na výpočet DPH</h2>
+    <ul>
+      <li><strong>Suma s DPH</strong> = suma bez DPH × (1 + sadzba / 100)</li>
+      <li><strong>Suma bez DPH</strong> = suma s DPH / (1 + sadzba / 100)</li>
+      <li><strong>Výška DPH</strong> = suma s DPH − suma bez DPH</li>
+    </ul>
+    <p>Príklad: tovar za 250 € bez DPH pri sadzbe 23 % stojí 250 × 1,23 = 307,50 € a DPH je 57,50 €.</p>
+
+    <div class="partner">
+      <strong>Fakturujete s DPH?</strong> Od 1. 1. 2027 musia platitelia DPH vystavovať e-faktúry. Pozrite si <a href="e-faktura-2027.html">nášho sprievodcu e-faktúrou</a>.
+    </div>
+
+    <h2>Časté otázky</h2>
+    <div class="faq">
+      <details><summary>Aké sú sadzby DPH na Slovensku v roku 2026?</summary>
+        <p>Základná sadzba je 23 %. Znížené sadzby sú 19 % a 5 % a platia len pre tovary a služby vymenované v zákone o DPH.</p></details>
+      <details><summary>Ako vypočítam sumu bez DPH?</summary>
+        <p>Sumu s DPH vydeľte koeficientom. Pri 23 % je to suma / 1,23. Napríklad 123 € / 1,23 = 100 € bez DPH, DPH je 23 €.</p></details>
+      <details><summary>Prečo nestačí odpočítať 23 % zo sumy s DPH?</summary>
+        <p>Pretože 23 % sa počíta zo základu, nie z konečnej sumy. Zo sumy s DPH tvorí daň pri 23 % len približne 18,70 % (23 / 123).</p></details>
+    </div>
+  </section>
+</div></main>
+
+<footer class="site"><div class="wrap">
+  <div class="links">
+    <a href="cista-mzda.html">Čistá mzda</a>
+    <a href="dph.html">DPH</a>
+    <a href="odvody-szco.html">Odvody SZČO</a>
+    <a href="e-faktura-2027.html">E-faktúra 2027</a>
+    <a href="ochrana-sukromia.html">Ochrana súkromia</a>
+  </div>
+  <p>© 2026 SpočítajSi. Výpočty sú orientačné a nenahrádzajú odborné daňové poradenstvo.</p>
+</div></footer>
+
+<script src="assets/calc.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var smer = 'pridat', sadzba = 23;
+  var rateBtns = document.querySelectorAll('[data-rate]');
+  function calc() {
+    var r = Calc.dph(Calc.cislo($('suma').value), sadzba, smer);
+    $('res-label').textContent = smer === 'pridat' ? 'Suma s DPH' : 'Suma bez DPH';
+    $('suma-label').textContent = smer === 'pridat' ? 'Suma bez DPH (€)' : 'Suma s DPH (€)';
+    $('res-value').textContent = Calc.eur(smer === 'pridat' ? r.sDPH : r.bezDPH);
+    $('r-bez').textContent = Calc.eur(r.bezDPH);
+    $('r-dph').textContent = Calc.eur(r.dph);
+    $('r-s').textContent = Calc.eur(r.sDPH);
+    $('r-rate').textContent = sadzba;
+  }
+  function setSmer(s) {
+    smer = s;
+    $('m-add').setAttribute('aria-pressed', s === 'pridat');
+    $('m-sub').setAttribute('aria-pressed', s === 'odobrat');
+    calc();
+  }
+  $('m-add').addEventListener('click', function () { setSmer('pridat'); });
+  $('m-sub').addEventListener('click', function () { setSmer('odobrat'); });
+  Array.prototype.forEach.call(rateBtns, function (b) {
+    b.addEventListener('click', function () {
+      sadzba = +b.getAttribute('data-rate');
+      Array.prototype.forEach.call(rateBtns, function (x) { x.setAttribute('aria-pressed', x === b); });
+      calc();
+    });
+  });
+  $('suma').addEventListener('input', calc);
+  calc();
+})();
+</script>
+</body>
+</html>

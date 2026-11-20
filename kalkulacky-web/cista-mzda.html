@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Výpočet čistej mzdy 2026 – kalkulačka hrubá/čistá mzda | SpočítajSi</title>
+<meta name="description" content="Kalkulačka čistej mzdy 2026: prepočet z hrubej na čistú aj naopak, odvody 14,4 %, nové daňové pásma, daňový bonus na deti a cena práce zamestnávateľa.">
+<link rel="canonical" href="https://www.VASA-DOMENA.sk/cista-mzda.html">
+<meta property="og:title" content="Výpočet čistej mzdy 2026">
+<meta property="og:description" content="Koľko dostanete na účet? Prepočet hrubej mzdy na čistú podľa pravidiel 2026.">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b6bcb'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3E%E2%82%AC%3C/text%3E%3C/svg%3E">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "Koľko odvodov platí zamestnanec v roku 2026?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Zamestnanec v roku 2026 platí 14,4 % z hrubej mzdy: 9,4 % na sociálne poistenie a 5 % na zdravotné poistenie."}},
+    {"@type": "Question", "name": "Aká je nezdaniteľná časť základu dane v roku 2026?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Plná nezdaniteľná časť na daňovníka je 5 966,73 € ročne, teda 497,23 € mesačne. Pri vyššom príjme sa postupne znižuje a pri ročnom základe dane 43 983,32 € klesne na nulu."}},
+    {"@type": "Question", "name": "Aké sú sadzby dane z príjmu v roku 2026?",
+     "acceptedAnswer": {"@type": "Answer", "text": "19 % do 43 983,32 € ročne, 25 % do 60 349,21 €, 30 % do 75 010,32 € a 35 % z časti základu dane nad touto sumou."}},
+    {"@type": "Question", "name": "Aký je daňový bonus na dieťa v roku 2026?",
+     "acceptedAnswer": {"@type": "Answer", "text": "100 € mesačne na dieťa do 15 rokov a 50 € mesačne na dieťa od 15 do 18 rokov. Bonus je obmedzený percentom zo základu dane a pri vyššom príjme sa kráti."}}
+  ]
+}
+</script>
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="logo" href="./">Spočítaj<span>Si</span></a>
+  <nav class="main">
+    <a href="cista-mzda.html" aria-current="page">Čistá mzda</a>
+    <a href="dph.html">DPH</a>
+    <a href="odvody-szco.html">Odvody SZČO</a>
+    <a href="e-faktura-2027.html">E-faktúra 2027</a>
+  </nav>
+</div></header>
+
+<main><div class="wrap">
+  <h1>Výpočet čistej mzdy 2026</h1>
+  <p class="lead">Zadajte hrubú mzdu a hneď uvidíte, koľko vám príde na účet a koľko vás stojí zamestnávateľa.</p>
+
+  <div class="grid calc">
+    <div class="card">
+      <div class="seg" role="group" aria-label="Smer výpočtu">
+        <button type="button" id="m-hc" aria-pressed="true">Z hrubej na čistú</button>
+        <button type="button" id="m-ch" aria-pressed="false">Z čistej na hrubú</button>
+      </div>
+      <label for="suma" id="suma-label" style="margin-top:16px">Hrubá mesačná mzda (€)</label>
+      <input id="suma" type="text" inputmode="decimal" value="1500" autocomplete="off">
+      <div class="row">
+        <div>
+          <label for="d15">Deti do 15 r.</label>
+          <select id="d15"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select>
+        </div>
+        <div>
+          <label for="d18">Deti 15 – 18 r.</label>
+          <select id="d18"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select>
+        </div>
+      </div>
+      <label class="check"><input type="checkbox" id="nczd" checked> <span>Mám podpísané vyhlásenie na uplatnenie nezdaniteľnej časti <span class="hint">(bežné pri hlavnom zamestnaní)</span></span></label>
+    </div>
+
+    <div class="card" aria-live="polite">
+      <div class="result-main">
+        <div class="label" id="res-label">Čistá mzda</div>
+        <div class="value" id="res-value">–</div>
+      </div>
+      <table class="breakdown">
+        <tr><td>Hrubá mzda</td><td id="r-hruba"></td></tr>
+        <tr class="minus"><td>Sociálne poistenie (9,4 %)</td><td id="r-sp"></td></tr>
+        <tr class="minus"><td>Zdravotné poistenie (5 %)</td><td id="r-zp"></td></tr>
+        <tr><td>Čiastkový základ dane</td><td id="r-zd"></td></tr>
+        <tr class="minus"><td>Nezdaniteľná časť</td><td id="r-nczd"></td></tr>
+        <tr class="minus"><td>Preddavok na daň</td><td id="r-dan"></td></tr>
+        <tr class="plus"><td>Daňový bonus na deti</td><td id="r-bonus"></td></tr>
+        <tr class="total"><td>Čistá mzda</td><td id="r-cista"></td></tr>
+      </table>
+      <h3>Pohľad zamestnávateľa</h3>
+      <table class="breakdown">
+        <tr class="minus"><td>Sociálne poistenie (25,2 %)</td><td id="r-spz"></td></tr>
+        <tr class="minus"><td>Zdravotné poistenie (11 %)</td><td id="r-zpz"></td></tr>
+        <tr class="total"><td>Celková cena práce</td><td id="r-cena"></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="ad-slot"></div>
+
+  <section class="content">
+    <h2>Čistá mzda pri bežných hrubých mzdách (2026)</h2>
+    <p>Bez detí a s uplatnenou nezdaniteľnou časťou:</p>
+    <div class="table-scroll">
+    <table class="data">
+      <thead><tr><th>Hrubá mzda</th><th>Odvody</th><th>Daň</th><th>Čistá mzda</th><th>Cena práce</th></tr></thead>
+      <tbody>
+        <tr><td>915,00 €</td><td>131,76 €</td><td>54,34 €</td><td><strong>728,90 €</strong></td><td>1 246,23 €</td></tr>
+        <tr><td>1 000,00 €</td><td>144,00 €</td><td>68,17 €</td><td><strong>787,83 €</strong></td><td>1 362,00 €</td></tr>
+        <tr><td>1 200,00 €</td><td>172,80 €</td><td>100,69 €</td><td><strong>926,51 €</strong></td><td>1 634,40 €</td></tr>
+        <tr><td>1 500,00 €</td><td>216,00 €</td><td>149,49 €</td><td><strong>1 134,51 €</strong></td><td>2 043,00 €</td></tr>
+        <tr><td>1 800,00 €</td><td>259,20 €</td><td>198,28 €</td><td><strong>1 342,52 €</strong></td><td>2 451,60 €</td></tr>
+        <tr><td>2 000,00 €</td><td>288,00 €</td><td>230,81 €</td><td><strong>1 481,19 €</strong></td><td>2 724,00 €</td></tr>
+        <tr><td>2 500,00 €</td><td>360,00 €</td><td>312,13 €</td><td><strong>1 827,87 €</strong></td><td>3 405,00 €</td></tr>
+        <tr><td>3 000,00 €</td><td>432,00 €</td><td>418,43 €</td><td><strong>2 149,57 €</strong></td><td>4 086,00 €</td></tr>
+        <tr><td>4 000,00 €</td><td>576,00 €</td><td>635,28 €</td><td><strong>2 788,72 €</strong></td><td>5 448,00 €</td></tr>
+        <tr><td>5 000,00 €</td><td>720,00 €</td><td>850,08 €</td><td><strong>3 429,92 €</strong></td><td>6 810,00 €</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h2>Ako sa počíta čistá mzda v roku 2026</h2>
+    <ol>
+      <li><strong>Odvody zamestnanca:</strong> z hrubej mzdy sa odpočíta 9,4 % na sociálne poistenie (najviac zo sumy 16 764 €) a 5 % na zdravotné poistenie.</li>
+      <li><strong>Základ dane:</strong> od zvyšku sa odpočíta nezdaniteľná časť, plne 497,23 € mesačne. Ak čiastkový základ dane presiahne 2 173,59 €, nezdaniteľná časť sa znižuje a pri 3 665,28 € je nulová.</li>
+      <li><strong>Daň:</strong> 19 % do 3 665,28 € mesačne, 25 % do 5 029,10 €, 30 % do 6 250,86 € a 35 % nad touto sumou (vždy len z časti v danom pásme).</li>
+      <li><strong>Daňový bonus:</strong> 100 € na dieťa do 15 rokov a 50 € na dieťa od 15 do 18 rokov. Je obmedzený percentom zo základu dane (29 % pri 1 dieťati až 64 % pri 6 a viac deťoch) a nad 2 286 € základu sa kráti o desatinu rozdielu.</li>
+    </ol>
+
+    <h2>Časté otázky</h2>
+    <div class="faq">
+      <details><summary>Koľko odvodov platí zamestnanec v roku 2026?</summary>
+        <p>Spolu 14,4 % z hrubej mzdy: 9,4 % na sociálne poistenie (nemocenské 1,4 %, starobné 4 %, invalidné 3 %, v nezamestnanosti 1 %) a 5 % na zdravotné poistenie. Zdravotné poistenie sa od roku 2026 zvýšilo zo 4 % na 5 %.</p></details>
+      <details><summary>Prečo mám pri vyššej mzde nižšiu nezdaniteľnú časť?</summary>
+        <p>Od roku 2026 sa nezdaniteľná časť kráti rýchlejšie: od ročného základu dane 26 083,13 € klesá o tretinu každého eura navyše, až kým pri 43 983,32 € nezmizne úplne.</p></details>
+      <details><summary>Platí sa daň 30 % a 35 % z celej mzdy?</summary>
+        <p>Nie. Vyššia sadzba sa uplatní len na časť základu dane, ktorá presiahne hranicu pásma. Zvyšok sa naďalej zdaňuje nižšími sadzbami.</p></details>
+      <details><summary>Je výpočet presný?</summary>
+        <p>Kalkulačka počíta bežný mesačný preddavok pri hlavnom pracovnom pomere. Nezohľadňuje napríklad príplatky, stravné, odmeny, ročné zúčtovanie, dohody či zníženú sadzbu pre poberateľov dôchodku. Pre presný výpočet sa obráťte na mzdovú účtovníčku.</p></details>
+    </div>
+  </section>
+
+  <div class="note">Výsledky sú orientačné a vychádzajú zo sadzieb platných v roku 2026 (zákon o dani z príjmov, sociálnom a zdravotnom poistení). Nenahrádzajú odborné poradenstvo.</div>
+</div></main>
+
+<footer class="site"><div class="wrap">
+  <div class="links">
+    <a href="cista-mzda.html">Čistá mzda</a>
+    <a href="dph.html">DPH</a>
+    <a href="odvody-szco.html">Odvody SZČO</a>
+    <a href="e-faktura-2027.html">E-faktúra 2027</a>
+    <a href="ochrana-sukromia.html">Ochrana súkromia</a>
+  </div>
+  <p>© 2026 SpočítajSi. Výpočty sú orientačné a nenahrádzajú odborné daňové poradenstvo.</p>
+</div></footer>
+
+<script src="assets/calc.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var mode = 'hc';
+  function setMode(m) {
+    mode = m;
+    $('m-hc').setAttribute('aria-pressed', m === 'hc');
+    $('m-ch').setAttribute('aria-pressed', m === 'ch');
+    $('suma-label').textContent = m === 'hc' ? 'Hrubá mesačná mzda (€)' : 'Požadovaná čistá mzda (€)';
+    $('res-label').textContent = m === 'hc' ? 'Čistá mzda' : 'Potrebná hrubá mzda';
+    calc();
+  }
+  function calc() {
+    var opt = {
+      nczd: $('nczd').checked,
+      deti: { do15: +$('d15').value, od15do18: +$('d18').value }
+    };
+    var vstup = Calc.cislo($('suma').value);
+    var hruba = mode === 'hc' ? vstup : Calc.hrubaZCistej(vstup, opt);
+    var r = Calc.cistaMzda(hruba, opt);
+    var E = Calc.eur;
+    $('res-value').textContent = mode === 'hc' ? E(r.cista) : E(r.hruba);
+    $('r-hruba').textContent = E(r.hruba);
+    $('r-sp').textContent = '− ' + E(r.sp);
+    $('r-zp').textContent = '− ' + E(r.zp);
+    $('r-zd').textContent = E(r.zd);
+    $('r-nczd').textContent = E(r.nczd);
+    $('r-dan').textContent = '− ' + E(r.dan);
+    $('r-bonus').textContent = '+ ' + E(r.bonus);
+    $('r-cista').textContent = E(r.cista);
+    $('r-spz').textContent = E(r.spZamestnavatel);
+    $('r-zpz').textContent = E(r.zpZamestnavatel);
+    $('r-cena').textContent = E(r.cenaPrace);
+  }
+  $('m-hc').addEventListener('click', function () { setMode('hc'); });
+  $('m-ch').addEventListener('click', function () { setMode('ch'); });
+  ['suma', 'd15', 'd18', 'nczd'].forEach(function (id) {
+    $(id).addEventListener('input', calc);
+    $(id).addEventListener('change', calc);
+  });
+  calc();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Odvody SZČO 2026 – kalkulačka odvodov živnostníka, mikroodvod | SpočítajSi</title>
+<meta name="description" content="Koľko zaplatí živnostník do Sociálnej a zdravotnej poisťovne? Kalkulačka odvodov SZČO podľa nových pravidiel od 1. 7. 2026 vrátane mikroodvodu 131,34 €.">
+<link rel="canonical" href="https://www.VASA-DOMENA.sk/odvody-szco.html">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b6bcb'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3E%E2%82%AC%3C/text%3E%3C/svg%3E">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "Aké sú minimálne odvody živnostníka v roku 2026?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Minimálny odvod do Sociálnej poisťovne je 303,11 € mesačne (pri príjme nad 9 144 €) a minimálny preddavok na zdravotné poistenie 121,92 € mesačne. Pri príjme od 2 876,91 € do 9 144 € sa platí mikroodvod 131,34 €."}},
+    {"@type": "Question", "name": "Čo je mikroodvod?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Mikroodvod je znížené sociálne poistenie 131,34 € mesačne pre SZČO, ktorých príjem v daňovom priznaní za predchádzajúci rok bol najviac 9 144 €. Vypočíta sa z osobitného vymeriavacieho základu 396,24 €."}}
+  ]
+}
+</script>
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="logo" href="./">Spočítaj<span>Si</span></a>
+  <nav class="main">
+    <a href="cista-mzda.html">Čistá mzda</a>
+    <a href="dph.html">DPH</a>
+    <a href="odvody-szco.html" aria-current="page">Odvody SZČO</a>
+    <a href="e-faktura-2027.html">E-faktúra 2027</a>
+  </nav>
+</div></header>
+
+<main><div class="wrap">
+  <h1>Odvody živnostníka (SZČO) 2026</h1>
+  <p class="lead">Zadajte údaje z daňového priznania za rok 2025 a zistite, koľko budete mesačne platiť do Sociálnej a zdravotnej poisťovne.</p>
+
+  <div class="grid calc">
+    <div class="card">
+      <label for="prijem">Príjem z podnikania za rok 2025 (€) <span class="hint">– tržby pred odpočítaním výdavkov</span></label>
+      <input id="prijem" type="text" inputmode="decimal" value="20000" autocomplete="off">
+      <label>Výdavky</label>
+      <div class="seg" role="group" aria-label="Typ výdavkov">
+        <button type="button" id="v-p" aria-pressed="true">Paušálne 60 %</button>
+        <button type="button" id="v-s" aria-pressed="false">Skutočné</button>
+      </div>
+      <div id="skut-wrap" hidden>
+        <label for="vydavky">Skutočné výdavky (€) <span class="hint">– bez zaplatených odvodov</span></label>
+        <input id="vydavky" type="text" inputmode="decimal" value="8000" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="card" aria-live="polite">
+      <div class="result-main">
+        <div class="label">Odvody spolu mesačne</div>
+        <div class="value" id="res-value">–</div>
+      </div>
+      <table class="breakdown">
+        <tr><td>Príjem</td><td id="r-prijem"></td></tr>
+        <tr class="minus"><td>Výdavky</td><td id="r-vyd"></td></tr>
+        <tr><td>Základ dane</td><td id="r-zd"></td></tr>
+        <tr><td>Vymeriavací základ (mesačne)</td><td id="r-vz"></td></tr>
+        <tr><td>Sociálne poistenie <span class="hint" id="r-sp-info"></span></td><td id="r-sp"></td></tr>
+        <tr><td>Zdravotné poistenie <span class="hint" id="r-zp-info"></span></td><td id="r-zp"></td></tr>
+        <tr class="total"><td>Spolu ročne</td><td id="r-rok"></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="note">Sociálne poistenie podľa príjmu za rok 2025 platí od 1. 7. 2026 (pri predĺženom termíne podania priznania od 1. 10. 2026). Zdravotné poistenie je orientačný preddavok. Začínajúci živnostníci a SZČO s osobitnou situáciou (dôchodcovia, súbeh so zamestnaním, ZŤP) môžu mať odlišné povinnosti.</div>
+
+  <div class="ad-slot"></div>
+
+  <section class="content">
+    <h2>Pásma sociálneho poistenia SZČO (od 1. 7. 2026)</h2>
+    <div class="table-scroll">
+    <table class="data">
+      <thead><tr><th>Príjem za rok 2025</th><th>Sociálne poistenie</th></tr></thead>
+      <tbody>
+        <tr><td>do 2 876,90 €</td><td>bez povinného sociálneho poistenia</td></tr>
+        <tr><td>2 876,91 € – 9 144 €</td><td><strong>mikroodvod 131,34 €</strong> mesačne</td></tr>
+        <tr><td>nad 9 144 €</td><td>33,15 % z vymeriavacieho základu, <strong>najmenej 303,11 €</strong>, najviac 5 557,26 €</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h2>Ako sa počíta vymeriavací základ</h2>
+    <p>Vymeriavací základ = (základ dane z podnikania za predchádzajúci rok + zaplatené odvody, ak ste ich uplatnili ako výdavok) / 12 / 1,486.</p>
+    <p>Príklad: príjem 20 000 € s paušálnymi výdavkami 60 % (12 000 €) dáva základ 8 000 €. Vymeriavací základ je 8 000 / 12 / 1,486 = 448,63 €, čo je pod minimom, takže sa platí minimálny odvod 303,11 € do Sociálnej poisťovne.</p>
+
+    <h2>Zdravotné poistenie SZČO 2026</h2>
+    <p>Sadzba je 16 % z vymeriavacieho základu. Minimálny preddavok je 121,92 € mesačne (z minimálneho základu 762 €) a platí sa od prvého dňa podnikania. SZČO so zdravotným postihnutím platí polovičnú sadzbu.</p>
+
+    <div class="partner">
+      <strong>Tip:</strong> Nechcete to riešiť sami? Online účtovné programy a fakturačné nástroje vedia odvody aj e-faktúry od 2027 strážiť za vás.
+      <!-- Sem vložte affiliate odkaz na účtovný/fakturačný softvér -->
+    </div>
+
+    <h2>Čo sa zmení v roku 2027</h2>
+    <p>Odvody sa odvíjajú od priemernej mzdy spred dvoch rokov. Podľa predbežných údajov (priemerná mzda 2025: 1 620 €) by mal minimálny sociálny odvod od júla 2027 stúpnuť na približne 322,22 €, mikroodvod na 139,61 € a minimálne zdravotné poistenie od januára 2027 na 129,60 €. Kalkulačku aktualizujeme po zverejnení oficiálnych súm.</p>
+
+    <h2>Časté otázky</h2>
+    <div class="faq">
+      <details><summary>Aké sú minimálne odvody živnostníka v roku 2026?</summary>
+        <p>Spolu 425,03 € mesačne: 303,11 € do Sociálnej poisťovne a 121,92 € do zdravotnej poisťovne. Pri príjme od 2 876,91 € do 9 144 € je sociálny odvod len 131,34 € (mikroodvod).</p></details>
+      <details><summary>Odkedy platí nová výška odvodov?</summary>
+        <p>Sociálna poisťovňa posudzuje príjem z daňového priznania za predchádzajúci rok vždy k 1. júlu (pri odklade priznania k 1. októbru) a nová suma platí od tohto mesiaca.</p></details>
+      <details><summary>Musí začínajúci živnostník platiť sociálne poistenie hneď?</summary>
+        <p>Od roku 2026 vzniká poistenie novým SZČO spravidla od prvého dňa šiesteho kalendárneho mesiaca po mesiaci, v ktorom získali oprávnenie. Ak však od skončenia predchádzajúceho podnikania uplynulo menej ako 60 mesiacov, poistenie vzniká hneď dňom vzniku oprávnenia. Zdravotné poistenie sa platí od začiatku.</p></details>
+    </div>
+  </section>
+</div></main>
+
+<footer class="site"><div class="wrap">
+  <div class="links">
+    <a href="cista-mzda.html">Čistá mzda</a>
+    <a href="dph.html">DPH</a>
+    <a href="odvody-szco.html">Odvody SZČO</a>
+    <a href="e-faktura-2027.html">E-faktúra 2027</a>
+    <a href="ochrana-sukromia.html">Ochrana súkromia</a>
+  </div>
+  <p>© 2026 SpočítajSi. Výpočty sú orientačné a nenahrádzajú odborné daňové poradenstvo.</p>
+</div></footer>
+
+<script src="assets/calc.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var pausal = true;
+  var info = {
+    bez: '(bez povinnosti)', mikro: '(mikroodvod)', minimum: '(minimum)',
+    vypocet: '(33,15 %)', maximum: '(maximum)'
+  };
+  function calc() {
+    var r = Calc.odvodySZCO({
+      prijem: Calc.cislo($('prijem').value),
+      vydavky: pausal ? 'pausal' : Calc.cislo($('vydavky').value)
+    });
+    var E = Calc.eur;
+    $('res-value').textContent = E(r.spolu);
+    $('r-prijem').textContent = E(r.prijem);
+    $('r-vyd').textContent = '− ' + E(r.vydavky);
+    $('r-zd').textContent = E(r.zd);
+    $('r-vz').textContent = E(r.vypocitanyVZ);
+    $('r-sp').textContent = E(r.sp);
+    $('r-sp-info').textContent = info[r.spRezim];
+    $('r-zp').textContent = E(r.zp);
+    $('r-zp-info').textContent = r.zpMinimum ? '(minimum)' : '(16 %)';
+    $('r-rok').textContent = E(r.rocne);
+  }
+  function setPausal(p) {
+    pausal = p;
+    $('v-p').setAttribute('aria-pressed', p);
+    $('v-s').setAttribute('aria-pressed', !p);
+    $('skut-wrap').hidden = p;
+    calc();
+  }
+  $('v-p').addEventListener('click', function () { setPausal(true); });
+  $('v-s').addEventListener('click', function () { setPausal(false); });
+  $('prijem').addEventListener('input', calc);
+  $('vydavky').addEventListener('input', calc);
+  calc();
+})();
+</script>
+</body>
+</html>
