@@ -44,12 +44,19 @@ function release() {
  * Otvorí izolovaný kontext, všetky požiadavky stránky (aj obrázky, skripty,
  * presmerovania) pustí len na verejné IP adresy.
  */
-async function withPage(fn, { viewport = { width: 1280, height: 900 } } = {}) {
+const DESKTOP_UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36 WebAnalyzer-A11y/1.0';
+const MOBILE_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36 WebAnalyzer-A11y/1.0';
+
+async function withPage(fn, { viewport = { width: 1280, height: 900 }, mobile = false } = {}) {
+  if (mobile) viewport = { width: 390, height: 844 };
   await acquire();
   const browser = await getBrowser().catch((e) => { release(); throw e; });
   const ctx = await browser.newContext({
     viewport,
-    userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36 WebAnalyzer-A11y/1.0',
+    userAgent: mobile ? MOBILE_UA : DESKTOP_UA,
+    isMobile: mobile,
+    hasTouch: mobile,
+    deviceScaleFactor: 1,
     locale: 'sk-SK',
     acceptDownloads: false,
     serviceWorkers: 'block',

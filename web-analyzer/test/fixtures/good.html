@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dobrá stránka – bez chýb prístupnosti</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; color: #1a1a1a; background: #fff; line-height: 1.5; }
+    header, main, footer { max-width: 720px; margin: 0 auto; padding: 16px; }
+    a { color: #0b4fb3; }
+    a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid #0b4fb3; outline-offset: 2px; }
+    button { padding: 10px 16px; font-size: 16px; }
+    input { padding: 8px; font-size: 16px; max-width: 100%; }
+    img { max-width: 100%; height: auto; }
+    .skip { position: absolute; left: -9999px; }
+    .skip:focus { left: 16px; top: 8px; background: #fff; padding: 8px; }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#obsah">Preskočiť na obsah</a>
+  <header>
+    <nav aria-label="Hlavná navigácia">
+      <ul>
+        <li><a href="#obsah">Úvod</a></li>
+        <li><a href="#kontakt">Kontakt</a></li>
+      </ul>
+    </nav>
+  </header>
+  <main id="obsah">
+    <h1>Prístupná stránka</h1>
+    <p>Tento text má dostatočný kontrast a stránka sa správne prispôsobí malej obrazovke.</p>
+    <img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" width="120" height="60" alt="Ukážkový obrázok">
+    <h2 id="kontakt">Kontaktný formulár</h2>
+    <form action="#" onsubmit="return false">
+      <p><label for="meno">Meno</label><br><input id="meno" name="meno" type="text" autocomplete="name"></p>
+      <p><label for="email">E-mail</label><br><input id="email" name="email" type="email" autocomplete="email"></p>
+      <p><button type="submit">Odoslať</button></p>
+    </form>
+  </main>
+  <footer><p>Pätička stránky</p></footer>
+</body>
+</html>

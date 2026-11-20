@@ -33,8 +33,13 @@ function isPrivateIp(ip) {
   return true;
 }
 
+// Len pre automatické testy na lokálnych stránkach – nikdy nenastavuj na produkcii!
+const ALLOW_PRIVATE = process.env.WA_ALLOW_PRIVATE_HOSTS === '1';
+if (ALLOW_PRIVATE) console.warn('[fetcher] WA_ALLOW_PRIVATE_HOSTS=1 – SSRF ochrana je VYPNUTÁ (len pre testy).');
+
 async function assertPublicHost(hostname) {
   const host = hostname.replace(/^\[|\]$/g, '');
+  if (ALLOW_PRIVATE) return [host];
   if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) {
     throw new UserError('Lokálne a interné adresy nie je možné analyzovať.');
   }
@@ -65,8 +70,8 @@ function normalizeUrl(input) {
   try { u = new URL(raw); } catch { throw new UserError('Neplatná adresa URL.'); }
   if (!['http:', 'https:'].includes(u.protocol)) throw new UserError('Podporované sú len http a https adresy.');
   if (u.username || u.password) throw new UserError('URL nesmie obsahovať prihlasovacie údaje.');
-  if (u.port && !['80', '443', '8080', '8443'].includes(u.port)) throw new UserError('Nepodporovaný port.');
-  if (!u.hostname.includes('.') && !net.isIP(u.hostname)) throw new UserError('Neplatná doména.');
+  if (!ALLOW_PRIVATE && u.port && !['80', '443', '8080', '8443'].includes(u.port)) throw new UserError('Nepodporovaný port.');
+  if (!ALLOW_PRIVATE && !u.hostname.includes('.') && !net.isIP(u.hostname)) throw new UserError('Neplatná doména.');
   u.hash = '';
   return u;
 }

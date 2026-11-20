@@ -163,6 +163,12 @@ const RULES = {
   'td-headers-attr': ['Atribút headers odkazuje mimo tabuľky', 'Atribút headers musí odkazovať len na <th> v tej istej tabuľke.', 'nevidiaci'],
   'th-has-data-cells': ['Hlavičky tabuľky neopisujú žiadne dáta', 'Odstráň prázdne hlavičky alebo oprav štruktúru tabuľky.', 'nevidiaci'],
   'valid-lang': ['Atribút lang na časti obsahu je neplatný', 'Použi platný kód jazyka v atribútoch lang na prvkoch.', 'nevidiaci'],
+  // ---- vlastné kontroly Web Analyzer (nad rámec axe-core) ----
+  'wa-focus-visible': ['Pri ovládaní klávesnicou nie je vidieť, kde je fokus', 'Nepoužívaj outline: none bez náhrady. Pridaj zreteľný štýl :focus-visible (napr. outline: 3px solid s kontrastom aspoň 3 : 1).', 'používatelia klávesnice, slabozrakí'],
+  'wa-keyboard-trap': ['Fokus klávesnice uviazne na prvku (pasca)', 'Zabezpeč, aby sa z prvku dalo odísť klávesom Tab / Shift+Tab, prípadne Esc. Neodchytávaj Tab bez možnosti pokračovať.', 'používatelia klávesnice a čítačiek'],
+  'wa-not-focusable': ['Ovládacie prvky nie sú dostupné z klávesnice', 'Použi natívne <button> alebo <a href>. Ak musíš použiť <div>/<span>, doplň tabindex="0" a obsluhu klávesov Enter a medzerník.', 'používatelia klávesnice, ľudia s motorickým postihnutím'],
+  'wa-focus-obscured': ['Prvok s fokusom je zakrytý iným obsahom', 'Uprav lepkavé hlavičky, lišty a okná tak, aby neprekrývali zameraný prvok (napr. scroll-padding-top alebo menšia výška lišty).', 'používatelia klávesnice'],
+  'wa-reflow': ['Pri malej šírke obrazovky treba skrolovať do strán', 'Pri šírke 320 CSS px (zväčšenie 400 %) sa musí obsah zalomiť do jedného stĺpca. Odstráň pevné šírky, použi max-width: 100 % a responzívne rozloženie.', 'slabozrakí používajúci zväčšenie, mobilní používatelia'],
   'video-caption': ['Videá nemajú titulky', 'Doplň titulky (<track kind="captions" srclang="sk">) pre všetok hovorený obsah.', 'nepočujúci, nedoslýchaví'],
 };
 

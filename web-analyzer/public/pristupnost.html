@@ -108,14 +108,24 @@
     <section id="pricing" class="pricing-wrap" aria-labelledby="pricingTitle">
       <div class="section-head">
         <h2 id="pricingTitle">Podrobná PDF správa</h2>
-        <p class="sub">Jednorazová platba, žiadne predplatné. Správu môžete poslať vývojárovi alebo použiť ako podklad pre vyhlásenie o prístupnosti.</p>
+        <p class="sub">Jednorazový audit alebo mesačný monitoring. Správu môžete poslať vývojárovi alebo použiť ako podklad pre vyhlásenie o prístupnosti.</p>
       </div>
       <p class="demo-banner" id="demoBanner" hidden>Demo režim: platobná brána nie je nastavená, objednávka sa spracuje bez platby.</p>
+      <div class="consent" id="consentBox">
+        <input type="checkbox" id="consent">
+        <label for="consent">Súhlasím s <a href="/obchodne-podmienky.html" target="_blank" rel="noopener">obchodnými podmienkami</a> a beriem na vedomie
+          <a href="/ochrana-osobnych-udajov.html" target="_blank" rel="noopener">spracovanie osobných údajov</a>. Žiadam o začatie poskytovania služby ihneď po zaplatení
+          a beriem na vedomie, že po dodaní správy strácam právo na odstúpenie od zmluvy.</label>
+      </div>
       <div class="pricing" id="tiers"></div>
     </section>
   </main>
 
   <footer class="foot">
+    <nav class="foot-links" aria-label="Právne informácie">
+      <a href="/obchodne-podmienky.html">Obchodné podmienky</a>
+      <a href="/ochrana-osobnych-udajov.html">Ochrana osobných údajov</a>
+    </nav>
     Web Analyzer · Automatický audit nenahrádza manuálne testovanie ani právne poradenstvo.
   </footer>
 </body>

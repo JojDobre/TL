@@ -31,9 +31,26 @@ Stránka `/pristupnost.html` – hĺbkový audit podľa Európskeho aktu o prís
 
 | Balík | Cena | Podstránky | Obsah PDF |
 |---|---|---|---|
-| Základ | 19 € | 5 | zhrnutie, právny rámec, porušené kritériá, chyby s návodom a príkladmi kódu |
+| Základ | 19 € | 5 | zhrnutie, právny rámec, porušené kritériá, chyby so snímkou, návodom a kódom |
 | Štandard | 29 € | 15 | + tabuľka všetkých kritérií WCAG ↔ EN 301 549, kontrolný zoznam manuálnych testov |
 | Pro | 49 € | 40 | + prioritizovaný plán nápravy, predvyplnená šablóna Vyhlásenia o prístupnosti |
+| **Monitoring** | 9 € / mesiac | 15 | mesačný audit, porovnanie (nové / opravené chyby), PDF **e-mailom**, upozornenie pri zhoršení |
+
+### Čo audit testuje
+
+- **axe-core** – 70+ pravidiel WCAG 2.0 / 2.1 / 2.2 A a AA vo vykreslenej stránke.
+- **Test klávesnice** (vlastný) – prechod klávesom Tab: viditeľný fokus (porovnanie snímok
+  prvku so zameraním a bez neho), pasca pre klávesnicu, fokus zakrytý prekryvom,
+  ovládacie prvky (rola / onclick) mimo poradia Tab.
+- **Reflow** – zobrazenie pri šírke 320 px bez vodorovného skrolovania.
+- **Mobilné zobrazenie** – kľúčové stránky aj v rozlíšení 390 × 844 s dotykom.
+- **Cookie lišta** – otestuje sa v zobrazenom stave, potom sa zatvorí, aby neprekrývala obsah.
+- **Ochrana proti botom / chybové stránky** – rozpoznajú sa a audit sa odmietne
+  (zákazník nezaplatí za nezmyselnú správu).
+- **Snímky chýb** – v PDF je výrez stránky so zvýrazneným chybným prvkom.
+
+Ako sme overili presnosť (testovacie stránky so známymi chybami, W3C BAD benchmark,
+ručne preverené nálezy) a čo audit negarantuje: **[docs/PRESNOST.md](docs/PRESNOST.md)**.
 
 Ceny a obsah balíkov sa menia v `src/a11y/tiers.js` (cenu nikdy neposiela klient).
 
@@ -42,16 +59,49 @@ Ceny a obsah balíkov sa menia v `src/a11y/tiers.js` (cenu nikdy neposiela klien
 - Bez `STRIPE_SECRET_KEY` beží **DEMO režim** – objednávky sa spracujú bez platby a stránka
   to zreteľne zobrazuje. **Na produkcii vždy nastav kľúč.**
 - V Stripe Dashboarde vytvor webhook na `https://tvoja-domena/api/stripe/webhook`
-  s udalosťami `checkout.session.completed` a `checkout.session.async_payment_succeeded`
+  s udalosťami `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
+  `customer.subscription.updated`, `customer.subscription.deleted` a `invoice.payment_failed`
   a jeho tajomstvo ulož do `STRIPE_WEBHOOK_SECRET`. Podpis sa overuje (HMAC SHA-256).
+- Pre predplatné zapni v Stripe **Customer Portal** (Settings → Billing → Customer portal) –
+  zákazník si v ňom mení kartu a ruší predplatné.
 - Platba sa overí aj priamo cez Stripe API pri návrate zákazníka, takže audit sa spustí
   aj keď webhook mešká.
 - DPH, faktúry a potvrdenia o platbe nastav v Stripe (Stripe Tax, Invoicing, e-mailové potvrdenia).
 
+### Predplatné a e-maily
+
+- Plánovač každých 15 minút spustí audit predplatným, ktorým nastal termín (raz mesačne).
+- Pri každom behu sa výsledok porovná s predchádzajúcim a PDF sa pošle e-mailom cez
+  [Resend](https://resend.com) (`RESEND_API_KEY`, `MAIL_FROM` s overenou doménou).
+  Bez kľúča sa e-maily ukladajú do `DATA_DIR/outbox` (vývoj).
+- E-maily sa posielajú **len pri predplatnom**; jednorazové objednávky sa sťahujú zo stránky.
+- Stránka predplatného: `/pristupnost.html?sub=…&token=…` (história, PDF, správa platby).
+
+### Administrácia
+
+`/admin.html` – tržby, MRR, objednávky, predplatné, opakovanie neúspešných auditov,
+ručné spustenie auditu predplatného, zrušenie. Prístup cez `ADMIN_TOKEN`
+(bez neho je admin vypnutý). Odporúčame ho ešte chrániť na úrovni reverse proxy.
+
+### Právne stránky
+
+`/obchodne-podmienky.html` a `/ochrana-osobnych-udajov.html` sú **šablóny** – žlté
+[polia] doplň a text daj skontrolovať právnikovi. Pred platbou zákazník povinne
+zaškrtne súhlas s podmienkami a so začatím poskytovania služby (ukladá sa k objednávke).
+
 ### Dáta
 
-Objednávky, audity a PDF sa ukladajú ako súbory do `DATA_DIR` (predvolene `./data`).
-Po reštarte servera sa rozpracované audity dokončia. Náhľady sa mažú po 24 hodinách.
+Objednávky, predplatné, audity a PDF sa ukladajú ako súbory do `DATA_DIR` (predvolene `./data`).
+Po reštarte servera sa rozpracované audity dokončia. Náhľady sa mažú po 24 hodinách,
+nezaplatené objednávky po 7 dňoch, ostatné po `RETENTION_DAYS` (predvolene 180).
+
+## Testy
+
+```bash
+npm test            # jednotkové + integračné testy (spúšťajú prehliadač)
+npm run test:unit   # len rýchle jednotkové testy
+npm run benchmark   # presnosť na W3C Before and After Demonstration
+```
 
 ### Bezpečnosť
 
@@ -92,6 +142,9 @@ Výsledok sa dá zdieľať odkazom `/?url=example.com`.
 - `POST /api/a11y/checkout` `{ "previewId": "…", "tier": "basic|standard|pro" }` – vytvorí objednávku / Stripe Checkout
 - `GET /api/a11y/orders/:id?token=…` – stav objednávky
 - `GET /api/a11y/orders/:id/report.pdf?token=…` – PDF správa
+- `POST /api/a11y/subscribe` `{ "previewId", "email", "consent": true }` – predplatné Monitoring
+- `GET /api/a11y/subscriptions/:id?token=…` – stav predplatného, `POST …/portal`, `POST …/cancel`
+- `GET /api/admin/overview` (Bearer `ADMIN_TOKEN`) – admin prehľad
 - `POST /api/stripe/webhook` – Stripe webhook
 
 ## Štruktúra
@@ -104,18 +157,24 @@ src/html.js        ľahký HTML parser
 src/tech.js        detekcia technológií
 src/a11y/
   wcag.js          kritériá WCAG, mapovanie EN 301 549, slovenské preklady pravidiel, manuálne testy
-  browser.js       zdieľaný Chromium, SSRF filter požiadaviek, limit súbežnosti
-  scanner.js       axe-core sken, crawler podstránok, skóre a agregácia
+  browser.js       zdieľaný Chromium (desktop/mobil), SSRF filter požiadaviek, limit súbežnosti
+  checks.js        vlastné testy: klávesnica, reflow, cookie lišta, snímky chýb
+  scanner.js       axe-core sken, crawler, ochrana proti botom, skóre, agregácia, porovnanie
   report.js        HTML šablóna PDF správy a jej render
-  orders.js        náhľady, objednávky, Stripe, fronta auditov
-  tiers.js         cenník balíkov
-public/            frontend (index.html + app.js, pristupnost.html + a11y.js, styles.css)
+  orders.js        náhľady, jednorazové objednávky, fronta auditov, uchovávanie dát
+  subscriptions.js predplatné Monitoring, plánovač, e-maily, Stripe udalosti
+  api.js           HTTP API vrátane administrácie
+  store.js / stripe.js / mailer.js / tiers.js
+public/            index + app.js, pristupnost + a11y.js, admin + admin.js, právne stránky, styles.css
+test/              node:test testy a testovacie stránky so známymi chybami
+scripts/           benchmark na W3C BAD
+docs/PRESNOST.md   ako sme overili presnosť
 ```
 
 ## Obmedzenia
 
-- **Automatický test prístupnosti odhalí len časť problémov** (ovládanie klávesnicou,
-  zrozumiteľnosť či kvalitu alt textov musí overiť človek). Správa to jasne uvádza a nie je
+- **Automatický test prístupnosti odhalí len časť problémov** (zložité komponenty,
+  zrozumiteľnosť či kvalitu alt textov musí overiť človek) – viac v docs/PRESNOST.md. Správa to jasne uvádza a nie je
   certifikátom zhody ani právnym stanoviskom.
 
 - Analyzuje sa HTML zo servera – obsah generovaný JavaScriptom (SPA) sa nevyhodnotí.

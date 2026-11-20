@@ -462,3 +462,53 @@ main { max-width: 1240px; margin: 0 auto; padding: 0 24px 40px; }
   background: linear-gradient(120deg, color-mix(in srgb, var(--c-accessibility) 14%, var(--card)), color-mix(in srgb, var(--accent-2) 10%, var(--card))); border-color: color-mix(in srgb, var(--c-accessibility) 35%, transparent); }
 .eaa-promo b { font-size: 16px; } .eaa-promo p { margin: 3px 0 0; }
 @media (max-width: 760px) { .eaa-promo { flex-direction: column; align-items: stretch; text-align: center; } }
+
+/* ===================== Súhlas, predplatné, admin ===================== */
+.consent { max-width: 760px; margin: 0 auto 22px; display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 14px; background: var(--card); border: 1px solid var(--line-2); font-size: 13.5px; color: var(--muted); }
+.consent input { width: 20px; height: 20px; margin-top: 1px; flex: none; accent-color: var(--accent); cursor: pointer; }
+.consent label { cursor: pointer; }
+.consent a { color: var(--text); }
+.consent.invalid { border-color: var(--bad); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad) 18%, transparent); }
+.monitor-card { grid-column: 1 / -1; margin-top: 8px; background: radial-gradient(90% 120% at 100% 0%, color-mix(in srgb, var(--c-accessibility) 14%, transparent), transparent 60%), var(--card); border-color: color-mix(in srgb, var(--c-accessibility) 35%, transparent); }
+.monitor-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px; align-items: center; }
+.monitor-form { display: flex; flex-direction: column; gap: 8px; padding: 18px; border-radius: 18px; background: var(--card-2); border: 1px solid var(--line); }
+.monitor-form label { font-weight: 600; font-size: 14px; }
+.monitor-form input { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--card); font-size: 15px; }
+.monitor-form input:focus { outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent); border-color: var(--accent); }
+.popular-tag.alt { background: linear-gradient(135deg, var(--c-accessibility), #0ea5e9); left: 32px; transform: none; }
+.chip-accent { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.demo-banner.left { text-align: left; margin: 14px 0 0; max-width: none; }
+.run-row { align-items: center; }
+.run-row .run-main { flex: 1; min-width: 0; }
+.run-row .ghost-btn { text-decoration: none; flex: none; }
+.foot-links { display: flex; justify-content: center; gap: 18px; margin-bottom: 8px; }
+.foot-links a { color: var(--muted); }
+@media (max-width: 760px) {
+  .monitor-grid { grid-template-columns: 1fr; gap: 16px; }
+  .run-row { flex-direction: row; flex-wrap: wrap; }
+}
+
+/* Právne stránky */
+.legal { max-width: 820px; margin: 0 auto; }
+.legal h1 { font-size: clamp(28px, 4vw, 40px); letter-spacing: -0.03em; margin: 10px 0 6px; }
+.legal h2 { font-size: 19px; margin: 28px 0 8px; }
+.legal p, .legal li { color: var(--muted); }
+.legal li { margin-bottom: 6px; }
+.legal .card { padding: 28px 32px; }
+.legal .placeholder { background: color-mix(in srgb, var(--ok) 22%, transparent); color: var(--text); padding: 0 4px; border-radius: 4px; }
+.legal table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 8px 0; }
+.legal td, .legal th { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--muted); }
+.legal th { color: var(--text); }
+
+/* Admin */
+.admin-login { max-width: 420px; margin: 40px auto; display: flex; flex-direction: column; gap: 10px; }
+.admin-login input { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--card-2); }
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.admin-table th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--faint); padding: 8px; border-bottom: 1px solid var(--line-2); white-space: nowrap; }
+.admin-table td { padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.admin-table td.url { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-table a, .admin-table button { font-size: 12.5px; }
+.table-wrap { overflow-x: auto; }
+.status-pill { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 12px; font-weight: 600; color: var(--sc); background: color-mix(in srgb, var(--sc) 14%, transparent); white-space: nowrap; }
+@media (max-width: 760px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }

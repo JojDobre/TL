@@ -81,41 +81,86 @@ const state = { config: null, preview: null };
 
 function renderTiers() {
   const box = $('#tiers');
-  box.replaceChildren(...state.config.tiers.map((t) => h('article', { class: 'card price-card' + (t.popular ? ' popular' : '') },
+  const ready = !!state.preview;
+  const cards = state.config.tiers.map((t) => h('article', { class: 'card price-card' + (t.popular ? ' popular' : '') },
     t.popular ? h('span', { class: 'popular-tag' }, 'Najobľúbenejší') : null,
     h('h3', {}, t.name),
     h('p', { class: 'sub' }, t.tagline),
     h('div', { class: 'price' }, h('b', {}, `${t.price} €`), h('span', {}, ' jednorazovo')),
     h('ul', { class: 'ticks' }, t.features.map((f) => h('li', {}, f))),
     h('button', { class: 'buy' + (t.popular ? ' primary' : ''), type: 'button', 'data-tier': t.key, onclick: (e) => buy(t.key, e.currentTarget) },
-      state.preview ? `Objednať za ${t.price} €` : 'Najprv otestuj web'),
-  )));
+      ready ? `Objednať za ${t.price} €` : 'Najprv otestuj web'),
+  ));
+
+  const m = state.config.monitoring;
+  const emailInput = h('input', { type: 'email', id: 'subEmail', name: 'email', autocomplete: 'email', placeholder: 'vas@email.sk', required: true });
+  const monitor = h('article', { class: 'card price-card monitor-card' },
+    h('span', { class: 'popular-tag alt' }, 'Predplatné'),
+    h('div', { class: 'monitor-grid' },
+      h('div', {},
+        h('h3', {}, m.name),
+        h('p', { class: 'sub' }, m.tagline),
+        h('div', { class: 'price' }, h('b', {}, `${m.price} €`), h('span', {}, ' / mesiac')),
+        h('ul', { class: 'ticks' }, m.features.map((f) => h('li', {}, f)))),
+      h('form', { class: 'monitor-form', onsubmit: (e) => { e.preventDefault(); subscribe(e.currentTarget.querySelector('button')); } },
+        h('label', { for: 'subEmail' }, 'E-mail pre mesačné správy'),
+        emailInput,
+        h('p', { class: 'sub small' }, 'Prvý audit prebehne hneď po aktivácii, ďalšie každý mesiac. Správu pošleme e-mailom s PDF v prílohe.'),
+        h('button', { class: 'buy primary', type: 'submit' }, ready ? `Predplatiť za ${m.price} € / mesiac` : 'Najprv otestuj web'))));
+
+  box.replaceChildren(...cards, monitor);
   $('#demoBanner').hidden = state.config.paymentMode !== 'demo';
 }
 
-async function buy(tier, btn) {
-  if (!state.preview) {
-    $('#url').focus();
-    $('#hero').scrollIntoView({ behavior: 'smooth' });
-    showError('Najprv zadaj adresu webu a spusti bezplatný test.');
-    return;
-  }
+function consentOk() {
+  const c = $('#consent');
+  if (c.checked) { $('#consentBox').classList.remove('invalid'); return true; }
+  $('#consentBox').classList.add('invalid');
+  c.focus();
+  return false;
+}
+
+function needPreview() {
+  if (state.preview) return false;
+  $('#url').focus();
+  $('#hero').scrollIntoView({ behavior: 'smooth' });
+  showError('Najprv zadaj adresu webu a spusti bezplatný test.');
+  return true;
+}
+
+async function withButton(btn, fn) {
   const label = btn.textContent;
   btn.disabled = true;
   btn.textContent = 'Presmerúvam na platbu…';
-  try {
-    const r = await api('/api/a11y/checkout', { method: 'POST', body: JSON.stringify({ previewId: state.preview.id, tier }) });
-    location.href = r.redirect;
-  } catch (e) {
+  try { await fn(); } catch (e) {
     btn.disabled = false;
     btn.textContent = label;
     alert(e.message);
   }
 }
 
+async function buy(tier, btn) {
+  if (needPreview() || !consentOk()) return;
+  await withButton(btn, async () => {
+    const r = await api('/api/a11y/checkout', { method: 'POST', body: JSON.stringify({ previewId: state.preview.id, tier, consent: true }) });
+    location.href = r.redirect;
+  });
+}
+
+async function subscribe(btn) {
+  if (needPreview()) return;
+  const email = $('#subEmail');
+  if (!email.checkValidity()) { email.reportValidity(); return; }
+  if (!consentOk()) return;
+  await withButton(btn, async () => {
+    const r = await api('/api/a11y/subscribe', { method: 'POST', body: JSON.stringify({ previewId: state.preview.id, email: email.value, consent: true }) });
+    location.href = r.redirect;
+  });
+}
+
 /* ======================= Bezplatný test ======================= */
 
-const STEPS = ['Otváram stránku v prehliadači…', 'Čakám na vykreslenie obsahu…', 'Kontrolujem kontrast farieb…', 'Overujem formuláre a tlačidlá…', 'Testujem ARIA atribúty…', 'Mapujem na WCAG a EN 301 549…'];
+const STEPS = ['Otváram stránku v prehliadači…', 'Testujem cookie lištu…', 'Kontrolujem kontrast farieb…', 'Overujem formuláre a tlačidlá…', 'Prechádzam stránku klávesnicou…', 'Skúšam zobrazenie na úzkej obrazovke…', 'Mapujem na WCAG a EN 301 549…']; 
 let timer;
 
 async function runPreview(url) {
@@ -160,6 +205,7 @@ function renderPreview(p) {
     h('div', { class: 'grade', vars: { '--sc': statusColor } }, p.conformance.label),
     h('p', { class: 'score-url' }, p.host),
     h('p', { class: 'sub center' }, 'Test úvodnej stránky · ', h('b', {}, `${p.discoveredPages} ${plural(p.discoveredPages, 'podstránka', 'podstránky', 'podstránok')}`), ' nájdených na ďalší audit'),
+    p.keyboard ? h('p', { class: 'sub center small' }, `⌨ Test klávesnice: ${p.keyboard.tabStops} zastávok Tab${p.consent?.dismissed ? ' · 🍪 cookie lišta otestovaná' : ''}`) : null,
   ));
 
   // 2. Závažnosť
@@ -195,7 +241,7 @@ function renderPreview(p) {
         h('span', { class: 'sev-pill' }, IMPACT[i.impact].label),
         h('div', {},
           h('b', {}, i.title),
-          h('div', { class: 'tags' }, i.sc.map((s) => h('span', { class: 'chip' }, `WCAG ${s.id} · ${s.level}`)), h('span', { class: 'chip' }, `${i.nodeCount}× na stránke`)),
+          h('div', { class: 'tags' }, i.sc.map((s) => h('span', { class: 'chip' }, `WCAG ${s.id} · ${s.level}`)), h('span', { class: 'chip' }, `${i.nodeCount}× na stránke`), i.custom ? h('span', { class: 'chip chip-accent' }, 'overené simuláciou') : null),
           h('p', {}, i.fix)))))
       : h('p', { class: 'empty' }, 'Automatický test úvodnej stránky nenašiel žiadne chyby. 🎉 Plný audit preverí ďalšie podstránky a pripraví podklady pre manuálne testovanie a vyhlásenie o prístupnosti.'),
     h('div', { class: 'unlock' },
@@ -284,6 +330,92 @@ function renderOrder(o, id, token) {
   out.replaceChildren(main, side);
 }
 
+/* ======================= Predplatné ======================= */
+
+const SUB_STATUS = {
+  pending_payment: ['Čaká na platbu', 'var(--ok)'],
+  active: ['Aktívne', 'var(--good)'],
+  past_due: ['Platba zlyhala', 'var(--bad)'],
+  canceled: ['Zrušené', 'var(--info)'],
+};
+const fmtDate = (d) => new Date(d).toLocaleDateString('sk-SK', { day: 'numeric', month: 'long', year: 'numeric' });
+
+let subTimer;
+async function showSubscription(id, token) {
+  $('#hero').hidden = true;
+  $('#info').hidden = true;
+  $('#pricing').hidden = true;
+  const out = $('#order');
+  out.hidden = false;
+  out.replaceChildren(h('article', { class: 'card span-12 skel short' }, h('div', { class: 'loader-ring' })));
+  const tick = async () => {
+    clearTimeout(subTimer);
+    try {
+      const sub = await api(`/api/a11y/subscriptions/${encodeURIComponent(id)}?token=${encodeURIComponent(token)}`);
+      renderSubscription(sub, id, token);
+      if (sub.status === 'pending_payment' || sub.runs.some((r) => r.status === 'running')) subTimer = setTimeout(tick, 4000);
+    } catch (e) {
+      out.replaceChildren(h('article', { class: 'card span-12' }, h('p', { class: 'error' }, e.message)));
+    }
+  };
+  tick();
+}
+
+function renderSubscription(sub, id, token) {
+  const out = $('#order');
+  const [label, color] = SUB_STATUS[sub.status] || [sub.status, 'var(--info)'];
+  const latest = sub.runs.find((r) => r.status === 'done');
+  const q = `?token=${encodeURIComponent(token)}`;
+
+  const actions = h('div', { class: 'download' },
+    sub.status !== 'canceled' && !sub.demo ? h('button', { class: 'cta', type: 'button', onclick: async (e) => {
+      e.currentTarget.disabled = true;
+      try { location.href = (await api(`/api/a11y/subscriptions/${id}/portal${q}`, { method: 'POST' })).redirect; } catch (err) { alert(err.message); e.currentTarget.disabled = false; }
+    } }, 'Spravovať platbu a predplatné') : null,
+    sub.status !== 'canceled' && sub.demo ? h('button', { class: 'ghost-btn', type: 'button', onclick: async () => {
+      if (!confirm('Naozaj zrušiť predplatné?')) return;
+      await api(`/api/a11y/subscriptions/${id}/cancel${q}`, { method: 'POST' });
+      showSubscription(id, token);
+    } }, 'Zrušiť predplatné') : null,
+    h('button', { class: 'ghost-btn', type: 'button', onclick: (e) => { navigator.clipboard?.writeText(location.href); e.currentTarget.textContent = 'Odkaz skopírovaný ✓'; } }, 'Kopírovať odkaz na túto stránku'));
+
+  const main = h('article', { class: 'card span-8' },
+    h('div', { class: 'card-head' },
+      h('h2', { class: 'card-title' }, h('span', { class: 'ico', 'aria-hidden': 'true' }, '↻'), 'Monitoring prístupnosti'),
+      h('span', { class: 'chip' }, h('span', { class: 'dot', vars: { '--dc': color } }), label, sub.demo ? ' · DEMO' : '')),
+    h('p', { class: 'sub' }, sub.url),
+    h('dl', { class: 'kv' },
+      h('dt', {}, 'E-mail pre správy'), h('dd', {}, sub.email),
+      h('dt', {}, 'Cena'), h('dd', {}, `${sub.price} € / mesiac`),
+      h('dt', {}, 'Ďalší audit'), h('dd', {}, sub.nextRunAt ? fmtDate(sub.nextRunAt) : '—'),
+      h('dt', {}, 'Aktívne od'), h('dd', {}, fmtDate(sub.createdAt))),
+    sub.mailMode === 'outbox' ? h('p', { class: 'demo-banner left' }, 'E-maily sa zatiaľ neodosielajú (server nemá nastavený RESEND_API_KEY) – správy sa ukladajú na server.') : null,
+    sub.status === 'pending_payment' ? h('p', { class: 'sub' }, 'Čakáme na potvrdenie platby zo Stripe…') : null,
+    actions);
+
+  const side = h('article', { class: 'card span-4' },
+    latest
+      ? h('div', { class: 'score-card plain' }, ring(latest.score, 150, 12),
+        h('p', { class: 'sub center' }, `Posledný audit ${fmtDate(latest.date)}`),
+        latest.delta != null ? h('div', { class: 'grade', vars: { '--sc': latest.delta >= 0 ? 'var(--good)' : 'var(--bad)' } }, `${latest.delta > 0 ? '+' : ''}${latest.delta} oproti minulému mesiacu`) : null)
+      : h('div', {}, h('h3', { class: 'card-title' }, 'Prvý audit'), h('p', { class: 'sub' }, sub.status === 'active' ? 'Prebieha prvý audit, o pár minút tu bude výsledok a príde aj e-mail.' : 'Spustí sa hneď po potvrdení platby.')));
+
+  const history = h('article', { class: 'card span-12' },
+    h('div', { class: 'card-head' }, h('h2', { class: 'card-title' }, h('span', { class: 'ico', 'aria-hidden': 'true' }, '≡'), 'História auditov'), h('span', { class: 'chip' }, String(sub.runs.length))),
+    sub.runs.length ? h('ul', { class: 'issue-list' }, sub.runs.map((r) => h('li', { class: 'issue-row run-row' },
+      h('span', { class: 'sev-pill', vars: { '--sev': r.status === 'done' ? scoreColor(r.score) : r.status === 'failed' ? 'var(--bad)' : 'var(--accent)' } },
+        r.status === 'done' ? String(r.score) : r.status === 'failed' ? 'Chyba' : 'Beží…'),
+      h('div', { class: 'run-main' },
+        h('b', {}, fmtDate(r.date)),
+        h('p', {}, r.status === 'done'
+          ? [r.delta != null ? `Zmena skóre ${r.delta > 0 ? '+' : ''}${r.delta}` : 'Prvý audit', r.fixedIssues != null ? ` · opravené ${r.fixedIssues}, nové ${r.newIssues}` : '', r.emailed ? ' · odoslané e-mailom' : ''].join('')
+          : r.status === 'failed' ? 'Audit sa nepodaril, skúsime to znova pri ďalšom behu.' : 'Audit práve prebieha.')),
+      r.reportUrl ? h('a', { class: 'ghost-btn', href: r.reportUrl, download: '' }, '⬇ PDF') : h('a', { class: 'ghost-btn', href: r.statusUrl }, 'Detail'))))
+      : h('p', { class: 'empty' }, 'Zatiaľ žiadne audity.'));
+
+  out.replaceChildren(main, side, history);
+}
+
 /* ======================= Init ======================= */
 
 $('#form').addEventListener('submit', (e) => {
@@ -297,6 +429,7 @@ $('#form').addEventListener('submit', (e) => {
   renderTiers();
   const q = new URLSearchParams(location.search);
   if (q.get('order') && q.get('token')) return showOrder(q.get('order'), q.get('token'));
+  if (q.get('sub') && q.get('token')) return showSubscription(q.get('sub'), q.get('token'));
   if (q.get('url')) { $('#url').value = q.get('url'); await runPreview(q.get('url')); }
   if (q.get('canceled')) showError('Platba bola zrušená. Môžeš si vybrať iný balík alebo to skúsiť znova.');
 })();

@@ -2,7 +2,7 @@
 
 const { withPage } = require('./browser');
 const { IMPACT, MANUAL_CHECKS, SC } = require('./wcag');
-const { TIERS } = require('./tiers');
+const { ALL_TIERS } = require('./tiers');
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmtDate = (d) => new Date(d).toLocaleDateString('sk-SK', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -25,8 +25,11 @@ const badge = (impact) => `<span class="badge" style="background:${IMPACT_COLOR[
 /* ======================= Šablóna správy ======================= */
 
 function buildHtml(audit, order) {
-  const tier = TIERS[order.tier];
+  const tier = ALL_TIERS[order.tier];
   const a = audit;
+  let secNo = 0;
+  const num = () => `<span class="num">${++secNo}</span>`;
+  const VP = { desktop: 'počítač', mobile: 'mobil' };
   const crit = a.counts.critical + a.counts.serious;
   const statusColor = a.conformance.key === 'fail' ? '#ef4444' : a.conformance.key === 'partial' ? '#e0a100' : '#12b76a';
 
@@ -35,7 +38,7 @@ function buildHtml(audit, order) {
   <section class="cover">
     <div class="cover-top">
       <div class="brand"><span class="mark">◎</span> Web Analyzer</div>
-      <div class="cover-meta">Číslo správy: <b>${esc(order.id.slice(0, 8).toUpperCase())}</b><br>Balík: <b>${esc(tier.name)}</b></div>
+      <div class="cover-meta">Číslo správy: <b>${esc(order.id.slice(0, 8).toUpperCase())}</b><br>${order.tier === 'monitor' ? 'Mesačný monitoring' : `Balík: <b>${esc(tier.name)}</b>`}</div>
     </div>
     <h1>Audit prístupnosti webu</h1>
     <p class="cover-sub">podľa Európskeho aktu o prístupnosti (EAA), zákona č. 351/2022 Z. z.<br>a normy EN 301 549 / WCAG 2.1 a 2.2, úroveň AA</p>
@@ -50,7 +53,7 @@ function buildHtml(audit, order) {
         <p>${esc(a.conformance.text)}</p>
         <table class="mini">
           <tr><td>Dátum auditu</td><td>${fmtDate(a.scannedAt)}</td></tr>
-          <tr><td>Analyzované podstránky</td><td>${a.pages.length}</td></tr>
+          <tr><td>Analyzované podstránky</td><td>${a.pages.length}${a.mobilePages?.length ? ` + ${a.mobilePages.length} v mobilnom zobrazení` : ''}</td></tr>
           <tr><td>Typy problémov</td><td>${a.issues.length}</td></tr>
           <tr><td>Výskyty problémov</td><td>${a.totalNodes}</td></tr>
         </table>
@@ -63,7 +66,7 @@ function buildHtml(audit, order) {
   const topIssues = a.issues.slice(0, 5);
   const summary = `
   <section class="page">
-    <h2><span class="num">1</span> Zhrnutie pre vedenie</h2>
+    <h2>${num()} Zhrnutie pre vedenie</h2>
     <p class="lead">${crit
       ? `Na webe <b>${esc(a.host)}</b> sme automatickým testom našli <b>${crit} ${crit === 1 ? 'kritický alebo závažný typ problému' : 'kritických alebo závažných typov problémov'}</b>, ktoré bránia ľuďom so zdravotným postihnutím web plnohodnotne používať. Tieto chyby sú v rozpore s požiadavkami WCAG 2.1 AA, na ktoré odkazuje EAA.`
       : a.issues.length
@@ -106,10 +109,33 @@ function buildHtml(audit, order) {
     </div>
   </section>`;
 
+  /* ---------- 2b. Porovnanie s predchádzajúcim auditom (monitoring) ---------- */
+  let comparison = '';
+  if (a.comparison) {
+    const c = a.comparison;
+    const d = c.scoreDelta;
+    const row = (i, extra = '') => `<tr><td>${esc(i.title)}</td><td>${badge(i.impact)}</td><td class="r">${extra || i.nodeCount + '×'}</td></tr>`;
+    comparison = `
+    <section class="page">
+      <h2>${num()} Zmeny od posledného auditu</h2>
+      <p class="lead">Predchádzajúci audit: ${fmtDate(c.previousDate)}. Skóre sa zmenilo z <b>${c.previousScore}</b> na <b>${a.score}</b>
+        (<b style="color:${d > 0 ? '#12b76a' : d < 0 ? '#ef4444' : '#6b7287'}">${d > 0 ? '+' : ''}${d}</b>).</p>
+      <div class="kpis kpis-3">
+        <div class="kpi" style="border-top:4px solid #12b76a"><div class="kpi-n">${c.fixedIssues.length}</div><div class="kpi-l">Opravené problémy</div></div>
+        <div class="kpi" style="border-top:4px solid #ef4444"><div class="kpi-n">${c.newIssues.length}</div><div class="kpi-l">Nové problémy</div></div>
+        <div class="kpi" style="border-top:4px solid #e0a100"><div class="kpi-n">${c.changed.length}</div><div class="kpi-l">Zmenený počet výskytov</div></div>
+      </div>
+      ${c.newIssues.length ? `<h3>Nové problémy</h3><table class="tbl"><tbody>${c.newIssues.map((i) => row(i)).join('')}</tbody></table>` : ''}
+      ${c.fixedIssues.length ? `<h3>Opravené problémy</h3><table class="tbl"><tbody>${c.fixedIssues.map((i) => row(i)).join('')}</tbody></table>` : ''}
+      ${c.changed.length ? `<h3>Zmenený počet výskytov</h3><table class="tbl"><tbody>${c.changed.map((i) => row(i, `${i.before}× → <b>${i.after}×</b>`)).join('')}</tbody></table>` : ''}
+      ${!c.newIssues.length && !c.fixedIssues.length && !c.changed.length ? '<p class="muted">Od posledného auditu sa výsledky nezmenili.</p>' : ''}
+    </section>`;
+  }
+
   /* ---------- 3. Právny rámec ---------- */
   const legal = `
   <section class="page">
-    <h2><span class="num">2</span> Právny rámec</h2>
+    <h2>${num()} Právny rámec</h2>
     <div class="cols">
       <div>
         <h3>Európsky akt o prístupnosti (EAA)</h3>
@@ -142,23 +168,23 @@ function buildHtml(audit, order) {
   const critRows = (tier.criteria ? a.criteria : a.criteria.filter((c) => c.status === 'fail'));
   const criteria = `
   <section class="page">
-    <h2><span class="num">3</span> ${tier.criteria ? 'Stav kritérií WCAG a EN 301 549' : 'Porušené kritériá WCAG'}</h2>
+    <h2>${num()} ${tier.criteria ? 'Stav kritérií WCAG a EN 301 549' : 'Porušené kritériá WCAG'}</h2>
     <p>${tier.criteria
-      ? 'Prehľad všetkých kritérií úrovne A a AA. <b>Vyhovuje</b> = automatický test kritérium overil bez chýb; <b>Nevyhovuje</b> = zistené porušenie; <b>Manuálne</b> = automat ho nedokáže spoľahlivo overiť.'
+      ? 'Prehľad všetkých kritérií úrovne A a AA. <b>Nevyhovuje</b> = test zistil porušenie. <b>Bez zistených chýb</b> = automatické pravidlá pre toto kritérium prebehli bez nálezu; <i>neznamená to</i> potvrdenie plnej zhody, keďže automat overí len časť požiadaviek kritéria. <b>Overiť manuálne</b> = automat kritérium nedokáže testovať.'
       : 'Kritériá, pri ktorých automatický test zistil porušenie.'}</p>
     ${critRows.length ? `<table class="tbl crit">
       <thead><tr><th>Kritérium</th><th>Názov</th><th>Úroveň</th><th>EN 301 549</th><th>Stav</th></tr></thead>
       <tbody>${critRows.map((c) => `<tr>
         <td><b>${esc(c.id)}</b></td><td>${esc(c.name)}${c.ver === '2.2' ? ' <span class="tag">2.2</span>' : ''}</td><td>${c.level}</td>
         <td>${c.en301549 || '—'}</td>
-        <td><span class="st st-${c.status}">${c.status === 'fail' ? 'Nevyhovuje' : c.status === 'pass' ? 'Vyhovuje' : 'Manuálne'}</span></td></tr>`).join('')}</tbody>
+        <td><span class="st st-${c.status}">${c.status === 'fail' ? 'Nevyhovuje' : c.status === 'pass' ? 'Bez zistených chýb' : 'Overiť manuálne'}</span></td></tr>`).join('')}</tbody>
     </table>` : '<p class="ok">Žiadne porušené kritériá.</p>'}
   </section>`;
 
   /* ---------- 5. Detail problémov ---------- */
   const issues = `
   <section class="page">
-    <h2><span class="num">4</span> Zistené problémy a ich oprava</h2>
+    <h2>${num()} Zistené problémy a ich oprava</h2>
     ${a.issues.length ? '' : '<p class="ok">Automatický test nenašiel žiadne problémy.</p>'}
     ${a.issues.map((i, idx) => `
       <article class="issue">
@@ -173,13 +199,16 @@ function buildHtml(audit, order) {
         <table class="mini">
           <tr><td>Výskyt</td><td>${i.nodeCount}× na ${i.pages.length} z ${a.pages.length} podstránok</td></tr>
           ${i.affects ? `<tr><td>Koho sa týka</td><td>${esc(i.affects)}</td></tr>` : ''}
-          <tr><td>Pravidlo</td><td class="mono">${esc(i.id)}</td></tr>
+          <tr><td>Zobrazenie</td><td>${(i.viewports || ['desktop']).map((v) => VP[v] || v).join(', ')}</td></tr>
+          <tr><td>Zdroj</td><td>${i.custom ? 'vlastný test Web Analyzer (simulácia klávesnice / zobrazenia)' : 'axe-core'} · <span class="mono">${esc(i.id)}</span></td></tr>
         </table>
         <div class="fix"><b>Ako opraviť:</b> ${esc(i.fix)}</div>
         ${i.examples.slice(0, tier.examples).map((e) => `
           <div class="ex">
-            <div class="ex-page">${esc(short(e.page))} · <span class="mono">${esc(e.target.slice(0, 120))}</span></div>
+            <div class="ex-page">${esc(short(e.page))}${e.viewport === 'mobile' ? ' · <b>mobil</b>' : ''} · <span class="mono">${esc(e.target.slice(0, 120))}</span></div>
+            ${e.shot ? `<img class="ex-shot" src="data:image/jpeg;base64,${e.shot}" alt="">` : ''}
             <pre>${esc(e.html)}</pre>
+            ${i.custom && e.summary ? `<div class="small muted">${esc(e.summary)}</div>` : ''}
           </div>`).join('')}
         ${i.pages.length > 1 ? `<div class="small muted">Podstránky: ${i.pages.slice(0, 6).map((p) => esc(short(p, 50))).join(', ')}${i.pages.length > 6 ? ` a ďalších ${i.pages.length - 6}` : ''}</div>` : ''}
       </article>`).join('')}
@@ -188,7 +217,7 @@ function buildHtml(audit, order) {
   /* ---------- 6. Podstránky ---------- */
   const pages = `
   <section class="page">
-    <h2><span class="num">5</span> Analyzované podstránky</h2>
+    <h2>${num()} Analyzované podstránky</h2>
     <table class="tbl">
       <thead><tr><th>#</th><th>Stránka</th><th class="r">Skóre</th><th class="r">Typy chýb</th><th class="r">Výskyty</th></tr></thead>
       <tbody>${a.pages.map((p, i) => `<tr>
@@ -197,6 +226,14 @@ function buildHtml(audit, order) {
         <td class="r"><b style="color:${p.score == null ? '#64748b' : scoreColor(p.score)}">${p.score ?? '—'}</b></td>
         <td class="r">${p.error ? '—' : p.violations}</td><td class="r">${p.error ? '—' : p.nodes}</td></tr>`).join('')}</tbody>
     </table>
+    ${a.mobilePages?.length ? `
+      <h3>Mobilné zobrazenie (390 × 844 px)</h3>
+      <table class="tbl">
+        <thead><tr><th>Stránka</th><th class="r">Skóre</th><th class="r">Typy chýb</th></tr></thead>
+        <tbody>${a.mobilePages.map((p) => `<tr><td>${esc(short(p.url, 80))}</td><td class="r"><b style="color:${scoreColor(p.score)}">${p.score}</b></td><td class="r">${p.violations}</td></tr>`).join('')}</tbody>
+      </table>` : ''}
+    ${a.keyboard ? `<p class="small muted">Test klávesnice na úvodnej stránke: ${a.keyboard.tabStops} zastávok klávesom Tab, vizuálne overený fokus na ${a.keyboard.visualTests} typoch prvkov.</p>` : ''}
+    ${a.consent?.dismissed ? `<p class="small muted">Cookie lišta bola otestovaná a potom zatvorená tlačidlom „${esc(a.consent.label)}“. Problémy lišty sú v správe označené ako [cookie lišta].</p>` : ''}
   </section>`;
 
   /* ---------- 7. Plán nápravy (Pro) ---------- */
@@ -213,7 +250,7 @@ function buildHtml(audit, order) {
       </div>`;
     plan = `
     <section class="page">
-      <h2><span class="num">6</span> Plán nápravy</h2>
+      <h2>${num()} Plán nápravy</h2>
       <p>Odporúčané poradie opráv podľa dopadu na používateľov a právneho rizika.</p>
       ${phase(1, 'Okamžite – blokujúce bariéry', 'odporúčaný termín: do 2 týždňov', p1, 'Kritické chyby a závažné porušenia úrovne A. Bránia používateľom dokončiť nákup, odoslať formulár alebo sa zorientovať.')}
       ${phase(2, 'Krátkodobo – závažné nedostatky', 'odporúčaný termín: do 1–2 mesiacov', p2, 'Zostávajúce závažné a stredné problémy úrovne AA (kontrast, popisy, štruktúra).')}
@@ -227,7 +264,7 @@ function buildHtml(audit, order) {
   if (tier.manual) {
     manual = `
     <section class="page">
-      <h2><span class="num">${tier.plan ? 7 : 6}</span> Kontrolný zoznam manuálnych testov</h2>
+      <h2>${num()} Kontrolný zoznam manuálnych testov</h2>
       <p>Automatické nástroje odhalia približne 30–40 % problémov prístupnosti. Nasledujúce kritériá je potrebné overiť človekom.</p>
       <table class="tbl check">
         <thead><tr><th></th><th>Kritérium</th><th>Čo overiť a ako</th></tr></thead>
@@ -248,7 +285,7 @@ function buildHtml(audit, order) {
     const stLabel = a.conformance.key === 'pass' ? 'v plnom súlade' : a.conformance.key === 'partial' ? 'čiastočne v súlade' : 'čiastočne v súlade';
     statement = `
     <section class="page">
-      <h2><span class="num">8</span> Šablóna: Vyhlásenie o prístupnosti</h2>
+      <h2>${num()} Šablóna: Vyhlásenie o prístupnosti</h2>
       <p class="muted small">Predvyplnený návrh na zverejnenie na webe (napr. na adrese /pristupnost). Údaje v [hranatých zátvorkách] doplňte. Po opravách text aktualizujte.</p>
       <div class="statement">
         <h3>Vyhlásenie o prístupnosti</h3>
@@ -266,12 +303,14 @@ function buildHtml(audit, order) {
   /* ---------- 10. Metodika ---------- */
   const methodology = `
   <section class="page">
-    <h2><span class="num">${tier.statement ? 9 : tier.manual ? 7 : 6}</span> Metodika a obmedzenia</h2>
+    <h2>${num()} Metodika a obmedzenia</h2>
     <ul>
-      <li>Web bol načítaný v prehliadači Chromium (rozlíšenie 1280 × 900 px) a otestovaný knižnicou <b>axe-core ${esc(a.axeVersion)}</b> s pravidlami WCAG 2.0, 2.1 a 2.2 úrovne A a AA.</li>
+      <li>Web bol načítaný v prehliadači Chromium (1280 × 900 px) a otestovaný knižnicou <b>axe-core ${esc(a.axeVersion)}</b> s pravidlami WCAG 2.0, 2.1 a 2.2 úrovne A a AA.</li>
+      <li>Kľúčové stránky boli navyše otestované <b>vlastnými testami</b>: prechod klávesom Tab (viditeľnosť fokusu overená porovnaním snímok prvku so zameraním a bez neho, pasca pre klávesnicu, zakrytie fokusu, ovládacie prvky mimo poradia Tab), zobrazenie pri šírke 320 px (reflow) a sken v mobilnom zobrazení.</li>
+      <li>Cookie lišta bola otestovaná v zobrazenom stave a pred ďalším testovaním zatvorená, aby neprekrývala obsah.</li>
       <li>Podstránky boli vybrané automaticky z odkazov na webe (prioritne kontakt, produkty, košík, formuláre, právne informácie). Rozsah balíka ${esc(tier.name)}: max. ${tier.pages} podstránok.</li>
       <li>Skóre (0–100) vyjadruje počet a závažnosť automaticky zistených problémov. Nie je to percento splnených kritérií.</li>
-      <li>Automatické testovanie neodhalí všetky bariéry – napr. zrozumiteľnosť textov, ovládanie klávesnicou, kvalitu alternatívnych textov či titulkov. Na potvrdenie plnej zhody je potrebné manuálne testovanie a testovanie s používateľmi.</li>
+      <li>Automatické testovanie neodhalí všetky bariéry – napr. zrozumiteľnosť textov, ovládanie zložitých prvkov (menu, formuláre, modálne okná), kvalitu alternatívnych textov či titulkov. Na potvrdenie plnej zhody je potrebné manuálne testovanie a testovanie s používateľmi.</li>
       <li>Obsah za prihlásením, v PDF dokumentoch a v mobilných aplikáciách nebol testovaný.</li>
       <li>Výsledok platí ku dňu auditu (${fmtDate(a.scannedAt)}). Zmeny na webe môžu stav ovplyvniť.</li>
     </ul>
@@ -282,7 +321,7 @@ function buildHtml(audit, order) {
 <title>Audit prístupnosti – ${esc(a.host)}</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono&display=swap">
 <style>${CSS}</style></head><body>
-${cover}${summary}${legal}${criteria}${issues}${pages}${plan}${manual}${statement}${methodology}
+${cover}${summary}${comparison}${legal}${criteria}${issues}${pages}${plan}${manual}${statement}${methodology}
 </body></html>`;
 }
 
@@ -346,6 +385,8 @@ table { width: 100%; border-collapse: collapse; }
 .issue-meta { margin-bottom: 2mm; }
 .fix { margin: 3mm 0; padding: 3mm 4mm; background: #f1efff; border-left: 3px solid #6d5dfc; border-radius: 6px; }
 .ex { margin: 2mm 0; }
+.ex-shot { display: block; width: 100%; max-height: 62mm; object-fit: contain; object-position: left top; border-radius: 6px; border: 1px solid #e3e6ee; margin-bottom: 1.5mm; }
+.kpis-3 { grid-template-columns: repeat(3, 1fr); }
 .ex-page { font-size: 7.5pt; color: #6b7287; margin-bottom: 1mm; word-break: break-all; }
 pre { margin: 0; padding: 2.5mm 3mm; background: #0f1320; color: #e6e9f2; border-radius: 6px; font-size: 7.3pt; white-space: pre-wrap; word-break: break-all; }
 .phase { border: 1px solid #e3e6ee; border-radius: 12px; padding: 4mm 5mm; margin-bottom: 4mm; break-inside: avoid; }
