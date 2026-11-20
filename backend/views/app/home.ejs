@@ -7,7 +7,7 @@
 </header>
 <main class="a-wrap a-in">
   <% if (deadline) { %>
-  <a class="a-deadline a-press" href="/app/tipovat?liga=<%= deadline.leagueId %>">
+  <a class="a-deadline a-press" href="/app/tipovat?kolo=<%= deadline.roundId %>">
     <div class="k"><svg class="i" width="15" height="15"><use href="#i-clock"/></svg><%= t('home.deadline', { x: deadline.until }) %></div>
     <h3><%= deadline.leagueName %> · <%= deadline.roundName %></h3>
     <p><%= t('home.tippedOf', { a: deadline.tipped, b: deadline.total, m: tn(deadline.total, 'matchGen') }) %></p>

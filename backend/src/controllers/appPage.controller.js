@@ -284,7 +284,7 @@ const home = asyncHandler(async (req, res) => {
   // karta uzávierky: kolo s najbližšou uzávierkou netipnutého zápasu
   const byRound = new Map();
   matches.forEach((m) => {
-    if (!byRound.has(m.roundId)) byRound.set(m.roundId, { leagueId: m.leagueId, leagueName: m.leagueName, roundName: m.roundName, total: 0, tipped: 0, next: null });
+    if (!byRound.has(m.roundId)) byRound.set(m.roundId, { roundId: m.roundId, leagueId: m.leagueId, leagueName: m.leagueName, roundName: m.roundName, total: 0, tipped: 0, next: null });
     const r = byRound.get(m.roundId);
     r.total += 1;
     if (m.tipped) r.tipped += 1;
@@ -347,6 +347,15 @@ const tipovat = asyncHandler(async (req, res) => {
   const now = new Date();
   const all = await openMatches(meId);
   const leagueFilter = req.query.liga ? Number(req.query.liga) : null;
+  // ?kolo=ID — len zápasy jedného kola (otvorené z ligy / z karty uzávierky)
+  const roundFilter = req.query.kolo ? Number(req.query.kolo) : null;
+  let round = null;
+  if (roundFilter) {
+    const inRound = all.filter((m) => m.roundId === roundFilter);
+    // v kole už nie je čo tipovať (alebo nie som člen) → stránka kola s výsledkami
+    if (!inRound.length) return res.redirect(`/rounds/${roundFilter}`);
+    round = { id: roundFilter, name: inRound[0].roundName, leagueId: inRound[0].leagueId, leagueName: inRound[0].leagueName };
+  }
 
   const chips = [];
   const seen = new Map();
@@ -354,7 +363,8 @@ const tipovat = asyncHandler(async (req, res) => {
     if (!seen.has(m.leagueId)) { seen.set(m.leagueId, { id: m.leagueId, name: m.leagueName, count: 0 }); chips.push(seen.get(m.leagueId)); }
     seen.get(m.leagueId).count += 1;
   });
-  const list = leagueFilter ? all.filter((m) => m.leagueId === leagueFilter) : all;
+  const list = roundFilter ? all.filter((m) => m.roundId === roundFilter)
+    : (leagueFilter ? all.filter((m) => m.leagueId === leagueFilter) : all);
 
   const today = dayKey(now);
   const tomorrow = dayKey(new Date(now.getTime() + DAY));
@@ -382,7 +392,7 @@ const tipovat = asyncHandler(async (req, res) => {
 
   res.render('app/tipovat', {
     title: L.t('title.tip'), screen: 'tipovat', appTab: 'tip',
-    chips, leagueFilter, groups,
+    chips, leagueFilter, groups, round,
     total: list.length,
     tipped: list.filter((m) => m.tipped).length,
   });

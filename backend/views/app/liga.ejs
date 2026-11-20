@@ -30,7 +30,7 @@
     <% if (rounds.length) { %>
     <div class="a-card a-list">
       <% rounds.forEach(function (r) { %>
-      <a class="a-row" href="<%= r.status === 'open' && league.member ? '/app/tipovat?liga=' + league.id : '/rounds/' + r.id %>">
+      <a class="a-row" href="<%= r.status === 'open' && league.member ? '/app/tipovat?kolo=' + r.id : '/rounds/' + r.id %>">
         <div class="a-ico" style="width:36px;height:36px;border-radius:12px;<%= r.status === 'open' ? 'background:var(--a-ok-soft);color:var(--a-ok)' : (r.status === 'scheduled' ? 'background:var(--a-info-soft);color:var(--a-info)' : 'background:var(--a-s2);color:var(--a-t3)') %>"><svg class="i"><use href="#i-<%= r.status === 'open' ? 'ball' : (r.status === 'scheduled' ? 'cal' : 'check') %>"/></svg></div>
         <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14.5px"><%= r.name %></div><div class="a-muted a-small"><%= r.when %> · <%= r.matches %> <%= tn(r.matches, 'match') %></div></div>
         <% if (r.status === 'open') { %><span class="a-pill <%= r.myTips >= r.matches ? 'ok' : 'warn' %>"><%= r.myTips %>/<%= r.matches %></span><% } else { %><svg class="i a-muted" width="18" height="18"><use href="#i-chev"/></svg><% } %>

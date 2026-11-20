@@ -1,14 +1,19 @@
 <%- include('_head') %>
 <script>document.body.setAttribute('data-total', '<%= total %>');</script>
 <header class="a-top">
+  <% if (round) { %>
+  <a class="a-ib" href="javascript:history.length>1?history.back():location.href='/app/liga/<%= round.leagueId %>'" aria-label="<%= t('common.back') %>"><svg class="i"><use href="#i-back"/></svg></a>
+  <div style="flex:1;min-width:0"><div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><%= round.leagueName %></div><h1 style="font-size:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><%= round.name %></h1></div>
+  <% } else { %>
   <h1><%= t('title.tip') %></h1>
+  <% } %>
   <div class="a-ring" aria-label="<%= t('tip.ring', { a: tipped, b: total }) %>">
     <svg viewBox="0 0 46 46"><circle cx="23" cy="23" r="19" stroke="#212a43"/><circle cx="23" cy="23" r="19" stroke="#9d83ff" data-ring stroke-dasharray="0 119.4" stroke-linecap="round"/></svg>
     <span data-ring-text><%= tipped %>/<%= total %></span>
   </div>
 </header>
 <main class="a-wrap a-in">
-  <% if (chips.length > 1) { %>
+  <% if (!round && chips.length > 1) { %>
   <div class="a-chips">
     <a class="a-chip <%= !leagueFilter ? 'on' : '' %>" href="/app/tipovat"><%= t('tip.all') %> <span class="n"><%= chips.reduce(function (s, c) { return s + c.count; }, 0) %></span></a>
     <% chips.forEach(function (c) { %><a class="a-chip <%= leagueFilter === c.id ? 'on' : '' %>" href="/app/tipovat?liga=<%= c.id %>"><%= c.name %> <span class="n"><%= c.count %></span></a><% }); %>
@@ -30,7 +35,7 @@
   <div class="a-dayhead" id="day-<%= g.key %>"><%= g.title %> · <%= t('tip.atKickoff') %></div>
   <% g.matches.forEach(function (m) { %>
   <article class="a-match <%= m.tipped ? 'tipped' : 'untipped' %>" data-match="<%= m.id %>" data-type="<%= m.type %>">
-    <div class="meta"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><%= m.leagueName %> · <%= m.roundName %></span><span class="when <%= m.soon ? 'soon' : '' %>"><svg class="i" width="13" height="13"><use href="#i-clock"/></svg><%= m.when %></span></div>
+    <div class="meta"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><%= round ? '' : m.leagueName + ' · ' + m.roundName %></span><span class="when <%= m.soon ? 'soon' : '' %>"><svg class="i" width="13" height="13"><use href="#i-clock"/></svg><%= m.when %></span></div>
     <% if (m.type === 'exact_score') { %>
     <div class="teams">
       <div class="team"><%- include('_crest', { c: m.home }) %><b><%= m.home.name %></b></div>
