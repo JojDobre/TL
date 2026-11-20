@@ -372,7 +372,7 @@ html.is-app .tip-step:has(.tip-num.hit) { border-color: var(--success); box-shad
 .a-code::placeholder { color: var(--a-t4, #3d4763); letter-spacing: .32em; }
 .a-hint { color: var(--a-t3); font-size: 12.5px; margin-top: 8px; line-height: 1.45; }
 .a-err { margin-top: 12px; padding: 11px 13px; border-radius: 13px; background: rgba(240, 71, 106, .12); color: #ff8aa2; font: 600 13.5px var(--a-body); }
-.a-screen .a-mini { flex: none; height: 36px; padding: 0 15px; border-radius: 12px; background: var(--a-brand); color: #fff; font: 700 13.5px var(--a-body); border: 0; box-shadow: 0 6px 16px rgba(124, 92, 255, .35); }
+.a-screen .a-mini { flex: none; height: 36px; padding: 0 15px; border-radius: 12px; background: var(--a-s2); color: var(--a-t1); font: 700 13.5px var(--a-body); border: 1px solid var(--a-line2); }
 .a-mini:active { transform: scale(.95); }
 .a-mini[disabled] { opacity: .6; }
 .a-choice { display: grid; gap: 8px; }
@@ -440,3 +440,12 @@ html.is-app .match-row .tip-step { width: 50px; }
 /* .a-screen button (reset) by inak prebil písmo tlačidiel s triedou .a-btn */
 .a-screen button.a-btn { font: 700 16px var(--a-body); }
 .a-screen button.a-btn.ghost { background: var(--a-s2); }
+
+/* liga: možnosti (spodný panel) */
+.a-sheet { max-height: 88vh; overflow-y: auto; }
+.a-idrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 16px; background: var(--a-bg2); border: 1.5px dashed var(--a-line2); }
+.a-idrow b { display: block; margin-top: 3px; font-size: 22px; letter-spacing: .16em; }
+.a-sheet .a-card { background: var(--a-s1); }
+/* .a-screen button (reset) by inak zrušil pozadie ikonových tlačidiel a čipov */
+.a-screen button.a-ib { background: rgba(255, 255, 255, .04); border: 1px solid rgba(150, 165, 215, .2); }
+.a-screen button.a-chip { background: var(--a-s2); border: 1px solid var(--a-line2); display: inline-flex; align-items: center; font: 700 13px var(--a-body); }

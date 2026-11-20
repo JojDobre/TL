@@ -33,6 +33,8 @@
     else if (p === '/profile') location.replace('/app/profil');
     else if (p === '/notifications') location.replace('/app/notifikacie');
     else if (p === '/moje-tipy') location.replace('/app/tipovat');
+    else if (p === '/leaderboards') location.replace('/app/rebricky');
+    else if (/^\/leagues\/\d+\/?$/.test(p)) location.replace('/app/liga/' + p.split('/')[2]);
   } catch (e) { /* bez sessionStorage ostáva web */ }
 })();
 </script>

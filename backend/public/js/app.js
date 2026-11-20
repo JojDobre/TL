@@ -54,6 +54,28 @@
   function haptic(ms) { try { if (navigator.vibrate) navigator.vibrate(ms || 8); } catch (e) { /* nič */ } }
   window.tifoApp = { api: api, toast: toast, haptic: haptic };
 
+  // ------------------------------------------- jedna obrazovka na jednu vec
+  // Odkazy na webové stránky, ktoré majú v appke vlastnú obrazovku, vedú
+  // rovno na ňu (bez preblikutia starej stránky). Záloha je presmerovanie
+  // v partials/app-detect.ejs.
+  var APP_URL = { '/': '/app', '/my': '/app', '/profile': '/app/profil', '/notifications': '/app/notifikacie',
+    '/moje-tipy': '/app/tipovat', '/leaderboards': '/app/rebricky' };
+  function appUrl(href) {
+    if (!href || href.charAt(0) !== '/') return null;
+    var m = /^\/leagues\/(\d+)\/?(?:[?#].*)?$/.exec(href);
+    if (m) return '/app/liga/' + m[1];
+    return APP_URL[href.split(/[?#]/)[0]] || null;
+  }
+  function fixLink(a) {
+    var to = appUrl(a.getAttribute('href'));
+    if (to) a.setAttribute('href', to);
+  }
+  document.querySelectorAll('a[href^="/"]').forEach(fixLink);
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href^="/"]');
+    if (a) fixLink(a);
+  }, true);
+
   // ------------------------------------- zadávanie skóre šípkami (webové stránky)
   // Na stránkach kola, Moje tipy a zápasoch sezóny sa v appke skóre zadáva
   // ako na obrazovke Tipovať: šípka hore / dole s haptickou odozvou, bez
@@ -394,6 +416,54 @@
 
   // ============================================================ NOTIFIKÁCIE
   // ================================================= LIGY: PRIDAŤ SA / VYTVORIŤ
+  if (screen === 'liga') {
+    var TL = window.TIFO_LIGA || {};
+    var copyCode = function (code) {
+      var ok = function () { toast(TL.copied); haptic(8); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(ok, ok); else ok();
+    };
+    var menuBtn = document.querySelector('[data-liga-menu]');
+    var tpl = document.getElementById('ligaMenu');
+    if (menuBtn && tpl) {
+      menuBtn.addEventListener('click', function () {
+        haptic(6);
+        var sh = sheet(tpl.innerHTML);
+        sh.el.addEventListener('click', function (e) {
+          var c = e.target.closest('[data-copy-code]');
+          if (c) { copyCode(c.getAttribute('data-copy-code')); return; }
+          var s = e.target.closest('[data-share-league]');
+          if (s) {
+            e.preventDefault();
+            var code = s.getAttribute('data-code');
+            var text = (TL.shareText || '').replace('{name}', s.getAttribute('data-name')).replace('{code}', code);
+            var link = location.origin + '/join?code=' + encodeURIComponent(code);
+            if (navigator.share) navigator.share({ title: 'Tifo', text: text, url: link }).catch(function () {});
+            else if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text + ' ' + link).then(function () { toast(TL.copied); });
+          }
+        });
+        sh.el.querySelectorAll('form[data-confirm]').forEach(function (f) {
+          f.addEventListener('submit', function (e) { if (!window.confirm(f.getAttribute('data-confirm'))) e.preventDefault(); });
+        });
+      });
+    }
+    var doJoin = function (body, btn, errEl) {
+      btn.disabled = true;
+      api('/api/app/join', { method: 'POST', body: body })
+        .then(function () { haptic(14); toast(TL.joined); setTimeout(function () { location.reload(); }, 500); })
+        .catch(function (err) {
+          btn.disabled = false; haptic(40);
+          if (errEl) { errEl.textContent = err.message; errEl.hidden = false; } else toast(err.message, true);
+        });
+    };
+    var now = document.querySelector('[data-liga-join-now]');
+    if (now) now.addEventListener('click', function () { doJoin({ code: now.getAttribute('data-code') }, now); });
+    var jf = document.querySelector('[data-liga-join]');
+    if (jf) jf.addEventListener('submit', function (e) {
+      e.preventDefault();
+      doJoin({ lid: Number(jf.leagueId.value), password: jf.password.value }, jf.querySelector('button'), jf.querySelector('[data-join-err]'));
+    });
+  }
+
   if (screen === 'pridat') {
     var T = window.TIFO_ADD || {};
     var showErr = function (el, msg) { el.textContent = msg || T.err || ''; el.hidden = !msg && !T.err; haptic(40); };

@@ -10,6 +10,7 @@
   <% active.forEach(function (l) { %>
   <a class="a-lg a-press" href="/app/rebricky/<%= l.id %>" style="background:radial-gradient(120% 100% at 100% 0%,<%= l.grad.replace('linear-gradient(135deg,', '').split(',')[0] %>55,transparent 60%),var(--a-s1)">
     <div class="hd"><%- include('_crest', { c: l }) %><div style="flex:1;min-width:0"><div class="nm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><%= l.name %></div><div class="a-muted a-small"><%= l.players %> <%= tn(l.players, 'player') %><% if (l.roundsTotal) { %> · <%= t('liga.roundOf', { a: Math.min(l.roundsPlayed + 1, l.roundsTotal), b: l.roundsTotal }) %><% } %></div></div><svg class="i a-muted" width="18" height="18"><use href="#i-chev"/></svg></div>
+    <% if (!l.rank) { %><div class="a-muted a-small" style="margin-top:12px"><%= l.points %> <%= tn(l.points, 'point') %></div><% } else { %>
     <div class="ft">
       <div>
         <div><span class="rk" style="<%= l.rank && l.rank <= 3 ? 'color:var(--a-gold)' : '' %>"><%= l.rank ? l.rank + '.' : '–' %></span><% if (l.move) { %><span class="mv <%= l.move > 0 ? 'a-up' : 'a-down' %>"><%= l.move > 0 ? '+' : '−' %><%= Math.abs(l.move) %></span><% } %></div>
@@ -18,6 +19,7 @@
       <% if (l.hasPrizes) { %><span class="a-pill gold"><%= t('rbs.prizes') %></span>
       <% } else if (l.top3.length) { %><div class="a-stack"><% l.top3.forEach(function (u) { %><%- include('_av', { u: u, size: 30 }) %><% }); %></div><% } %>
     </div>
+    <% } %>
     <% if (l.spark) { %>
     <svg viewBox="0 0 300 40" style="width:100%;height:40px;margin-top:10px;fill:none;stroke:#9d83ff;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><path d="<%= l.spark %>"/></svg>
     <div class="a-muted" style="font-size:11px;display:flex;justify-content:space-between"><span><%= t('rbs.hist', { n: l.histLen }) %></span><% if (l.bestRank) { %><span style="color:var(--a-brand-b);font-weight:700"><%= t('rbs.best', { n: l.bestRank }) %></span><% } %></div>

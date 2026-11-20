@@ -447,7 +447,7 @@ const rebricek = asyncHandler(async (req, res) => {
     const league = await League.findByPk(leagueId, { include: [{ model: Season, attributes: ['id', 'hasPassword', 'hidden'] }] });
     if (!league) return res.redirect('/app/rebricky');
     const access = await canSeeLeague(league, meId);
-    if (!access.ok) return res.redirect(`/leagues/${leagueId}`);
+    if (!access.ok) return res.redirect(`/app/liga/${leagueId}`);
     title = league.name;
     if (period === 'kolo') {
       const last = await Round.findOne({ where: { leagueId, startDate: { [Op.lte]: now } }, order: [['startDate', 'DESC']], attributes: ['id', 'name'] });
@@ -516,9 +516,12 @@ const liga = asyncHandler(async (req, res) => {
   });
   if (!league) return res.redirect('/app/home');
   const access = await canSeeLeague(league, meId);
-  if (!access.ok) return res.redirect(`/leagues/${league.id}`);
-  const now = new Date();
   const season = league.Season;
+  // súkromná/skrytá SEZÓNA → zamknutá obrazovka sezóny (pole na heslo);
+  // liga len s heslom → appková obrazovka so zámkom a pripojením cez heslo
+  if (!access.ok && season && (season.hasPassword || season.hidden)) return res.redirect(`/seasons/${season.id}`);
+  const now = new Date();
+  const canManage = await require('./leaguePage.controller').isLeagueManager(league, meId);
 
   const rounds = await Round.findAll({ where: { leagueId: league.id }, order: [['startDate', 'ASC']] });
   const roundIds = rounds.map((r) => r.id);
@@ -573,7 +576,17 @@ const liga = asyncHandler(async (req, res) => {
       ended: isLeagueLocked(league),
       auto: !!(league.externalLeagueId || league.templateId),
       member: access.member,
+      locked: !access.ok,
+      hasPassword: !!league.hasPassword,
+      creator: league.creatorId === meId,
+      joinCode: access.ok ? league.joinCode : null,
+      description: access.ok ? (league.description || '') : '',
+      seasonId: league.seasonId,
+      standalone: !!(season && season.mode === 'standalone'),
+      template: !!league.templateId,
     },
+    canManage,
+    noTeams: canManage && !league.templateId ? (await league.countTeams()) === 0 : false,
     seasonName: season ? season.name : null,
     membersCount,
     roundsTotal: rounds.length,
@@ -698,7 +711,14 @@ const apiJoin = asyncHandler(async (req, res) => {
   const meId = Number(req.session.userId);
   const b = req.body || {};
   try {
-    const r = b.leagueId ? await appLeague.joinOfficial(meId, b.leagueId) : await appLeague.joinByCode(meId, b.code, b.password);
+    let code = b.code;
+    // zamknutá liga (bez zobrazeného kódu): pripojenie cez id + HESLO ligy;
+    // bez hesla by id obišlo kód, preto len pre ligy s heslom
+    if (b.lid) {
+      const l = await League.findByPk(Number(b.lid), { attributes: ['joinCode', 'hasPassword'] });
+      code = l && l.hasPassword ? l.joinCode : '__none__';
+    }
+    const r = b.leagueId ? await appLeague.joinOfficial(meId, b.leagueId) : await appLeague.joinByCode(meId, code, b.password);
     res.json({ success: true, created: r.created, leagueId: r.leagueId || null, redirect: leagueDest(r) });
   } catch (e) { appLeagueFail(req, res, e); }
 });
