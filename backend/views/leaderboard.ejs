@@ -66,7 +66,7 @@
       <h1 style="font-size:clamp(2rem,3.4vw,2.8rem)"><%= season.name %></h1>
       <p class="muted" style="margin-top:6px">Súčet bodov naprieč všetkými ligami sezóny · aktualizované po vyhodnotení</p>
     </div>
-    <a href="/seasons/<%= season.id %>" class="btn btn-ghost">← Späť na sezónu</a>
+    <a href="/seasons/<%= season.id %>" class="btn btn-ghost aw-extra">← Späť na sezónu</a>
   </div>
 
   <% if (leaderboard.length === 0) { %>
@@ -141,7 +141,7 @@
 
   <aside class="sticky-side">
     <% if (myRank) { %>
-    <div class="card card-pad card-glow">
+    <div class="card card-pad card-glow aw-extra">
       <div class="stat-label">Tvoja pozícia</div>
       <div class="row g-3" style="margin:12px 0 6px"><span class="stat-value brand" style="font-size:2.6rem">#<%= myRank %></span></div>
       <p class="muted" style="font-size:var(--fs-sm)">Z <b class="hi num"><%= leaderboard.length %></b> hráčov v sezóne.</p>
@@ -149,7 +149,7 @@
     <% } %>
 
     <% if (!(typeof isStandalone !== 'undefined' && isStandalone)) { %>
-    <div class="card card-pad">
+    <div class="card card-pad aw-extra">
       <div class="stat-label" style="margin-bottom:10px">Ligy v sezóne</div>
       <div class="stack g-2">
         <% leagues.forEach(function(l){ %>

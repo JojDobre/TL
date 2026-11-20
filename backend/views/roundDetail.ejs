@@ -338,7 +338,7 @@
 
   <aside class="sticky-side">
     <% if (round.status === 'open' && !seasonLocked) { %>
-    <div class="card card-pad">
+    <div class="card card-pad aw-extra">
       <div class="stat-label">Tvoj progres v kole</div>
       <div class="row g-3" style="margin:12px 0 4px"><span class="stat-value brand" style="font-size:2.2rem" id="progNum"><%= tippedCount %></span><span class="muted" style="font-size:var(--fs-sm)">zo <%= matches.length %> zápasov<br>vyplnených</span></div>
       <div class="progress" style="margin-top:10px"><i id="progBar" style="width:<%= matches.length ? Math.round(tippedCount/matches.length*100) : 0 %>%"></i></div>
@@ -357,7 +357,7 @@
     </div>
     <% } %>
 
-    <div class="card card-pad" id="rules">
+    <div class="card card-pad aw-extra" id="rules">
       <div class="between" style="margin-bottom:12px"><div class="stat-label" style="margin:0">Bodovanie</div><a href="/leagues/<%= league.id %>" class="faint" style="font-size:var(--fs-xs)">Pravidlá →</a></div>
       <div class="stack g-2" style="font-size:var(--fs-sm)">
         <div class="between"><span class="muted">Presný výsledok</span><span class="pts-pill max">+<%= s.exactScore != null ? s.exactScore : 10 %></span></div>

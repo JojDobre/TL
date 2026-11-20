@@ -115,7 +115,7 @@
     <div class="results-grid">
       <% seasons.forEach(function(s, i){ %>
         <a href="/seasons/<%= s.id %>" class="card card-hover" style="overflow:hidden">
-          <div class="dc-cover<% if (s.image) { %> has-img<% } %>" style="background:<%= COVERS[i % COVERS.length] %><% if (s.image) { %>;background-image:url('<%= s.image %>');background-size:cover;background-position:center<% } %>">
+          <div class="dc-cover<% if (s.image) { %> has-img<% } %>" data-init="<%= (s.name || '?').trim().split(/\s+/).map(function(w){return w[0];}).slice(0,2).join('').toUpperCase() %>" style="background:<%= COVERS[i % COVERS.length] %><% if (s.image) { %>;background-image:url('<%= s.image %>');background-size:cover;background-position:center<% } %>">
             <span class="dc-tags-left">
               <% if (s.type === 'official') { %><span class="tag tag-brand">Oficiálna</span><% } else { %><span class="tag tag-gold">Community</span><% } %>
               <% if (s.hasPassword) { %><span class="tag tag-muted">🔒</span><% } %>

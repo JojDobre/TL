@@ -51,7 +51,7 @@
   <div class="crumb"><a href="/leaderboards">Rebríčky</a> › <a href="/player/<%= other.id %>"><%= other.name %></a> › Porovnanie</div>
   <div class="eyebrow">Hlava na hlavu</div>
   <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Ty vs <%= other.name %></h1>
-  <p class="muted" style="margin-top:6px"><% if (typeof restricted !== 'undefined' && restricted) { %>Porovnanie s týmto hráčom nie je dostupné.<% } else if (hasShared) { %>Porovnanie vašich výsledkov naprieč <%= sharedStandings.length %> spoločnými súťažami.<% } else { %>Porovnanie celkových výsledkov — spoločné súťaže zatiaľ nemáte.<% } %></p>
+  <p class="muted<%= typeof restricted !== 'undefined' && restricted ? ' aw-keep' : '' %>" style="margin-top:6px"><% if (typeof restricted !== 'undefined' && restricted) { %>Porovnanie s týmto hráčom nie je dostupné.<% } else if (hasShared) { %>Porovnanie vašich výsledkov naprieč <%= sharedStandings.length %> spoločnými súťažami.<% } else { %>Porovnanie celkových výsledkov — spoločné súťaže zatiaľ nemáte.<% } %></p>
 </div>
 
 <div class="wrap" style="padding-bottom:64px">

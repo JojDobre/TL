@@ -82,7 +82,7 @@
     <div class="card form-card">
       <h3>Bodovanie</h3>
       <% if (league.scoringLocked) { %>
-        <p class="sub" style="color:var(--warning)">Bodovanie je uzamknuté, pretože už začalo prvé kolo. Nedá sa meniť.</p>
+        <p class="sub aw-keep" style="color:var(--warning)">Bodovanie je uzamknuté, pretože už začalo prvé kolo. Nedá sa meniť.</p>
       <% } else { %>
         <p class="sub">Nastav, koľko bodov sa prideľuje za jednotlivé presnosti tipu.</p>
       <% } %>
@@ -94,7 +94,7 @@
   </main>
 
   <aside class="sticky-side">
-    <div class="card card-pad">
+    <div class="card card-pad aw-extra">
       <div class="stat-label" style="margin-bottom:12px">Náhľad ligy</div>
       <div class="row g-3" style="margin-bottom:12px"><span class="team-logo" style="width:48px;height:48px;font-size:16px;background:linear-gradient(135deg,#7c5cff,#3b1f8a)"><%= lgInit %></span><div><b class="hi"><%= league.name %></b></div></div>
       <div class="row g-2 wrap-gap"><span class="tag <%= league.type === 'official' ? 'tag-brand' : 'tag-gold' %>"><%= league.type === 'official' ? 'Oficiálna' : 'Custom' %></span><% if (league.hasPassword) { %><span class="tag tag-muted">🔒 Heslo</span><% } %></div>

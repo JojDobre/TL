@@ -51,7 +51,7 @@
       <div class="progress ac-progress" style="margin-top:12px"><i style="width:<%= overallPct %>%"></i></div>
       <div class="muted" style="font-size:var(--fs-sm);margin-top:10px"><%= earnedCount %> odomknutých · <%= lockedCount %> zostáva</div>
     </div>
-    <div class="card card-pad">
+    <div class="card card-pad aw-extra">
       <div class="stat-label">Najvzácnejší odznak</div>
       <% if (rarest) { %>
       <div class="row g-2" style="margin-top:8px"><span style="font-size:26px"><%= rarest.icon %></span><div><b class="hi"><%= rarest.name %></b><div class="rarity <%= rCls(rarest.rarity) %>" style="display:inline-block;margin-top:3px"><%= rName(rarest.rarity) %></div></div></div>
@@ -59,7 +59,7 @@
       <div class="muted" style="margin-top:10px;font-size:var(--fs-sm)">Zatiaľ žiadny — získaj svoj prvý odznak.</div>
       <% } %>
     </div>
-    <div class="card card-pad">
+    <div class="card card-pad aw-extra">
       <div class="stat-label">Najbližší cieľ</div>
       <% if (nextGoal) { %>
       <div class="row between" style="margin-top:8px"><b class="hi"><%= nextGoal.icon %> <%= nextGoal.name %></b><span class="muted num" style="font-size:var(--fs-sm)"><%= nextGoal.current %> / <%= nextGoal.target %></span></div>

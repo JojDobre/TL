@@ -13,9 +13,10 @@
 <link rel="stylesheet" href="/css/enhance.css?v=<%= assetV %>">
 <link rel="stylesheet" href="/css/logo.css?v=<%= assetV %>">
 <link rel="stylesheet" href="/css/app.css?v=<%= assetV %>">
+<link rel="stylesheet" href="/css/app-web.css?v=<%= assetV %>">
 <%- include('meta-head') %>
 <% if (typeof pageStyle !== 'undefined' && pageStyle) { %>
 <style><%- pageStyle %></style>
 <% } %>
 </head>
-<body>
+<body class="auth-body">

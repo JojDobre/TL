@@ -28,6 +28,11 @@
     if (p === '/' || p === '/my') location.replace('/app');
     // pozvánka do ligy (tifo.sk/join?code=…) sa v appke otvorí na obrazovke Ligy
     else if (p === '/join') location.replace('/app/pridat' + location.search);
+    // jedna obrazovka na jednu vec: web stránky, ktoré majú v appke vlastnú
+    // (rovnaké funkcie), sa v appke otvoria na appkovej obrazovke
+    else if (p === '/profile') location.replace('/app/profil');
+    else if (p === '/notifications') location.replace('/app/notifikacie');
+    else if (p === '/moje-tipy') location.replace('/app/tipovat');
   } catch (e) { /* bez sessionStorage ostáva web */ }
 })();
 </script>
