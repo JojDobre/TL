@@ -6,12 +6,22 @@ Statický web (HTML + CSS + JS, bez servera a databázy) so slovenskými kalkula
 |---|---|
 | `index.html` | rozcestník |
 | `cista-mzda.html` | čistá mzda z hrubej aj naopak, daňový bonus, cena práce |
-| `dph.html` | DPH 23 / 19 / 5 % |
+| `hypoteka.html` | anuitná splátka, úroky spolu, splátkový kalendár, limity NBS |
+| `pn.html` | náhrada príjmu (1. – 14. deň) a nemocenské od 15. dňa |
+| `materska.html` | materské 75 % DVZ, celková suma, rodičovský príspevok |
 | `odvody-szco.html` | odvody živnostníka podľa pravidiel od 1. 7. 2026 (mikroodvod) |
-| `e-faktura-2027.html` | sprievodca povinnou e-faktúrou od 1. 1. 2027 (aktuálna téma s vysokým záujmom) |
+| `dph.html` | DPH 23 / 19 / 5 % |
+| `priplatky.html` | príplatky za sobotu, nedeľu, noc, sviatok, nadčas a minimálne mzdové nároky |
+| `cestovne-nahrady.html` | stravné (sumy do 30. 11. a od 1. 12. 2026), krátenie za jedlo, náhrada za auto |
+| `sporenie.html` | zložené úročenie s 19 % zrážkovou daňou z úrokov |
+| `e-faktura-2027.html` | sprievodca povinnou e-faktúrou od 1. 1. 2027 |
 | `ochrana-sukromia.html` | zásady ochrany súkromia (potrebné pre AdSense) |
 
-Všetky sadzby sú na jednom mieste: objekt `P` v `assets/calc.js`. Testy: `node tests/calc.test.js`.
+Všetky sadzby sú na jednom mieste v `assets/calc.js` (objekty `P`, `D`, `CN`, `MZ`).
+
+- `node tests/calc.test.js`: testy výpočtov porovnané s oficiálnymi sumami (24 testov)
+- `node tests/e2e.js`: test všetkých stránok v prehliadači na mobile aj desktope vrátane okrajových vstupov (58 testov)
+- `node tools/build-layout.js`: po pridaní stránky obnoví hlavičku, pätičku a `sitemap.xml` na všetkých stránkach. Novú stránku najprv pridajte do zoznamu `stranky` v skripte.
 
 ---
 
@@ -50,7 +60,7 @@ Mnohé slovenské SaaS firmy majú partnerské programy. Napíšte im a spýtajt
 ### 7. Návštevnosť (toto rozhoduje o zárobku)
 - **Teraz (november – január)** je ideálny čas: e-faktúra od 1. 1. 2027, nové odvody a mzdy na nový rok. Zdieľajte odkazy v FB skupinách pre živnostníkov a podnikateľov a na Reddite r/Slovakia, kde to dáva zmysel (bez spamu).
 - Každý **január** treba aktualizovať sadzby v `assets/calc.js` a texty. Tituly s rokom („… 2027“) si ľudia vyhľadávajú najviac.
-- Ďalšie stránky, ktoré je ľahké pridať: rodičovský príspevok, nemocenská (PN), materská, kalkulačka hypotéky, úroky, daňové priznanie, minimálna mzda 2027, cestovné náhrady.
+- Ďalšie stránky, ktoré je ľahké pridať: daňové priznanie a ročné zúčtovanie, dôchodok, ošetrovné (OČR), dohody o práci mimo pracovného pomeru, prídavok na dieťa, minimálna mzda 2027.
 
 ---
 
@@ -62,4 +72,10 @@ Mnohé slovenské SaaS firmy majú partnerské programy. Napíšte im a spýtajt
 ## Údržba sadzieb
 Pri zmene legislatívy upravte objekt `P` v `assets/calc.js`, spustite `node tests/calc.test.js` a aktualizujte texty na stránkach (hľadajte „2026“). Hodnoty v tabuľke čistých miezd v `cista-mzda.html` sú vygenerované, takže ich po zmene sadzieb vygenerujte znova alebo prepíšte.
 
-Výpočty sú orientačné. Zdroje sadzieb 2026: Finančná správa SR (pásma dane), Sociálna poisťovňa (odvody SZČO), zákony č. 595/2003, 461/2003 a 580/2004 Z. z.
+## Kedy aktualizovať (dôležité termíny)
+- **1. 1. 2027:** nové sumy nemocenských dávok (max. DVZ podľa priemernej mzdy 2025: 1 620 €), minimálna mzda 2027, daňové pásma, nezdaniteľná časť, minimálne zdravotné odvody SZČO.
+- **1. 7. 2027:** nové pásma a minimá sociálnych odvodov SZČO.
+- Úrokové sadzby hypoték v texte (`hypoteka.html`) podľa mesačných štatistík NBS.
+- Stravné: stránka už obsahuje sumy platné od 1. 12. 2026.
+
+Výpočty sú orientačné. Zdroje sadzieb 2026: Finančná správa SR (pásma dane), Sociálna poisťovňa (odvody SZČO, nemocenské dávky), MPSVR SR (stravné, minimálna mzda, rodičovský príspevok), zákony č. 595/2003 (daň z príjmov), 461/2003 (sociálne poistenie), 462/2003 (náhrada príjmu), 580/2004 (zdravotné poistenie), 283/2002 (cestovné náhrady), 311/2001 (Zákonník práce) a 571/2009 Z. z. (rodičovský príspevok).

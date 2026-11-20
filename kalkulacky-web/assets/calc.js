@@ -189,6 +189,201 @@
     }, 0));
   }
 
+  /* ------------------------------------------------------------------
+   * Nemocenské dávky (zákon 461/2003 Z. z.) a náhrada príjmu (zákon 462/2003 Z. z.)
+   * ------------------------------------------------------------------ */
+  var D = {
+    maxDVZ: 100.2083,          // 2 × 1 524 € × 12 / 365, PN/materská vzniknutá v roku 2026
+    nahradaDni1az3: 0.25,      // zamestnávateľ, 1. – 3. deň
+    nahradaDni4az14: 0.55,     // zamestnávateľ, 4. – 14. deň (od 2026 do 14. dňa)
+    dniZamestnavatel: 14,
+    nemocenske: 0.55,          // Sociálna poisťovňa od 15. dňa
+    materske: 0.75,
+    rodicovskyPoMaterskej: 500.10,
+    rodicovskyBezMaterskej: 364.80
+  };
+
+  function ceilTo(x, krok) { return Math.ceil(x / krok - 1e-9) * krok; }
+
+  /** Denný vymeriavací základ zo stabilnej hrubej mesačnej mzdy (zaokrúhlený na 4 des. miesta nahor). */
+  function dvz(hrubaMesacna) {
+    var v = Math.max(0, +hrubaMesacna || 0) * 12 / 365;
+    return Math.min(Math.round(ceilTo(v, 0.0001) * 10000) / 10000, D.maxDVZ);
+  }
+
+  /** PN zamestnanca: náhrada príjmu od zamestnávateľa + nemocenské zo Sociálnej poisťovne. */
+  function pn(hrubaMesacna, dni) {
+    var d = dvz(hrubaMesacna);
+    dni = Math.max(0, Math.floor(+dni || 0));
+    var dni1 = Math.min(dni, 3);
+    var dni2 = Math.max(0, Math.min(dni, D.dniZamestnavatel) - 3);
+    var dniSP = Math.max(0, dni - D.dniZamestnavatel);
+    var nahrada1 = ceilTo(dni1 * d * D.nahradaDni1az3, 0.01);
+    var nahrada2 = ceilTo(dni2 * d * D.nahradaDni4az14, 0.01);
+    var nemocenske = dniSP > 0 ? ceilTo(dniSP * d * D.nemocenske, 0.1) : 0;
+    return {
+      dvz: d, dni: dni,
+      dni1: dni1, dni2: dni2, dniSP: dniSP,
+      denne1: r2(d * D.nahradaDni1az3), denne2: r2(d * D.nahradaDni4az14),
+      nahrada1: r2(nahrada1), nahrada2: r2(nahrada2),
+      nahradaSpolu: r2(nahrada1 + nahrada2),
+      nemocenske: r2(nemocenske),
+      spolu: r2(nahrada1 + nahrada2 + nemocenske),
+      maxDVZ: d >= D.maxDVZ
+    };
+  }
+
+  /** Materské: 75 % DVZ za každý kalendárny deň. tyzdne = 34 / 37 / 43 */
+  function materske(hrubaMesacna, tyzdne) {
+    var d = dvz(hrubaMesacna);
+    var denne = d * D.materske;
+    var dni = (tyzdne || 34) * 7;
+    return {
+      dvz: d, denne: Math.round(denne * 10000) / 10000,
+      mesiac30: r2(ceilTo(denne * 30, 0.1)),
+      mesiac31: r2(ceilTo(denne * 31, 0.1)),
+      dni: dni,
+      spolu: r2(ceilTo(denne * dni, 0.1)),
+      maxDVZ: d >= D.maxDVZ
+    };
+  }
+
+  /* ------------------------------------------------------------------
+   * Úvery a sporenie
+   * ------------------------------------------------------------------ */
+
+  /** Anuitná splátka úveru. urokPa v %, roky. */
+  function hypoteka(istina, urokPa, roky) {
+    istina = Math.max(0, +istina || 0);
+    var n = Math.max(1, Math.round((+roky || 0) * 12));
+    var i = (+urokPa || 0) / 100 / 12;
+    var splatka = i === 0 ? istina / n : istina * i / (1 - Math.pow(1 + i, -n));
+    var zostatok = istina, rocne = [], urokRok = 0, istinaRok = 0;
+    for (var m = 1; m <= n; m++) {
+      var u = zostatok * i;
+      var s = Math.min(splatka - u, zostatok);
+      zostatok -= s; urokRok += u; istinaRok += s;
+      if (m % 12 === 0 || m === n) {
+        rocne.push({ rok: Math.ceil(m / 12), urok: r2(urokRok), istina: r2(istinaRok), zostatok: r2(Math.max(0, zostatok)) });
+        urokRok = 0; istinaRok = 0;
+      }
+    }
+    return {
+      splatka: r2(splatka), pocetSplatok: n,
+      zaplateneSpolu: r2(splatka * n), urokySpolu: r2(splatka * n - istina),
+      rocne: rocne
+    };
+  }
+
+  /**
+   * Sporenie s mesačným pripisovaním úrokov a zrážkovou daňou 19 % (§ 43 zákona 595/2003).
+   * vklad = počiatočný vklad, mesacne = pravidelný vklad na začiatku mesiaca.
+   */
+  function sporenie(vklad, mesacne, urokPa, roky, danovat) {
+    var i = (+urokPa || 0) / 100 / 12;
+    var n = Math.max(0, Math.round((+roky || 0) * 12));
+    var dan = danovat === false ? 0 : 0.19;
+    var zostatok = Math.max(0, +vklad || 0), vlozene = zostatok, urokHruby = 0, danSpolu = 0;
+    mesacne = Math.max(0, +mesacne || 0);
+    for (var m = 0; m < n; m++) {
+      zostatok += mesacne; vlozene += mesacne;   // vklad na začiatku mesiaca
+      var u = r2(zostatok * i);
+      var d = r2(u * dan);
+      urokHruby += u; danSpolu += d;
+      zostatok += u - d;
+    }
+    return {
+      vlozene: r2(vlozene), urokHruby: r2(urokHruby), dan: r2(danSpolu),
+      urokCisty: r2(urokHruby - danSpolu), konecnaSuma: r2(zostatok)
+    };
+  }
+
+  /* ------------------------------------------------------------------
+   * Cestovné náhrady (zákon 283/2002 Z. z.)
+   * ------------------------------------------------------------------ */
+  var CN = {
+    stravneDo30112026: [9.30, 13.80, 20.60],
+    stravneOd1122026: [9.80, 14.60, 21.70],
+    kratenie: { ranajky: 0.25, obed: 0.40, vecera: 0.35 },
+    kmNahrada: 0.313
+  };
+
+  /** Stravné na tuzemskej pracovnej ceste. jedla = {ranajky, obed, vecera} poskytnuté bezplatne. */
+  function stravne(hodiny, jedla, sadzby) {
+    sadzby = sadzby || CN.stravneOd1122026;
+    hodiny = +hodiny || 0;
+    jedla = jedla || {};
+    var pasmo = hodiny < 5 ? -1 : (hodiny <= 12 ? 0 : (hodiny <= 18 ? 1 : 2));
+    if (pasmo < 0) return { pasmo: -1, zaklad: 0, kratenie: 0, stravne: 0 };
+    var zaklad = sadzby[pasmo];
+    if (jedla.ranajky && jedla.obed && jedla.vecera) {
+      return { pasmo: pasmo, zaklad: zaklad, kratenie: zaklad, stravne: 0 };
+    }
+    var k = 0, top = sadzby[2];
+    if (jedla.ranajky) k += top * CN.kratenie.ranajky;
+    if (jedla.obed) k += top * CN.kratenie.obed;
+    if (jedla.vecera) k += top * CN.kratenie.vecera;
+    var vysledok = Math.max(0, zaklad - k);
+    return { pasmo: pasmo, zaklad: zaklad, kratenie: Math.round(k * 1000) / 1000, stravne: r2(ceilTo(vysledok, 0.01)) };
+  }
+
+  /** Náhrada za použitie súkromného auta: základná náhrada za každý začatý km + PHM. */
+  function nahradaAuto(km, spotreba, cenaPHM, sadzbaKm) {
+    km = Math.max(0, +km || 0);
+    var zakladna = Math.ceil(km - 1e-9) * (sadzbaKm || CN.kmNahrada);
+    var phm = km * (Math.max(0, +spotreba || 0) / 100) * Math.max(0, +cenaPHM || 0);
+    return { zakladna: r2(zakladna), phm: r2(phm), spolu: r2(r2(zakladna) + r2(phm)) };
+  }
+
+  /* ------------------------------------------------------------------
+   * Minimálna mzda a príplatky 2026 (Zákonník práce)
+   * ------------------------------------------------------------------ */
+  var MZ = {
+    mesacna: 915,
+    hodinova: 5.259,
+    zakladStupne: 580,   // nárast medzi stupňami: (koeficient − 1) × 580 €
+    koeficienty: [1.0, 1.2, 1.4, 1.6, 1.8, 2.0],
+    // percentá z hodinovej minimálnej mzdy; dohodnuté = minimum pri dohode v KZ/pracovnej zmluve
+    priplatky: {
+      sobota: { zakon: 0.50, dohodnute: 0.45 },
+      nedela: { zakon: 1.00, dohodnute: 0.90 },
+      noc: { zakon: 0.40, dohodnute: 0.35 },
+      nocRizikova: { zakon: 0.50, dohodnute: 0.45 }
+    },
+    sviatok: 1.00,       // % priemerného zárobku
+    nadcas: 0.25,
+    nadcasRizikovy: 0.35
+  };
+
+  function minimalneNaroky() {
+    return MZ.koeficienty.map(function (k, idx) {
+      var mesacne = r2(MZ.mesacna + (k - 1) * MZ.zakladStupne);
+      return { stupen: idx + 1, koeficient: k, mesacne: mesacne, hodinove: Math.round(mesacne / 174 * 1000) / 1000 };
+    });
+  }
+
+  /** Sadzba príplatku za hodinu (z minimálnej hodinovej mzdy). */
+  function priplatokHodina(typ, dohodnute) {
+    var p = MZ.priplatky[typ];
+    return r2(MZ.hodinova * (dohodnute ? p.dohodnute : p.zakon));
+  }
+
+  /** hodiny = {sobota, nedela, noc, nocRizikova, sviatok, nadcas}; priemer = priemerný hodinový zárobok */
+  function priplatky(hodiny, priemer, dohodnute, rizikovyNadcas) {
+    hodiny = hodiny || {};
+    var out = {}, spolu = 0;
+    ['sobota', 'nedela', 'noc', 'nocRizikova'].forEach(function (t) {
+      var h = Math.max(0, +hodiny[t] || 0);
+      out[t] = r2(h * priplatokHodina(t, dohodnute));
+      spolu += out[t];
+    });
+    priemer = Math.max(0, +priemer || 0);
+    out.sviatok = r2(Math.max(0, +hodiny.sviatok || 0) * priemer * MZ.sviatok);
+    out.nadcas = r2(Math.max(0, +hodiny.nadcas || 0) * priemer * (rizikovyNadcas ? MZ.nadcasRizikovy : MZ.nadcas));
+    out.spolu = r2(spolu + out.sviatok + out.nadcas);
+    return out;
+  }
+
   /** Formátovanie sumy po slovensky: 1 234,56 € */
   function eur(x) {
     var n = (+x || 0).toFixed(2).split('.');
@@ -206,7 +401,11 @@
   var api = {
     P: P, danProgresivna: danProgresivna, nczdMesacne: nczdMesacne,
     danovyBonus: danovyBonus, cistaMzda: cistaMzda, hrubaZCistej: hrubaZCistej,
-    dph: dph, odvodySZCO: odvodySZCO, spPodlaFondov: spPodlaFondov, eur: eur, cislo: cislo
+    dph: dph, odvodySZCO: odvodySZCO, spPodlaFondov: spPodlaFondov, eur: eur, cislo: cislo,
+    D: D, dvz: dvz, pn: pn, materske: materske,
+    hypoteka: hypoteka, sporenie: sporenie,
+    CN: CN, stravne: stravne, nahradaAuto: nahradaAuto,
+    MZ: MZ, minimalneNaroky: minimalneNaroky, priplatokHodina: priplatokHodina, priplatky: priplatky
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Calc = api;

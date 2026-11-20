@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cestovné náhrady 2026 – kalkulačka stravného a náhrady za km | SpočítajSi</title>
+<meta name="description" content="Výpočet stravného na pracovnej ceste od 1. 12. 2026 (9,80 / 14,60 / 21,70 €) vrátane krátenia za jedlo a náhrady za použitie vlastného auta 0,313 €/km + PHM.">
+<link rel="canonical" href="https://www.VASA-DOMENA.sk/cestovne-nahrady.html">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b6bcb'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3E%E2%82%AC%3C/text%3E%3C/svg%3E">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "Aké je stravné na pracovnej ceste od 1. 12. 2026?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Pri tuzemskej pracovnej ceste 9,80 € pri trvaní 5 až 12 hodín, 14,60 € pri trvaní nad 12 do 18 hodín a 21,70 € nad 18 hodín. Do 30. 11. 2026 platili sumy 9,30 €, 13,80 € a 20,60 €."}},
+    {"@type": "Question", "name": "Aká je náhrada za kilometer v roku 2026?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Základná náhrada za použitie osobného motorového vozidla je od 1. 1. 2026 0,313 € za každý začatý kilometer. K nej sa pripočítava náhrada za spotrebované pohonné látky."}}
+  ]
+}
+</script>
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="logo" href="./">Spočítaj<span>Si</span></a>
+  <nav class="main">
+    <a href="cista-mzda.html">Čistá mzda</a>
+    <a href="hypoteka.html">Hypotéka</a>
+    <a href="pn.html">PN</a>
+    <a href="materska.html">Materská</a>
+    <a href="./#vsetky">Všetky kalkulačky</a>
+  </nav>
+</div></header>
+
+<main><div class="wrap">
+  <h1>Cestovné náhrady 2026</h1>
+  <p class="lead">Stravné na tuzemskej pracovnej ceste a náhrada za použitie vlastného auta podľa zákona o cestovných náhradách.</p>
+
+  <div class="grid calc">
+    <div class="card">
+      <label>Sadzby stravného</label>
+      <div class="seg" role="group" aria-label="Obdobie">
+        <button type="button" id="s-old" aria-pressed="false">do 30. 11. 2026</button>
+        <button type="button" id="s-new" aria-pressed="true">od 1. 12. 2026</button>
+      </div>
+      <label for="hodiny">Trvanie pracovnej cesty v danom dni (hodiny)</label>
+      <input id="hodiny" type="text" inputmode="decimal" value="10" autocomplete="off">
+      <label>Bezplatne poskytnuté jedlo</label>
+      <label class="check" style="margin-top:4px"><input type="checkbox" id="j-r"> <span>Raňajky</span></label>
+      <label class="check" style="margin-top:4px"><input type="checkbox" id="j-o"> <span>Obed</span></label>
+      <label class="check" style="margin-top:4px"><input type="checkbox" id="j-v"> <span>Večera</span></label>
+
+      <h3>Vlastné auto</h3>
+      <label for="km">Počet najazdených km</label>
+      <input id="km" type="text" inputmode="decimal" value="0" autocomplete="off">
+      <div class="row">
+        <div>
+          <label for="spotreba">Spotreba (l/100 km)</label>
+          <input id="spotreba" type="text" inputmode="decimal" value="6,5" autocomplete="off">
+        </div>
+        <div>
+          <label for="cena">Cena PHM (€/l)</label>
+          <input id="cena" type="text" inputmode="decimal" value="1,55" autocomplete="off">
+        </div>
+      </div>
+      <p class="hint">Spotreba sa berie z technického preukazu (ak ich je uvedených viac, použije sa ich priemer). Cena podľa dokladu o kúpe, inak priemerná cena podľa Štatistického úradu SR.</p>
+    </div>
+
+    <div class="card" aria-live="polite">
+      <div class="result-main">
+        <div class="label">Náhrady spolu</div>
+        <div class="value" id="res-value">–</div>
+      </div>
+      <table class="breakdown">
+        <tr><td>Stravné podľa pásma <span class="hint" id="r-pasmo"></span></td><td id="r-zaklad"></td></tr>
+        <tr class="minus"><td>Krátenie za poskytnuté jedlo</td><td id="r-krat"></td></tr>
+        <tr><td><strong>Stravné</strong></td><td id="r-stravne"></td></tr>
+        <tr><td>Základná náhrada 0,313 €/km <span class="hint" id="r-kmh"></span></td><td id="r-km"></td></tr>
+        <tr><td>Náhrada za PHM</td><td id="r-phm"></td></tr>
+        <tr class="total"><td>Spolu</td><td id="r-spolu"></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="ad-slot"></div>
+
+  <section class="content">
+    <h2>Stravné na tuzemskej pracovnej ceste</h2>
+    <div class="table-scroll">
+    <table class="data">
+      <thead><tr><th>Trvanie cesty</th><th>do 30. 11. 2026</th><th>od 1. 12. 2026</th></tr></thead>
+      <tbody>
+        <tr><td>5 – 12 hodín</td><td>9,30 €</td><td>9,80 €</td></tr>
+        <tr><td>nad 12 – 18 hodín</td><td>13,80 €</td><td>14,60 €</td></tr>
+        <tr><td>nad 18 hodín</td><td>20,60 €</td><td>21,70 €</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p>Pri pracovnej ceste kratšej ako 5 hodín zamestnancovi stravné nepatrí.</p>
+
+    <h2>Krátenie stravného za bezplatné jedlo</h2>
+    <p>Ak zamestnanec dostane jedlo zadarmo, stravné sa kráti o percento zo sumy pre <strong>najvyššie časové pásmo</strong> (od 1. 12. 2026 z 21,70 €), bez ohľadu na to, ako dlho cesta trvala:</p>
+    <ul>
+      <li>raňajky: 25 % (5,425 €)</li>
+      <li>obed: 40 % (8,68 €)</li>
+      <li>večera: 35 % (7,595 €)</li>
+    </ul>
+    <p>Ak sú poskytnuté všetky tri jedlá, stravné za daný deň nepatrí. Výsledná suma sa zaokrúhľuje na celé centy nahor. Za bezplatné jedlo sa nepovažuje káva, čaj, minerálka ani obložený chlebíček.</p>
+
+    <h2>Náhrada za použitie vlastného auta</h2>
+    <p>Ak zamestnávateľ súhlasí s použitím súkromného auta, patrí zamestnancovi:</p>
+    <ul>
+      <li><strong>základná náhrada 0,313 €</strong> za každý začatý kilometer (od 1. 1. 2026),</li>
+      <li><strong>náhrada za PHM</strong> = km × spotreba / 100 × cena pohonnej látky.</li>
+    </ul>
+
+    <h2>Časté otázky</h2>
+    <div class="faq">
+      <details><summary>Je stravné zdaniteľný príjem?</summary>
+        <p>Nie. Cestovné náhrady v zákonnej výške nie sú predmetom dane ani odvodov.</p></details>
+      <details><summary>Ako sa počíta viacdňová pracovná cesta?</summary>
+        <p>Stravné sa určuje za každý kalendárny deň zvlášť podľa toho, koľko hodín cesta v daný deň trvala. Kalkulačku použite pre každý deň samostatne.</p></details>
+      <details><summary>Ako je to so zahraničnými cestami?</summary>
+        <p>Pri zahraničných pracovných cestách platia iné sumy stravného, ktoré sú určené pre každú krajinu zvlášť. Táto kalkulačka počíta len tuzemské cesty.</p></details>
+    </div>
+  </section>
+
+  <div class="note">Výpočet je orientačný a vychádza zo zákona č. 283/2002 Z. z. o cestovných náhradách a oznámení MPSVR SR o sumách stravného a základnej náhrady.</div>
+</div></main>
+
+<footer class="site"><div class="wrap">
+  <div class="links">
+    <a href="cista-mzda.html">Čistá mzda</a>
+    <a href="hypoteka.html">Hypotéka</a>
+    <a href="pn.html">PN (nemocenská)</a>
+    <a href="materska.html">Materská a rodičovský</a>
+    <a href="odvody-szco.html">Odvody SZČO</a>
+    <a href="dph.html">DPH</a>
+    <a href="priplatky.html">Príplatky a min. mzda</a>
+    <a href="cestovne-nahrady.html">Cestovné náhrady</a>
+    <a href="sporenie.html">Sporenie a úroky</a>
+    <a href="e-faktura-2027.html">E-faktúra 2027</a>
+    <a href="ochrana-sukromia.html">Ochrana súkromia</a>
+  </div>
+  <p>© 2026 SpočítajSi. Výpočty sú orientačné a nenahrádzajú odborné daňové ani právne poradenstvo.</p>
+</div></footer>
+
+<script src="assets/calc.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var nove = true;
+  var pasma = ['5 – 12 h', 'nad 12 – 18 h', 'nad 18 h'];
+  function setNove(n) {
+    nove = n;
+    $('s-new').setAttribute('aria-pressed', n);
+    $('s-old').setAttribute('aria-pressed', !n);
+    calc();
+  }
+  function calc() {
+    var E = Calc.eur;
+    var s = Calc.stravne(Calc.cislo($('hodiny').value),
+      { ranajky: $('j-r').checked, obed: $('j-o').checked, vecera: $('j-v').checked },
+      nove ? Calc.CN.stravneOd1122026 : Calc.CN.stravneDo30112026);
+    var km = Calc.cislo($('km').value);
+    var a = Calc.nahradaAuto(km, Calc.cislo($('spotreba').value), Calc.cislo($('cena').value));
+    $('r-pasmo').textContent = s.pasmo < 0 ? '(menej ako 5 h – nepatrí)' : '(' + pasma[s.pasmo] + ')';
+    $('r-zaklad').textContent = E(s.zaklad);
+    $('r-krat').textContent = '− ' + E(Math.min(s.kratenie, s.zaklad));
+    $('r-stravne').textContent = E(s.stravne);
+    $('r-kmh').textContent = km > 0 ? '(' + Math.ceil(km - 1e-9) + ' km)' : '';
+    $('r-km').textContent = E(a.zakladna);
+    $('r-phm').textContent = E(a.phm);
+    var spolu = Math.round((s.stravne + a.spolu) * 100) / 100;
+    $('r-spolu').textContent = E(spolu);
+    $('res-value').textContent = E(spolu);
+  }
+  $('s-old').addEventListener('click', function () { setNove(false); });
+  $('s-new').addEventListener('click', function () { setNove(true); });
+  ['hodiny', 'j-r', 'j-o', 'j-v', 'km', 'spotreba', 'cena'].forEach(function (id) {
+    $(id).addEventListener('input', calc); $(id).addEventListener('change', calc);
+  });
+  setNove(nove);
+})();
+</script>
+</body>
+</html>

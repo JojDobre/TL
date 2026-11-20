@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hypotekárna kalkulačka 2026 – výpočet mesačnej splátky hypotéky | SpočítajSi</title>
+<meta name="description" content="Vypočítajte mesačnú splátku hypotéky alebo úveru, celkové zaplatené úroky a splátkový kalendár po rokoch. Aktuálne úrokové sadzby hypoték na Slovensku 2026.">
+<link rel="canonical" href="https://www.VASA-DOMENA.sk/hypoteka.html">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b6bcb'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3E%E2%82%AC%3C/text%3E%3C/svg%3E">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "Ako sa počíta splátka hypotéky?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Hypotéky sa splácajú anuitne, teda rovnakou mesačnou splátkou. Splátka = istina × i / (1 − (1 + i)^−n), kde i je mesačná úroková sadzba (ročná sadzba / 12) a n je počet mesačných splátok."}},
+    {"@type": "Question", "name": "Aký je úrok na hypotéku v roku 2026?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Priemerná úroková sadzba nových hypoték na Slovensku sa v roku 2026 podľa štatistík NBS pohybovala približne medzi 3,5 % a 3,9 %. Konkrétna ponuka závisí od banky, fixácie a bonity klienta."}}
+  ]
+}
+</script>
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="logo" href="./">Spočítaj<span>Si</span></a>
+  <nav class="main">
+    <a href="cista-mzda.html">Čistá mzda</a>
+    <a href="hypoteka.html" aria-current="page">Hypotéka</a>
+    <a href="pn.html">PN</a>
+    <a href="materska.html">Materská</a>
+    <a href="./#vsetky">Všetky kalkulačky</a>
+  </nav>
+</div></header>
+
+<main><div class="wrap">
+  <h1>Hypotekárna kalkulačka</h1>
+  <p class="lead">Koľko budete mesačne splácať a koľko zaplatíte banke na úrokoch?</p>
+
+  <div class="grid calc">
+    <div class="card">
+      <label for="istina">Výška úveru (€)</label>
+      <input id="istina" type="text" inputmode="decimal" value="150000" autocomplete="off">
+      <div class="row">
+        <div>
+          <label for="urok">Úrok p. a. (%)</label>
+          <input id="urok" type="text" inputmode="decimal" value="3,9" autocomplete="off">
+        </div>
+        <div>
+          <label for="roky">Doba splácania (roky)</label>
+          <input id="roky" type="number" inputmode="numeric" min="1" max="40" value="30">
+        </div>
+      </div>
+      <p class="hint">Priemerná sadzba nových hypoték bola v septembri 2026 podľa NBS približne 3,7 – 3,9 %.</p>
+    </div>
+
+    <div class="card" aria-live="polite">
+      <div class="result-main">
+        <div class="label">Mesačná splátka</div>
+        <div class="value" id="res-value">–</div>
+      </div>
+      <table class="breakdown">
+        <tr><td>Počet splátok</td><td id="r-n"></td></tr>
+        <tr><td>Výška úveru</td><td id="r-istina"></td></tr>
+        <tr class="minus"><td>Zaplatené úroky spolu</td><td id="r-uroky"></td></tr>
+        <tr class="total"><td>Zaplatíte spolu</td><td id="r-spolu"></td></tr>
+      </table>
+      <p class="hint">Pre porovnanie: pri úroku o 1 percentuálny bod vyššom by splátka bola <strong id="r-vyssi"></strong>.</p>
+    </div>
+  </div>
+
+  <div class="ad-slot"></div>
+
+  <section class="content">
+    <h2>Splátkový kalendár po rokoch</h2>
+    <div class="table-scroll">
+    <table class="data">
+      <thead><tr><th>Rok</th><th>Úroky</th><th>Istina</th><th>Zostatok</th></tr></thead>
+      <tbody id="kalendar"></tbody>
+    </table>
+    </div>
+
+    <div class="partner">
+      <strong>Porovnajte ponuky bánk.</strong> Rozdiel 0,3 percentuálneho bodu pri úveru 150 000 € na 30 rokov znamená približne 25 € mesačne a viac ako 9 000 € za celé obdobie.
+      <!-- Sem vložte affiliate odkaz na porovnávač hypoték / finančného sprostredkovateľa -->
+    </div>
+
+    <h2>Limity NBS pri hypotékach</h2>
+    <ul>
+      <li><strong>Výška úveru voči hodnote nehnuteľnosti (LTV):</strong> spravidla najviac 80 %, len obmedzená časť úverov môže dosiahnuť až 90 %.</li>
+      <li><strong>Celkový dlh voči príjmu (DTI):</strong> všetky úvery spolu najviac 8-násobok ročného čistého príjmu. Pre žiadateľov starších ako 40 rokov sa limit postupne znižuje.</li>
+      <li><strong>Splátky voči príjmu (DSTI):</strong> splátky všetkých úverov najviac 60 % voľného príjmu po odpočítaní životného minima. Banka pritom počíta s rezervou na rast úrokov.</li>
+      <li><strong>Splatnosť:</strong> spravidla najviac 30 rokov.</li>
+    </ul>
+    <p>Presné podmienky určuje opatrenie NBS a interné pravidlá každej banky.</p>
+
+    <h2>Časté otázky</h2>
+    <div class="faq">
+      <details><summary>Ako sa počíta splátka hypotéky?</summary>
+        <p>Hypotéky sa splácajú anuitne, teda rovnakou splátkou každý mesiac. Na začiatku tvorí väčšinu splátky úrok, postupne sa zvyšuje podiel istiny. Vzorec: splátka = istina × i / (1 − (1 + i)<sup>−n</sup>), kde i je ročná sadzba / 12 a n je počet splátok.</p></details>
+      <details><summary>Čo sa stane po skončení fixácie?</summary>
+        <p>Banka ponúkne novú sadzbu podľa aktuálnej situácie na trhu. Vtedy môžete hypotéku bez poplatku refinancovať v inej banke alebo ju mimoriadne splatiť. Prepočítajte si splátku s novou sadzbou a so zostatkom zo splátkového kalendára.</p></details>
+      <details><summary>Zahŕňa výpočet poplatky a poistenie?</summary>
+        <p>Nie. Kalkulačka počíta len splátku istiny a úroku. Banka môže mať poplatok za poskytnutie úveru, vedenie účtu alebo poistenie nehnuteľnosti a schopnosti splácať. Pri porovnávaní ponúk sledujte RPMN.</p></details>
+    </div>
+  </section>
+
+  <div class="note">Výpočet je orientačný, predpokladá rovnakú úrokovú sadzbu počas celej doby splácania a nezahŕňa poplatky. Nejde o ponuku úveru.</div>
+</div></main>
+
+<footer class="site"><div class="wrap">
+  <div class="links">
+    <a href="cista-mzda.html">Čistá mzda</a>
+    <a href="hypoteka.html">Hypotéka</a>
+    <a href="pn.html">PN (nemocenská)</a>
+    <a href="materska.html">Materská a rodičovský</a>
+    <a href="odvody-szco.html">Odvody SZČO</a>
+    <a href="dph.html">DPH</a>
+    <a href="priplatky.html">Príplatky a min. mzda</a>
+    <a href="cestovne-nahrady.html">Cestovné náhrady</a>
+    <a href="sporenie.html">Sporenie a úroky</a>
+    <a href="e-faktura-2027.html">E-faktúra 2027</a>
+    <a href="ochrana-sukromia.html">Ochrana súkromia</a>
+  </div>
+  <p>© 2026 SpočítajSi. Výpočty sú orientačné a nenahrádzajú odborné daňové ani právne poradenstvo.</p>
+</div></footer>
+
+<script src="assets/calc.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function calc() {
+    var istina = Calc.cislo($('istina').value);
+    var urok = Calc.cislo($('urok').value);
+    var roky = Math.min(40, Math.max(1, Math.round(Calc.cislo($('roky').value)) || 1));
+    var r = Calc.hypoteka(istina, urok, roky);
+    var E = Calc.eur;
+    $('res-value').textContent = E(r.splatka);
+    $('r-n').textContent = r.pocetSplatok;
+    $('r-istina').textContent = E(istina);
+    $('r-uroky').textContent = E(r.urokySpolu);
+    $('r-spolu').textContent = E(r.zaplateneSpolu);
+    $('r-vyssi').textContent = E(Calc.hypoteka(istina, urok + 1, roky).splatka);
+    $('kalendar').innerHTML = r.rocne.map(function (x) {
+      return '<tr><td>' + x.rok + '.</td><td>' + E(x.urok) + '</td><td>' + E(x.istina) + '</td><td>' + E(x.zostatok) + '</td></tr>';
+    }).join('');
+  }
+  ['istina', 'urok', 'roky'].forEach(function (id) { $(id).addEventListener('input', calc); });
+  calc();
+})();
+</script>
+</body>
+</html>

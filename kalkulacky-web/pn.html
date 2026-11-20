@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PN kalkulačka 2026 – výpočet nemocenskej a náhrady príjmu | SpočítajSi</title>
+<meta name="description" content="Koľko dostanete na PN v roku 2026? Kalkulačka náhrady príjmu od zamestnávateľa (prvých 14 dní) a nemocenského zo Sociálnej poisťovne od 15. dňa.">
+<link rel="canonical" href="https://www.VASA-DOMENA.sk/pn.html">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b6bcb'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3E%E2%82%AC%3C/text%3E%3C/svg%3E">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "Koľko sa platí na PN v roku 2026?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Prvé 3 dni dostanete od zamestnávateľa 25 % denného vymeriavacieho základu, od 4. do 14. dňa 55 %. Od 15. dňa vypláca Sociálna poisťovňa nemocenské vo výške 55 % denného vymeriavacieho základu."}},
+    {"@type": "Question", "name": "Aké je maximálne nemocenské v roku 2026?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Maximálny denný vymeriavací základ je 100,2083 €, takže nemocenské je najviac 55,11 € denne, čo je 1 653,50 € za 30-dňový a 1 708,60 € za 31-dňový mesiac."}},
+    {"@type": "Question", "name": "Kto platí prvé dni PN?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Od roku 2026 platí zamestnávateľ náhradu príjmu za prvých 14 dní PN (predtým 10 dní). Sociálna poisťovňa platí až od 15. dňa."}}
+  ]
+}
+</script>
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="logo" href="./">Spočítaj<span>Si</span></a>
+  <nav class="main">
+    <a href="cista-mzda.html">Čistá mzda</a>
+    <a href="hypoteka.html">Hypotéka</a>
+    <a href="pn.html" aria-current="page">PN</a>
+    <a href="materska.html">Materská</a>
+    <a href="./#vsetky">Všetky kalkulačky</a>
+  </nav>
+</div></header>
+
+<main><div class="wrap">
+  <h1>PN kalkulačka 2026: koľko dostanete na nemocenskej</h1>
+  <p class="lead">Zadajte svoju priemernú hrubú mzdu z minulého roka a počet dní PN.</p>
+
+  <div class="grid calc">
+    <div class="card">
+      <label for="mzda">Priemerná hrubá mesačná mzda v minulom roku (€)</label>
+      <input id="mzda" type="text" inputmode="decimal" value="1500" autocomplete="off">
+      <label for="dni">Počet dní PN <span class="hint">(kalendárne dni vrátane víkendov)</span></label>
+      <input id="dni" type="number" inputmode="numeric" min="1" max="365" value="21">
+    </div>
+
+    <div class="card" aria-live="polite">
+      <div class="result-main">
+        <div class="label">Spolu za celú PN</div>
+        <div class="value" id="res-value">–</div>
+      </div>
+      <table class="breakdown">
+        <tr><td>Denný vymeriavací základ</td><td id="r-dvz"></td></tr>
+        <tr><td>1. – 3. deň: zamestnávateľ 25 % <span class="hint" id="r-d1"></span></td><td id="r-n1"></td></tr>
+        <tr><td>4. – 14. deň: zamestnávateľ 55 % <span class="hint" id="r-d2"></span></td><td id="r-n2"></td></tr>
+        <tr><td>Od 15. dňa: Sociálna poisťovňa 55 % <span class="hint" id="r-d3"></span></td><td id="r-n3"></td></tr>
+        <tr class="total"><td>Spolu</td><td id="r-spolu"></td></tr>
+      </table>
+      <p class="hint" id="r-max" hidden>Vaša mzda presahuje strop, preto sa počíta s maximálnym denným vymeriavacím základom 100,2083 €.</p>
+      <p class="hint">Pre porovnanie: vaša bežná čistá mzda za rovnaký počet dní je približne <strong id="r-cista"></strong>.</p>
+    </div>
+  </div>
+
+  <div class="ad-slot"></div>
+
+  <section class="content">
+    <h2>Ako sa počíta PN v roku 2026</h2>
+    <ol>
+      <li><strong>Denný vymeriavací základ (DVZ)</strong> = súčet hrubých príjmov, z ktorých ste platili nemocenské poistenie v minulom roku, vydelený počtom dní roka. Pri stabilnej mzde približne <em>mesačná mzda × 12 / 365</em>.</li>
+      <li><strong>1. až 3. deň</strong> platí zamestnávateľ náhradu príjmu 25 % DVZ.</li>
+      <li><strong>4. až 14. deň</strong> platí zamestnávateľ 55 % DVZ. Od 1. 1. 2026 sa toto obdobie predĺžilo z 10 na 14 dní.</li>
+      <li><strong>Od 15. dňa</strong> vypláca Sociálna poisťovňa nemocenské 55 % DVZ.</li>
+    </ol>
+    <p>Náhrada príjmu ani nemocenské sa nezdaňujú a neplatia sa z nich odvody. Preto rozdiel oproti čistej mzde nie je taký veľký, ako by naznačovalo samotné percento.</p>
+
+    <h2>Maximálne sumy v roku 2026</h2>
+    <div class="table-scroll">
+    <table class="data">
+      <thead><tr><th>Položka</th><th>Suma</th></tr></thead>
+      <tbody>
+        <tr><td>Maximálny denný vymeriavací základ</td><td>100,2083 €</td></tr>
+        <tr><td>Maximálne nemocenské za deň</td><td>55,11 €</td></tr>
+        <tr><td>Maximum za 30-dňový mesiac</td><td>1 653,50 €</td></tr>
+        <tr><td>Maximum za 31-dňový mesiac</td><td>1 708,60 €</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h2>Časté otázky</h2>
+    <div class="faq">
+      <details><summary>Kto platí prvé dni PN?</summary>
+        <p>Od roku 2026 zamestnávateľ za prvých 14 dní, potom Sociálna poisťovňa. Živnostníkom (SZČO) a dobrovoľne poisteným platí Sociálna poisťovňa od 1. dňa, a to 25 % DVZ za 1. až 3. deň a 55 % od 4. dňa.</p></details>
+      <details><summary>Počítajú sa aj víkendy a sviatky?</summary>
+        <p>Áno, náhrada príjmu aj nemocenské sa vyplácajú za kalendárne dni vrátane víkendov a sviatkov.</p></details>
+      <details><summary>Prečo môže byť skutočná suma iná?</summary>
+        <p>Kalkulačka predpokladá rovnakú mzdu počas celého minulého roka. Rozhodujúce obdobie môže byť iné (napr. ak ste zmenili prácu alebo pracujete kratšie ako rok), do základu sa započítavajú aj odmeny a prémie a nepočítajú sa dni, keď ste neboli poistení.</p></details>
+    </div>
+  </section>
+
+  <div class="note">Výpočet je orientačný a vychádza zo zákona č. 461/2003 Z. z. o sociálnom poistení a zákona č. 462/2003 Z. z. o náhrade príjmu pri dočasnej pracovnej neschopnosti, so sumami platnými pre PN vzniknuté v roku 2026.</div>
+</div></main>
+
+<footer class="site"><div class="wrap">
+  <div class="links">
+    <a href="cista-mzda.html">Čistá mzda</a>
+    <a href="hypoteka.html">Hypotéka</a>
+    <a href="pn.html">PN (nemocenská)</a>
+    <a href="materska.html">Materská a rodičovský</a>
+    <a href="odvody-szco.html">Odvody SZČO</a>
+    <a href="dph.html">DPH</a>
+    <a href="priplatky.html">Príplatky a min. mzda</a>
+    <a href="cestovne-nahrady.html">Cestovné náhrady</a>
+    <a href="sporenie.html">Sporenie a úroky</a>
+    <a href="e-faktura-2027.html">E-faktúra 2027</a>
+    <a href="ochrana-sukromia.html">Ochrana súkromia</a>
+  </div>
+  <p>© 2026 SpočítajSi. Výpočty sú orientačné a nenahrádzajú odborné daňové ani právne poradenstvo.</p>
+</div></footer>
+
+<script src="assets/calc.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function dniText(n) { return n === 1 ? '1 deň' : (n >= 2 && n <= 4 ? n + ' dni' : n + ' dní'); }
+  function calc() {
+    var mzda = Calc.cislo($('mzda').value);
+    var dni = Math.min(365, Math.max(0, Math.floor(Calc.cislo($('dni').value))));
+    var r = Calc.pn(mzda, dni);
+    var E = Calc.eur;
+    $('res-value').textContent = E(r.spolu);
+    $('r-dvz').textContent = r.dvz.toFixed(4).replace('.', ',') + ' €';
+    $('r-d1').textContent = r.dni1 ? '(' + dniText(r.dni1) + ' × ' + E(r.denne1) + ')' : '';
+    $('r-d2').textContent = r.dni2 ? '(' + dniText(r.dni2) + ' × ' + E(r.denne2) + ')' : '';
+    $('r-d3').textContent = r.dniSP ? '(' + dniText(r.dniSP) + ')' : '';
+    $('r-n1').textContent = E(r.nahrada1);
+    $('r-n2').textContent = E(r.nahrada2);
+    $('r-n3').textContent = E(r.nemocenske);
+    $('r-spolu').textContent = E(r.spolu);
+    $('r-max').hidden = !r.maxDVZ;
+    $('r-cista').textContent = E(Calc.cistaMzda(mzda).cista * 12 / 365 * dni);
+  }
+  ['mzda', 'dni'].forEach(function (id) { $(id).addEventListener('input', calc); });
+  calc();
+})();
+</script>
+</body>
+</html>
