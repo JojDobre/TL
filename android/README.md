@@ -56,13 +56,10 @@ Odtlačok SHA-256 nahrávacieho kľúča (je už v `/.well-known/assetlinks.json
 
 ## 3. Stránka v obchode (Hlavný záznam v obchode)
 
-Súbory sú v `android/store/`:
-
-| Položka | Súbor |
-|---|---|
-| Ikona aplikácie 512×512 | `store_icon.png` |
-| Hlavná grafika 1024×500 | `store/feature-graphic.png` |
-| Snímky obrazovky telefónu (2–8) | `store/screenshots/*.png` (1080×1920) |
+Všetky texty (SK aj EN), obrázky a odpovede do dotazníkov sú pripravené
+v **`android/store/GOOGLE-PLAY.md`** (ikona `store_icon.png`, hlavná grafika
+`store/feature-graphic-sk.jpg` / `-en.jpg`, snímky `store/screenshots-sk/`
+a `store/screenshots-en/`, 1080×1920). Texty nižšie sú staršia verzia.
 
 **Krátky popis** (max. 80 znakov):
 
