@@ -449,3 +449,25 @@ html.is-app .match-row .tip-step { width: 50px; }
 /* .a-screen button (reset) by inak zrušil pozadie ikonových tlačidiel a čipov */
 .a-screen button.a-ib { background: rgba(255, 255, 255, .04); border: 1px solid rgba(150, 165, 215, .2); }
 .a-screen button.a-chip { background: var(--a-s2); border: 1px solid var(--a-line2); display: inline-flex; align-items: center; font: 700 13px var(--a-body); }
+
+/* kolo: karty zápasov bez tipovania (rovnaký tvar ako karta na tipovanie) */
+.a-match.done .meta .a-pill { padding: 3px 8px; font-size: 11px; }
+.a-match.done .meta .a-pill:not(.ok):not(.warn):not(.info) { background: var(--a-s2); color: var(--a-t3); }
+.a-match.done .team .a-crest { width: 44px; height: 44px; border-radius: 15px; font-size: 12.5px; }
+.a-res { min-width: 86px; text-align: center; font: 700 30px var(--a-disp); letter-spacing: .02em; color: var(--a-t1); }
+.a-match.waiting .a-res, .a-match.canceled .a-res, .a-match.live .a-res { color: var(--a-t4); font-size: 24px; }
+.a-mytip { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 12px; border-radius: 14px; background: var(--a-bg2); font-size: 13.5px; }
+.a-mytip b { font: 700 15px var(--a-disp); }
+.a-others { margin-top: 10px; }
+.a-others summary { list-style: none; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 6px; cursor: pointer; font: 700 12.5px var(--a-body); color: var(--a-brand-b); }
+.a-others summary::-webkit-details-marker { display: none; }
+.a-others[open] summary svg { transform: rotate(180deg); }
+.a-others .o { display: flex; align-items: center; gap: 10px; padding: 7px 4px; border-top: 1px solid var(--a-line); font-size: 13.5px; }
+.a-others .o .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.a-others .o b { font: 700 14px var(--a-disp); }
+.a-others .o .p { min-width: 36px; text-align: right; font: 700 12px var(--a-body); color: var(--a-t4); }
+.a-others .o .p.on { color: var(--a-gold); }
+.a-sec .a-small { font-family: var(--a-body); }
+.a-pill:not(.ok):not(.warn):not(.info):not(.gold) { background: var(--a-s2); color: var(--a-t2); }
+.a-screen button.a-row { justify-content: flex-start; text-align: left; }
+.a-screen button.a-row .lbl { flex: 1; }

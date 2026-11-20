@@ -1,0 +1,87 @@
+<%- include('_head') %>
+<script>document.body.setAttribute('data-total', '<%= open.length %>');</script>
+<div style="position:absolute;left:0;right:0;top:0;height:280px;background:radial-gradient(100% 90% at 50% 0%,<%= league.grad.replace('linear-gradient(135deg,', '').split(',')[0] %>88,transparent 70%);z-index:0"></div>
+<header class="a-top">
+  <a class="a-ib" href="javascript:history.length>1?history.back():location.href='/app/liga/<%= league.id %>'" aria-label="<%= t('common.back') %>"><svg class="i"><use href="#i-back"/></svg></a>
+  <div style="flex:1"></div>
+  <button class="a-ib" type="button" data-kolo-menu aria-label="<%= t('kolo.menu') %>"><svg class="i"><use href="#i-list"/></svg></button>
+</header>
+<main class="a-wrap a-in" data-tabs-scope>
+  <div class="a-hero">
+    <a href="/app/liga/<%= league.id %>" style="display:inline-block"><%- include('_crest', { c: league }) %></a>
+    <h2><%= round.name %></h2>
+    <div class="a-muted a-small" style="margin-top:3px"><a href="/app/liga/<%= league.id %>"><%= league.name %></a> · <%= total %> <%= tn(total, 'match') %></div>
+    <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;justify-content:center">
+      <% if (round.status === 'open') { %><span class="a-pill ok"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span><%= t('kolo.st.open') %> · <%= t('round.deadline', { x: round.deadline }) %></span>
+      <% } else if (round.status === 'scheduled') { %><span class="a-pill info"><%= t('round.opens', { x: round.opens }) %></span>
+      <% } else { %><span class="a-pill"><%= t('kolo.st.finished') %></span><% } %>
+      <% if (myRank) { %><span class="a-pill gold"><%= t('kolo.rank', { r: myRank }) %> · <%= myPoints %> <%= t('common.pts') %></span><% } %>
+    </div>
+    <% if (round.description) { %><p class="a-muted a-small" style="margin:10px auto 0;max-width:420px;line-height:1.5"><%= round.description %></p><% } %>
+  </div>
+
+  <div class="a-seg" data-tabs style="margin-top:18px">
+    <a href="#zapasy" data-tab="zapasy" class="on"><%= t('kolo.matches') %></a>
+    <a href="#rebricek" data-tab="rebricek"><%= t('kolo.board') %></a>
+    <a href="#bodovanie" data-tab="bodovanie"><%= t('kolo.scoring') %></a>
+  </div>
+
+  <section class="a-pane" data-pane="zapasy" style="margin-top:14px">
+    <% if (!total) { %><div class="a-card a-empty"><b><%= t('kolo.empty') %></b></div><% } %>
+    <% if (round.status === 'open' && !league.member) { %>
+    <div class="a-note" style="margin:0 0 12px"><svg class="i"><use href="#i-info"/></svg><div><%= t('kolo.notMember') %> <a href="/app/liga/<%= league.id %>" style="color:var(--a-brand-b);font-weight:700"><%= t('liga.join') %></a></div></div>
+    <% } else if (round.status === 'scheduled') { %>
+    <div class="a-note" style="margin:0 0 12px"><svg class="i"><use href="#i-cal"/></svg><div><%= t('kolo.opensAt', { x: round.opens }) %></div></div>
+    <% } %>
+
+    <% if (open.length) { %>
+    <div class="a-sec" style="margin-top:4px"><span><%= t('kolo.toTip') %></span><span class="a-muted a-small" data-kolo-count><%= tippedOpen %>/<%= open.length %></span></div>
+    <% open.forEach(function (m) { %><%- include('_match', { m: m, meta: '' }) %><% }); %>
+    <div class="a-muted a-small" style="text-align:center;margin:10px 0 4px"><%= t('kolo.canChange') %></div>
+    <% } %>
+
+    <% if (done.length) { %>
+    <% if (open.length) { %><div class="a-sec"><%= t('kolo.rest') %></div><% } %>
+    <% done.forEach(function (m) { %><%- include('_result', { m: m }) %><% }); %>
+    <% } %>
+  </section>
+
+  <section class="a-pane" data-pane="rebricek" hidden style="margin-top:14px">
+    <% if (!board.length) { %><div class="a-card a-empty"><b><%= t('liga.noPoints') %></b><%= t('kolo.noBoard') %></div><% } else { %>
+    <div class="a-card" style="padding:2px 0">
+      <% board.forEach(function (r) { %>
+      <div class="a-rrow <%= r.me ? 'me' : '' %>"><span class="r" style="<%= r.rank === 1 ? 'color:var(--a-gold)' : '' %>"><%= r.rank %></span><%- include('_av', { u: r, size: 34 }) %><span class="nm"><%= r.me ? t('common.you') : r.name %></span><span class="a-pts"><%= r.points %></span></div>
+      <% }); %>
+      <% if (meRow) { %><div class="a-rrow me"><span class="r"><%= meRow.rank %></span><%- include('_av', { u: meRow, size: 34 }) %><span class="nm"><%= t('common.you') %></span><span class="a-pts"><%= meRow.points %></span></div><% } %>
+    </div>
+    <% } %>
+    <a class="a-btn ghost" style="margin-top:12px" href="/app/rebricky/<%= league.id %>"><%= t('liga.fullBoard') %></a>
+  </section>
+
+  <section class="a-pane" data-pane="bodovanie" hidden style="margin-top:14px">
+    <div class="a-card a-list">
+      <div class="a-row"><span style="flex:1"><%= t('liga.exact') %></span><b class="a-num" style="color:var(--a-gold)"><%= scoring.exactScore %> <%= t('common.pts') %></b></div>
+      <div class="a-row"><span style="flex:1"><%= t('liga.winner') %></span><b class="a-num"><%= scoring.correctWinner %> <%= t('common.pts') %></b></div>
+      <div class="a-row"><span style="flex:1"><%= t('liga.diff') %></span><b class="a-num"><%= scoring.goalDifference %> <%= t('common.pts') %></b></div>
+      <div class="a-row"><span style="flex:1"><%= t('liga.goals') %></span><b class="a-num"><%= scoring.correctGoals %> <%= t('common.pts') %></b></div>
+    </div>
+  </section>
+
+  <template id="koloMenu">
+    <h3><%= t('kolo.menu') %></h3>
+    <div class="a-card a-list a-menu" style="margin-top:12px">
+      <a class="a-row" href="/app/liga/<%= league.id %>"><div class="a-ico" style="background:var(--a-brand-soft);color:var(--a-brand-b)"><svg class="i"><use href="#i-trophy"/></svg></div><span class="lbl"><%= t('kolo.openLeague') %></span><svg class="i a-muted" width="18" height="18"><use href="#i-chev"/></svg></a>
+      <% if (canEdit) { %>
+      <a class="a-row" href="/rounds/<%= round.id %>/evaluate"><div class="a-ico" style="background:var(--a-gold-soft);color:var(--a-gold)"><svg class="i"><use href="#i-checks"/></svg></div><span class="lbl"><%= t('kolo.evaluate') %></span><svg class="i a-muted" width="18" height="18"><use href="#i-chev"/></svg></a>
+      <a class="a-row" href="/rounds/<%= round.id %>/matches/create"><div class="a-ico" style="background:var(--a-ok-soft);color:var(--a-ok)"><svg class="i"><use href="#i-plus"/></svg></div><span class="lbl"><%= t('kolo.addMatches') %></span><svg class="i a-muted" width="18" height="18"><use href="#i-chev"/></svg></a>
+      <a class="a-row" href="/rounds/<%= round.id %>/edit"><div class="a-ico" style="background:var(--a-info-soft);color:var(--a-info)"><svg class="i"><use href="#i-cog"/></svg></div><span class="lbl"><%= t('kolo.edit') %></span><svg class="i a-muted" width="18" height="18"><use href="#i-chev"/></svg></a>
+      <% } %>
+    </div>
+    <% if (canEdit) { %>
+    <div class="a-card a-list a-menu" style="margin-top:10px">
+      <button class="a-row" type="button" style="width:100%" data-del-round="<%= round.id %>" data-league="<%= league.id %>" data-q="<%= t('kolo.deleteQ') %>"><div class="a-ico" style="background:rgba(240,71,106,.12);color:var(--a-bad)"><svg class="i"><use href="#i-x"/></svg></div><span class="lbl" style="color:var(--a-bad)"><%= t('kolo.delete') %></span></button>
+    </div>
+    <% } %>
+  </template>
+</main>
+<%- include('_foot') %>

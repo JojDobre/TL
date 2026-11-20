@@ -1,0 +1,102 @@
+<%- include('_head') %>
+<div style="position:absolute;left:0;right:0;top:0;height:280px;background:radial-gradient(100% 90% at 50% 0%,<%= season.grad.replace('linear-gradient(135deg,', '').split(',')[0] %>88,transparent 70%);z-index:0"></div>
+<header class="a-top">
+  <a class="a-ib" href="javascript:history.length>1?history.back():location.href='/app/home'" aria-label="<%= t('common.back') %>"><svg class="i"><use href="#i-back"/></svg></a>
+  <div style="flex:1"></div>
+  <% if (!locked) { %><button class="a-ib" type="button" data-sez-menu aria-label="<%= t('sez.menu') %>"><svg class="i"><use href="#i-list"/></svg></button><% } %>
+</header>
+<main class="a-wrap a-in" data-tabs-scope>
+  <div class="a-hero">
+    <%- include('_crest', { c: season }) %>
+    <h2><%= season.name %></h2>
+    <div class="a-muted a-small" style="margin-top:3px"><%= t(season.official ? 'sez.official' : 'sez.community') %><% if (!locked) { %> · <%= participants %> <%= tn(participants, 'player') %> · <%= leagues.length %> <%= t('sez.leagues').toLowerCase() %><% } %></div>
+    <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;justify-content:center">
+      <span class="a-pill <%= season.status === 'active' ? 'ok' : (season.status === 'upcoming' ? 'info' : '') %>"><%= t('sez.' + season.status) %></span>
+      <% if (myRank) { %><span class="a-pill gold"><%= t('sez.youAre', { r: myRank, p: myPoints }) %></span><% } %>
+    </div>
+    <% if (season.description) { %><p class="a-muted a-small" style="margin:10px auto 0;max-width:420px;line-height:1.5"><%= season.description %></p><% } %>
+  </div>
+
+  <% if (locked) { %>
+  <form class="a-card" style="margin-top:18px;padding:18px" data-sez-join-pw>
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px"><div class="a-ico" style="width:40px;height:40px;border-radius:13px;background:var(--a-s2);color:var(--a-t2)"><svg class="i"><use href="#i-users"/></svg></div><div><b><%= t('sez.locked') %></b><div class="a-muted a-small"><%= t('sez.lockedTx') %></div></div></div>
+    <input type="hidden" name="sid" value="<%= season.id %>">
+    <input class="a-input" type="password" name="password" placeholder="<%= t('sez.password') %>" autocomplete="off" required>
+    <div class="a-err" data-join-err hidden></div>
+    <button class="a-btn gold" type="submit" style="margin-top:12px"><%= t('sez.join') %></button>
+  </form>
+  <% } else { %>
+  <% if (!isMember && !season.ended) { %>
+  <button class="a-btn gold" type="button" style="margin-top:16px" data-sez-join="<%= season.inviteCode %>"><%= t('sez.join') %></button>
+  <% } else if (isMember && !season.ended) { %>
+  <a class="a-btn gold" style="margin-top:16px" href="/app/tipovat?sezona=<%= season.id %>"><%= t('sez.tip') %></a>
+  <% } %>
+
+  <div class="a-seg" data-tabs style="margin-top:18px">
+    <a href="#ligy" data-tab="ligy" class="on"><%= t('sez.leagues') %></a>
+    <a href="#rebricek" data-tab="rebricek"><%= t('sez.board') %></a>
+    <% if (rules) { %><a href="#pravidla" data-tab="pravidla"><%= t('sez.rules') %></a><% } %>
+    <% if (news.length) { %><a href="#novinky" data-tab="novinky"><%= t('sez.news') %></a><% } %>
+  </div>
+
+  <section class="a-pane" data-pane="ligy" style="margin-top:14px">
+    <% if (canCreateLeague) { %><a class="a-btn ghost" style="margin-bottom:12px" href="/leagues/create?season=<%= season.id %>"><svg class="i" width="18" height="18"><use href="#i-plus"/></svg><%= t('sez.newLeague') %></a><% } %>
+    <% if (!leagues.length) { %><div class="a-card a-empty"><b><%= t('sez.noLeagues') %></b></div><% } else { %>
+    <div class="a-card a-list">
+      <% leagues.forEach(function (l) { %>
+      <a class="a-row" href="/app/liga/<%= l.id %>">
+        <%- include('_crest', { c: l, st: 'width:40px;height:40px;border-radius:13px;font-size:12px' }) %>
+        <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><%= l.name %></div><div class="a-muted a-small"><%= l.players %> <%= tn(l.players, 'player') %><% if (l.ended) { %> · <%= t('liga.ended') %><% } %></div></div>
+        <% if (l.member) { %><span class="a-pill ok"><%= t('sez.member') %></span><% } else { %><svg class="i a-muted" width="18" height="18"><use href="#i-chev"/></svg><% } %>
+      </a>
+      <% }); %>
+    </div>
+    <% } %>
+  </section>
+
+  <section class="a-pane" data-pane="rebricek" hidden style="margin-top:14px">
+    <% if (!board.length) { %><div class="a-card a-empty"><b><%= t('liga.noPoints') %></b><%= t('liga.noPointsTx') %></div><% } else { %>
+    <div class="a-card" style="padding:2px 0">
+      <% board.forEach(function (r) { %>
+      <div class="a-rrow <%= r.me ? 'me' : '' %>"><span class="r" style="<%= r.rank === 1 ? 'color:var(--a-gold)' : '' %>"><%= r.rank %></span><%- include('_av', { u: r, size: 34 }) %><span class="nm"><%= r.me ? t('common.you') : r.name %></span><span class="a-pts"><%= r.points %></span></div>
+      <% }); %>
+      <% if (meRow) { %><div class="a-rrow me"><span class="r"><%= meRow.rank %></span><%- include('_av', { u: meRow, size: 34 }) %><span class="nm"><%= t('common.you') %></span><span class="a-pts"><%= meRow.points %></span></div><% } %>
+    </div>
+    <% } %>
+  </section>
+
+  <% if (rules) { %>
+  <section class="a-pane" data-pane="pravidla" hidden style="margin-top:14px"><div class="a-card a-rules"><%= rules %></div></section>
+  <% } %>
+  <% if (news.length) { %>
+  <section class="a-pane" data-pane="novinky" hidden style="margin-top:14px">
+    <div class="a-card a-list">
+      <% news.forEach(function (n) { %>
+      <div class="a-row"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px"><%= n.title %></div><div class="a-muted a-small"><%= n.tag %> · <%= n.when %></div></div></div>
+      <% }); %>
+    </div>
+  </section>
+  <% } %>
+
+  <template id="sezMenu">
+    <h3><%= t('sez.menu') %></h3>
+    <div class="a-idrow"><div><div class="a-label"><%= t('sez.code') %></div><b class="a-num"><%= season.inviteCode %></b></div><button type="button" class="a-chip" data-copy-code="<%= season.inviteCode %>"><%= t('liga.copy') %></button></div>
+    <div class="a-card a-list a-menu" style="margin-top:12px">
+      <a class="a-row" href="#" data-share-league data-code="<%= season.inviteCode %>" data-name="<%= season.name %>"><div class="a-ico" style="background:var(--a-gold-soft);color:var(--a-gold)"><svg class="i"><use href="#i-share"/></svg></div><span class="lbl"><%= t('liga.invite') %></span><svg class="i a-muted" width="18" height="18"><use href="#i-chev"/></svg></a>
+      <% if (canManage) { %>
+      <a class="a-row" href="/seasons/<%= season.id %>/manage"><div class="a-ico" style="background:var(--a-brand-soft);color:var(--a-brand-b)"><svg class="i"><use href="#i-cog"/></svg></div><span class="lbl"><%= t('sez.manage') %></span><svg class="i a-muted" width="18" height="18"><use href="#i-chev"/></svg></a>
+      <a class="a-row" href="/seasons/<%= season.id %>/members"><div class="a-ico" style="background:var(--a-info-soft);color:var(--a-info)"><svg class="i"><use href="#i-users"/></svg></div><span class="lbl"><%= t('sez.members') %></span><svg class="i a-muted" width="18" height="18"><use href="#i-chev"/></svg></a>
+      <% } %>
+      <% if (canCreateLeague) { %><a class="a-row" href="/leagues/create?season=<%= season.id %>"><div class="a-ico" style="background:var(--a-ok-soft);color:var(--a-ok)"><svg class="i"><use href="#i-plus"/></svg></div><span class="lbl"><%= t('sez.newLeague') %></span><svg class="i a-muted" width="18" height="18"><use href="#i-chev"/></svg></a><% } %>
+    </div>
+    <% if (isMember && !isCreator) { %>
+    <form class="a-card a-list a-menu" style="margin-top:10px" action="/seasons/<%= season.id %>/leave" method="POST" data-confirm="<%= t('sez.leaveQ') %>">
+      <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+      <button class="a-row" type="submit" style="width:100%"><div class="a-ico" style="background:rgba(240,71,106,.12);color:var(--a-bad)"><svg class="i"><use href="#i-logout"/></svg></div><span class="lbl" style="color:var(--a-bad)"><%= t('sez.leave') %></span></button>
+    </form>
+    <% } %>
+  </template>
+  <% } %>
+</main>
+<script>window.TIFO_LIGA = <%- JSON.stringify({ copied: t('create.copied'), shareText: t('create.shareText'), joined: t('sez.joined') }).replace(/</g, '\\u003c') %>;</script>
+<%- include('_foot') %>

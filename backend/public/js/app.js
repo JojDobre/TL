@@ -64,6 +64,14 @@
     if (!href || href.charAt(0) !== '/') return null;
     var m = /^\/leagues\/(\d+)\/?(?:[?#].*)?$/.exec(href);
     if (m) return '/app/liga/' + m[1];
+    m = /^\/rounds\/(\d+)(?:\/results)?\/?(?:[?#].*)?$/.exec(href);
+    if (m) return '/app/kolo/' + m[1];
+    m = /^\/seasons\/(\d+)\/leaderboard\/?(?:[?#].*)?$/.exec(href);
+    if (m) return '/app/sezona/' + m[1] + '#rebricek';
+    m = /^\/seasons\/(\d+)\/?(?:[?#].*)?$/.exec(href);
+    if (m) return '/app/sezona/' + m[1];
+    m = /^\/seasons\/(\d+)\/zapasy\/?(?:[?#].*)?$/.exec(href);
+    if (m) return '/app/tipovat?sezona=' + m[1];
     return APP_URL[href.split(/[?#]/)[0]] || null;
   }
   function fixLink(a) {
@@ -305,7 +313,8 @@
   }
 
   // ================================================================ TIPOVANIE
-  if (screen === 'tipovat') {
+  // obrazovky Tipovať a Kolo majú tie isté karty zápasov (views/app/_match.ejs)
+  if (screen === 'tipovat' || screen === 'kolo') {
     var total = Number(body.getAttribute('data-total') || 0);
     var ring = document.querySelector('[data-ring]');
     var ringTxt = document.querySelector('[data-ring-text]');
@@ -314,6 +323,8 @@
       var done = document.querySelectorAll('.a-match.tipped').length;
       if (ringTxt) ringTxt.textContent = done + '/' + total;
       if (ring) ring.setAttribute('stroke-dasharray', (total ? (C * done / total) : 0).toFixed(1) + ' ' + C.toFixed(1));
+      var kc = document.querySelector('[data-kolo-count]');
+      if (kc) kc.textContent = done + '/' + total;
     }
     var askedPush = false;
     function maybeAskPush() {
@@ -403,6 +414,24 @@
     updateRing();
   }
 
+  // ================================================================== KOLO
+  if (screen === 'kolo') {
+    var kTpl = document.getElementById('koloMenu');
+    var kBtn = document.querySelector('[data-kolo-menu]');
+    if (kTpl && kBtn) kBtn.addEventListener('click', function () {
+      haptic(6);
+      var sh = sheet(kTpl.innerHTML);
+      var del = sh.el.querySelector('[data-del-round]');
+      if (del) del.addEventListener('click', function () {
+        if (!window.confirm(del.getAttribute('data-q'))) return;
+        del.disabled = true;
+        api('/api/rounds/' + del.getAttribute('data-del-round'), { method: 'DELETE' })
+          .then(function () { location.replace('/app/liga/' + del.getAttribute('data-league')); })
+          .catch(function (e) { del.disabled = false; toast(e.message, true); haptic(40); });
+      });
+    });
+  }
+
   // =============================================================== REBRÍČEK
   if (screen === 'rebricek') {
     var me = document.querySelector('[data-me-row]');
@@ -416,14 +445,15 @@
 
   // ============================================================ NOTIFIKÁCIE
   // ================================================= LIGY: PRIDAŤ SA / VYTVORIŤ
-  if (screen === 'liga') {
+  // liga a sezóna majú rovnaké menu možností a pripojenie
+  if (screen === 'liga' || screen === 'sezona') {
     var TL = window.TIFO_LIGA || {};
     var copyCode = function (code) {
       var ok = function () { toast(TL.copied); haptic(8); };
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(ok, ok); else ok();
     };
-    var menuBtn = document.querySelector('[data-liga-menu]');
-    var tpl = document.getElementById('ligaMenu');
+    var menuBtn = document.querySelector('[data-liga-menu],[data-sez-menu]');
+    var tpl = document.getElementById('ligaMenu') || document.getElementById('sezMenu');
     if (menuBtn && tpl) {
       menuBtn.addEventListener('click', function () {
         haptic(6);
@@ -455,12 +485,12 @@
           if (errEl) { errEl.textContent = err.message; errEl.hidden = false; } else toast(err.message, true);
         });
     };
-    var now = document.querySelector('[data-liga-join-now]');
-    if (now) now.addEventListener('click', function () { doJoin({ code: now.getAttribute('data-code') }, now); });
-    var jf = document.querySelector('[data-liga-join]');
+    var now = document.querySelector('[data-liga-join-now],[data-sez-join]');
+    if (now) now.addEventListener('click', function () { doJoin({ code: now.getAttribute('data-code') || now.getAttribute('data-sez-join') }, now); });
+    var jf = document.querySelector('[data-liga-join],[data-sez-join-pw]');
     if (jf) jf.addEventListener('submit', function (e) {
       e.preventDefault();
-      doJoin({ lid: Number(jf.leagueId.value), password: jf.password.value }, jf.querySelector('button'), jf.querySelector('[data-join-err]'));
+      doJoin(jf.sid ? { sid: Number(jf.sid.value), password: jf.password.value } : { lid: Number(jf.leagueId.value), password: jf.password.value }, jf.querySelector('button'), jf.querySelector('[data-join-err]'));
     });
   }
 

@@ -1,0 +1,23 @@
+<%# karta zápasu BEZ tipovania (odohraný, prebiehajúci, ešte neotvorený): m z kolo controllera.
+    Rovnaký tvar ako karta na tipovanie, namiesto šípok je výsledok a môj tip. %>
+<article class="a-match done <%= m.state %>">
+  <div class="meta"><span><%= m.when %></span><span class="a-pill <%= m.state === 'finished' ? 'ok' : (m.state === 'live' ? 'warn' : (m.state === 'waiting' ? 'info' : '')) %>"><%= t('kolo.s.' + m.state) %></span></div>
+  <div class="teams">
+    <div class="team"><%- include('_crest', { c: m.home }) %><b><%= m.home.name %></b></div>
+    <div class="a-res"><%= m.result || '–:–' %></div>
+    <div class="team"><%- include('_crest', { c: m.away }) %><b><%= m.away.name %></b></div>
+  </div>
+  <div class="a-mytip">
+    <span class="a-muted"><%= t('kolo.yourTip') %></span>
+    <b class="<%= m.myTip ? '' : 'a-muted' %>"><%= m.myTip || t('kolo.noTip') %></b>
+    <% if (m.myPoints != null) { %><span class="a-pill <%= m.myPoints > 0 ? 'gold' : '' %>" style="margin-left:auto">+<%= m.myPoints %> <%= t('common.pts') %></span><% } %>
+  </div>
+  <% if (m.state !== 'waiting' && m.others.length) { %>
+  <details class="a-others">
+    <summary><%= t('kolo.others', { n: m.others.length }) %><svg class="i" width="16" height="16"><use href="#i-down"/></svg></summary>
+    <% m.others.forEach(function (o) { %>
+    <div class="o"><%- include('_av', { u: o, size: 26 }) %><span class="nm"><%= o.name %></span><b><%= o.tip || '–' %></b><% if (o.points != null && m.state === 'finished') { %><span class="p <%= o.points > 0 ? 'on' : '' %>">+<%= o.points %></span><% } %></div>
+    <% }); %>
+  </details>
+  <% } %>
+</article>

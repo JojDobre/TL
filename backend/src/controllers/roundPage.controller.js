@@ -274,4 +274,4 @@ const roundResultsPage = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { roundDetailPage, roundResultsPage };
+module.exports = { roundDetailPage, roundResultsPage, canManageRound };
