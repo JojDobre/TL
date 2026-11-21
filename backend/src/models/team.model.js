@@ -48,6 +48,8 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       unique: 'teams_external_id_unique',
     },
+    // kedy sa naposledy hľadalo chýbajúce logo v TheSportsDB (utils/auto-results.js)
+    logoCheckedAt: { type: DataTypes.DATE, allowNull: true },
     shortName: { type: DataTypes.STRING, allowNull: true },
     alternateName: { type: DataTypes.STRING, allowNull: true },
     foundedYear: { type: DataTypes.INTEGER, allowNull: true },

@@ -60,6 +60,8 @@ const CFG = {
   importPerRun: 4,             // koľko kôl naimportovať pri importe celej sezóny za beh
   pauseMs: num(process.env.AUTO_RESULTS_PAUSE_MS, 300),  // pauza medzi vyhodnoteniami
   maxEvaluatePerRun: num(process.env.AUTO_RESULTS_MAX_EVALUATE, 40), // strop vyhodnotení za beh
+  logosPerRun: num(process.env.AUTO_LOGOS_PER_RUN, 5),        // koľko tímov bez loga skontrolovať za beh
+  logoRetryDays: num(process.env.AUTO_LOGOS_RETRY_DAYS, 30),  // po koľkých dňoch skúsiť nenájdené logo znova
 };
 
 const MIN = 60 * 1000;
@@ -133,6 +135,12 @@ async function ensureTeam(extId, name, badge, sport, country, cache) {
   if (!extId) return null;
   if (cache.has(extId)) return cache.get(extId);
   let team = await Team.findOne({ where: { externalId: extId } });
+  // existujúci tím bez loga: erb prišiel spolu so zápasom → doplň ho hneď (bez ďalšieho requestu)
+  if (team && !team.logo && badge) {
+    team.logo = badge;
+    team.logoCheckedAt = new Date();
+    await team.save({ fields: ['logo', 'logoCheckedAt'] });
+  }
   if (!team) {
     team = await Team.create({
       name: name || `Tím ${extId}`,
@@ -319,7 +327,10 @@ async function syncLeague(league, budget, now) {
       newCursor = (!events.length || r >= 200) ? null : r + 1;
       // priebežne ulož, aby sa po prerušení (limit API) pokračovalo tu
       league.externalSyncCursor = newCursor;
-      await league.save({ fields: ['externalSyncCursor'] });
+      league.externalSyncNote = newCursor
+        ? `Import sezóny prebieha — hotové kolá do ${r}., pokračuje od ${newCursor}. kola (${ctx.stats.rounds} nových kôl, ${ctx.stats.matches} zápasov v tomto behu)`
+        : `Import sezóny dokončený (${ctx.stats.rounds} nových kôl, ${ctx.stats.matches} zápasov v poslednom behu)`;
+      await league.save({ fields: ['externalSyncCursor', 'externalSyncNote'] });
       if (newCursor === null) break;
     }
   }
@@ -568,6 +579,102 @@ async function alertAdmins(now, problems) {
   if (late.length) await Match.update({ autoAlertedAt: now }, { where: { id: late.map((m) => m.id) } });
 }
 
+// ── 3) LOGÁ TÍMOV ────────────────────────────────────────────────────────────
+// Oficiálne (globálne) tímy bez loga sa postupne doplnia z TheSportsDB.
+// Beží až po programe a výsledkoch a berie si len zvyšok rozpočtu requestov
+// (najviac AUTO_LOGOS_PER_RUN tímov za beh). Tím s externým ID → lookupteam,
+// inak hľadanie podľa názvu. Nenájdené logo sa skúsi znova až po
+// AUTO_LOGOS_RETRY_DAYS dňoch.
+
+function missingLogoWhere(now) {
+  return {
+    scope: 'global',
+    [Op.and]: [
+      { [Op.or]: [{ logo: null }, { logo: '' }] },
+      { [Op.or]: [{ logoCheckedAt: null }, { logoCheckedAt: { [Op.lte]: new Date(now - CFG.logoRetryDays * 24 * HOUR) } }] },
+    ],
+  };
+}
+
+// anglický názov krajiny z kódu (národné tímy máme po slovensky: Nemecko → Germany)
+let regionNames = null;
+function englishCountry(code) {
+  try {
+    if (!regionNames) regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
+    const n = code ? regionNames.of(String(code).toUpperCase()) : null;
+    return n && n !== String(code).toUpperCase() ? n : null;
+  } catch (e) { return null; }
+}
+// názov, pod ktorým tím hľadať v TheSportsDB
+function searchName(team) {
+  return (team.teamType === 'national' && englishCountry(team.country)) || team.name;
+}
+
+// najlepší kandidát z vyhľadávania podľa názvu (a športu pri kluboch)
+function pickTeam(team, list) {
+  const want = norm(searchName(team));
+  const short = norm(team.shortName);
+  const okSport = (c) => team.teamType === 'national' || !team.sport || team.sport === 'other' || tsdb.sportCode(c.sport) === team.sport;
+  const cands = list.filter((c) => c.badge && okSport(c));
+  // národné tímy sú naprieč športmi — pri zhode názvu má prednosť futbal
+  if (team.teamType === 'national') cands.sort((a, b) => (b.sport === 'Soccer') - (a.sport === 'Soccer'));
+  const exact = cands.find((c) => [c.name, c.short, ...String(c.alternate).split(',')].some((n) => {
+    const x = norm(n);
+    return x && (x === want || (short && x === short));
+  }));
+  if (exact) return exact;
+  if (cands.length === 1 && want.length >= 4) {
+    const x = norm(cands[0].name);
+    if (x.includes(want) || want.includes(x)) return cands[0];
+  }
+  return null;
+}
+
+async function fillLogos(budget, now) {
+  const max = Math.min(CFG.logosPerRun, budget.left);
+  if (max <= 0) return 0;
+  const teams = await Team.findAll({
+    where: missingLogoWhere(now),
+    // najprv tímy, ktoré sa ešte nehľadali; tímy s externým ID sú najistejšie
+    order: [[Sequelize.literal('logo_checked_at IS NULL'), 'DESC'], [Sequelize.literal('external_id IS NULL'), 'ASC'], ['id', 'ASC']],
+    limit: max,
+  });
+  let filled = 0;
+  for (const team of teams) {
+    let found = null;
+    if (team.externalId) {
+      found = await call(budget, () => tsdb.lookupTeam(team.externalId));
+      if (found && !found.badge) found = null;
+    } else {
+      const list = await call(budget, () => tsdb.searchTeams(searchName(team)));
+      found = pickTeam(team, list);
+    }
+    team.logoCheckedAt = now;
+    const fields = ['logoCheckedAt'];
+    if (found) {
+      team.logo = found.badge;
+      fields.push('logo');
+      // prepoj aj externé ID (ak ho ešte nemá iný tím) — ďalšie synchronizácie ho spoznajú
+      if (!team.externalId && found.id && !(await Team.findOne({ where: { externalId: found.id }, attributes: ['id'] }))) {
+        team.externalId = found.id;
+        fields.push('externalId');
+      }
+      filled += 1;
+    }
+    await team.save({ fields });
+  }
+  return filled;
+}
+
+async function logoStatus() {
+  const now = new Date();
+  const [missing, waiting] = await Promise.all([
+    Team.count({ where: { scope: 'global', [Op.or]: [{ logo: null }, { logo: '' }] } }),
+    Team.count({ where: missingLogoWhere(now) }),
+  ]);
+  return { missing, waiting, perRun: CFG.logosPerRun, intervalMin: CFG.intervalMin };
+}
+
 // ── behy ─────────────────────────────────────────────────────────────────────
 
 async function runOnce({ leagueId = null, maxRequests = CFG.maxRequests } = {}) {
@@ -587,6 +694,8 @@ async function runOnce({ leagueId = null, maxRequests = CFG.maxRequests } = {}) 
     const r = await processResults(budget, now);
     summary.evaluated = r.evaluated;
     summary.waiting = r.waiting;
+    // logá tímov len v pravidelnom behu a zo zvyšku rozpočtu
+    if (!leagueId) summary.logos = await fillLogos(budget, now);
   } catch (e) {
     if (e instanceof BudgetExhausted) summary.stoppedEarly = true;
     else { state.lastError = e.message; console.error('[auto-results] beh zlyhal:', e); }
@@ -598,7 +707,8 @@ async function runOnce({ leagueId = null, maxRequests = CFG.maxRequests } = {}) 
   }
   if (summary.requests || summary.evaluated) {
     console.log(`[auto-results] beh: ${summary.requests} req, vyhodnotených ${summary.evaluated}, `
-      + `čaká ${summary.waiting}${summary.stoppedEarly ? ' (pokračuje v ďalšom behu)' : ''}`);
+      + `čaká ${summary.waiting}${summary.logos ? `, doplnených lôg ${summary.logos}` : ''}`
+      + `${summary.stoppedEarly ? ' (pokračuje v ďalšom behu)' : ''}`);
   }
   return summary;
 }
@@ -654,6 +764,8 @@ module.exports = {
   syncLeague,
   processResults,
   leagueStatus,
+  logoStatus,
+  fillLogos,
   retryDelayMs,
-  _internal: { findEvent, handleMatch, upsertRound, Budget },
+  _internal: { findEvent, handleMatch, upsertRound, Budget, pickTeam, ensureTeam, searchName },
 };
