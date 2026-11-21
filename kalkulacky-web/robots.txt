@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /tests/
+Disallow: /tools/
 
-Sitemap: https://www.VASA-DOMENA.sk/sitemap.xml
+Sitemap: https://www.vasa-domena.sk/sitemap.xml

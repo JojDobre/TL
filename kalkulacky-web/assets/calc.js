@@ -78,6 +78,16 @@
     return Math.max(0, P.nczdKonstanta - zd / 3);
   }
 
+  /** Ročná nezdaniteľná časť na daňovníka 2026: 5 966,73 € do 26 083,13 €, potom 14 661,11 − ZD/3, najmenej 0. */
+  function nczdRocne(zd) {
+    var plna = r2(21 * P.zivotneMinimum);            // 5 966,73 €
+    var hranica = r2(91.8 * P.zivotneMinimum);       // 26 083,13 €
+    var konst = r2(51.6 * P.zivotneMinimum);         // 14 661,11 €
+    zd = Math.max(0, +zd || 0);
+    var n = zd <= hranica ? plna : Math.max(0, konst - zd / 3);
+    return r2(Math.min(n, zd));
+  }
+
   /** Mesačný daňový bonus. deti = {do15: n, od15do18: n} */
   function danovyBonus(zd, deti) {
     var a = deti && deti.do15 ? deti.do15 : 0;
@@ -193,7 +203,7 @@
    * Nemocenské dávky (zákon 461/2003 Z. z.) a náhrada príjmu (zákon 462/2003 Z. z.)
    * ------------------------------------------------------------------ */
   var D = {
-    maxDVZ: 100.2083,          // 2 × 1 524 € × 12 / 365, PN/materská vzniknutá v roku 2026
+    maxDVZ: { 2026: 100.2083, 2027: 106.5206 }, // 2 × priemerná mzda spred 2 rokov × 12 / 365 (podľa roku vzniku nároku)
     nahradaDni1az3: 0.25,      // zamestnávateľ, 1. – 3. deň
     nahradaDni4az14: 0.55,     // zamestnávateľ, 4. – 14. deň (od 2026 do 14. dňa)
     dniZamestnavatel: 14,
@@ -206,14 +216,16 @@
   function ceilTo(x, krok) { return Math.ceil(x / krok - 1e-9) * krok; }
 
   /** Denný vymeriavací základ zo stabilnej hrubej mesačnej mzdy (zaokrúhlený na 4 des. miesta nahor). */
-  function dvz(hrubaMesacna) {
+  function maxDVZ(rok) { return D.maxDVZ[rok] || D.maxDVZ[2026]; }
+
+  function dvz(hrubaMesacna, rok) {
     var v = Math.max(0, +hrubaMesacna || 0) * 12 / 365;
-    return Math.min(Math.round(ceilTo(v, 0.0001) * 10000) / 10000, D.maxDVZ);
+    return Math.min(Math.round(ceilTo(v, 0.0001) * 10000) / 10000, maxDVZ(rok));
   }
 
   /** PN zamestnanca: náhrada príjmu od zamestnávateľa + nemocenské zo Sociálnej poisťovne. */
-  function pn(hrubaMesacna, dni) {
-    var d = dvz(hrubaMesacna);
+  function pn(hrubaMesacna, dni, rok) {
+    var d = dvz(hrubaMesacna, rok);
     dni = Math.max(0, Math.floor(+dni || 0));
     var dni1 = Math.min(dni, 3);
     var dni2 = Math.max(0, Math.min(dni, D.dniZamestnavatel) - 3);
@@ -229,13 +241,13 @@
       nahradaSpolu: r2(nahrada1 + nahrada2),
       nemocenske: r2(nemocenske),
       spolu: r2(nahrada1 + nahrada2 + nemocenske),
-      maxDVZ: d >= D.maxDVZ
+      maxDVZ: d >= maxDVZ(rok)
     };
   }
 
   /** Materské: 75 % DVZ za každý kalendárny deň. tyzdne = 34 / 37 / 43 */
-  function materske(hrubaMesacna, tyzdne) {
-    var d = dvz(hrubaMesacna);
+  function materske(hrubaMesacna, tyzdne, rok) {
+    var d = dvz(hrubaMesacna, rok);
     var denne = d * D.materske;
     var dni = (tyzdne || 34) * 7;
     return {
@@ -244,7 +256,7 @@
       mesiac31: r2(ceilTo(denne * 31, 0.1)),
       dni: dni,
       spolu: r2(ceilTo(denne * dni, 0.1)),
-      maxDVZ: d >= D.maxDVZ
+      maxDVZ: d >= maxDVZ(rok)
     };
   }
 
@@ -339,8 +351,10 @@
    * Minimálna mzda a príplatky 2026 (Zákonník práce)
    * ------------------------------------------------------------------ */
   var MZ = {
-    mesacna: 915,
-    hodinova: 5.259,
+    roky: {
+      2026: { mesacna: 915, hodinova: 5.259 },
+      2027: { mesacna: 972, hodinova: 5.586 }
+    },
     zakladStupne: 580,   // nárast medzi stupňami: (koeficient − 1) × 580 €
     koeficienty: [1.0, 1.2, 1.4, 1.6, 1.8, 2.0],
     // percentá z hodinovej minimálnej mzdy; dohodnuté = minimum pri dohode v KZ/pracovnej zmluve
@@ -348,33 +362,42 @@
       sobota: { zakon: 0.50, dohodnute: 0.45 },
       nedela: { zakon: 1.00, dohodnute: 0.90 },
       noc: { zakon: 0.40, dohodnute: 0.35 },
-      nocRizikova: { zakon: 0.50, dohodnute: 0.45 }
+      nocRizikova: { zakon: 0.50, dohodnute: null }   // znížená sadzba nie je stanovená
     },
     sviatok: 1.00,       // % priemerného zárobku
     nadcas: 0.25,
     nadcasRizikovy: 0.35
   };
 
-  function minimalneNaroky() {
+  function mzRok(rok) { return MZ.roky[rok] || MZ.roky[2026]; }
+
+  /** § 120 ods. 4 ZP: (MM − MM 2020) + MM 2020 × koeficient, kde MM 2020 = 580 € */
+  function minimalneNaroky(rok) {
+    var mm = mzRok(rok).mesacna;
     return MZ.koeficienty.map(function (k, idx) {
-      var mesacne = r2(MZ.mesacna + (k - 1) * MZ.zakladStupne);
+      var mesacne = r2(mm + (k - 1) * MZ.zakladStupne);
       return { stupen: idx + 1, koeficient: k, mesacne: mesacne, hodinove: Math.round(mesacne / 174 * 1000) / 1000 };
     });
   }
 
-  /** Sadzba príplatku za hodinu (z minimálnej hodinovej mzdy). */
-  function priplatokHodina(typ, dohodnute) {
+  /** Percento príplatku (pri dohode znížené, ak zákon zníženie pripúšťa). */
+  function priplatokPercento(typ, dohodnute) {
     var p = MZ.priplatky[typ];
-    return r2(MZ.hodinova * (dohodnute ? p.dohodnute : p.zakon));
+    return dohodnute && p.dohodnute !== null ? p.dohodnute : p.zakon;
+  }
+
+  /** Presná sadzba príplatku za hodinu (z minimálnej hodinovej mzdy), bez zaokrúhlenia. */
+  function priplatokHodina(typ, dohodnute, rok) {
+    return Math.round(mzRok(rok).hodinova * priplatokPercento(typ, dohodnute) * 10000) / 10000;
   }
 
   /** hodiny = {sobota, nedela, noc, nocRizikova, sviatok, nadcas}; priemer = priemerný hodinový zárobok */
-  function priplatky(hodiny, priemer, dohodnute, rizikovyNadcas) {
+  function priplatky(hodiny, priemer, dohodnute, rizikovyNadcas, rok) {
     hodiny = hodiny || {};
     var out = {}, spolu = 0;
     ['sobota', 'nedela', 'noc', 'nocRizikova'].forEach(function (t) {
       var h = Math.max(0, +hodiny[t] || 0);
-      out[t] = r2(h * priplatokHodina(t, dohodnute));
+      out[t] = r2(h * priplatokHodina(t, dohodnute, rok));   // zaokrúhľuje sa až výsledok
       spolu += out[t];
     });
     priemer = Math.max(0, +priemer || 0);
@@ -399,13 +422,14 @@
   }
 
   var api = {
-    P: P, danProgresivna: danProgresivna, nczdMesacne: nczdMesacne,
+    P: P, danProgresivna: danProgresivna, nczdMesacne: nczdMesacne, nczdRocne: nczdRocne,
     danovyBonus: danovyBonus, cistaMzda: cistaMzda, hrubaZCistej: hrubaZCistej,
     dph: dph, odvodySZCO: odvodySZCO, spPodlaFondov: spPodlaFondov, eur: eur, cislo: cislo,
-    D: D, dvz: dvz, pn: pn, materske: materske,
+    D: D, maxDVZ: maxDVZ, dvz: dvz, pn: pn, materske: materske,
     hypoteka: hypoteka, sporenie: sporenie,
     CN: CN, stravne: stravne, nahradaAuto: nahradaAuto,
-    MZ: MZ, minimalneNaroky: minimalneNaroky, priplatokHodina: priplatokHodina, priplatky: priplatky
+    MZ: MZ, mzRok: mzRok, minimalneNaroky: minimalneNaroky, priplatokPercento: priplatokPercento,
+    priplatokHodina: priplatokHodina, priplatky: priplatky
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Calc = api;
