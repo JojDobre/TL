@@ -3,7 +3,8 @@
 const fs = require('fs');
 const { withPage } = require('./browser');
 const { normalizeUrl, assertPublicHost } = require('../fetcher');
-const { SC, tagToSc, IMPACT, RULES, PRINCIPLES } = require('./wcag');
+const { SC, tagToSc, IMPACT, ruleText, scIn, principlesIn } = require('./wcag');
+const { UserError } = require('../fetcher');
 const { CUSTOM_RULES, dismissConsent, keyboardChecks, reflowCheck, elementShot } = require('./checks');
 
 const AXE_SOURCE = fs.readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
@@ -107,7 +108,7 @@ async function scanPage(url, opts = {}) {
 
     // 2) Hlavný sken
     const raw = consent.dismissed || !bannerRaw ? await runAxe(page) : bannerRaw;
-    if (bannerRaw && consent.dismissed) mergeViolations(raw.violations, bannerRaw.violations, 'cookie lišta');
+    if (bannerRaw && consent.dismissed) mergeViolations(raw.violations, bannerRaw.violations, opts.lang === 'en' ? 'cookie banner' : 'cookie lišta');
 
     // 3) Titulná snímka (už bez lišty)
     let cover = null;
@@ -119,11 +120,11 @@ async function scanPage(url, opts = {}) {
     // 4) Vlastné kontroly
     let keyboard = null;
     if (opts.keyboard) {
-      keyboard = await keyboardChecks(page).catch((e) => { console.warn('[keyboard]', e.message); return null; });
+      keyboard = await keyboardChecks(page, { lang: opts.lang }).catch((e) => { console.warn('[keyboard]', e.message); return null; });
       if (keyboard) { raw.violations.push(...keyboard.violations); raw.passes.push(...keyboard.passes); }
     }
     if (opts.reflow) {
-      const rf = await reflowCheck(page).catch(() => null);
+      const rf = await reflowCheck(page, opts.lang).catch(() => null);
       if (rf) { raw.violations.push(...rf.violations); raw.passes.push(...rf.passes); }
     }
 
@@ -193,29 +194,30 @@ function scoreFrom(violations) {
   return Math.round(100 * Math.exp(-penalty / 45));
 }
 
-function conformance(violations) {
+function conformance(violations, lang = 'sk') {
+  const L = (sk, en) => (lang === 'en' ? en : sk);
   const has = (lvl) => violations.some((v) => v.impact === lvl);
   if (has('critical') || has('serious')) {
-    return { key: 'fail', label: 'Nevyhovuje', text: 'Web obsahuje kritické alebo závažné bariéry, ktoré bránia časti používateľov v jeho používaní. Pred splnením požiadaviek EAA je potrebná náprava.' };
+    return { key: 'fail', label: L('Nevyhovuje', 'Does not conform'), text: L('Web obsahuje kritické alebo závažné bariéry, ktoré bránia časti používateľov v jeho používaní. Pred splnením požiadaviek EAA je potrebná náprava.', 'The website contains critical or serious barriers that prevent some users from using it. Remediation is needed before it meets EAA requirements.') };
   }
   if (violations.length) {
-    return { key: 'partial', label: 'Čiastočne vyhovuje', text: 'Automatický test našiel menej závažné nedostatky. Po ich odstránení a manuálnom overení môže web požiadavky splniť.' };
+    return { key: 'partial', label: L('Čiastočne vyhovuje', 'Partially conforms'), text: L('Automatický test našiel menej závažné nedostatky. Po ich odstránení a manuálnom overení môže web požiadavky splniť.', 'The automated test found minor issues. Once they are fixed and manually verified, the website may meet the requirements.') };
   }
-  return { key: 'pass', label: 'Bez zistených automatických chýb', text: 'Automatický test nenašiel žiadne porušenia. Plnú zhodu je ešte potrebné overiť manuálnym testovaním.' };
+  return { key: 'pass', label: L('Bez zistených automatických chýb', 'No automated issues found'), text: L('Automatický test nenašiel žiadne porušenia. Plnú zhodu je ešte potrebné overiť manuálnym testovaním.', 'The automated test found no violations. Full conformance still needs to be verified by manual testing.') };
 }
 
 /* ======================= Agregácia výsledkov ======================= */
 
 const scOf = (tags) => [...new Set(tags.map(tagToSc).filter((s) => s && SC[s]))];
 
-function translate(v) {
-  const t = RULES[v.id];
+function translate(v, lang) {
+  const t = ruleText(v.id, lang);
   return { title: t ? t[0] : v.help, fix: t ? t[1] : v.description, affects: t ? t[2] : '' };
 }
 
 const ALL_RULES = [...require('axe-core').getRules(AXE_TAGS).map((r) => ({ ruleId: r.ruleId, tags: r.tags })), ...CUSTOM_RULES];
 
-function aggregate(pages) {
+function aggregate(pages, lang = 'sk') {
   const issues = new Map();
   for (const p of pages) {
     for (const v of p.violations) {
@@ -225,11 +227,11 @@ function aggregate(pages) {
         it = {
           id: v.id,
           impact: v.impact,
-          ...translate(v),
+          ...translate(v, lang),
           helpEn: v.help,
           helpUrl: v.helpUrl,
           custom: v.id.startsWith('wa-'),
-          sc: sc.map((s) => SC[s]),
+          sc: sc.map((s) => scIn(s, lang)),
           level: sc.some((s) => SC[s].level === 'A') ? 'A' : 'AA',
           pages: [],
           viewports: [],
@@ -259,7 +261,7 @@ function aggregate(pages) {
   const nodeCounts = { critical: 0, serious: 0, moderate: 0, minor: 0 };
   for (const it of list) { counts[it.impact]++; nodeCounts[it.impact] += it.nodeCount; }
 
-  const principles = Object.fromEntries(Object.entries(PRINCIPLES).map(([k, p]) => [k, { ...p, issues: 0, nodes: 0 }]));
+  const principles = Object.fromEntries(Object.entries(principlesIn(lang)).map(([k, p]) => [k, { ...p, issues: 0, nodes: 0 }]));
   for (const it of list) for (const pr of new Set(it.sc.map((s) => s.principle))) { principles[pr].issues++; principles[pr].nodes += it.nodeCount; }
 
   // Stav kritérií: fail = zistené porušenie, pass = testovateľné pravidlá prebehli bez chyby, manual = automat neoverí
@@ -267,7 +269,7 @@ function aggregate(pages) {
   const failedSc = new Set(list.flatMap((it) => it.sc.map((s) => s.id)));
   const testedSc = new Set();
   for (const r of ALL_RULES) if (passed.has(r.ruleId) || issues.has(r.ruleId)) scOf(r.tags).forEach((s) => testedSc.add(s));
-  const criteria = Object.values(SC).map((s) => ({ ...s, status: failedSc.has(s.id) ? 'fail' : testedSc.has(s.id) ? 'pass' : 'manual' }));
+  const criteria = Object.keys(SC).map((id) => scIn(id, lang)).map((s) => ({ ...s, status: failedSc.has(s.id) ? 'fail' : testedSc.has(s.id) ? 'pass' : 'manual' }));
 
   const desktop = pages.filter((p) => p.viewport !== 'mobile');
   const avgPage = desktop.length ? desktop.reduce((s, p) => s + p.score, 0) / desktop.length : 100;
@@ -276,7 +278,7 @@ function aggregate(pages) {
 
   const incomplete = new Map();
   for (const p of pages) for (const v of p.incomplete) {
-    const e = incomplete.get(v.id) || { id: v.id, title: translate(v).title, sc: scOf(v.tags), nodeCount: 0 };
+    const e = incomplete.get(v.id) || { id: v.id, title: translate(v, lang).title, sc: scOf(v.tags), nodeCount: 0 };
     e.nodeCount += v.nodeCount;
     incomplete.set(v.id, e);
   }
@@ -289,7 +291,7 @@ function aggregate(pages) {
 
   return {
     score,
-    conformance: conformance(list),
+    conformance: conformance(list, lang),
     counts,
     nodeCounts,
     totalNodes: Object.values(nodeCounts).reduce((a, b) => a + b, 0),
@@ -335,7 +337,7 @@ function candidateLinks(links, origin) {
  * Plný audit: až `maxPages` podstránok (desktop), na prvých `deepPages` aj test
  * klávesnice, reflow a mobilné zobrazenie.
  */
-async function crawlAndScan(input, { maxPages = 5, deepPages = 1, examples = 4 } = {}, onProgress = () => {}) {
+async function crawlAndScan(input, { maxPages = 5, deepPages = 1, examples = 4, lang = 'sk' } = {}, onProgress = () => {}) {
   const start = normalizeUrl(input);
   const shots = { perRule: new Map(), max: Math.min(examples, 4), left: 45 };
   const totalSteps = () => Math.min(maxPages, pages.length + queue.length) + deepUrls.length;
@@ -343,7 +345,7 @@ async function crawlAndScan(input, { maxPages = 5, deepPages = 1, examples = 4 }
   const deepUrls = [];
   let queue = [];
 
-  const first = await scanPage(start.href, { cover: true, bannerScan: true, keyboard: true, reflow: true, shots });
+  const first = await scanPage(start.href, { cover: true, bannerScan: true, keyboard: true, reflow: true, shots, lang });
   const origin = new URL(first.url).origin;
   pages.push(first);
   deepUrls.push(first.url);
@@ -359,7 +361,7 @@ async function crawlAndScan(input, { maxPages = 5, deepPages = 1, examples = 4 }
       const deep = started < deepPages;
       started++;
       try {
-        const r = await scanPage(next, { keyboard: deep, reflow: deep, shots });
+        const r = await scanPage(next, { keyboard: deep, reflow: deep, shots, lang });
         if (pages.length >= maxPages) break;
         if (new URL(r.url).origin !== origin) continue;
         pages.push(r);
@@ -367,7 +369,7 @@ async function crawlAndScan(input, { maxPages = 5, deepPages = 1, examples = 4 }
         for (const l of candidateLinks(r.links, origin)) if (!seen.has(l)) { seen.add(l); queue.push(l); }
       } catch (e) {
         if (e.notHtml) continue; // RSS, XML, PDF… preskočíme bez započítania
-        if (pages.length < maxPages) pages.push({ url: next, viewport: 'desktop', title: '', status: null, score: 0, violations: [], incomplete: [], passes: [], error: shortErr(e), failed: true });
+        if (pages.length < maxPages) pages.push({ url: next, viewport: 'desktop', title: '', status: null, score: 0, violations: [], incomplete: [], passes: [], error: shortErr(e, lang), failed: true });
       }
       onProgress({ done: pages.length, total: totalSteps(), url: next, phase: 'scan' });
     }
@@ -378,7 +380,7 @@ async function crawlAndScan(input, { maxPages = 5, deepPages = 1, examples = 4 }
   let done = pages.length;
   for (const u of deepUrls) {
     try {
-      pages.push(await scanPage(u, { mobile: true }));
+      pages.push(await scanPage(u, { mobile: true, lang }));
     } catch (e) {
       console.warn('[mobile]', u, e.message);
     }
@@ -386,7 +388,7 @@ async function crawlAndScan(input, { maxPages = 5, deepPages = 1, examples = 4 }
   }
 
   const ok = pages.filter((p) => !p.failed);
-  const result = aggregate(ok);
+  const result = aggregate(ok, lang);
   const failed = pages.filter((p) => p.failed).map((p) => ({ url: p.url, title: '', status: null, score: null, viewport: 'desktop', violations: 0, nodes: 0, error: p.error }));
   result.pages.push(...failed);
   return {
@@ -398,16 +400,17 @@ async function crawlAndScan(input, { maxPages = 5, deepPages = 1, examples = 4 }
     consent: first.consent,
     keyboard: first.keyboardStats,
     scannedAt: new Date().toISOString(),
+    lang,
     axeVersion: AXE_VERSION,
     ...result,
   };
 }
 
 /** Rýchly bezplatný náhľad – úvodná stránka vrátane testu klávesnice a reflow. */
-async function quickScan(input) {
+async function quickScan(input, lang = 'sk') {
   const start = normalizeUrl(input);
-  const p = await scanPage(start.href, { bannerScan: true, keyboard: true, reflow: true });
-  const agg = aggregate([p]);
+  const p = await scanPage(start.href, { bannerScan: true, keyboard: true, reflow: true, lang });
+  const agg = aggregate([p], lang);
   return {
     url: p.url,
     host: new URL(p.url).host,
@@ -437,15 +440,16 @@ function compareAudits(prev, cur) {
   };
 }
 
-function shortErr(e) {
-  if (e?.blocked) return 'Web blokuje automatické testovanie (ochrana proti botom, napr. Cloudflare). Audit nie je možné vykonať – výsledok by nezodpovedal skutočnému webu';
-  if (e?.httpStatus) return `Stránka vrátila chybu HTTP ${e.httpStatus}`;
+function shortErr(e, lang = 'sk') {
+  const L = (sk, en) => (lang === 'en' ? en : sk);
+  if (e instanceof UserError) return e.text(lang);
+  if (e?.blocked) return L('Web blokuje automatické testovanie (ochrana proti botom, napr. Cloudflare). Audit nie je možné vykonať – výsledok by nezodpovedal skutočnému webu', 'The website blocks automated testing (bot protection, e.g. Cloudflare). The audit cannot be performed – the result would not reflect the real website');
+  if (e?.httpStatus) return L(`Stránka vrátila chybu HTTP ${e.httpStatus}`, `The page returned HTTP error ${e.httpStatus}`);
   const m = String(e?.message || e);
-  if (/Timeout/i.test(m)) return 'Stránka sa nenačítala včas';
-  if (/ERR_NAME_NOT_RESOLVED|DNS/i.test(m)) return 'Doména neexistuje';
-  if (/ERR_CONNECTION|ECONN/i.test(m)) return 'Server odmietol spojenie';
-  if (/Lokálne|interné/i.test(m)) return m;
-  return 'Stránku sa nepodarilo načítať';
+  if (/Timeout/i.test(m)) return L('Stránka sa nenačítala včas', 'The page did not load in time');
+  if (/ERR_NAME_NOT_RESOLVED|DNS/i.test(m)) return L('Doména neexistuje', 'The domain does not exist');
+  if (/ERR_CONNECTION|ECONN/i.test(m)) return L('Server odmietol spojenie', 'The server refused the connection');
+  return L('Stránku sa nepodarilo načítať', 'The page could not be loaded');
 }
 
 module.exports = { scanPage, crawlAndScan, quickScan, compareAudits, aggregate, scoreFrom, conformance, candidateLinks, shortErr, AXE_VERSION };

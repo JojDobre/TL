@@ -1,7 +1,10 @@
 'use strict';
 
 const fsp = require('fs').promises;
-const { TIERS, ALL_TIERS } = require('./tiers');
+const { TIERS, ALL_TIERS, localizeTier } = require('./tiers');
+const { routePath } = require('../site/i18n');
+
+const normLang = (l) => (l === 'en' ? 'en' : 'sk');
 const { crawlAndScan, quickScan, shortErr } = require('./scanner');
 const { renderPdf } = require('./report');
 const { UserError } = require('../fetcher');
@@ -20,13 +23,14 @@ const on = (name, fn) => hooks[name].push(fn);
 
 const PREVIEW_FREE_ISSUES = 3;
 
-async function createPreview(url) {
+async function createPreview(url, lang = 'sk') {
+  lang = normLang(lang);
   let r;
-  try { r = await quickScan(url); } catch (e) {
-    if (e instanceof UserError) throw new PublicError(e.message);
-    throw new PublicError(shortErr(e) + '.', 502);
+  try { r = await quickScan(url, lang); } catch (e) {
+    if (e instanceof UserError) throw new PublicError(e.message, e.en);
+    throw new PublicError(shortErr(e, 'sk') + '.', shortErr(e, 'en') + '.', 502);
   }
-  const preview = { id: newId(), createdAt: new Date().toISOString(), url: r.url, host: r.host, result: r };
+  const preview = { id: newId(), lang, createdAt: new Date().toISOString(), url: r.url, host: r.host, result: r };
   await save('previews', preview);
   return publicPreview(preview);
 }
@@ -56,14 +60,14 @@ function publicPreview(p) {
 }
 
 async function loadPreview(previewId) {
-  if (!ID_RE.test(String(previewId))) throw new PublicError('Neplatný náhľad.');
+  if (!ID_RE.test(String(previewId))) throw new PublicError('Neplatný náhľad.', 'Invalid preview.');
   const preview = await load('previews', previewId);
-  if (!preview) throw new PublicError('Náhľad vypršal, spusti test znova.', 410);
+  if (!preview) throw new PublicError('Náhľad vypršal, spustite test znova.', 'The preview has expired, please run the test again.', 410);
   return preview;
 }
 
 function requireConsent(body) {
-  if (body.consent !== true) throw new PublicError('Pred objednávkou je potrebné súhlasiť s obchodnými podmienkami a so začatím poskytovania služby.');
+  if (body.consent !== true) throw new PublicError('Pred objednávkou je potrebné súhlasiť s obchodnými podmienkami a so začatím poskytovania služby.', 'Before ordering you must accept the terms of service and agree to the service starting immediately.');
   return { at: new Date().toISOString(), version: CONSENT_VERSION };
 }
 
@@ -71,7 +75,7 @@ function requireConsent(body) {
 
 function publicOrder(o) {
   return {
-    id: o.id, url: o.url, host: o.host, tier: o.tier, tierName: ALL_TIERS[o.tier].name, price: o.price,
+    id: o.id, url: o.url, host: o.host, tier: o.tier, tierName: localizeTier(ALL_TIERS[o.tier], o.lang).name, price: o.price, lang: o.lang || 'sk',
     status: o.status, progress: o.progress, error: o.error, demo: o.payment.mode === 'demo',
     kind: o.kind || 'single', subId: o.subId || null,
     createdAt: o.createdAt, finishedAt: o.finishedAt || null,
@@ -81,14 +85,16 @@ function publicOrder(o) {
 
 async function createOrder(body, baseUrl) {
   const { previewId, tier } = body;
-  if (!TIERS[tier]) throw new PublicError('Neplatný balík.');
+  if (!TIERS[tier]) throw new PublicError('Neplatný balík.', 'Invalid plan.');
   const preview = await loadPreview(previewId);
   const consent = requireConsent(body);
 
-  const t = TIERS[tier];
+  const lang = normLang(body.lang || preview.lang);
+  const t = localizeTier(TIERS[tier], lang);
   const order = {
     id: newId(),
     token: newToken(),
+    lang,
     kind: 'single',
     previewId,
     url: preview.url,
@@ -102,7 +108,8 @@ async function createOrder(body, baseUrl) {
     error: null,
     createdAt: new Date().toISOString(),
   };
-  const orderPage = `${baseUrl}/pristupnost.html?order=${order.id}&token=${order.token}`;
+  const auditPath = routePath('audit', lang);
+  const orderPage = `${baseUrl}${auditPath}?order=${order.id}&token=${order.token}`;
 
   if (PAYMENT_MODE === 'demo') {
     order.status = 'paid';
@@ -114,17 +121,19 @@ async function createOrder(body, baseUrl) {
 
   const session = await stripe('POST', '/v1/checkout/sessions', {
     mode: 'payment',
-    locale: 'sk',
+    locale: lang,
     'line_items[0][quantity]': 1,
     'line_items[0][price_data][currency]': 'eur',
     'line_items[0][price_data][unit_amount]': t.price * 100,
-    'line_items[0][price_data][product_data][name]': `Audit prístupnosti – ${t.name}`,
-    'line_items[0][price_data][product_data][description]': `${preview.host} · až ${t.pages} podstránok · PDF správa (EAA / WCAG 2.1 AA)`,
+    'line_items[0][price_data][product_data][name]': lang === 'en' ? `Accessibility audit – ${t.name}` : `Audit prístupnosti – ${t.name}`,
+    'line_items[0][price_data][product_data][description]': lang === 'en'
+      ? `${preview.host} · up to ${t.pages} pages · PDF report (EAA / WCAG 2.1 AA)`
+      : `${preview.host} · až ${t.pages} podstránok · PDF správa (EAA / WCAG 2.1 AA)`,
     client_reference_id: order.id,
     'metadata[order_id]': order.id,
     'payment_intent_data[metadata][order_id]': order.id,
     success_url: `${orderPage}&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${baseUrl}/pristupnost.html?url=${encodeURIComponent(preview.url)}&canceled=1`,
+    cancel_url: `${baseUrl}${auditPath}?url=${encodeURIComponent(preview.url)}&canceled=1`,
   });
   order.payment.sessionId = session.id;
   await save('orders', order);
@@ -133,7 +142,7 @@ async function createOrder(body, baseUrl) {
 
 async function getOrder(id, token) {
   const o = await load('orders', id);
-  if (!o || !safeEqual(o.token, token || '')) throw new PublicError('Objednávka neexistuje.', 404);
+  if (!o || !safeEqual(o.token, token || '')) throw new PublicError('Objednávka neexistuje.', 'Order not found.', 404);
   // Ak webhook ešte neprišiel, overíme platbu priamo v Stripe
   if (o.status === 'pending_payment' && o.payment.mode === 'stripe' && o.payment.sessionId) {
     await verifyStripeSession(o).catch((e) => console.error('[stripe verify]', e.message));
@@ -152,8 +161,8 @@ async function markPaid(orderId, info) {
 
 async function retryOrder(id, token, { admin = false } = {}) {
   const o = await load('orders', id);
-  if (!o || (!admin && !safeEqual(o.token, token || ''))) throw new PublicError('Objednávka neexistuje.', 404);
-  if (o.status !== 'failed') throw new PublicError('Objednávku nie je potrebné opakovať.');
+  if (!o || (!admin && !safeEqual(o.token, token || ''))) throw new PublicError('Objednávka neexistuje.', 'Order not found.', 404);
+  if (o.status !== 'failed') throw new PublicError('Objednávku nie je potrebné opakovať.', 'This order does not need to be retried.');
   o.status = 'paid'; o.error = null;
   await save('orders', o);
   startJob(o.id);
@@ -162,11 +171,11 @@ async function retryOrder(id, token, { admin = false } = {}) {
 
 async function getReport(id, token) {
   const o = await load('orders', id);
-  if (!o || !safeEqual(o.token, token || '')) throw new PublicError('Objednávka neexistuje.', 404);
-  if (o.status !== 'done') throw new PublicError('Správa ešte nie je pripravená.', 409);
+  if (!o || !safeEqual(o.token, token || '')) throw new PublicError('Objednávka neexistuje.', 'Order not found.', 404);
+  if (o.status !== 'done') throw new PublicError('Správa ešte nie je pripravená.', 'The report is not ready yet.', 409);
   const pdf = await fsp.readFile(file('reports', id, 'pdf')).catch(() => null);
-  if (!pdf) throw new PublicError('Správa už nie je k dispozícii (uplynula doba uchovávania).', 410);
-  return { pdf, filename: `audit-pristupnosti-${o.host.replace(/[^a-z0-9.-]/gi, '')}-${o.createdAt.slice(0, 10)}.pdf` };
+  if (!pdf) throw new PublicError('Správa už nie je k dispozícii (uplynula doba uchovávania).', 'The report is no longer available (retention period expired).', 410);
+  return { pdf, filename: `${o.lang === 'en' ? 'accessibility-audit' : 'audit-pristupnosti'}-${o.host.replace(/[^a-z0-9.-]/gi, '')}-${o.createdAt.slice(0, 10)}.pdf` };
 }
 
 /* ======================= Spracovanie auditu ======================= */
@@ -185,7 +194,7 @@ async function startJob(id) {
     await save('orders', o);
 
     let lastSave = 0;
-    const audit = await crawlAndScan(o.url, { maxPages: tier.pages, deepPages: tier.deepPages, examples: tier.examples }, async (p) => {
+    const audit = await crawlAndScan(o.url, { maxPages: tier.pages, deepPages: tier.deepPages, examples: tier.examples, lang: o.lang || 'sk' }, async (p) => {
       o.progress = { ...p, phase: 'scan' };
       if (Date.now() - lastSave > 1500) { lastSave = Date.now(); await save('orders', o).catch(() => {}); }
     });
@@ -210,7 +219,7 @@ async function startJob(id) {
     console.error('[a11y job]', id, e);
     const o = await load('orders', id);
     if (o) {
-      o.status = 'failed'; o.error = shortErr(e);
+      o.status = 'failed'; o.error = shortErr(e, o.lang);
       await save('orders', o);
       for (const fn of hooks.afterFail) await fn(o, e).catch(() => {});
     }

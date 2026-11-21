@@ -58,6 +58,24 @@ test('good.html: žiadne falošné poplachy (desktop aj mobil)', async () => {
   for (const sc of ['2.1.1', '2.1.2', '2.4.7', '1.4.10']) assert.equal(c[sc], 'pass', `kritérium ${sc}`);
 });
 
+test('anglická verzia: nálezy, kritériá aj PDF šablóna sú po anglicky', async () => {
+  const { buildHtml } = require('../src/a11y/report');
+  const r = await quickScan(srv.url('bad.html'), 'en');
+  const sk = /[áäčďéíĺľňóôŕšťúýž]/i;
+  for (const i of r.issues) {
+    assert.ok(!sk.test(i.title + i.fix + i.affects), `slovenský text v ${i.id}: ${i.title}`);
+    for (const s of i.sc) assert.ok(!sk.test(s.name), s.name);
+  }
+  assert.equal(r.conformance.label, 'Does not conform');
+  assert.equal(r.principles[1].name, 'Perceivable');
+  const html = buildHtml({ ...r, pages: [], mobilePages: [], incomplete: r.incomplete }, { id: '00000000-0000-0000-0000-000000000000', tier: 'pro', lang: 'en' });
+  const text = html.replace(/<style>[\s\S]*?<\/style>/, '').replace(/<pre>[\s\S]*?<\/pre>/g, '').replace(/<[^>]+>/g, ' ');
+  const skWords = text.match(/\S*[áäčďéíĺľňóôŕšťúýž]\S*/gi) || [];
+  assert.deepEqual(skWords.filter((w) => !/Zlá|stránka|zámerne|vložené|chyby|Testovacia|Široký|pevnou|šírkou|Odkaz|zameraní|skončí|lištou|viditeľného|fokusu|Klikni|mňa|Slabý|kontrast|Domov|Informačná|lišta|prilepená|spodku|obrazovky|slabým|kontrastom|Text/.test(w)), []);
+  assert.match(text, /Executive summary/);
+  assert.match(text, /Accessibility statement/);
+});
+
 test('stránka s ochranou proti botom a chyba 404 sa neauditujú', async () => {
   await assert.rejects(quickScan(srv.url('challenge.html')), (e) => e.blocked === true);
   await assert.rejects(quickScan(srv.url('neexistuje.html')), (e) => e.httpStatus === 404);

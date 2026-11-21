@@ -12,6 +12,7 @@ const { stripe, PAYMENT_MODE } = require('./stripe');
 const { sendMail, MAIL_MODE } = require('./mailer');
 const orders = require('./orders');
 const { compareAudits } = require('./scanner');
+const { routePath } = require('../site/i18n');
 
 const PUBLIC_URL = () => (process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`).replace(/\/+$/, '');
 const EMAIL_RE = /^[^\s@<>"]{1,64}@[^\s@<>"]{1,190}\.[a-z]{2,24}$/i;
@@ -20,7 +21,7 @@ const MAX_RUNS_KEPT = 24;
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const maskEmail = (e) => String(e || '').replace(/^(.).*?(.)?@/, (m, a, b) => `${a}${'•'.repeat(3)}${b || ''}@`);
 const addMonth = (d) => { const x = new Date(d); x.setMonth(x.getMonth() + 1); return x.toISOString(); };
-const subPage = (sub, base = PUBLIC_URL()) => `${base}/pristupnost.html?sub=${sub.id}&token=${sub.token}`;
+const subPage = (sub, base = PUBLIC_URL()) => `${base}${routePath('audit', sub.lang)}?sub=${sub.id}&token=${sub.token}`;
 
 /* ======================= Verejný pohľad ======================= */
 
@@ -42,7 +43,7 @@ function publicSub(sub) {
       newIssues: r.newIssues ?? null, fixedIssues: r.fixedIssues ?? null, emailed: !!r.emailedAt,
       orderId: r.orderId,
       reportUrl: r.status === 'done' && fs.existsSync(file('reports', r.orderId, 'pdf')) ? `/api/a11y/orders/${r.orderId}/report.pdf?token=${r.orderToken}` : null,
-      statusUrl: `/pristupnost.html?order=${r.orderId}&token=${r.orderToken}`,
+      statusUrl: `${routePath('audit', sub.lang)}?order=${r.orderId}&token=${r.orderToken}`,
     })),
   };
 }
@@ -53,11 +54,13 @@ async function createSubscription(body, baseUrl) {
   const preview = await orders.loadPreview(body.previewId);
   const consent = orders.requireConsent(body);
   const email = String(body.email || '').trim();
-  if (!EMAIL_RE.test(email)) throw new PublicError('Zadaj platnú e-mailovú adresu – posielame na ňu mesačné správy.');
+  if (!EMAIL_RE.test(email)) throw new PublicError('Zadajte platnú e-mailovú adresu – posielame na ňu mesačné správy.', 'Enter a valid email address – we send the monthly reports there.');
 
+  const lang = body.lang === 'en' || (!body.lang && preview.lang === 'en') ? 'en' : 'sk';
   const sub = {
     id: newId(),
     token: newToken(),
+    lang,
     email,
     url: preview.url,
     host: preview.host,
@@ -80,19 +83,19 @@ async function createSubscription(body, baseUrl) {
 
   const session = await stripe('POST', '/v1/checkout/sessions', {
     mode: 'subscription',
-    locale: 'sk',
+    locale: lang,
     customer_email: email,
     'line_items[0][quantity]': 1,
     'line_items[0][price_data][currency]': 'eur',
     'line_items[0][price_data][unit_amount]': MONITORING.price * 100,
     'line_items[0][price_data][recurring][interval]': 'month',
-    'line_items[0][price_data][product_data][name]': 'Monitoring prístupnosti webu',
+    'line_items[0][price_data][product_data][name]': lang === 'en' ? 'Website accessibility monitoring' : 'Monitoring prístupnosti webu',
     client_reference_id: sub.id,
     'metadata[sub_id]': sub.id,
     'subscription_data[metadata][sub_id]': sub.id,
-    'subscription_data[description]': `Mesačný audit prístupnosti – ${preview.host}`,
+    'subscription_data[description]': lang === 'en' ? `Monthly accessibility audit – ${preview.host}` : `Mesačný audit prístupnosti – ${preview.host}`,
     success_url: `${page}&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${baseUrl}/pristupnost.html?url=${encodeURIComponent(preview.url)}&canceled=1`,
+    cancel_url: `${baseUrl}${routePath('audit', lang)}?url=${encodeURIComponent(preview.url)}&canceled=1`,
   });
   sub.payment.sessionId = session.id;
   await save('subscriptions', sub);
@@ -101,7 +104,7 @@ async function createSubscription(body, baseUrl) {
 
 async function getSubscription(id, token) {
   let sub = await load('subscriptions', id);
-  if (!sub || !safeEqual(sub.token, token || '')) throw new PublicError('Predplatné neexistuje.', 404);
+  if (!sub || !safeEqual(sub.token, token || '')) throw new PublicError('Predplatné neexistuje.', 'Subscription not found.', 404);
   if (sub.status === 'pending_payment' && sub.payment.mode === 'stripe' && sub.payment.sessionId) {
     try {
       const s = await stripe('GET', `/v1/checkout/sessions/${encodeURIComponent(sub.payment.sessionId)}`);
@@ -133,6 +136,7 @@ async function startRun(subId) {
     id: newId(),
     token: newToken(),
     kind: 'monitor',
+    lang: sub.lang || 'sk',
     subId: sub.id,
     url: sub.url,
     host: sub.host,
@@ -196,41 +200,45 @@ orders.on('afterFail', async (o) => {
 /* ======================= E-mail ======================= */
 
 function mailHtml(sub, audit) {
+  const L = (sk, en) => (sub.lang === 'en' ? en : sk);
   const c = audit.comparison;
   const color = audit.score >= 90 ? '#12b76a' : audit.score >= 65 ? '#e0a100' : audit.score >= 50 ? '#f97316' : '#ef4444';
-  const delta = c ? `<span style="color:${c.scoreDelta > 0 ? '#12b76a' : c.scoreDelta < 0 ? '#ef4444' : '#6b7287'};font-weight:700">${c.scoreDelta > 0 ? '+' : ''}${c.scoreDelta}</span> oproti ${new Date(c.previousDate).toLocaleDateString('sk-SK')}` : 'prvý audit v rámci monitoringu';
+  const prevDate = c ? new Date(c.previousDate).toLocaleDateString(L('sk-SK', 'en-GB')) : '';
+  const delta = c ? `<span style="color:${c.scoreDelta > 0 ? '#12b76a' : c.scoreDelta < 0 ? '#ef4444' : '#6b7287'};font-weight:700">${c.scoreDelta > 0 ? '+' : ''}${c.scoreDelta}</span> ${L('oproti', 'vs')} ${prevDate}` : L('prvý audit v rámci monitoringu', 'first monitoring audit');
   const top = audit.issues.slice(0, 5).map((i) => `<li style="margin:0 0 6px">${esc(i.title)} <span style="color:#6b7287">(${i.nodeCount}×)</span></li>`).join('');
-  return `<!doctype html><html lang="sk"><body style="margin:0;background:#f4f5f8;font-family:Arial,Helvetica,sans-serif;color:#1d2333">
+  return `<!doctype html><html lang="${sub.lang === 'en' ? 'en' : 'sk'}"><body style="margin:0;background:#f4f5f8;font-family:Arial,Helvetica,sans-serif;color:#1d2333">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f8;padding:24px 12px"><tr><td align="center">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;padding:28px">
     <tr><td>
-      <p style="margin:0 0 4px;color:#6b7287;font-size:13px">Mesačný monitoring prístupnosti</p>
+      <p style="margin:0 0 4px;color:#6b7287;font-size:13px">${L('Mesačný monitoring prístupnosti', 'Monthly accessibility monitoring')}</p>
       <h1 style="margin:0 0 18px;font-size:22px">${esc(sub.host)}</h1>
       <table role="presentation" cellpadding="0" cellspacing="0"><tr>
         <td style="font-size:44px;font-weight:800;color:${color};padding-right:14px">${audit.score}</td>
-        <td style="font-size:14px;color:#464d63">skóre zo 100<br>${delta}</td>
+        <td style="font-size:14px;color:#464d63">${L('skóre zo 100', 'score out of 100')}<br>${delta}</td>
       </tr></table>
-      <p style="margin:18px 0;font-size:15px"><b>${esc(audit.conformance.label)}</b> – ${audit.issues.length} typov problémov na ${audit.pages.length} podstránkach.</p>
-      ${c ? `<p style="margin:0 0 18px;font-size:14px">✅ Opravené: <b>${c.fixedIssues.length}</b> &nbsp; ⚠️ Nové: <b>${c.newIssues.length}</b></p>` : ''}
-      ${top ? `<p style="margin:0 0 6px;font-weight:700;font-size:14px">Najdôležitejšie problémy</p><ul style="margin:0 0 20px;padding-left:18px;font-size:14px">${top}</ul>` : ''}
-      <p style="margin:0 0 22px;font-size:14px">Podrobnú PDF správu nájdete v prílohe.</p>
-      <a href="${esc(subPage(sub))}" style="display:inline-block;background:#6d5dfc;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:700;font-size:14px">Zobraziť históriu auditov</a>
-      <p style="margin:26px 0 0;font-size:12px;color:#8a90a2">Tento e-mail dostávate, pretože ste si predplatili monitoring prístupnosti webu ${esc(sub.host)}. Predplatné môžete kedykoľvek zrušiť na stránke predplatného.</p>
+      <p style="margin:18px 0;font-size:15px"><b>${esc(audit.conformance.label)}</b> – ${L(`${audit.issues.length} typov problémov na ${audit.pages.length} podstránkach.`, `${audit.issues.length} issue types on ${audit.pages.length} pages.`)}</p>
+      ${c ? `<p style="margin:0 0 18px;font-size:14px">✅ ${L('Opravené', 'Fixed')}: <b>${c.fixedIssues.length}</b> &nbsp; ⚠️ ${L('Nové', 'New')}: <b>${c.newIssues.length}</b></p>` : ''}
+      ${top ? `<p style="margin:0 0 6px;font-weight:700;font-size:14px">${L('Najdôležitejšie problémy', 'Top issues')}</p><ul style="margin:0 0 20px;padding-left:18px;font-size:14px">${top}</ul>` : ''}
+      <p style="margin:0 0 22px;font-size:14px">${L('Podrobnú PDF správu nájdete v prílohe.', 'The detailed PDF report is attached.')}</p>
+      <a href="${esc(subPage(sub))}" style="display:inline-block;background:#6d5dfc;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:700;font-size:14px">${L('Zobraziť históriu auditov', 'View audit history')}</a>
+      <p style="margin:26px 0 0;font-size:12px;color:#8a90a2">${L(`Tento e-mail dostávate, pretože ste si predplatili monitoring prístupnosti webu ${esc(sub.host)}. Predplatné môžete kedykoľvek zrušiť na stránke predplatného.`, `You are receiving this email because you subscribed to accessibility monitoring for ${esc(sub.host)}. You can cancel anytime on the subscription page.`)}</p>
     </td></tr>
   </table></td></tr></table></body></html>`;
 }
 
 async function sendReportMail(sub, o, audit, pdf) {
+  const en = sub.lang === 'en';
   const c = audit.comparison;
   const worse = c && (c.scoreDelta < 0 || c.newIssues.length > 0);
+  const d = c && c.scoreDelta ? `, ${c.scoreDelta}` : '';
   const subject = worse
-    ? `⚠️ Prístupnosť webu ${sub.host} sa zhoršila (skóre ${audit.score}${c.scoreDelta ? `, ${c.scoreDelta}` : ''})`
-    : `Mesačný audit prístupnosti – ${sub.host}: skóre ${audit.score}`;
+    ? (en ? `⚠️ Accessibility of ${sub.host} got worse (score ${audit.score}${d})` : `⚠️ Prístupnosť webu ${sub.host} sa zhoršila (skóre ${audit.score}${d})`)
+    : (en ? `Monthly accessibility audit – ${sub.host}: score ${audit.score}` : `Mesačný audit prístupnosti – ${sub.host}: skóre ${audit.score}`);
   await sendMail({
     to: sub.email,
     subject,
     html: mailHtml(sub, audit),
-    attachments: [{ filename: `audit-pristupnosti-${sub.host}-${o.createdAt.slice(0, 10)}.pdf`, content: pdf.toString('base64') }],
+    attachments: [{ filename: `${en ? 'accessibility-audit' : 'audit-pristupnosti'}-${sub.host}-${o.createdAt.slice(0, 10)}.pdf`, content: pdf.toString('base64') }],
   });
 }
 
@@ -238,16 +246,16 @@ async function sendReportMail(sub, o, audit, pdf) {
 
 async function portal(id, token, baseUrl) {
   const sub = await load('subscriptions', id);
-  if (!sub || !safeEqual(sub.token, token || '')) throw new PublicError('Predplatné neexistuje.', 404);
-  if (sub.payment.mode !== 'stripe' || !sub.payment.customerId) throw new PublicError('Správa platby nie je pre toto predplatné dostupná.');
-  const s = await stripe('POST', '/v1/billing_portal/sessions', { customer: sub.payment.customerId, return_url: subPage(sub, baseUrl), locale: 'sk' });
+  if (!sub || !safeEqual(sub.token, token || '')) throw new PublicError('Predplatné neexistuje.', 'Subscription not found.', 404);
+  if (sub.payment.mode !== 'stripe' || !sub.payment.customerId) throw new PublicError('Správa platby nie je pre toto predplatné dostupná.', 'Payment management is not available for this subscription.');
+  const s = await stripe('POST', '/v1/billing_portal/sessions', { customer: sub.payment.customerId, return_url: subPage(sub, baseUrl), locale: sub.lang === 'en' ? 'en' : 'sk' });
   return { redirect: s.url };
 }
 
 /** Zrušenie: v Stripe ku koncu obdobia (cez portál), v demo režime hneď. */
 async function cancel(id, token, { admin = false } = {}) {
   const sub = await load('subscriptions', id);
-  if (!sub || (!admin && !safeEqual(sub.token, token || ''))) throw new PublicError('Predplatné neexistuje.', 404);
+  if (!sub || (!admin && !safeEqual(sub.token, token || ''))) throw new PublicError('Predplatné neexistuje.', 'Subscription not found.', 404);
   if (sub.payment.mode === 'stripe' && sub.payment.subscriptionId) {
     await stripe('POST', `/v1/subscriptions/${encodeURIComponent(sub.payment.subscriptionId)}`, { cancel_at_period_end: 'true' });
     sub.cancelAtPeriodEnd = true;

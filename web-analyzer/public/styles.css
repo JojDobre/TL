@@ -1,3 +1,21 @@
+/* Inter (variabilný) – lokálne, bez blokovania externými fontami. Licencia: fonts/LICENSE-Inter.txt */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(/fonts/inter-latin-wght-normal.woff2) format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(/fonts/inter-latin-ext-wght-normal.woff2) format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 /* ===================== Tokens ===================== */
 :root {
   --bg: #f4f5f8;
@@ -8,7 +26,7 @@
   --line-2: rgba(15, 20, 35, 0.14);
   --text: #0e1220;
   --muted: #5d6478;
-  --faint: #8a90a2;
+  --faint: #686e81;
   --accent: #6d5dfc;
   --accent-2: #2ec5ff;
   --good: #12b76a;
@@ -32,7 +50,7 @@
   :root:not([data-theme="light"]) {
     --bg: #0a0c11; --bg-2: #10131a; --card: #12151d; --card-2: #181c26;
     --line: rgba(255, 255, 255, 0.07); --line-2: rgba(255, 255, 255, 0.13);
-    --text: #eef0f6; --muted: #9aa1b4; --faint: #6b7287;
+    --text: #eef0f6; --muted: #9aa1b4; --faint: #858ca0;
     --shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 20px 40px -24px rgba(0, 0, 0, 0.6);
     --glow-a: rgba(109, 93, 252, 0.22); --glow-b: rgba(46, 197, 255, 0.12);
     color-scheme: dark;
@@ -41,7 +59,7 @@
 :root[data-theme="dark"] {
   --bg: #0a0c11; --bg-2: #10131a; --card: #12151d; --card-2: #181c26;
   --line: rgba(255, 255, 255, 0.07); --line-2: rgba(255, 255, 255, 0.13);
-  --text: #eef0f6; --muted: #9aa1b4; --faint: #6b7287;
+  --text: #eef0f6; --muted: #9aa1b4; --faint: #858ca0;
   --shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 20px 40px -24px rgba(0, 0, 0, 0.6);
   --glow-a: rgba(109, 93, 252, 0.22); --glow-b: rgba(46, 197, 255, 0.12);
   color-scheme: dark;
@@ -54,7 +72,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 15px/1.55 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 15px/1.55 'Inter Variable', Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
   overflow-x: hidden;
@@ -63,7 +81,7 @@ button, input { font: inherit; color: inherit; }
 a { color: inherit; }
 [hidden] { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.86em; }
+.mono { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: 0.86em; }
 
 .bg-glow {
   position: fixed; inset: -20vh -10vw auto; height: 80vh; z-index: -1; pointer-events: none;
@@ -328,7 +346,7 @@ main { max-width: 1240px; margin: 0 auto; padding: 0 24px 40px; }
   .cats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .checks { grid-template-columns: 1fr; }
   .card { padding: 18px; border-radius: 20px; }
-  .search button span { display: none; }
+  .search button span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .search button { padding: 12px 14px; }
   .ring { --size: 160px; }
   .ring-num { font-size: 46px; }
@@ -481,7 +499,7 @@ main { max-width: 1240px; margin: 0 auto; padding: 0 24px 40px; }
 .run-row { align-items: center; }
 .run-row .run-main { flex: 1; min-width: 0; }
 .run-row .ghost-btn { text-decoration: none; flex: none; }
-.foot-links { display: flex; justify-content: center; gap: 18px; margin-bottom: 8px; }
+.foot-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; margin-bottom: 8px; }
 .foot-links a { color: var(--muted); }
 @media (max-width: 760px) {
   .monitor-grid { grid-template-columns: 1fr; gap: 16px; }
@@ -512,3 +530,41 @@ main { max-width: 1240px; margin: 0 auto; padding: 0 24px 40px; }
 .table-wrap { overflow-x: auto; }
 .status-pill { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 12px; font-weight: 600; color: var(--sc); background: color-mix(in srgb, var(--sc) 14%, transparent); white-space: nowrap; }
 @media (max-width: 760px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* ===================== Jazyk, obsahové sekcie, FAQ ===================== */
+.lang-switch { display: grid; place-items: center; min-width: 40px; height: 40px; padding: 0 10px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--card); color: var(--muted); font-weight: 700; font-size: 13px; text-decoration: none; letter-spacing: .04em; }
+.lang-switch:hover { color: var(--text); border-color: var(--accent); }
+.content-section { margin-top: 56px; }
+.content-section .section-head h2 { font-size: clamp(24px, 3.4vw, 34px); letter-spacing: -0.03em; margin: 0 0 8px; }
+.content-section h3 { font-size: 17px; margin: 0 0 6px; letter-spacing: -0.01em; }
+.feature-card .card-title { margin-bottom: 8px; }
+.feature-card p { margin: 0; line-height: 1.6; }
+.fc-security { --c: var(--c-security); } .fc-seo { --c: var(--c-seo); } .fc-performance { --c: var(--c-performance); }
+.fc-accessibility { --c: var(--c-accessibility); } .fc-social { --c: var(--c-social); } .fc-tech { --c: var(--accent-2); }
+.steps-wide { margin: 0; }
+.steps-wide h3 { margin: 0; font-size: 15px; }
+.promo-title { font-size: 18px; margin: 0; letter-spacing: -0.01em; }
+.faq { display: flex; flex-direction: column; gap: 10px; max-width: 860px; margin: 0 auto; }
+.faq-item { padding: 0; animation: none; }
+.faq-item summary { list-style: none; cursor: pointer; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after { content: "+"; flex: none; width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; font-weight: 700; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); transition: transform .2s; }
+.faq-item[open] summary::after { transform: rotate(45deg); }
+.faq-item summary h3 { margin: 0; font-size: 16px; font-weight: 650; }
+.faq-a { padding: 0 22px 18px; color: var(--muted); line-height: 1.65; }
+.faq-a a, .feature-card a { color: var(--text); }
+.content-section .bento .card h3 + .sub { margin: 0; line-height: 1.6; }
+@media (max-width: 760px) {
+  .lang-switch { order: 2; margin-left: auto; }
+  .content-section { margin-top: 40px; }
+  .faq-item summary { padding: 16px; }
+  .faq-a { padding: 0 16px 16px; }
+}
+
+/* Opravy z vlastného auditu prístupnosti */
+.faq-item summary:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; border-radius: var(--radius); }
+.search input:focus-visible { outline: none; }
+.monitor-grid > *, .price-card > * { min-width: 0; }
+.monitor-form input { width: 100%; min-width: 0; }
+@media (max-width: 760px) { .price-card { padding: 20px; } .monitor-form { padding: 14px; } }
+.table-wrap:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 8px; }

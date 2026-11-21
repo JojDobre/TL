@@ -17,6 +17,7 @@ function h(tag, props = {}, ...children) {
   return el;
 }
 const $ = (s) => document.querySelector(s);
+const { t, tp, locale: LOCALE, lang: LANG, routes: ROUTES } = window.I18N;
 
 const ICONS = {
   security: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>',
@@ -43,10 +44,10 @@ const ICONS = {
 
 const CAT_COLOR = { security: 'var(--c-security)', seo: 'var(--c-seo)', performance: 'var(--c-performance)', accessibility: 'var(--c-accessibility)', social: 'var(--c-social)' };
 const STATUS_COLOR = { pass: 'var(--good)', warn: 'var(--ok)', fail: 'var(--bad)', info: 'var(--info)' };
-const STATUS_LABEL = { pass: 'OK', warn: 'Upozornenia', fail: 'Chyby', info: 'Info' };
+const STATUS_LABEL = t('status');
 
 const scoreColor = (s) => (s >= 90 ? 'var(--good)' : s >= 65 ? 'var(--ok)' : s >= 50 ? 'var(--meh)' : 'var(--bad)');
-const verdict = (s) => (s >= 90 ? 'Výborný web' : s >= 80 ? 'Veľmi dobrý stav' : s >= 65 ? 'Dobrý základ, je čo zlepšiť' : s >= 50 ? 'Priemer – potrebuje prácu' : 'Vážne nedostatky');
+const verdict = (s) => t('verdict')[s >= 90 ? 0 : s >= 80 ? 1 : s >= 65 ? 2 : s >= 50 ? 3 : 4];
 const fmtBytes = (n) => (n == null ? '—' : n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`);
 const statusCodeColor = (c) => (c < 300 ? 'var(--good)' : c < 400 ? 'var(--ok)' : 'var(--bad)');
 
@@ -86,22 +87,9 @@ function cardHead(title, icon, color, extra) {
     extra || null);
 }
 
-/* ======================= Téma ======================= */
-
-const root = document.documentElement;
-function initTheme() {
-  let t = null;
-  try { t = localStorage.getItem('wa-theme'); } catch { /* storage nedostupný */ }
-  root.dataset.theme = t || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  $('#themeToggle').addEventListener('click', () => {
-    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
-    try { localStorage.setItem('wa-theme', root.dataset.theme); } catch { /* ignore */ }
-  });
-}
-
 /* ======================= Analýza ======================= */
 
-const LOADER_STEPS = ['Načítavam stránku…', 'Kontrolujem HTTPS a certifikát…', 'Čítam bezpečnostné hlavičky…', 'Analyzujem SEO a obsah…', 'Hľadám robots.txt a sitemap…', 'Detegujem technológie…', 'Počítam skóre…'];
+const LOADER_STEPS = t('loader');
 let loaderTimer;
 
 async function run(url, fresh = false) {
@@ -117,9 +105,9 @@ async function run(url, fresh = false) {
   loaderTimer = setInterval(() => { i = Math.min(i + 1, LOADER_STEPS.length - 1); $('#loaderText').textContent = LOADER_STEPS[i]; }, 1300);
 
   try {
-    const res = await fetch(`/api/analyze?url=${encodeURIComponent(url)}${fresh ? '&fresh=1' : ''}`);
-    const data = await res.json().catch(() => ({ error: 'Neočakávaná odpoveď servera.' }));
-    if (!res.ok || data.error) throw new Error(data.error || `Chyba ${res.status}`);
+    const res = await fetch(`/api/analyze?url=${encodeURIComponent(url)}&lang=${LANG}${fresh ? '&fresh=1' : ''}`);
+    const data = await res.json().catch(() => ({ error: t('badResponse') }));
+    if (!res.ok || data.error) throw new Error(data.error || t('errorStatus', { n: res.status }));
     const q = new URL(location.href);
     q.searchParams.set('url', url);
     history.replaceState(null, '', q);
@@ -127,7 +115,7 @@ async function run(url, fresh = false) {
   } catch (e) {
     $('#loading').hidden = true;
     $('#hero').classList.remove('compact');
-    err.textContent = e.message || 'Analýza zlyhala.';
+    err.textContent = e.message || t('failed');
     err.hidden = false;
   } finally {
     clearInterval(loaderTimer);
@@ -144,23 +132,23 @@ function render(d) {
   const cats = d.categories;
 
   if (o.status >= 400) {
-    out.append(h('div', { class: 'notice' }, `Web vrátil HTTP ${o.status}. Môže blokovať automatické požiadavky (ochrana proti botom), preto výsledky nemusia zodpovedať tomu, čo vidí bežný návštevník.`));
+    out.append(h('div', { class: 'notice' }, t('httpNotice', { n: o.status })));
   }
 
   /* --- 1. Celkové skóre --- */
   const num = h('div', { class: 'ring-num' }, '0');
   const scoreRing = ring(d.overall);
-  scoreRing.append(h('div', { class: 'ring-label' }, num, h('div', { class: 'ring-of' }, 'zo 100')));
+  scoreRing.append(h('div', { class: 'ring-label' }, num, h('div', { class: 'ring-of' }, t('of100'))));
   countUp(num, d.overall);
   out.append(h('article', { class: 'card span-4 row-2 score-card', vars: { '--sc': scoreColor(d.overall) } },
     scoreRing,
-    h('div', { class: 'grade' }, `Známka ${d.grade}`),
+    h('div', { class: 'grade' }, t('grade', { n: d.grade })),
     h('p', { class: 'verdict' }, verdict(d.overall)),
     h('div', { class: 'score-url' }, d.url),
     h('div', { class: 'score-actions' },
-      h('button', { class: 'ghost-btn', type: 'button', html: ICONS.refresh + '<span>Znova</span>', onclick: () => run(d.inputUrl, true) }),
-      h('button', { class: 'ghost-btn', type: 'button', html: ICONS.share + '<span>Kopírovať odkaz</span>', onclick: (e) => copyLink(e.currentTarget) }),
-      h('button', { class: 'ghost-btn', type: 'button', html: ICONS.print + '<span>Tlačiť</span>', onclick: () => window.print() }),
+      h('button', { class: 'ghost-btn', type: 'button', html: ICONS.refresh + `<span>${t('again')}</span>`, onclick: () => run(d.inputUrl, true) }),
+      h('button', { class: 'ghost-btn', type: 'button', html: ICONS.share + `<span>${t('copyLink')}</span>`, onclick: (e) => copyLink(e.currentTarget) }),
+      h('button', { class: 'ghost-btn', type: 'button', html: ICONS.print + `<span>${t('print')}</span>`, onclick: () => window.print() }),
     ),
   ));
 
@@ -168,25 +156,25 @@ function render(d) {
   const fav = o.favicon ? h('img', { src: o.favicon, alt: '', referrerpolicy: 'no-referrer', loading: 'lazy' }) : null;
   const favFallback = h('div', { class: 'fav-fallback' }, (o.host[0] || '?').toUpperCase());
   if (fav) fav.addEventListener('error', () => fav.replaceWith(favFallback));
-  const ogImg = h('div', { class: 'og-img' }, o.ogImage ? '' : 'bez obrázka');
+  const ogImg = h('div', { class: 'og-img' }, o.ogImage ? '' : t('noImage'));
   if (o.ogImage) {
     const probe = new Image();
     probe.referrerPolicy = 'no-referrer';
     probe.onload = () => ogImg.style.setProperty('background-image', `url("${o.ogImage.replace(/["\\\n\r()]/g, encodeURIComponent)}")`);
-    probe.onerror = () => { ogImg.textContent = 'nedá sa načítať'; };
+    probe.onerror = () => { ogImg.textContent = t('imageFail'); };
     probe.src = o.ogImage;
   }
   out.append(h('article', { class: 'card span-5 row-2' },
-    cardHead('Náhľad vo vyhľadávaní', 'eye', 'var(--c-seo)'),
+    cardHead(t('serpTitle'), 'eye', 'var(--c-seo)'),
     h('div', { class: 'site-id' }, fav || favFallback,
       h('div', {}, h('div', { class: 'host' }, o.host), h('div', { class: 'sub' }, [o.ip, o.server].filter(Boolean).join(' · ') || '—'))),
     h('div', { class: 'serp' },
       h('div', { class: 'serp-url' }, d.url.replace(/^https?:\/\//, '').replace(/\/$/, '').replace(/\//g, ' › ')),
-      h('div', { class: 'serp-title' + (o.title ? '' : ' serp-missing') }, o.title || 'Chýba titulok stránky'),
-      h('div', { class: 'serp-desc' + (o.description ? '' : ' serp-missing') }, o.description || 'Chýba meta popis – Google si vyberie text sám.'),
+      h('div', { class: 'serp-title' + (o.title ? '' : ' serp-missing') }, o.title || t('missingTitle')),
+      h('div', { class: 'serp-desc' + (o.description ? '' : ' serp-missing') }, o.description || t('missingDesc')),
     ),
     h('div', { class: 'og' }, ogImg,
-      h('div', { class: 'sub' }, h('b', {}, 'Zdieľanie na sociálnych sieťach'), h('br'), o.ogImage ? 'Obrázok og:image je nastavený.' : 'Chýba og:image – zdieľaný odkaz bude bez náhľadu.')),
+      h('div', { class: 'sub' }, h('b', {}, t('sharing')), h('br'), o.ogImage ? t('ogOk') : t('ogMissing'))),
   ));
 
   /* --- 3. Rýchle metriky --- */
@@ -194,12 +182,12 @@ function render(d) {
     h('div', { class: 'v' }, color ? h('span', { class: 'dot', vars: { '--dc': color } }) : null, v, small ? h('small', {}, small) : null));
   out.append(h('article', { class: 'card span-3 row-2' },
     h('div', { class: 'stats' },
-      stat('Odozva (TTFB)', o.ttfb, 'ms', o.ttfb < 600 ? 'var(--good)' : o.ttfb < 1500 ? 'var(--ok)' : 'var(--bad)'),
-      stat('HTTP status', o.status, null, statusCodeColor(o.status)),
-      stat('Veľkosť HTML', fmtBytes(o.htmlBytes)),
-      stat('Kompresia', o.compression || 'žiadna', null, o.compression ? 'var(--good)' : 'var(--bad)'),
-      stat('Skripty', o.scripts),
-      stat('Obrázky', o.images),
+      stat(t('ttfb'), o.ttfb, 'ms', o.ttfb < 600 ? 'var(--good)' : o.ttfb < 1500 ? 'var(--ok)' : 'var(--bad)'),
+      stat(t('httpStatus'), o.status, null, statusCodeColor(o.status)),
+      stat(t('htmlSize'), fmtBytes(o.htmlBytes)),
+      stat(t('compression'), o.compression || t('none'), null, o.compression ? 'var(--good)' : 'var(--bad)'),
+      stat(t('scripts'), o.scripts),
+      stat(t('images'), o.images),
     )));
 
   /* --- 4. Kategórie --- */
@@ -226,75 +214,75 @@ function render(d) {
 
   /* --- Ponuka EAA auditu --- */
   const a11yScore = cats.accessibility.score;
-  out.append(h('a', { class: 'card span-12 eaa-promo', href: `/pristupnost.html?url=${encodeURIComponent(d.inputUrl)}` },
+  out.append(h('a', { class: 'card span-12 eaa-promo', href: `${ROUTES.audit}?url=${encodeURIComponent(d.inputUrl)}` },
     h('div', {},
-      h('b', {}, a11yScore < 90 ? 'Prístupnosť webu má nedostatky – spĺňa požiadavky zákona EAA?' : 'Overte súlad s Európskym aktom o prístupnosti (EAA)'),
-      h('p', { class: 'sub' }, 'Hĺbkový test podľa WCAG 2.1 AA v reálnom prehliadači, až 40 podstránok a PDF správa s návodom na opravu.')),
-    h('span', { class: 'cta' }, 'Bezplatný EAA test →')));
+      h('b', {}, a11yScore < 90 ? t('eaaBad') : t('eaaOk')),
+      h('p', { class: 'sub' }, t('eaaText'))),
+    h('span', { class: 'cta' }, t('eaaCta'))));
 
   /* --- 5. Odporúčania --- */
   out.append(h('article', { class: 'card span-7 row-2' },
-    cardHead('Najdôležitejšie odporúčania', 'bulb', 'var(--ok)', h('span', { class: 'chip' }, `${d.recommendations.length} úloh`)),
+    cardHead(t('recs'), 'bulb', 'var(--ok)', h('span', { class: 'chip' }, tp('tasks', d.recommendations.length))),
     d.recommendations.length
       ? h('ol', { class: 'recs' }, d.recommendations.map((r) => h('li', { class: 'rec', vars: { '--sev': STATUS_COLOR[r.status], '--c': CAT_COLOR[r.cat] } },
         h('span', { class: 'sev', html: ICONS[r.status] }),
         h('div', {}, h('div', { class: 'tag' }, r.catTitle), h('b', {}, r.label), h('p', {}, r.fix)))))
-      : h('p', { class: 'empty' }, 'Bez výhrad – skvelá práca! 🎉'),
+      : h('p', { class: 'empty' }, t('noRecs')),
   ));
 
   /* --- 6. Technológie --- */
   const groups = {};
   d.tech.forEach((t) => (groups[t.category] ||= []).push(t.name));
   out.append(h('article', { class: 'card span-5' },
-    cardHead('Použité technológie', 'tech', 'var(--accent)', h('span', { class: 'chip' }, String(d.tech.length))),
+    cardHead(t('tech'), 'tech', 'var(--accent)', h('span', { class: 'chip' }, String(d.tech.length))),
     d.tech.length
       ? h('div', { class: 'tech-groups' }, Object.entries(groups).map(([g, names]) => h('div', { class: 'tech-group' },
         h('div', { class: 'k' }, g), h('div', { class: 'chips' }, names.map((n) => h('span', { class: 'chip' }, n))))))
-      : h('p', { class: 'sub' }, 'Nepodarilo sa rozpoznať žiadne známe technológie.'),
+      : h('p', { class: 'sub' }, t('noTech')),
   ));
 
   /* --- 7. Obsah --- */
   out.append(h('article', { class: 'card span-5' },
-    cardHead('Obsah stránky', 'doc', 'var(--c-seo)'),
+    cardHead(t('content'), 'doc', 'var(--c-seo)'),
     h('dl', { class: 'kv' },
-      h('dt', {}, 'Počet slov'), h('dd', {}, o.words.toLocaleString('sk-SK')),
-      h('dt', {}, 'Interné odkazy'), h('dd', {}, o.links.internal),
-      h('dt', {}, 'Externé odkazy'), h('dd', {}, o.links.external),
-      h('dt', {}, 'CSS súbory'), h('dd', {}, o.stylesheets),
-      h('dt', {}, 'Jazyk'), h('dd', {}, o.lang || '—'),
-      h('dt', {}, 'Typ obsahu'), h('dd', { class: 'mono' }, o.contentType || '—'),
+      h('dt', {}, t('words')), h('dd', {}, o.words.toLocaleString(LOCALE)),
+      h('dt', {}, t('internal')), h('dd', {}, o.links.internal),
+      h('dt', {}, t('external')), h('dd', {}, o.links.external),
+      h('dt', {}, t('css')), h('dd', {}, o.stylesheets),
+      h('dt', {}, t('lang')), h('dd', {}, o.lang || '—'),
+      h('dt', {}, t('ctype')), h('dd', { class: 'mono' }, o.contentType || '—'),
     )));
 
   /* --- 8. Certifikát --- */
   const cert = d.certificate;
   out.append(h('article', { class: 'card span-4' },
-    cardHead('SSL certifikát', 'lock', 'var(--c-security)', cert ? h('span', { class: 'chip' }, h('span', { class: 'dot', vars: { '--dc': cert.authorized && cert.daysLeft > 14 ? 'var(--good)' : cert.daysLeft > 0 && cert.authorized ? 'var(--ok)' : 'var(--bad)' } }), cert.authorized ? 'Platný' : 'Problém') : null),
+    cardHead(t('cert'), 'lock', 'var(--c-security)', cert ? h('span', { class: 'chip' }, h('span', { class: 'dot', vars: { '--dc': cert.authorized && cert.daysLeft > 14 ? 'var(--good)' : cert.daysLeft > 0 && cert.authorized ? 'var(--ok)' : 'var(--bad)' } }), cert.authorized ? t('certValid') : t('certProblem')) : null),
     cert
       ? h('dl', { class: 'kv' },
-        h('dt', {}, 'Vydavateľ'), h('dd', {}, cert.issuer || '—'),
-        h('dt', {}, 'Pre'), h('dd', {}, cert.subject || '—'),
-        h('dt', {}, 'Platný do'), h('dd', {}, new Date(cert.validTo).toLocaleDateString('sk-SK')),
-        h('dt', {}, 'Zostáva'), h('dd', {}, `${cert.daysLeft} dní`),
-        h('dt', {}, 'Protokol'), h('dd', {}, cert.protocol || '—'))
-      : h('p', { class: 'sub' }, d.url.startsWith('https') ? 'Detaily certifikátu sa nepodarilo získať.' : 'Web nepoužíva HTTPS.'),
+        h('dt', {}, t('issuer')), h('dd', {}, cert.issuer || '—'),
+        h('dt', {}, t('for')), h('dd', {}, cert.subject || '—'),
+        h('dt', {}, t('validTo')), h('dd', {}, new Date(cert.validTo).toLocaleDateString(LOCALE)),
+        h('dt', {}, t('remaining')), h('dd', {}, t('days', { n: cert.daysLeft })),
+        h('dt', {}, t('protocol')), h('dd', {}, cert.protocol || '—'))
+      : h('p', { class: 'sub' }, d.url.startsWith('https') ? t('noCert') : t('noHttps')),
   ));
 
   /* --- 9. Presmerovania --- */
   out.append(h('article', { class: 'card span-4' },
-    cardHead('Cesta požiadavky', 'route', 'var(--c-performance)', h('span', { class: 'chip' }, `${d.redirects.length - 1} presm.`)),
+    cardHead(t('route'), 'route', 'var(--c-performance)', h('span', { class: 'chip' }, tp('redirects', d.redirects.length - 1))),
     h('div', { class: 'chain' }, d.redirects.map((r) => h('div', { class: 'hop', vars: { '--hc': statusCodeColor(r.status) } },
       h('span', { class: 'code' }, r.status), h('span', { class: 'u mono', title: r.url }, r.url)))),
   ));
 
   /* --- 10. Server --- */
   out.append(h('article', { class: 'card span-4' },
-    cardHead('Server', 'server', 'var(--c-accessibility)'),
+    cardHead(t('server'), 'server', 'var(--c-accessibility)'),
     h('dl', { class: 'kv' },
-      h('dt', {}, 'IP adresa'), h('dd', { class: 'mono' }, o.ip || '—'),
-      h('dt', {}, 'Softvér'), h('dd', {}, o.server || 'skrytý'),
-      h('dt', {}, 'Celkový čas'), h('dd', {}, `${o.totalTime} ms`),
-      h('dt', {}, 'Trvanie auditu'), h('dd', {}, `${(d.durationMs / 1000).toFixed(1)} s`),
-      h('dt', {}, 'Analyzované'), h('dd', {}, new Date(d.analyzedAt).toLocaleString('sk-SK') + (d.cached ? ' (cache)' : ''))),
+      h('dt', {}, t('ip')), h('dd', { class: 'mono' }, o.ip || '—'),
+      h('dt', {}, t('software')), h('dd', {}, o.server || t('hidden')),
+      h('dt', {}, t('totalTime')), h('dd', {}, `${o.totalTime} ms`),
+      h('dt', {}, t('auditTime')), h('dd', {}, `${(d.durationMs / 1000).toFixed(1)} s`),
+      h('dt', {}, t('analyzed')), h('dd', {}, new Date(d.analyzedAt).toLocaleString(LOCALE) + (d.cached ? t('cache') : ''))),
   ));
 
   /* --- 11. Detailné kontroly --- */
@@ -302,7 +290,7 @@ function render(d) {
 
   /* --- 12. HTTP hlavičky --- */
   out.append(h('article', { class: 'card span-12' },
-    cardHead('HTTP hlavičky odpovede', 'list', 'var(--info)', h('span', { class: 'chip' }, String(d.headers.length))),
+    cardHead(t('headers'), 'list', 'var(--info)', h('span', { class: 'chip' }, String(d.headers.length))),
     h('div', { class: 'headers' }, h('table', {}, h('tbody', {}, d.headers.map((x) => h('tr', {}, h('td', { class: 'mono' }, x.name), h('td', { class: 'mono' }, x.value))))))));
 
   $('#loading').hidden = true;
@@ -321,9 +309,9 @@ function checksCard(cats) {
       c.title, h('span', { class: 'n' }, c.score))));
   const filters = h('div', { class: 'filters' }, ['all', 'fail', 'warn', 'pass'].map((f) =>
     h('button', { type: 'button', 'data-filter': f, 'aria-pressed': String(state.filter === f), onclick: () => { state.filter = f; drawChecks(); } },
-      f === 'all' ? 'Všetko' : STATUS_LABEL[f])));
+      f === 'all' ? t('all') : STATUS_LABEL[f])));
   return h('article', { class: 'card span-12', id: 'checksCard' },
-    cardHead('Detailné kontroly', 'list', 'var(--accent)', filters),
+    cardHead(t('checks'), 'list', 'var(--accent)', filters),
     tabs,
     h('div', { class: 'checks', id: 'checks', role: 'tabpanel' }));
 }
@@ -351,22 +339,21 @@ function drawChecks() {
       h('div', { class: 'body' },
         c.detail ? h('p', {}, c.detail) : null,
         c.fix && c.status !== 'pass' ? h('p', { class: 'fix' }, '💡 ', c.fix) : null,
-        !c.detail && !(c.fix && c.status !== 'pass') ? h('p', {}, 'Bez ďalších detailov.') : null)))
-    : [h('p', { class: 'empty' }, 'V tejto kategórii nie sú žiadne položky s týmto stavom.')]));
+        !c.detail && !(c.fix && c.status !== 'pass') ? h('p', {}, t('noDetail')) : null)))
+    : [h('p', { class: 'empty' }, t('emptyFilter'))]));
 }
 
 async function copyLink(btn) {
   try {
     await navigator.clipboard.writeText(location.href);
     const span = btn.querySelector('span');
-    span.textContent = 'Skopírované!';
-    setTimeout(() => { span.textContent = 'Kopírovať odkaz'; }, 1800);
-  } catch { prompt('Skopíruj odkaz:', location.href); }
+    span.textContent = t('copied');
+    setTimeout(() => { span.textContent = t('copyLink'); }, 1800);
+  } catch { prompt(t('copyPrompt'), location.href); }
 }
 
 /* ======================= Init ======================= */
 
-initTheme();
 $('#form').addEventListener('submit', (e) => {
   e.preventDefault();
   const v = $('#url').value.trim();

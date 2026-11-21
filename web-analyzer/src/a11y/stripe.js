@@ -21,20 +21,20 @@ async function stripe(method, endpoint, params) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     console.error('[stripe]', res.status, data?.error?.message);
-    throw new PublicError('Platobnú bránu sa nepodarilo kontaktovať. Skús to prosím znova.', 502);
+    throw new PublicError('Platobnú bránu sa nepodarilo kontaktovať. Skúste to prosím znova.', 'Could not reach the payment gateway. Please try again.', 502);
   }
   return data;
 }
 
 /** Overenie podpisu webhooku (Stripe-Signature: t=…,v1=…), tolerancia 5 minút. */
 function verifyWebhook(rawBody, header) {
-  if (!STRIPE_WEBHOOK_SECRET) throw new PublicError('Webhook nie je nakonfigurovaný.', 400);
+  if (!STRIPE_WEBHOOK_SECRET) throw new PublicError('Webhook nie je nakonfigurovaný.', 'Webhook is not configured.', 400);
   const items = String(header || '').split(',').map((kv) => kv.trim().split('='));
   const t = Number((items.find(([k]) => k === 't') || [])[1]);
   const sigs = items.filter(([k]) => k === 'v1').map(([, v]) => v);
-  if (!t || !sigs.length || Math.abs(Date.now() / 1000 - t) > 300) throw new PublicError('Neplatný podpis.', 400);
+  if (!t || !sigs.length || Math.abs(Date.now() / 1000 - t) > 300) throw new PublicError('Neplatný podpis.', 'Invalid signature.', 400);
   const expected = crypto.createHmac('sha256', STRIPE_WEBHOOK_SECRET).update(`${t}.${rawBody}`).digest('hex');
-  if (!sigs.some((s) => safeEqual(s, expected))) throw new PublicError('Neplatný podpis.', 400);
+  if (!sigs.some((s) => safeEqual(s, expected))) throw new PublicError('Neplatný podpis.', 'Invalid signature.', 400);
   return JSON.parse(rawBody);
 }
 

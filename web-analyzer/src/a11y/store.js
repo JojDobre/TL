@@ -45,8 +45,15 @@ async function list(dir) {
   return out;
 }
 
+/** Chyba pre klienta: new PublicError('slovensky', 'english', 404) alebo new PublicError('text', 404). */
 class PublicError extends Error {
-  constructor(msg, status = 400) { super(msg); this.status = status; }
+  constructor(sk, en, status) {
+    super(sk);
+    if (typeof en === 'number') { status = en; en = null; }
+    this.en = en || sk;
+    this.status = status || 400;
+  }
+  text(lang) { return lang === 'en' ? this.en : this.message; }
 }
 
 function safeEqual(a, b) {

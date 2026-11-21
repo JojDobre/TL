@@ -6,18 +6,10 @@ const path = require('path');
 const { analyze } = require('./src/analyzer');
 const { UserError } = require('./src/fetcher');
 const a11yApi = require('./src/a11y/api');
+const site = require('./src/site');
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC = path.join(__dirname, 'public');
-
-const MIME = {
-  '.html': 'text/html; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon',
-  '.png': 'image/png',
-};
 
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
@@ -25,7 +17,7 @@ const SECURITY_HEADERS = {
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
   'Content-Security-Policy':
-    "default-src 'self'; img-src 'self' https: data:; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; frame-ancestors 'none'",
+    "default-src 'self'; img-src 'self' https: data:; style-src 'self'; font-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
 };
 
 /* ---- jednoduchý rate limit (na IP) a krátka cache výsledkov ---- */
@@ -54,42 +46,27 @@ function sendJson(res, status, data) {
 async function handleAnalyze(req, res, url) {
   const ip = req.socket.remoteAddress || 'unknown';
   const target = url.searchParams.get('url');
+  const lang = url.searchParams.get('lang') === 'en' ? 'en' : 'sk';
+  const L = (sk, en) => (lang === 'en' ? en : sk);
   const fresh = url.searchParams.get('fresh') === '1';
-  const key = String(target || '').trim().toLowerCase().replace(/\/+$/, '');
+  const key = lang + '|' + String(target || '').trim().toLowerCase().replace(/\/+$/, '');
 
   if (!fresh && cache.has(key)) return sendJson(res, 200, { ...cache.get(key).data, cached: true });
-  if (rateLimited(ip)) return sendJson(res, 429, { error: 'Príliš veľa požiadaviek. Skús to o minútu znova.' });
+  if (rateLimited(ip)) return sendJson(res, 429, { error: L('Príliš veľa požiadaviek. Skúste to o minútu znova.', 'Too many requests. Please try again in a minute.') });
 
   try {
-    const data = await analyze(target);
+    const data = await analyze(target, lang);
     cache.set(key, { at: Date.now(), data });
     sendJson(res, 200, data);
   } catch (err) {
-    if (err instanceof UserError) return sendJson(res, 400, { error: err.message });
+    if (err instanceof UserError) return sendJson(res, 400, { error: err.text(lang) });
+    const code = err?.cause?.code ? ` (${err.cause.code})` : '';
     const msg = err?.name === 'TimeoutError' || err?.cause?.code === 'UND_ERR_CONNECT_TIMEOUT'
-      ? 'Web neodpovedal včas (timeout).'
-      : `Web sa nepodarilo načítať${err?.cause?.code ? ` (${err.cause.code})` : ''}.`;
+      ? L('Web neodpovedal včas (timeout).', 'The website did not respond in time (timeout).')
+      : L(`Web sa nepodarilo načítať${code}.`, `The website could not be loaded${code}.`);
     console.error('[analyze]', target, err?.cause?.code || err?.message);
     sendJson(res, 502, { error: msg });
   }
-}
-
-function serveStatic(req, res, pathname) {
-  const rel = pathname === '/' ? '/index.html' : pathname;
-  const file = path.normalize(path.join(PUBLIC, rel));
-  if (!file.startsWith(PUBLIC + path.sep)) { res.writeHead(403); return res.end(); }
-  fs.readFile(file, (err, buf) => {
-    if (err) {
-      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8', ...SECURITY_HEADERS });
-      return res.end('404 – nenájdené');
-    }
-    res.writeHead(200, {
-      'Content-Type': MIME[path.extname(file)] || 'application/octet-stream',
-      'Cache-Control': 'no-cache',
-      ...SECURITY_HEADERS,
-    });
-    res.end(buf);
-  });
 }
 
 const server = http.createServer((req, res) => {
@@ -100,7 +77,7 @@ const server = http.createServer((req, res) => {
   }
   if (url.pathname === '/api/health') return sendJson(res, 200, { ok: true });
   if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); return res.end(); }
-  serveStatic(req, res, url.pathname);
+  site.handle(req, res, url, SECURITY_HEADERS);
 });
 
 server.listen(PORT, () => {

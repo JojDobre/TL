@@ -94,16 +94,23 @@ const SIGNATURES = [
   ['HTTP/3', 'Protokol', H('alt-svc', /h3/)],
 ];
 
-function detectTech({ html, h, main }) {
+const CAT_EN = {
+  Analytika: 'Analytics', 'Cookie lišta': 'Cookie banner', 'E-shop': 'E-commerce', Ikony: 'Icons', 'JS knižnica': 'JS library',
+  Mapy: 'Maps', Médiá: 'Media', Platby: 'Payments', Protokol: 'Protocol', Písma: 'Fonts', 'Tvorca webov': 'Website builder',
+  Zabezpečenie: 'Security', Generátor: 'Generator',
+};
+
+function detectTech({ html, h, main, L }) {
+  const en = L && L('sk', 'en') === 'en';
   const cookies = main.setCookies || [];
   const found = [];
   for (const [name, category, test] of SIGNATURES) {
-    try { if (test(html, h, cookies)) found.push({ name, category }); } catch { /* ignore */ }
+    try { if (test(html, h, cookies)) found.push({ name, category: en ? CAT_EN[category] || category : category }); } catch { /* ignore */ }
   }
   // Generator meta tag (napr. presná verzia CMS)
   const gen = /<meta[^>]+name=["']generator["'][^>]+content=["']([^"']+)["']/i.exec(html)
     || /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']generator["']/i.exec(html);
-  if (gen) found.push({ name: gen[1].slice(0, 60), category: 'Generátor' });
+  if (gen) found.push({ name: gen[1].slice(0, 60), category: en ? 'Generator' : 'Generátor' });
   return found;
 }
 

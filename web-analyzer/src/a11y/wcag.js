@@ -198,4 +198,28 @@ const MANUAL_CHECKS = [
   ['1.3.3', 'Pokyny nezávisia od tvaru a polohy', 'Inštrukcie neodkazujú len na tvar, farbu či polohu („kliknite na zelené tlačidlo vpravo“).'],
 ];
 
-module.exports = { PRINCIPLES, SC, SC_LIST, tagToSc, IMPACT, RULES, MANUAL_CHECKS };
+/* ---------- prístup k textom podľa jazyka ---------- */
+const EN = require('./wcag-en');
+const isEn = (lang) => lang === 'en';
+
+/** [názov problému, ako opraviť, koho sa týka] alebo null */
+function ruleText(id, lang) {
+  return (isEn(lang) ? EN.RULES[id] : RULES[id]) || null;
+}
+/** Kritérium s názvom v danom jazyku. */
+function scIn(id, lang) {
+  const s = SC[id];
+  return s && isEn(lang) ? { ...s, name: EN.SC[id] || s.name } : s;
+}
+function principlesIn(lang) {
+  return isEn(lang) ? EN.PRINCIPLES : PRINCIPLES;
+}
+/** [[kritérium, čo overiť, ako], …] */
+function manualChecksIn(lang) {
+  return isEn(lang) ? MANUAL_CHECKS.map(([sc]) => [sc, ...EN.MANUAL[sc]]) : MANUAL_CHECKS;
+}
+function impactLabel(k, lang) {
+  return isEn(lang) ? EN.IMPACT[k] : IMPACT[k]?.label;
+}
+
+module.exports = { PRINCIPLES, SC, SC_LIST, tagToSc, IMPACT, RULES, MANUAL_CHECKS, ruleText, scIn, principlesIn, manualChecksIn, impactLabel };

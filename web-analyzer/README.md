@@ -1,5 +1,7 @@
 # Web Analyzer
 
+🇸🇰 Slovenská a 🇬🇧 anglická verzia (`/` a `/en/`) – web, výsledky analýz, PDF správy aj e-maily.
+
 Webová aplikácia, do ktorej zadáš adresu ľubovoľného webu a dostaneš kompletný audit
 v modernom **bento** rozložení (svetlá aj tmavá téma, responzívne).
 
@@ -101,6 +103,7 @@ nezaplatené objednávky po 7 dňoch, ostatné po `RETENTION_DAYS` (predvolene 1
 npm test            # jednotkové + integračné testy (spúšťajú prehliadač)
 npm run test:unit   # len rýchle jednotkové testy
 npm run benchmark   # presnosť na W3C Before and After Demonstration
+npm run images      # pregeneruje OG obrázky a ikony (po zmene SITE_NAME)
 ```
 
 ### Bezpečnosť
@@ -109,6 +112,32 @@ npm run benchmark   # presnosť na W3C Before and After Demonstration
   ktorá blokuje privátne a lokálne IP adresy (ochrana proti SSRF).
 - Prístup k objednávke a PDF len s náhodným 192-bitovým tokenom.
 - Rate limit na bezplatné testy (6/min na IP) a objednávky.
+
+## SEO a jazykové verzie
+
+| Stránka | SK | EN |
+|---|---|---|
+| Analýza webu | `/` | `/en/` |
+| Audit prístupnosti | `/pristupnost` | `/en/accessibility-audit` |
+| Obchodné podmienky | `/obchodne-podmienky` | `/en/terms` |
+| Ochrana osobných údajov | `/ochrana-osobnych-udajov` | `/en/privacy` |
+
+- Stránky renderuje server (`src/site/`) – vyhľadávače vidia celý obsah vrátane cien a FAQ bez JavaScriptu.
+- Každá stránka má unikátny titulok a popis, `canonical`, `hreflang` (sk, en, x-default → en),
+  Open Graph a X Card s obrázkom 1200×630, štruktúrované dáta (Organization, WebSite,
+  WebApplication / Service s cenami, FAQPage, BreadcrumbList).
+- `robots.txt`, `sitemap.xml` (s jazykovými alternatívami), web app manifest, ikony.
+- Výsledky analýz, objednávky a predplatné (`?url=`, `?order=`, `?sub=`) majú `noindex`.
+- Staré adresy `*.html` presmerujú 301 na nové (zachová sa query – napr. návrat zo Stripe).
+- Výkon: Brotli/gzip, dlhodobá cache súborov s otlačkom (`?v=hash`), ETag, lokálny
+  variabilný font Inter (bez Google Fonts), žiadne blokujúce skripty.
+- **Nastav `PUBLIC_URL`** (napr. `https://audit.mojadomena.sk`) – používa sa v canonical,
+  hreflang, sitemap a OG. Pri HTTPS server pridá hlavičku HSTS.
+- Po spustení pridaj web do **Google Search Console** a **Bing Webmaster Tools** a odošli `/sitemap.xml`.
+
+Overenie (21. 11. 2026, lokálne): Google Lighthouse 100 / 100 / 100 / 100 (výkon, prístupnosť,
+osvedčené postupy, SEO) na desktope aj mobile, LCP 0,4 s (desktop) / 1,5–2,0 s (mobil), CLS 0.
+Vlastný analyzátor: SEO 100 a audit prístupnosti 100 na všetkých stránkach (desktop aj mobil).
 
 ## Spustenie
 
@@ -165,7 +194,15 @@ src/a11y/
   subscriptions.js predplatné Monitoring, plánovač, e-maily, Stripe udalosti
   api.js           HTTP API vrátane administrácie
   store.js / stripe.js / mailer.js / tiers.js
-public/            index + app.js, pristupnost + a11y.js, admin + admin.js, právne stránky, styles.css
+src/site/
+  i18n.js          jazyky a lokalizované adresy
+  layout.js        hlavička (SEO metadáta, hreflang, OG, JSON-LD), navigácia, pätička
+  pages/           obsah stránok v SK aj EN (analýza, audit, právne stránky, 404)
+  client-i18n.js   texty pre JavaScript v prehliadači
+  static.js        statické súbory, kompresia, cache
+  index.js         smerovanie, presmerovania, robots.txt, sitemap.xml, manifest
+src/a11y/wcag-en.js anglické texty WCAG pravidiel a kritérií
+public/            app.js, a11y.js, i18n.js, theme.js, admin, styles.css, fonts/, img/
 test/              node:test testy a testovacie stránky so známymi chybami
 scripts/           benchmark na W3C BAD
 docs/PRESNOST.md   ako sme overili presnosť

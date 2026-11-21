@@ -1,6 +1,6 @@
 {
   "name": "web-analyzer",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Webová aplikácia na audit webu (bezpečnosť, SEO, výkon) a platený audit prístupnosti podľa EAA/WCAG s PDF správou.",
   "main": "server.js",
   "private": true,
@@ -9,7 +9,8 @@
     "dev": "node --watch server.js",
     "test": "node --test --test-concurrency=1 'test/*.test.js'",
     "test:unit": "node --test test/unit.test.js",
-    "benchmark": "node scripts/benchmark-w3c-bad.js"
+    "benchmark": "node scripts/benchmark-w3c-bad.js",
+    "images": "node scripts/generate-images.js"
   },
   "engines": {
     "node": ">=20"

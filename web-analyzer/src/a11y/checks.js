@@ -146,7 +146,8 @@ window.__wa = window.__wa || {
  *  - 2.4.11 fokus úplne zakrytý iným prvkom (sticky hlavička, lišta),
  *  - 2.1.1 prvky s rolou/onclick, ktoré nie sú dostupné klávesnicou.
  */
-async function keyboardChecks(page, { maxSteps = 60, maxVisualTests = 25 } = {}) {
+async function keyboardChecks(page, { maxSteps = 60, maxVisualTests = 25, lang = 'sk' } = {}) {
+  const L = (sk, en) => (lang === 'en' ? en : sk);
   await page.evaluate(PAGE_HELPERS);
   // Východiskový bod: dočasný prvok na začiatku <body>, z ktorého Tab pokračuje na prvý prvok stránky
   await page.evaluate(() => {
@@ -187,7 +188,7 @@ async function keyboardChecks(page, { maxSteps = 60, maxVisualTests = 25 } = {})
       await page.waitForTimeout(500);
       const again = await page.evaluate(() => window.__wa.active()).catch(() => null);
       if (again && again.key === a.key && again.obscuredBy) {
-        obscured.push({ html: a.html, target: a.key, summary: `Prvok s fokusom je úplne zakrytý prvkom: ${again.obscuredBy}`, sel: a.key });
+        obscured.push({ html: a.html, target: a.key, summary: L(`Prvok s fokusom je úplne zakrytý prvkom: ${again.obscuredBy}`, `The focused element is completely covered by: ${again.obscuredBy}`), sel: a.key });
       } else a.obscuredBy = null;
     }
 
@@ -215,8 +216,30 @@ async function keyboardChecks(page, { maxSteps = 60, maxVisualTests = 25 } = {})
           return Math.abs(b.left - r.rect.x) < 1 && Math.abs(b.top - r.rect.y) < 1;
         }, a).catch(() => false);
         const blurred = scrollSame ? await page.screenshot({ clip, animations: 'disabled', caret: 'hide' }).catch(() => null) : null;
-        if (focused && blurred && focused.equals(blurred)) {
-          noFocus.push({ html: a.html, target: a.key, summary: 'Pri zameraní klávesnicou sa vzhľad prvku nezmení – chýba viditeľný indikátor fokusu.', sel: a.key });
+        let same = focused && blurred && focused.equals(blurred);
+        if (same) {
+          // Indikátor môže byť na blízkom rodičovi (napr. rámček vyhľadávania cez :focus-within)
+          const parentBox = await page.evaluate((k) => {
+            const el = document.querySelector(k);
+            let p = el && el.parentElement;
+            for (let i = 0; p && i < 3; i++, p = p.parentElement) {
+              const r = p.getBoundingClientRect(), e = el.getBoundingClientRect();
+              if (r.width * r.height <= Math.max(e.width * e.height * 6, 40000) && r.width > 0) {
+                return { x: Math.max(0, r.left - 6), y: Math.max(0, r.top - 6), width: Math.min(innerWidth - Math.max(0, r.left - 6), r.width + 12), height: Math.min(innerHeight - Math.max(0, r.top - 6), r.height + 12) };
+              }
+            }
+            return null;
+          }, a.key).catch(() => null);
+          if (parentBox && parentBox.width >= 4 && parentBox.height >= 4) {
+            const pBlur = await page.screenshot({ clip: parentBox, animations: 'disabled', caret: 'hide' }).catch(() => null);
+            await page.evaluate((k) => { const el = document.querySelector(k); if (el) el.focus({ preventScroll: true }); }, a.key).catch(() => {});
+            await page.waitForTimeout(90);
+            const pFocus = await page.screenshot({ clip: parentBox, animations: 'disabled', caret: 'hide' }).catch(() => null);
+            if (pBlur && pFocus && !pBlur.equals(pFocus)) same = false;
+          }
+        }
+        if (same) {
+          noFocus.push({ html: a.html, target: a.key, summary: L('Pri zameraní klávesnicou sa vzhľad prvku nezmení – chýba viditeľný indikátor fokusu.', 'The element looks the same when focused by keyboard – there is no visible focus indicator.'), sel: a.key });
         }
         // Vráť fokus späť na prvok, aby Tab pokračoval v poradí
         await page.evaluate((k) => { const el = document.querySelector(k); if (el) el.focus({ preventScroll: true }); }, a.key).catch(() => {});
@@ -227,7 +250,7 @@ async function keyboardChecks(page, { maxSteps = 60, maxVisualTests = 25 } = {})
   }
 
   // 2.1.1 – interaktívne prvky mimo poradia Tab (vysoká istota: explicitná rola alebo onclick)
-  const notFocusable = await page.evaluate(() => {
+  const notFocusable = await page.evaluate((msg) => {
     const focusableSel = 'a[href],button,input:not([type=hidden]),select,textarea,summary,iframe,[contenteditable=""],[contenteditable="true"]';
     const isTabbable = (el) => el.matches(focusableSel) ? el.tabIndex >= 0 : (el.hasAttribute('tabindex') && el.tabIndex >= 0);
     const out = [];
@@ -243,15 +266,15 @@ async function keyboardChecks(page, { maxSteps = 60, maxVisualTests = 25 } = {})
       const r = el.getBoundingClientRect();
       const cs = getComputedStyle(el);
       if (r.width < 2 || r.height < 2 || cs.visibility === 'hidden' || cs.display === 'none') continue;
-      out.push({ html: el.outerHTML.slice(0, 300), target: window.__wa.path(el), summary: 'Prvok sa správa ako ovládací prvok (rola alebo onclick), ale nedá sa naň dostať klávesom Tab.', sel: window.__wa.path(el) });
+      out.push({ html: el.outerHTML.slice(0, 300), target: window.__wa.path(el), summary: msg, sel: window.__wa.path(el) });
       if (out.length >= 30) break;
     }
     return out;
-  }).catch(() => []);
+  }, L('Prvok sa správa ako ovládací prvok (rola alebo onclick), ale nedá sa naň dostať klávesom Tab.', 'The element acts as a control (role or onclick) but cannot be reached with the Tab key.')).catch(() => []);
 
   const violations = [];
   if (noFocus.length) violations.push(violation('wa-focus-visible', noFocus));
-  if (trap) violations.push(violation('wa-keyboard-trap', [{ html: trap.html, target: trap.key, summary: 'Fokus po stlačení Tab zostáva na tomto prvku – klávesnicou sa nedá pokračovať.', sel: trap.key }]));
+  if (trap) violations.push(violation('wa-keyboard-trap', [{ html: trap.html, target: trap.key, summary: L('Fokus po stlačení Tab zostáva na tomto prvku – klávesnicou sa nedá pokračovať.', 'Focus stays on this element after pressing Tab – keyboard users cannot move on.'), sel: trap.key }]));
   if (obscured.length) violations.push(violation('wa-focus-obscured', obscured));
   if (notFocusable.length) violations.push(violation('wa-not-focusable', notFocusable));
 
@@ -269,12 +292,12 @@ async function keyboardChecks(page, { maxSteps = 60, maxVisualTests = 25 } = {})
 /* ======================= Reflow (1.4.10) ======================= */
 
 /** Pri šírke 320 CSS px nesmie obsah vyžadovať vodorovné skrolovanie (výnimky: tabuľky, mapy, kód…). */
-async function reflowCheck(page) {
+async function reflowCheck(page, lang = 'sk') {
   const orig = page.viewportSize();
   await page.evaluate(PAGE_HELPERS);
   await page.setViewportSize({ width: 320, height: 640 });
   await page.waitForTimeout(600);
-  const res = await page.evaluate(() => {
+  const res = await page.evaluate((en) => {
     const doc = document.scrollingElement || document.documentElement;
     const vw = doc.clientWidth;
     if (doc.scrollWidth - vw <= 2) return { overflow: 0, nodes: [] };
@@ -295,9 +318,11 @@ async function reflowCheck(page) {
     const outer = offenders.filter((e) => !offenders.some((o) => o !== e && o.contains(e)));
     return {
       overflow: doc.scrollWidth - vw,
-      nodes: outer.slice(0, 8).map((el) => ({ html: el.outerHTML.slice(0, 300), target: window.__wa.path(el), summary: `Pri šírke 320 px prvok presahuje obrazovku (šírka ${Math.round(el.getBoundingClientRect().width)} px, pravý okraj na ${Math.round(el.getBoundingClientRect().right)} px)${el.innerText.trim() ? '' : ' – prvok je prázdny, pravdepodobne má pevne nastavenú šírku'} a vynúti vodorovné skrolovanie.` })),
+      nodes: outer.slice(0, 8).map((el) => ({ html: el.outerHTML.slice(0, 300), target: window.__wa.path(el), summary: en
+        ? `At 320 px wide the element overflows the screen (width ${Math.round(el.getBoundingClientRect().width)} px, right edge at ${Math.round(el.getBoundingClientRect().right)} px)${el.innerText.trim() ? '' : ' – the element is empty and probably has a fixed width'} and forces horizontal scrolling.`
+        : `Pri šírke 320 px prvok presahuje obrazovku (šírka ${Math.round(el.getBoundingClientRect().width)} px, pravý okraj na ${Math.round(el.getBoundingClientRect().right)} px)${el.innerText.trim() ? '' : ' – prvok je prázdny, pravdepodobne má pevne nastavenú šírku'} a vynúti vodorovné skrolovanie.` })),
     };
-  }).catch(() => ({ overflow: 0, nodes: [] }));
+  }, lang === 'en').catch(() => ({ overflow: 0, nodes: [] }));
   await page.setViewportSize(orig);
   await page.waitForTimeout(300);
   if (res.nodes.length) return { violations: [violation('wa-reflow', res.nodes)], passes: [] };

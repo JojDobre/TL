@@ -41,7 +41,7 @@ async function assertPublicHost(hostname) {
   const host = hostname.replace(/^\[|\]$/g, '');
   if (ALLOW_PRIVATE) return [host];
   if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) {
-    throw new UserError('Lokálne a interné adresy nie je možné analyzovať.');
+    throw new UserError('Lokálne a interné adresy nie je možné analyzovať.', 'Local and internal addresses cannot be analyzed.');
   }
   let addrs;
   if (net.isIP(host)) addrs = [{ address: host }];
@@ -49,29 +49,33 @@ async function assertPublicHost(hostname) {
     try {
       addrs = await dns.lookup(host, { all: true });
     } catch {
-      throw new UserError(`Doménu „${host}“ sa nepodarilo nájsť (DNS).`);
+      throw new UserError(`Doménu „${host}“ sa nepodarilo nájsť (DNS).`, `The domain “${host}” could not be found (DNS).`);
     }
   }
   if (!addrs.length || addrs.some((a) => isPrivateIp(a.address))) {
-    throw new UserError('Lokálne a interné adresy nie je možné analyzovať.');
+    throw new UserError('Lokálne a interné adresy nie je možné analyzovať.', 'Local and internal addresses cannot be analyzed.');
   }
   return addrs.map((a) => a.address);
 }
 
-class UserError extends Error {}
+/** Chyba vstupu pre používateľa – nesie text v SK aj EN. */
+class UserError extends Error {
+  constructor(sk, en) { super(sk); this.en = en || sk; }
+  text(lang) { return lang === 'en' ? this.en : this.message; }
+}
 
 /* ---------- normalizácia vstupu ---------- */
 
 function normalizeUrl(input) {
   let raw = String(input || '').trim();
-  if (!raw) throw new UserError('Zadaj adresu webu.');
+  if (!raw) throw new UserError('Zadajte adresu webu.', 'Enter a website address.');
   if (!/^https?:\/\//i.test(raw)) raw = 'https://' + raw;
   let u;
-  try { u = new URL(raw); } catch { throw new UserError('Neplatná adresa URL.'); }
-  if (!['http:', 'https:'].includes(u.protocol)) throw new UserError('Podporované sú len http a https adresy.');
-  if (u.username || u.password) throw new UserError('URL nesmie obsahovať prihlasovacie údaje.');
-  if (!ALLOW_PRIVATE && u.port && !['80', '443', '8080', '8443'].includes(u.port)) throw new UserError('Nepodporovaný port.');
-  if (!ALLOW_PRIVATE && !u.hostname.includes('.') && !net.isIP(u.hostname)) throw new UserError('Neplatná doména.');
+  try { u = new URL(raw); } catch { throw new UserError('Neplatná adresa URL.', 'Invalid URL.'); }
+  if (!['http:', 'https:'].includes(u.protocol)) throw new UserError('Podporované sú len http a https adresy.', 'Only http and https addresses are supported.');
+  if (u.username || u.password) throw new UserError('URL nesmie obsahovať prihlasovacie údaje.', 'The URL must not contain credentials.');
+  if (!ALLOW_PRIVATE && u.port && !['80', '443', '8080', '8443'].includes(u.port)) throw new UserError('Nepodporovaný port.', 'Unsupported port.');
+  if (!ALLOW_PRIVATE && !u.hostname.includes('.') && !net.isIP(u.hostname)) throw new UserError('Neplatná doména.', 'Invalid domain.');
   u.hash = '';
   return u;
 }
@@ -115,7 +119,7 @@ async function request(url, { method = 'GET', readBody = true, maxRedirects = MA
       chain.push({ url: current.href, status: res.status });
       res.body?.cancel().catch(() => {});
       current = new URL(loc, current);
-      if (!['http:', 'https:'].includes(current.protocol)) throw new UserError('Presmerovanie na nepodporovaný protokol.');
+      if (!['http:', 'https:'].includes(current.protocol)) throw new UserError('Presmerovanie na nepodporovaný protokol.', 'Redirect to an unsupported protocol.');
       continue;
     }
     let body = Buffer.alloc(0);
@@ -135,7 +139,7 @@ async function request(url, { method = 'GET', readBody = true, maxRedirects = MA
       ip: ips[0],
     };
   }
-  throw new UserError('Príliš veľa presmerovaní.');
+  throw new UserError('Príliš veľa presmerovaní.', 'Too many redirects.');
 }
 
 /** Bezpečný pokus – pri chybe vráti null namiesto výnimky. */
