@@ -1,0 +1,185 @@
+<%- include('partials/head', { title: 'Import súťaží', page: 'admin', active: 'admin', pageStyle: `
+  .ad-head { padding:40px 0 18px; }
+  .imp-grid { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:18px; align-items:start; }
+  .imp-search { display:grid; grid-template-columns:1fr 180px auto; gap:10px; }
+  .imp-id { display:grid; grid-template-columns:1fr auto; gap:10px; margin-top:10px; }
+  .imp-res { margin-top:14px; display:flex; flex-direction:column; gap:8px; max-height:420px; overflow:auto; }
+  .imp-row { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:var(--r-md); background:var(--surface-2); border:1px solid var(--line); }
+  .imp-row .t { flex:1; min-width:0; }
+  .imp-row b { display:block; color:var(--text-1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .imp-row small { color:var(--text-3); }
+  .imp-badge { width:46px; height:46px; border-radius:12px; flex:none; background:#fff center/cover no-repeat; display:grid; place-items:center; font-weight:800; color:#1c1605; }
+  .imp-prev { display:flex; gap:16px; align-items:center; margin-bottom:16px; }
+  .imp-prev .imp-badge { width:72px; height:72px; border-radius:18px; }
+  .imp-list .imp-row { align-items:flex-start; }
+  .imp-note { font-size:var(--fs-xs); color:var(--text-3); margin-top:4px; }
+  .imp-stat { display:flex; gap:14px; margin-top:6px; font-size:var(--fs-sm); color:var(--text-3); }
+  .imp-stat .n { font-family:var(--num); font-weight:700; color:var(--text-2); }
+  .imp-msg { margin-top:12px; font-size:var(--fs-sm); }
+  @media (max-width:860px){ .imp-grid { grid-template-columns:1fr; } .imp-search { grid-template-columns:1fr 1fr; } .imp-search .btn { grid-column:1 / -1; } }
+` }) %>
+
+<%- include('partials/admin-subnav', { active: 'import' }) %>
+
+<div class="wrap ad-head">
+  <h1 style="font-size:clamp(1.8rem,3vw,2.4rem)">Import súťaží</h1>
+  <p class="muted" style="margin-top:6px;max-width:70ch">Vyber súťaž z TheSportsDB a vytvor z nej šablónu. Kolá, zápasy a tímy (aj s logami) sa naimportujú postupne — každých <%= provider.intervalMin %> min pár kôl, aby sa neprekročil limit bezplatného API. Výsledky sa potom vyhodnocujú automaticky.</p>
+</div>
+
+<div class="wrap imp-grid" style="padding-bottom:64px">
+  <div class="stack g-4">
+    <div class="card card-pad">
+      <h3 style="font-size:var(--fs-h4)">1. Nájdi súťaž</h3>
+      <p class="muted" style="font-size:var(--fs-sm);margin:4px 0 14px">Krajinu zadaj po anglicky (napr. England, Slovakia, Germany). Ak poznáš ID súťaže z TheSportsDB, zadaj ho nižšie.</p>
+      <form class="imp-search" data-imp-search>
+        <input class="input" name="country" placeholder="Krajina, napr. England" required>
+        <select class="input" name="sport"><% sports.forEach(function (s) { %><option value="<%= s[0] %>"><%= s[1] %></option><% }); %></select>
+        <button class="btn btn-secondary" type="submit">Hľadať</button>
+      </form>
+      <form class="imp-id" data-imp-id>
+        <input class="input" name="id" inputmode="numeric" placeholder="ID súťaže, napr. 4328 (Premier League)">
+        <button class="btn btn-secondary" type="submit">Načítať</button>
+      </form>
+      <div class="imp-msg muted" data-imp-msg hidden></div>
+      <div class="imp-res" data-imp-res></div>
+    </div>
+
+    <form class="card card-pad" data-imp-form hidden>
+      <h3 style="font-size:var(--fs-h4);margin-bottom:14px">2. Vytvor šablónu</h3>
+      <div class="imp-prev"><span class="imp-badge" data-p-badge></span><div><b class="hi" data-p-name style="font-size:var(--fs-h4)"></b><div class="muted" data-p-meta style="font-size:var(--fs-sm)"></div></div></div>
+      <input type="hidden" name="externalLeagueId">
+      <div class="field" style="margin-bottom:12px"><label class="label">Názov šablóny</label><input class="input" name="name" maxlength="120"></div>
+      <div class="field" style="margin-bottom:16px"><label class="label">Sezóna</label><input class="input" name="externalSeason" placeholder="2026-2027"><div class="muted" style="font-size:var(--fs-xs);margin-top:4px">Predvyplnená aktuálna sezóna súťaže.</div></div>
+      <button class="btn btn-primary btn-block" type="submit">Importovať ako šablónu</button>
+      <div class="imp-msg" data-imp-err hidden style="color:var(--danger)"></div>
+    </form>
+  </div>
+
+  <div class="stack g-4">
+    <div class="card card-pad">
+      <div class="between"><h3 style="font-size:var(--fs-h4)">Logá tímov</h3><button class="btn btn-secondary btn-sm" type="button" data-logos-run>Skontrolovať teraz</button></div>
+      <div class="imp-stat"><span><span class="n" data-l-missing><%= logos.missing %></span> tímov bez loga</span><span><span class="n" data-l-waiting><%= logos.waiting %></span> čaká na hľadanie</span></div>
+      <p class="imp-note">Chýbajúce logá oficiálnych tímov sa dopĺňajú automaticky z TheSportsDB — <%= logos.perRun %> tímov každých <%= logos.intervalMin %> min, len zo zvyšku limitu po výsledkoch. Nenájdené logo sa skúsi znova o 30 dní. Národné tímy sa hľadajú podľa anglického názvu krajiny. Čo sa nenájde, doplň ručne v časti Tímy.</p>
+      <div class="imp-msg muted" data-l-msg hidden></div>
+    </div>
+
+    <div class="card card-pad imp-list">
+      <h3 style="font-size:var(--fs-h4);margin-bottom:12px">Naimportované súťaže</h3>
+      <% if (provider.backoffUntil) { %><div class="imp-note" style="color:var(--warning);margin-bottom:10px">TheSportsDB dočasne obmedzil požiadavky — import pokračuje automaticky po <%= provider.backoffUntil %>.</div><% } %>
+      <% if (!imports.length) { %><p class="muted" style="font-size:var(--fs-sm)">Zatiaľ žiadne. Vyhľadaj súťaž vľavo.</p><% } %>
+      <div class="stack g-2">
+      <% imports.forEach(function (i) { %>
+        <div class="imp-row" data-imp-item="<%= i.id %>">
+          <span class="imp-badge" style="<%= i.image ? 'background-image:url(' + i.image + ')' : 'background:var(--surface-3);color:var(--text-2)' %>"><%= i.image ? '' : i.name.substring(0, 2).toUpperCase() %></span>
+          <div class="t">
+            <a href="/admin/templates/<%= i.id %>/edit"><b><%= i.name %></b></a>
+            <div class="imp-stat"><span><span class="n"><%= i.rounds %></span> kôl</span><span><span class="n"><%= i.matches %></span> zápasov</span><span>ID <%= i.extId %> · <%= i.season %></span></div>
+            <div class="imp-note" data-i-note><%= i.note || '' %></div>
+          </div>
+          <span class="tag <%= i.importing ? 'tag-warning' : 'tag-success' %>" data-i-tag><%= i.importing ? 'Importuje sa' : 'Hotové' %></span>
+        </div>
+      <% }); %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var csrf = (document.querySelector('meta[name=csrf-token]') || {}).content || '';
+  function api(url, opts) {
+    opts = opts || {};
+    return fetch(url, { method: opts.method || 'GET', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': csrf },
+      body: opts.body ? JSON.stringify(opts.body) : undefined })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok || j.success === false) throw new Error(j.message || 'Chyba (' + r.status + ')'); return j; }); });
+  }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  var msg = document.querySelector('[data-imp-msg]');
+  var res = document.querySelector('[data-imp-res]');
+  var form = document.querySelector('[data-imp-form]');
+  function say(t) { msg.hidden = !t; msg.textContent = t || ''; }
+
+  function choose(l) {
+    form.hidden = false;
+    form.externalLeagueId.value = l.id;
+    form.dataset.league = JSON.stringify({ leagueName: l.name, badge: l.badge || '', sport: l.sport || '', country: l.country || '' });
+    form.externalSeason.value = l.currentSeason || '';
+    form.name.value = l.name + (l.currentSeason ? ' ' + l.currentSeason.replace('-', '/') : '');
+    var b = form.querySelector('[data-p-badge]');
+    b.style.backgroundImage = l.badge ? 'url(' + l.badge + ')' : '';
+    b.textContent = l.badge ? '' : (l.name || '?').substring(0, 2).toUpperCase();
+    form.querySelector('[data-p-name]').textContent = l.name;
+    form.querySelector('[data-p-meta]').textContent = [l.sport, l.country, l.currentSeason ? 'sezóna ' + l.currentSeason : '', 'ID ' + l.id].filter(Boolean).join(' · ');
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function loadById(id) {
+    say('Načítavam súťaž…');
+    return api('/api/admin/tsdb/league/' + encodeURIComponent(id)).then(function (r) { say(''); choose(r.data); }).catch(function (e) { say(e.message); });
+  }
+
+  document.querySelector('[data-imp-search]').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var f = e.target;
+    res.innerHTML = ''; say('Hľadám…');
+    api('/api/admin/tsdb/search?country=' + encodeURIComponent(f.country.value) + '&sport=' + encodeURIComponent(f.sport.value))
+      .then(function (r) {
+        say(r.data.length ? r.data.length + ' súťaží — vyber jednu:' : 'Nič sa nenašlo. Skús anglický názov krajiny.');
+        res.innerHTML = r.data.map(function (l) {
+          return '<div class="imp-row"><div class="t"><b>' + esc(l.name) + '</b><small>' + esc([l.country, l.currentSeason, 'ID ' + l.id].filter(Boolean).join(' · ')) + '</small></div>'
+            + '<button class="btn btn-secondary btn-sm" type="button" data-pick="' + esc(l.id) + '">Vybrať</button></div>';
+        }).join('');
+      }).catch(function (e2) { say(e2.message); });
+  });
+  res.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-pick]');
+    if (b) { b.disabled = true; loadById(b.getAttribute('data-pick')).then(function () { b.disabled = false; }); }
+  });
+  document.querySelector('[data-imp-id]').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var id = e.target.id.value.trim();
+    if (id) loadById(id);
+  });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var err = form.querySelector('[data-imp-err]');
+    var btn = form.querySelector('button[type=submit]');
+    err.hidden = true; btn.disabled = true;
+    api('/api/admin/import', { method: 'POST', body: Object.assign(JSON.parse(form.dataset.league || '{}'), { externalLeagueId: form.externalLeagueId.value, externalSeason: form.externalSeason.value, name: form.name.value }) })
+      .then(function (r) { btn.textContent = r.message; setTimeout(function () { location.reload(); }, 1600); })
+      .catch(function (e2) { btn.disabled = false; err.hidden = false; err.textContent = e2.message; });
+  });
+
+  var lmsg = document.querySelector('[data-l-msg]');
+  document.querySelector('[data-logos-run]').addEventListener('click', function (e) {
+    var b = e.currentTarget; b.disabled = true;
+    api('/api/admin/logos/run', { method: 'POST', body: {} })
+      .then(function (r) { lmsg.hidden = false; lmsg.textContent = r.message; setTimeout(poll, 20000); })
+      .catch(function (e2) { lmsg.hidden = false; lmsg.textContent = e2.message; })
+      .then(function () { b.disabled = false; });
+  });
+
+  // priebežný stav importov a lôg (každých 30 s, kým niečo beží)
+  function poll() {
+    api('/api/admin/import/status').then(function (r) {
+      document.querySelector('[data-l-missing]').textContent = r.logos.missing;
+      document.querySelector('[data-l-waiting]').textContent = r.logos.waiting;
+      var busy = false;
+      r.data.forEach(function (d) {
+        var row = document.querySelector('[data-imp-item="' + d.id + '"]');
+        if (!row) return;
+        row.querySelector('[data-i-note]').textContent = d.note || '';
+        var tag = row.querySelector('[data-i-tag]');
+        tag.textContent = d.importing ? 'Importuje sa' : 'Hotové';
+        tag.className = 'tag ' + (d.importing ? 'tag-warning' : 'tag-success');
+        if (d.importing) busy = true;
+      });
+      if (busy) setTimeout(poll, 30000);
+    }).catch(function () {});
+  }
+  if (document.querySelector('[data-i-tag].tag-warning')) setTimeout(poll, 30000);
+})();
+</script>
+
+<%- include('partials/footer') %>

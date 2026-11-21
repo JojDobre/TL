@@ -195,6 +195,30 @@ async function searchLeagues(country, sport) {
   }));
 }
 
+// Tím (pre doplnenie loga). strBadge = erb; staršie odpovede majú strTeamBadge.
+function normalizeTeam(t) {
+  return {
+    id: String(t.idTeam),
+    name: t.strTeam || '',
+    alternate: t.strTeamAlternate || '',
+    short: t.strTeamShort || '',
+    sport: t.strSport || null,
+    country: t.strCountry || null,
+    badge: t.strBadge || t.strTeamBadge || t.strLogo || null,
+  };
+}
+
+async function lookupTeam(teamId) {
+  const j = await get(`lookupteam.php?id=${encodeURIComponent(teamId)}`);
+  const t = j && Array.isArray(j.teams) ? j.teams[0] : null;
+  return t ? normalizeTeam(t) : null;
+}
+
+async function searchTeams(name) {
+  const j = await get(`searchteams.php?t=${encodeURIComponent(name)}`);
+  return (j && Array.isArray(j.teams) ? j.teams : []).map(normalizeTeam);
+}
+
 // TheSportsDB šport → kód športu v appke (utils/team.constants.js)
 const SPORT_MAP = {
   soccer: 'football', 'ice hockey': 'hockey', basketball: 'basketball', handball: 'handball',
@@ -210,6 +234,8 @@ module.exports = {
   lastLeagueEvent,
   lookupLeague,
   searchLeagues,
+  lookupTeam,
+  searchTeams,
   eventTime,
   eventState,
   normalizeEvent,

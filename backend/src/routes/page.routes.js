@@ -187,6 +187,11 @@ router.post('/api/app/leagues', apiRequireLogin, appCtl.apiCreate);
 
 // Admin API — automatické výsledky (TheSportsDB)
 const autoResultsCtl = require('../controllers/autoResults.controller');
+const importCtl = require('../controllers/adminImport.controller');
+router.get('/admin/import', requireAdmin, importCtl.importPage);
+router.post('/api/admin/import', apiRequireAdmin, importCtl.createImport);
+router.get('/api/admin/import/status', apiRequireAdmin, importCtl.importStatus);
+router.post('/api/admin/logos/run', apiRequireAdmin, importCtl.runLogos);
 router.get('/api/admin/tsdb/league/:extId', apiRequireAdmin, autoResultsCtl.lookupLeague);
 router.get('/api/admin/tsdb/search', apiRequireAdmin, autoResultsCtl.searchLeagues);
 router.post('/api/leagues/:id/auto-results', apiRequireAdmin, autoResultsCtl.saveLink);
