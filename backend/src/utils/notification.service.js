@@ -137,6 +137,56 @@ async function roundDeadlineSoon(round, league, userIds) {
   } catch (e) { console.error('[notify] roundDeadlineSoon:', e.message); }
 }
 
+// SÚBOJE 1 NA 1
+async function duelChallenge(duel, challengerName, roundName) {
+  await createOne({
+    userId: duel.opponentId, type: 'duel', title: 'Výzva na súboj ⚔️',
+    message: `${challengerName} ťa vyzýva na súboj v kole „${roundName}“. Kto získa viac bodov, vyhrá.`,
+    link: `/app/suboj/${duel.id}`,
+  });
+}
+async function duelAccepted(duel, opponentName, roundName) {
+  await createOne({
+    userId: duel.challengerId, type: 'duel', title: 'Súboj prijatý ⚔️',
+    message: `${opponentName} prijal tvoj súboj v kole „${roundName}“. Veľa šťastia!`,
+    link: `/app/suboj/${duel.id}`,
+  });
+}
+async function duelDeclined(duel, opponentName, roundName) {
+  await createOne({
+    userId: duel.challengerId, type: 'duel', title: 'Súboj odmietnutý',
+    message: `${opponentName} odmietol súboj v kole „${roundName}“.`,
+    link: `/app/suboj/${duel.id}`,
+  });
+}
+// výsledok: rows = [{ userId, title, message }] (každý hráč dostane svoj pohľad)
+async function duelResult(duel, rows) {
+  await createMany(rows.map((r) => ({ ...r, type: 'duel', link: `/app/suboj/${duel.id}` })));
+}
+
+// „Ešte si netipol“ — zápasy bez tipu, ktoré sa začínajú do pár hodín.
+// perUser: Map(userId → [{ id, roundId, home, away, time }]) — jedna notifikácia na hráča.
+async function untippedSoon(perUser) {
+  try {
+    const rows = [];
+    for (const [uid, list] of perUser) {
+      if (!list.length) continue;
+      const first = list.slice().sort((a, b) => new Date(a.time) - new Date(b.time))[0];
+      const when = fmtDateTimeShort(first.time, null);
+      const pair = `${first.home} – ${first.away}`;
+      rows.push({
+        userId: uid, type: 'deadline',
+        title: list.length === 1 ? 'Ešte si netipol zápas' : `Ešte si netipol ${list.length} ${list.length < 5 ? 'zápasy' : 'zápasov'}`,
+        message: list.length === 1
+          ? `${pair} sa začína ${when}. Tipni ho, kým je čas.`
+          : `Najbližší: ${pair} (${when}). Tipni ich, kým je čas.`,
+        link: `/rounds/${first.roundId}`,
+      });
+    }
+    await createMany(rows);
+  } catch (e) { console.error('[notify] untippedSoon:', e.message); }
+}
+
 // ODPOJENÉ (2026-07): duplicitné s matchEvaluated(), ktorá už zoskupuje
 // notifikácie na úroveň kola a sama rozlišuje „celé kolo vyhodnotené" vs
 // „kolo má vyhodnotené zápasy". Ponechané kvôli spätnej kompatibilite.
@@ -534,6 +584,7 @@ async function adminRoundsUnevaluated(count) {
 }
 
 module.exports = {
+  untippedSoon, duelChallenge, duelAccepted, duelDeclined, duelResult,
   createOne, createMany, leagueMemberIds,
   // kolá
   roundStarted, roundDeadlineSoon, matchEvaluated, matchCanceled,

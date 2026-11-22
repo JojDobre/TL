@@ -1,0 +1,30 @@
+<%- include('_head') %>
+<header class="a-top">
+  <a class="a-ib" href="javascript:history.length>1?history.back():location.href='/app/kolo/<%= round.id %>'" aria-label="<%= t('common.back') %>"><svg class="i"><use href="#i-back"/></svg></a>
+  <h1 style="flex:1"><%= t('duel.new') %></h1>
+</header>
+<main class="a-wrap a-in">
+  <section class="a-duel-hero">
+    <div class="dh-ic"><svg class="i"><use href="#i-duel"/></svg></div>
+    <div style="flex:1;min-width:0"><b><%= round.name %></b><span><%= league.name %></span></div>
+  </section>
+  <% if (round.closed) { %>
+    <div class="a-card a-empty"><b><%= t('duel.closedT') %></b><%= t('duel.closedTx') %></div>
+  <% } else if (!players.length) { %>
+    <div class="a-card a-empty"><b><%= t('duel.alone') %></b><%= t('duel.aloneTx') %></div>
+  <% } else { %>
+    <p class="a-muted a-small" style="margin:14px 2px 10px"><%= t('duel.pick') %></p>
+    <input class="a-input" type="search" placeholder="<%= t('duel.search') %>" data-duel-search style="margin-bottom:12px">
+    <div class="a-card a-list" data-round="<%= round.id %>">
+      <% players.forEach(function (p) { %>
+      <div class="a-row" data-duel-player data-name="<%= (p.name + ' ' + p.username).toLowerCase() %>">
+        <%- include('_av', { u: p, size: 40 }) %>
+        <div style="flex:1;min-width:0"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><%= p.name %></b><span class="a-muted a-small">@<%= p.username %></span></div>
+        <% if (p.taken) { %><span class="a-pill info"><%= t('duel.already') %></span>
+        <% } else { %><button class="a-btn gold sm" type="button" data-duel-challenge="<%= p.id %>"><svg class="i" width="16" height="16"><use href="#i-duel"/></svg><%= t('duel.challenge') %></button><% } %>
+      </div>
+      <% }); %>
+    </div>
+  <% } %>
+</main>
+<%- include('_foot') %>

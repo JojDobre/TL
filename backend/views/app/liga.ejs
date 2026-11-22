@@ -41,6 +41,7 @@
     </div>
     <% } %>
   </section>
+  <%- include('_myseason', { ms: typeof mySeason !== 'undefined' ? mySeason : null }) %>
 
   <% if (!league.locked) { %>
 

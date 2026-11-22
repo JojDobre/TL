@@ -178,6 +178,9 @@ const leagueDetailPage = asyncHandler(async (req, res) => {
     isMember: !!myMembership,
     isSeasonMember,
     isCreator: league.creatorId === meId,
+    mySeasonCard: req._standaloneView && myMembership && league.Season
+      ? await require('./appPage.controller')._internal.seasonShareFor(require('../utils/app-i18n').forLang('sk'), meId, league.Season).then((r) => (r ? r.card : null)).catch(() => null)
+      : null,
     adminCanLeave: req.session.userRole === 'admin' && league.type === 'official',
     teamsCount: await league.countTeams(),
     myRank,

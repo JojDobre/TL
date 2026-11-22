@@ -312,6 +312,7 @@ const seasonDetailPage = asyncHandler(async (req, res) => {
     canManage,
     isMember,
     isCreator,
+    mySeasonCard: meId && isMember ? await seasonCardSk(meId, season) : null,
     adminCanLeave: !!isGlobalAdmin && season.type === 'official',
     canCreateLeague,
     status,
@@ -328,6 +329,12 @@ const createSeasonPage = asyncHandler(async (req, res) => {
   });
   res.render('createSeason', { error: null, templates: templates.map((t) => t.toJSON()) });
 });
+
+// karta „Moja sezóna“ na zdieľanie (web — po slovensky)
+async function seasonCardSk(meId, season) {
+  const r = await require('./appPage.controller')._internal.seasonShareFor(require('../utils/app-i18n').forLang('sk'), meId, season);
+  return r ? r.card : null;
+}
 
 // POST /seasons/create
 const createSeasonSubmit = asyncHandler(async (req, res) => {

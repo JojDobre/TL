@@ -40,6 +40,7 @@
     </div>
     <% } %>
   </section>
+  <%- include('_myseason', { ms: typeof mySeason !== 'undefined' ? mySeason : null }) %>
 
   <% if (!locked) { %>
   <div class="a-seg" data-tabs style="margin-top:18px">

@@ -1,0 +1,13 @@
+<%# Ako tipovali ostatní (web). m = zápas s m.crowd, m.lone %>
+<% if (m.lone) { %><div class="crowd-lone">🎯 Jediný si trafil presný výsledok!</div><% } %>
+<% if (m.crowd && m.crowd.n > 1) { var c = m.crowd; var nd = m.tipType === 'winner_no_draw'; %>
+<div class="crowd-box">
+  <div class="between" style="font-weight:700;margin-bottom:8px"><span>Ako tipovali ostatní</span><span class="muted" style="font-weight:600"><%= c.n %> <%= c.n === 1 ? 'tip' : (c.n < 5 ? 'tipy' : 'tipov') %></span></div>
+  <div class="crowd-bar"><i class="h" style="width:<%= c.home %>%"></i><% if (!nd) { %><i class="d" style="width:<%= c.draw %>%"></i><% } %><i class="a" style="width:<%= c.away %>%"></i></div>
+  <div class="between crowd-lg"><span><b>1</b> <%= c.home %> %</span><% if (!nd) { %><span><b>X</b> <%= c.draw %> %</span><% } %><span><b>2</b> <%= c.away %> %</span></div>
+  <% if (c.topScore || c.exactCount != null) { %><div class="between crowd-ft">
+    <% if (c.topScore) { %><span>Najčastejšie <b class="hi"><%= c.topScore %></b> (<%= c.topScorePct %> %)</span><% } %>
+    <% if (c.exactCount != null) { %><span><%= m.tipType === 'exact_score' ? 'Presne trafili' : 'Trafili víťaza' %>: <b class="hi"><%= c.exactCount %></b></span><% } %>
+  </div><% } %>
+</div>
+<% } %>

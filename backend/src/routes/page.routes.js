@@ -187,6 +187,13 @@ router.get('/app/sezona/:id', appCtl.appLogin, appCtl.sezona);
 router.get('/app/notifikacie', appCtl.appLogin, appCtl.notifikacie);
 router.get('/app/profil', appCtl.appLogin, appCtl.profil);
 router.get('/app/pridat', appCtl.appLogin, appCtl.pridat);
+// súboje 1 na 1
+const duelCtl = require('../controllers/duel.controller');
+router.get('/app/suboje', appCtl.appLogin, duelCtl.list);
+router.get('/app/suboj/novy', appCtl.appLogin, duelCtl.newPage);
+router.get('/app/suboj/:id', appCtl.appLogin, duelCtl.detail);
+router.post('/api/duels', apiRequireLogin, duelCtl.apiCreate);
+router.post('/api/duels/:id/:action', apiRequireLogin, duelCtl.apiAction);
 router.post('/api/app/join', apiRequireLogin, appCtl.apiJoin);
 router.post('/api/app/leagues', apiRequireLogin, appCtl.apiCreate);
 

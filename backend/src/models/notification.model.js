@@ -27,8 +27,9 @@ module.exports = (sequelize, DataTypes) => {
       //   achievement – získaný odznak
       //   member      – nový hráč v lige
       //   canceled    – zrušený zápas
+      //   duel        – súboj 1 na 1 (výzva, prijatie, výsledok)
       //   admin, rank – zatiaľ nevyužité (ponechané kvôli starším záznamom)
-      type: DataTypes.ENUM('new_round', 'deadline', 'result', 'achievement', 'admin', 'rank', 'member', 'canceled', 'season', 'sysadmin'),
+      type: DataTypes.ENUM('new_round', 'deadline', 'result', 'achievement', 'admin', 'rank', 'member', 'canceled', 'season', 'sysadmin', 'duel'),
       allowNull: false,
     },
     // Krátky nadpis (tučný riadok). Voliteľný — staršie záznamy ho nemusia mať.

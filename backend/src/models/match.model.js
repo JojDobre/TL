@@ -48,7 +48,9 @@ module.exports = (sequelize, DataTypes) => {
       },
       // --- automatické vyhodnocovanie (utils/auto-results.js) ---
       externalId: { type: DataTypes.STRING(32), allowNull: true },     // idEvent v TheSportsDB
-      resultSource: { type: DataTypes.STRING(16), allowNull: true },   // 'manual' | 'auto'
+      resultSource: { type: DataTypes.STRING(16), allowNull: true },
+      // pripomienka „ešte si netipol“ (2 h pred začiatkom) už odoslaná — utils/scheduler.js
+      remindNotifiedAt: { type: DataTypes.DATE, allowNull: true },   // 'manual' | 'auto'
       autoResults: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true }, // vypnutie pre 1 zápas
       autoCheckedAt: { type: DataTypes.DATE, allowNull: true },        // posledný pokus o stiahnutie výsledku
       autoAttempts: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },

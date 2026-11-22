@@ -114,6 +114,20 @@ const roundDetailPage = asyncHandler(async (req, res) => {
     };
   });
 
+  // AKO TIPOVALI OSTATNÍ — súhrn tipov na zápasy, ktoré sa už začali
+  const startedIds = matches.filter((m) => m.status !== 'scheduled' || new Date(m.matchTime) <= new Date()).map((m) => m.id);
+  if (startedIds.length) {
+    const { crowdStats } = require('../utils/crowd.util');
+    const all = await Tip.findAll({ where: { matchId: startedIds }, attributes: ['userId', 'matchId', 'homeScore', 'awayScore', 'winner'], raw: true });
+    const byM = new Map();
+    all.forEach((t) => { if (!byM.has(t.matchId)) byM.set(t.matchId, []); byM.get(t.matchId).push(t); });
+    matchData.forEach((m) => {
+      if (!byM.has(m.id)) return;
+      m.crowd = crowdStats(m, byM.get(m.id));
+      m.lone = !!(m.crowd && m.tipType === 'exact_score' && m.crowd.exactCount === 1 && m.crowd.exactIds[0] === meId);
+    });
+  }
+
   const tippedCount = matchData.filter((m) => m.myTip && (m.myTip.homeScore != null || m.myTip.winner)).length;
 
   // rebríček kola
@@ -152,7 +166,25 @@ const roundDetailPage = asyncHandler(async (req, res) => {
     exact: myExactCount, hits: evaluatedMine.filter((m) => (m.myTip.points || 0) > 0).length,
     tips: tippedCount, joker: matchData.some((m) => m.myTip && m.myTip.isJoker),
     code: league.hasPassword ? null : league.joinCode, url: 'https://tifo.sk',
+    matches: evaluatedMine.map((m) => {
+      const isWin = m.tipType === 'winner' || m.tipType === 'winner_no_draw';
+      const full = isWin ? (m.myTip.points || 0) > 0 : m.myTip.basePoints >= (scoring.exactScore || 10);
+      return {
+        home: m.homeTeam ? m.homeTeam.name : '?', away: m.awayTeam ? m.awayTeam.name : '?',
+        result: m.homeScore != null ? `${m.homeScore}:${m.awayScore}` : null,
+        tip: isWin ? ({ home: '1', draw: 'X', away: '2' })[m.myTip.winner] || '–' : `${m.myTip.homeScore}:${m.myTip.awayScore}`,
+        pts: m.myTip.points || 0, joker: !!m.myTip.isJoker, hit: full ? 'exact' : ((m.myTip.points || 0) > 0 ? 'part' : 'miss'),
+      };
+    }),
+    board: (() => {
+      const nm = (u) => [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username;
+      const rows = leaderboard.map((r, i) => ({ rank: i + 1, name: nm(r.user), pts: r.totalPoints, me: r.user.id === meId }));
+      const top = rows.slice(0, 5); const me = rows.find((r) => r.me);
+      if (me && me.rank > 5) top.push({ gap: true }, me);
+      return top;
+    })(),
     labels: {
+      pick: 'Vyber štýl karty', shareNow: 'Zdieľať', myTips: 'Moje tipy v kole', ptsShort: 'b', place: 'miesto v kole', playersW: 'hráčov', exactShort: 'presné',
       got: 'V tomto kole mám', pts: myPoints === 1 ? 'bod' : (myPoints >= 2 && myPoints <= 4 ? 'body' : 'bodov'),
       rank: '{r}. miesto z {n}', exact: 'presné výsledky', hits: 'bodované tipy',
       tips: tippedCount === 1 ? 'tip' : (tippedCount >= 2 && tippedCount <= 4 ? 'tipy' : 'tipov'),

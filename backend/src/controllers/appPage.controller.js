@@ -110,6 +110,41 @@ function useLang(req, res) {
   return L;
 }
 
+// ZDIEĽANIE: spoločné popisky štýlov kariet a skrátený rebríček (top 5 + ja)
+function shareLabels(L) {
+  return {
+    pick: L.t('share.pick'), shareNow: L.t('share.short'), myTips: L.t('share.myTips'), ptsShort: L.t('common.pts'),
+    place: L.t('share.place'), playersW: L.t('share.playersW'), exactShort: L.t('share.exactShort'),
+    variants: { classic: L.t('share.v.classic'), minimal: L.t('share.v.minimal'), matches: L.t('share.v.matches'), rank: L.t('share.v.rank'), square: L.t('share.v.square'), duel: L.t('share.v.duel'), duelLight: L.t('share.v.light'), season: L.t('share.v.season'), seasonLight: L.t('share.v.light') },
+  };
+}
+// SEZÓNNE ZHRNUTIE → údaje pre kartu (štýl „season“) a blok na obrazovke
+async function seasonShareFor(L, meId, season) {
+  if (!season) return null;
+  const sum = await require('../utils/season-summary.util').seasonSummary(meId, season.id).catch(() => null);
+  if (!sum) return null;
+  return {
+    ...sum,
+    card: {
+      variant: 'season', season: season.name, initials: initials(season.name), grad: grad(season.name), url: 'https://tifo.sk',
+      points: sum.points, rank: sum.rank, players: sum.players, exact: sum.exact, accuracy: sum.accuracy,
+      rounds: sum.rounds, tips: sum.tips, best: sum.best, team: sum.team,
+      labels: {
+        ...shareLabels(L), yearIn: L.t('ssum.title'), pts: L.tn(sum.points, 'point'), rank: L.t('share.rankSeason'),
+        exact: L.t('share.exact'), accuracy: L.t('ssum.accuracy'), roundsW: L.tn(sum.rounds, 'roundPlayed'), tips: L.tn(sum.tips, 'tip'),
+        bestRound: L.t('ssum.best'), favTeam: L.t('ssum.team'), cta: L.t('share.cta'),
+        text: L.t('ssum.text', { p: sum.points, s: season.name }),
+      },
+    },
+  };
+}
+function shareBoard(board) {
+  const top = board.slice(0, 5).map((r) => ({ rank: r.rank, name: r.name, pts: r.points, me: !!r.me }));
+  const me = board.find((r) => r.me);
+  if (me && me.rank > 5) top.push({ gap: true }, { rank: me.rank, name: me.name, pts: me.points, me: true });
+  return top;
+}
+
 // prihlásenie pre appku — neprihlásený ide na úvodné obrazovky
 function appLogin(req, res, next) {
   if (!req.session || !req.session.userId) return res.redirect('/app/welcome');
@@ -602,7 +637,10 @@ const liga = asyncHandler(async (req, res) => {
   const s = league.scoringSystem || { exactScore: 10, correctWinner: 3, goalDifference: 2, correctGoals: 1 };
   const meIdx = top.findIndex((r) => r.user.id === meId);
 
+  // turnaj (samostatná liga) = sezóna s jednou ligou → zhrnutie sezóny tu
+  const mySeason = access.member && season && season.mode === 'standalone' ? await seasonShareFor(req.L, meId, season) : null;
   res.render('app/liga', {
+    mySeason,
     title: league.name, screen: 'liga', appTab: 'home',
     league: {
       id: league.id, name: league.name, image: league.image || (season && season.image) || null,
@@ -712,7 +750,11 @@ const kolo = asyncHandler(async (req, res) => {
       name: userName(o.User), initials: userInitials(o.User), image: o.User && o.User.profileImage, color: avColor(o.userId),
       tip: tipText(m.tipType, o), points: o.points, joker: !!o.isJoker,
     })).sort((a, b) => (b.points || 0) - (a.points || 0)) : [];
+    // ako tipovali ostatní — až po začiatku zápasu
+    const crowd = started ? require('../utils/crowd.util').crowdStats(m, [...(others.get(m.id) || []), ...(t ? [t] : [])]) : null;
     done.push({
+      crowd,
+      lone: !!(crowd && m.tipType === 'exact_score' && crowd.exactCount === 1 && crowd.exactIds[0] === meId),
       id: m.id, type: m.tipType, home: team(m.homeTeam), away: team(m.awayTeam),
       state: m.status === 'finished' ? 'finished' : (m.status === 'canceled' ? 'canceled' : (started ? 'live' : 'waiting')),
       result: m.status === 'finished' && m.homeScore != null ? `${m.homeScore}:${m.awayScore}` : null,
@@ -745,7 +787,18 @@ const kolo = asyncHandler(async (req, res) => {
       tips: mine.size, joker: [...mine.values()].some((t) => t.isJoker),
       code: league.hasPassword ? null : league.joinCode,
       url: 'https://tifo.sk',
+      matches: finishedMine.map((m) => {
+        const tp = mine.get(m.id); const b = base(tp);
+        const full = m.tipType === 'exact_score' ? b >= (s.exactScore || 10) : (tp.points || 0) > 0;
+        return {
+          home: m.homeTeam ? m.homeTeam.name : '?', away: m.awayTeam ? m.awayTeam.name : '?',
+          result: m.homeScore != null ? `${m.homeScore}:${m.awayScore}` : null, tip: tipText(m.tipType, tp),
+          pts: tp.points || 0, joker: !!tp.isJoker, hit: full ? 'exact' : ((tp.points || 0) > 0 ? 'part' : 'miss'),
+        };
+      }),
+      board: shareBoard(board),
       labels: {
+        ...shareLabels(L),
         got: L.t('share.got'), pts: L.tn(myPoints, 'point'), rank: L.t('share.rank'),
         exact: L.t('share.exact'), hits: L.t('share.hits'), tips: L.tn(mine.size, 'tip'),
         joker: L.t('share.joker'), cta: L.t('share.cta'), code: L.t('share.code'),
@@ -808,7 +861,7 @@ const sezona = asyncHandler(async (req, res) => {
     isMember, isCreator, canManage, canCreateLeague, locked: !canView,
     stopCompeting: isCreator && isAdmin && season.type === 'official',
   };
-  if (!canView) return res.render('app/sezona', { ...base, leagues: [], board: [], news: [], rules: '', participants: 0, myRank: null, myPoints: 0 });
+  if (!canView) return res.render('app/sezona', { ...base, mySeason: null, leagues: [], board: [], news: [], rules: '', participants: 0, myRank: null, myPoints: 0 });
 
   const ids = leagues.map((l) => l.id);
   const [memberRows, myRows, participants, board, news] = await Promise.all([
@@ -824,6 +877,7 @@ const sezona = asyncHandler(async (req, res) => {
   const meRow = rows.find((r) => r.me);
   res.render('app/sezona', {
     ...base,
+    mySeason: isMember ? await seasonShareFor(req.L, meId, season) : null,
     leagues: leagues.map((l) => ({
       id: l.id, name: l.name, image: l.image || season.image || null, grad: grad(l.name), initials: initials(l.name),
       players: cnt.get(l.id) || 0, member: mineSet.has(l.id), ended: isLeagueLocked(l), hasPassword: !!l.hasPassword,
@@ -840,7 +894,7 @@ const sezona = asyncHandler(async (req, res) => {
 const NOTI_GROUPS = {
   tipy: ['deadline', 'new_round'],
   vysledky: ['result', 'canceled'],
-  ligy: ['member', 'season'],
+  ligy: ['member', 'season', 'duel'],
   ostatne: ['achievement', 'admin', 'sysadmin'],
 };
 const notifikacie = asyncHandler(async (req, res) => {
@@ -972,5 +1026,5 @@ const apiCreate = asyncHandler(async (req, res) => {
 
 module.exports = {
   appLogin, entry, welcome, home, tipovat, rebricky, rebricek, liga, kolo, sezona, notifikacie, profil, pridat, apiJoin, apiCreate,
-  _internal: { initials, teamAbbr, untilLabel, whenLabel, sparkPath, pl },
+  _internal: { initials, teamAbbr, untilLabel, whenLabel, sparkPath, pl, shareLabels, shareBoard, grad, useLang, seasonShareFor },
 };

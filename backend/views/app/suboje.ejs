@@ -1,0 +1,33 @@
+<%- include('_head') %>
+<header class="a-top">
+  <a class="a-ib" href="javascript:history.length>1?history.back():location.href='/app/profil'" aria-label="<%= t('common.back') %>"><svg class="i"><use href="#i-back"/></svg></a>
+  <h1 style="flex:1"><%= t('duel.title') %></h1>
+</header>
+<main class="a-wrap a-in">
+  <section class="a-duel-hero">
+    <div class="dh-ic"><svg class="i"><use href="#i-duel"/></svg></div>
+    <div style="flex:1;min-width:0"><b><%= t('duel.heroT') %></b><span><%= t('duel.heroTx') %></span></div>
+  </section>
+  <div class="a-duel-rec">
+    <div><b class="a-num" style="color:var(--a-ok)"><%= record.w %></b><span><%= t('duel.wins') %></span></div>
+    <div><b class="a-num"><%= record.d %></b><span><%= t('duel.draws') %></span></div>
+    <div><b class="a-num" style="color:var(--a-bad)"><%= record.l %></b><span><%= t('duel.losses') %></span></div>
+  </div>
+
+  <% function row(r) { %>
+    <a class="a-duel-row <%= r.result || r.state %>" href="/app/suboj/<%= r.id %>">
+      <%- include('_av', { u: r.opp, size: 42 }) %>
+      <div class="dr-main"><b><%= r.opp.name %></b><span><%= r.league %> · <%= r.round %></span></div>
+      <% if (r.state === 'finished') { %><div class="dr-score"><b><%= r.mine %>:<%= r.theirs %></b><span class="a-pill <%= r.result === 'win' ? 'ok' : (r.result === 'loss' ? '' : 'info') %>"><%= t('duel.r.' + r.result) %></span></div>
+      <% } else if (r.state === 'live' || r.state === 'ready') { %><div class="dr-score"><b><%= r.mine %>:<%= r.theirs %></b><span class="a-pill warn"><%= t('duel.s.' + r.state) %></span></div>
+      <% } else { %><span class="a-pill <%= r.incoming ? 'gold' : 'info' %>"><%= t(r.incoming ? 'duel.s.incoming' : 'duel.s.' + r.state) %></span><% } %>
+    </a>
+  <% } %>
+
+  <% if (incoming.length) { %><div class="a-sec"><%= t('duel.incoming') %></div><div class="a-card a-list"><% incoming.forEach(row) %></div><% } %>
+  <div class="a-sec"><%= t('duel.active') %></div>
+  <% if (active.length) { %><div class="a-card a-list"><% active.forEach(row) %></div>
+  <% } else { %><div class="a-card a-empty"><b><%= t('duel.noneT') %></b><%= t('duel.noneTx') %></div><% } %>
+  <% if (finished.length) { %><div class="a-sec"><%= t('duel.finished') %></div><div class="a-card a-list"><% finished.forEach(row) %></div><% } %>
+</main>
+<%- include('_foot') %>

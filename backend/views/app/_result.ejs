@@ -13,6 +13,20 @@
     <% if (m.myJoker) { %><span class="a-pill gold" title="<%= t('joker.title') %>">🃏 2×</span><% } %>
     <% if (m.myPoints != null) { %><span class="a-pill <%= m.myPoints > 0 ? 'gold' : '' %>" style="margin-left:auto">+<%= m.myPoints %> <%= t('common.pts') %></span><% } %>
   </div>
+  <% if (m.lone) { %><div class="a-lone">🎯 <%= t('crowd.lone') %></div><% } %>
+  <% if (m.crowd && m.crowd.n > 1) { var c = m.crowd; %>
+  <div class="a-crowd">
+    <div class="cr-h"><span><%= t('crowd.title') %></span><span class="a-muted"><%= c.n %> <%= tn(c.n, 'tip') %></span></div>
+    <div class="cr-bar">
+      <i class="h" style="width:<%= c.home %>%"></i><% if (m.type !== 'winner_no_draw') { %><i class="d" style="width:<%= c.draw %>%"></i><% } %><i class="a" style="width:<%= c.away %>%"></i>
+    </div>
+    <div class="cr-lg"><span><b>1</b> <%= c.home %> %</span><% if (m.type !== 'winner_no_draw') { %><span><b>X</b> <%= c.draw %> %</span><% } %><span><b>2</b> <%= c.away %> %</span></div>
+    <% if (c.topScore || c.exactCount != null) { %><div class="cr-ft">
+      <% if (c.topScore) { %><span><%= t('crowd.top') %> <b><%= c.topScore %></b> (<%= c.topScorePct %> %)</span><% } %>
+      <% if (c.exactCount != null) { %><span><%= m.type === 'exact_score' ? t('crowd.exact') : t('crowd.winner') %> <b><%= c.exactCount %></b></span><% } %>
+    </div><% } %>
+  </div>
+  <% } %>
   <% if (m.state !== 'waiting' && m.others.length) { %>
   <details class="a-others">
     <summary><%= t('kolo.others', { n: m.others.length }) %><svg class="i" width="16" height="16"><use href="#i-down"/></svg></summary>

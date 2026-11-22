@@ -491,6 +491,36 @@
     }
   }
 
+  // ================================================================ SÚBOJE
+  if (screen === 'suboj-novy') {
+    var dsearch = document.querySelector('[data-duel-search]');
+    if (dsearch) dsearch.addEventListener('input', function () {
+      var q = dsearch.value.trim().toLowerCase();
+      document.querySelectorAll('[data-duel-player]').forEach(function (r) { r.hidden = q && r.getAttribute('data-name').indexOf(q) < 0; });
+    });
+    document.querySelectorAll('[data-duel-challenge]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (b.disabled) return;
+        b.disabled = true;
+        var roundId = Number(b.closest('[data-round]').getAttribute('data-round'));
+        api('/api/duels', { method: 'POST', body: { roundId: roundId, opponentId: Number(b.getAttribute('data-duel-challenge')) } })
+          .then(function (j) { haptic(20); toast(tr('duelSent', 'Výzva odoslaná')); setTimeout(function () { location.href = j.redirect; }, 500); })
+          .catch(function (e) { b.disabled = false; toast(e.message, true); });
+      });
+    });
+  }
+  if (screen === 'suboj') {
+    document.querySelectorAll('[data-duel-act]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (b.disabled) return;
+        b.disabled = true;
+        api('/api/duels/' + b.getAttribute('data-id') + '/' + b.getAttribute('data-duel-act'), { method: 'POST', body: {} })
+          .then(function (j) { toast(j.message); haptic(15); setTimeout(function () { if (j.redirect) location.href = j.redirect; else location.reload(); }, 600); })
+          .catch(function (e) { b.disabled = false; toast(e.message, true); });
+      });
+    });
+  }
+
   // ================================================================== KOLO
   if (screen === 'kolo') {
     var go = document.querySelector('[data-kolo-go]');

@@ -1,0 +1,18 @@
+<%# Blok „Moja sezóna“ (sezóna / turnaj) s kartou na zdieľanie. ms = výsledok seasonShareFor %>
+<% if (ms) { %>
+<section class="a-myseason">
+  <div class="ms-h"><span><%= t('ssum.title') %></span><% if (ms.rank) { %><span class="a-pill gold">🏆 <%= ms.rank %>. / <%= ms.players %></span><% } %></div>
+  <div class="ms-grid">
+    <div><b class="a-num" style="color:var(--a-gold)"><%= ms.points %></b><span><%= tn(ms.points, 'point') %></span></div>
+    <div><b class="a-num"><%= ms.exact %></b><span><%= t('share.exact') %></span></div>
+    <div><b class="a-num"><%= ms.accuracy != null ? ms.accuracy + ' %' : '–' %></b><span><%= t('ssum.accuracy') %></span></div>
+    <div><b class="a-num"><%= ms.rounds %></b><span><%= tn(ms.rounds, 'roundPlayed') %></span></div>
+  </div>
+  <% if (ms.best || ms.team) { %><div class="ms-extra">
+    <% if (ms.best) { %><div>⭐ <%= t('ssum.best') %>: <b><%= ms.best.name %></b> (+<%= ms.best.pts %>)</div><% } %>
+    <% if (ms.team) { %><div>❤️ <%= t('ssum.team') %>: <b><%= ms.team %></b></div><% } %>
+  </div><% } %>
+  <button class="a-btn gold" type="button" data-share-card="<%= JSON.stringify(ms.card) %>" style="margin-top:14px"><svg class="i" width="18" height="18"><use href="#i-share"/></svg><%= t('ssum.share') %></button>
+</section>
+<script src="/js/share-card.js?v=<%= assetV %>" defer></script>
+<% } %>

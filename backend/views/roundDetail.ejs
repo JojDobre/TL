@@ -144,6 +144,9 @@
         <% } else { %><span class="tag tag-info">Naplánované</span><% } %>
       </div>
       <p class="muted" style="margin:0"><%= matches.length %> zápasov · tipuj presný výsledok · uzávierka <%= fmtDT(round.endDate) %></p>
+      <% if (isMember && round.status !== 'finished' && !seasonLocked) { %>
+      <div class="row g-2 wrap-gap" style="margin-top:12px"><a href="/app/suboj/novy?kolo=<%= round.id %>" class="btn btn-secondary btn-sm">⚔️ Vyzvať na súboj</a><a href="/app/suboje" class="btn btn-ghost btn-sm">Moje súboje</a></div>
+      <% } %>
       <% if (typeof isManager !== 'undefined' && isManager && !isClone) { %>
       <div class="row g-2 wrap-gap" style="margin-top:12px">
         <a href="/rounds/<%= round.id %>/evaluate" class="btn btn-brand btn-sm">Vyhodnotiť zápasy</a>
@@ -264,6 +267,7 @@
           <% } else if (locked && m.status === 'scheduled') { %>
             <div class="muted" style="font-size:var(--fs-xs);margin-top:8px;text-align:center">Tipovanie tohto zápasu je už uzavreté.</div>
           <% } %>
+          <% if (locked) { %><%- include('partials/crowd-web', { m: m }) %><% } %>
           <% if (typeof jokerOn !== 'undefined' && jokerOn && canTip && !locked) { %>
             <%- include('partials/joker-web', { jm: { id: m.id, roundId: round.id, active: !!(m.myTip && m.myTip.isJoker), locked: jokerLocked } }) %>
           <% } else if (m.myTip && m.myTip.isJoker) { %>
@@ -317,6 +321,7 @@
               <span class="muted" style="font-size:var(--fs-sm)">Netipoval si tento zápas</span><span class="pts-pill zero">0</span>
             <% } %>
           </div>
+          <%- include('partials/crowd-web', { m: m }) %>
           <% if (m.others && m.others.length > 0) { %>
           <button class="toggle-others" data-others>Zobraziť tipy ostatných (<%= m.others.length > 4 ? '4+' : m.others.length %>) ▾</button>
           <div class="others" data-others-box>

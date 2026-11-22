@@ -95,6 +95,7 @@
     </form>
   </div>
 </div>
+<script src="/js/share-card.js?v=<%= assetV %>" defer></script>
 <%- include('partials/footer') %>
 <% } else { %>
 
@@ -129,6 +130,7 @@
         <% if (typeof canManage !== 'undefined' && canManage) { %>
           <a href="/seasons/<%= season.id %>/manage" class="btn btn-secondary">Spravovať</a>
         <% } %>
+        <% if (typeof mySeasonCard !== 'undefined' && mySeasonCard) { %><button type="button" class="btn btn-secondary" data-share-card="<%= JSON.stringify(mySeasonCard) %>">↗ Zdieľať moju sezónu</button><% } %>
         <% if (typeof isMember !== 'undefined' && isMember && (!isCreator || (typeof adminCanLeave !== 'undefined' && adminCanLeave))) { %>
           <% const stopMode = isCreator; %>
           <form action="/seasons/<%= season.id %>/leave" method="POST" onsubmit="return confirm('<%= stopMode ? 'Prestať súťažiť? Súťaž budeš ďalej spravovať, ale tvoje tipy v nej sa zmažú a zmizneš z rebríčka.' : 'Naozaj opustiť túto sezónu?' %>')" style="display:inline">
