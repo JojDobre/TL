@@ -98,9 +98,10 @@
         <% if (typeof canManage !== 'undefined' && canManage) { %>
           <a href="/seasons/<%= league.seasonId %>/manage" class="btn btn-secondary">Spravovať</a>
         <% } %>
-        <% if (typeof isMember !== 'undefined' && isMember && !isCreator) { %>
-          <form action="/leagues/<%= league.id %>/leave" method="POST" onsubmit="return confirm('Naozaj opustiť tento turnaj?')" style="display:inline">
-            <button type="submit" class="btn btn-secondary">Opustiť turnaj</button>
+        <% if (typeof isMember !== 'undefined' && isMember && (!isCreator || (typeof adminCanLeave !== 'undefined' && adminCanLeave))) { %>
+          <% const stopMode = isCreator; %>
+          <form action="/leagues/<%= league.id %>/leave" method="POST" onsubmit="return confirm('<%= stopMode ? 'Prestať súťažiť? Súťaž budeš ďalej spravovať, ale tvoje tipy v nej sa zmažú a zmizneš z rebríčka.' : 'Naozaj opustiť tento turnaj?' %>')" style="display:inline">
+            <button type="submit" class="btn btn-secondary"><%= stopMode ? 'Nesúťažiť' : 'Opustiť turnaj' %></button>
           </form>
         <% } %>
         <% if (heroStatus !== 'ended') { %>

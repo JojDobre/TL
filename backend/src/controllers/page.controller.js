@@ -12,6 +12,7 @@ const { deleteSeason } = require('../utils/delete.util');
 const { cloneTemplateInto } = require('../utils/league-clone.util');
 const { asyncHandler } = require('../middleware/error.middleware');
 const { seasonCounts, seasonLeaderboard } = require('../utils/standings.util');
+const { adminMayLeave, stopCompeting } = require('../utils/stop-competing');
 const { leagueDetailPage, manageLeaguePage } = require('./leaguePage.controller');
 const achievements = require('../utils/achievement.engine');
 
@@ -311,6 +312,7 @@ const seasonDetailPage = asyncHandler(async (req, res) => {
     canManage,
     isMember,
     isCreator,
+    adminCanLeave: !!isGlobalAdmin && season.type === 'official',
     canCreateLeague,
     status,
   });
@@ -360,6 +362,8 @@ const createSeasonSubmit = asyncHandler(async (req, res) => {
   // oficiálnu sezónu môže vytvoriť LEN admin
   const seasonType = (type === 'official' && user.role === 'admin') ? 'official' : 'community';
   const participantLimit = seasonType === 'community' ? 100 : null;
+  // oficiálnu súťaž admin spravuje, ale súťaží v nej len ak chce
+  const creatorPlays = seasonType !== 'official' || req.body.creatorPlays === 'on';
 
   // dátumy (voliteľné, ale ak sú obe, koniec musí byť po začiatku)
   let start = startDate ? new Date(startDate) : null;
@@ -433,9 +437,12 @@ const createSeasonSubmit = asyncHandler(async (req, res) => {
           templateId: template ? template.id : null,
         }, { transaction: t });
 
-        // zakladateľ = admin v lige aj v sezóne
-        await UserLeague.create({ userId, leagueId: league.id, role: 'admin', joinedAt: new Date() }, { transaction: t });
-        await UserSeason.create({ userId, seasonId: season.id, role: 'admin', joinedAt: new Date() }, { transaction: t });
+        // zakladateľ = admin v lige aj v sezóne (oficiálnu admin spravuje
+        // aj bez členstva — súťaží, len ak zaškrtol „Súťažím aj ja“)
+        if (creatorPlays) {
+          await UserLeague.create({ userId, leagueId: league.id, role: 'admin', joinedAt: new Date() }, { transaction: t });
+          await UserSeason.create({ userId, seasonId: season.id, role: 'admin', joinedAt: new Date() }, { transaction: t });
+        }
 
         newSeasonId = season.id;
         newLeague = league;
@@ -472,7 +479,9 @@ const createSeasonSubmit = asyncHandler(async (req, res) => {
     startDate: start, endDate: end, ended: false,
     password: passwordHash, hasPassword: priv, hidden: hide,
   });
-  try { await season.addParticipant(userId, { through: { role: 'admin' } }); } catch (e) { /* nič */ }
+  if (creatorPlays) {
+    try { await season.addParticipant(userId, { through: { role: 'admin' } }); } catch (e) { /* nič */ }
+  }
 
   achievements.evaluateInBackground([userId]);
   res.redirect('/seasons/' + season.id);
@@ -816,6 +825,13 @@ const leaveSeasonSubmit = asyncHandler(async (req, res) => {
   const userId = Number(req.session.userId);
   const season = await Season.findByPk(req.params.id);
   if (!season) return res.redirect('/seasons');
+  // admin, ktorý oficiálnu sezónu založil, z nej môže odísť (ďalej ju
+  // spravuje, ale nesúťaží — zmažú sa aj jeho tipy v jej ligách)
+  const me = await User.findByPk(userId, { attributes: ['id', 'role'] });
+  if (adminMayLeave(me, season)) {
+    await stopCompeting(userId, { seasonId: season.id });
+    return res.redirect('/seasons/' + season.id);
+  }
   if (season.creatorId === userId) {
     return res.status(400).render('error-page', { message: 'Zakladateľ nemôže opustiť sezónu — môžeš ju ukončiť alebo zmazať.' });
   }

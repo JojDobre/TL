@@ -98,6 +98,7 @@
         <label class="type-opt" data-type="official"><input type="radio" name="type" value="official" hidden><div class="t-ic">🏆</div><b>Oficiálna</b><span class="muted" style="font-size:var(--fs-sm)">Preberá kolá a bodovanie celej sezóny. Iba admin.</span></label>
       </div>
       <label class="check" id="tplWrap" style="margin-bottom:14px;display:none"><input type="checkbox" name="isTemplate"> Označiť ako šablónu (používatelia si ju budú môcť naklonovať)</label>
+      <label class="check" id="playWrap" style="margin-bottom:14px;display:none"><input type="checkbox" name="creatorPlays"> Súťažím aj ja <span class="faint">(inak ligu len spravuješ a nie si v rebríčku)</span></label>
       <% } else { %>
       <input type="hidden" name="type" value="custom">
       <% } %>
@@ -155,6 +156,8 @@
       if (tag) { if (opt.getAttribute('data-type')==='official'){tag.textContent='Oficiálna';tag.className='tag tag-brand';} else {tag.textContent='Custom';tag.className='tag tag-gold';} }
       var tpl = document.getElementById('tplWrap');
       if (tpl) tpl.style.display = opt.getAttribute('data-type')==='official' ? 'flex' : 'none';
+      var play = document.getElementById('playWrap');
+      if (play) play.style.display = opt.getAttribute('data-type')==='official' ? 'flex' : 'none';
     });
   });
 

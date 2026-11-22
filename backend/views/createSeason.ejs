@@ -76,6 +76,7 @@
         <label class="type-opt sel" data-type="official"><input type="radio" name="type" value="official" hidden checked><div class="t-ic">🏆</div><b>Oficiálna</b><span class="muted" style="font-size:var(--fs-sm)">Verejná, globálny rebríček, overené turnaje. Iba pre adminov.</span></label>
         <label class="type-opt" data-type="community"><input type="radio" name="type" value="community" hidden><div class="t-ic">👥</div><b>Community</b><span class="muted" style="font-size:var(--fs-sm)">Vlastná sezóna pre tvoju partiu. Verejná alebo súkromná cez ID.</span></label>
       </div>
+      <label class="check" id="playWrap" style="display:flex;align-items:center;gap:10px;margin-top:14px"><input type="checkbox" name="creatorPlays"> <span>Súťažím aj ja <span class="faint">(inak súťaž len spravuješ a nie si v rebríčku)</span></span></label>
     </div>
     <% } %>
 
@@ -176,6 +177,8 @@
       var radio = opt.querySelector('input[type=radio]'); if (radio) radio.checked = true;
       var tag = document.querySelector('.preview-cover .tag');
       var isCommunity = opt.getAttribute('data-type') === 'community';
+      var play = document.getElementById('playWrap');
+      if (play) play.style.display = isCommunity ? 'none' : 'flex';
       if (isCommunity) { tag.textContent = 'Community'; tag.className = 'tag tag-gold'; }
       else { tag.textContent = 'Oficiálna'; tag.className = 'tag tag-brand'; }
       // súkromie má zmysel len pre community (oficiálne sú vždy verejné)

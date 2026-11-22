@@ -11,6 +11,7 @@ const { deleteLeague } = require('../utils/delete.util');
 const { SPORTS, COUNTRIES } = require('../utils/team.constants');
 const { asyncHandler } = require('../middleware/error.middleware');
 const { leagueLeaderboard } = require('../utils/standings.util');
+const { adminMayLeave, stopCompeting } = require('../utils/stop-competing');
 const notify = require('../utils/notification.service');
 const achievements = require('../utils/achievement.engine');
 
@@ -177,6 +178,7 @@ const leagueDetailPage = asyncHandler(async (req, res) => {
     isMember: !!myMembership,
     isSeasonMember,
     isCreator: league.creatorId === meId,
+    adminCanLeave: req.session.userRole === 'admin' && league.type === 'official',
     teamsCount: await league.countTeams(),
     myRank,
     myPoints,
@@ -351,14 +353,19 @@ const createLeagueSubmit = asyncHandler(async (req, res) => {
     isTemplate: markTemplate,
   });
 
-  await UserLeague.findOrCreate({
-    where: { userId, leagueId: league.id },
-    defaults: { userId, leagueId: league.id, role: 'admin', joinedAt: new Date() },
-  });
-  await UserSeason.findOrCreate({
-    where: { userId, seasonId },
-    defaults: { userId, seasonId, role: 'player', joinedAt: new Date() },
-  });
+  // oficiálnu ligu admin spravuje aj bez členstva — súťaží v nej, len ak
+  // zaškrtol „Súťažím aj ja“
+  const creatorPlays = !(leagueType === 'official' && user.role === 'admin') || req.body.creatorPlays === 'on';
+  if (creatorPlays) {
+    await UserLeague.findOrCreate({
+      where: { userId, leagueId: league.id },
+      defaults: { userId, leagueId: league.id, role: 'admin', joinedAt: new Date() },
+    });
+    await UserSeason.findOrCreate({
+      where: { userId, seasonId },
+      defaults: { userId, seasonId, role: 'player', joinedAt: new Date() },
+    });
+  }
 
   // ak je liga zo šablóny → naklonuj kolá a zápasy zo šablóny
   if (template) {
@@ -533,6 +540,15 @@ const leaveLeagueSubmit = asyncHandler(async (req, res) => {
   const userId = Number(req.session.userId);
   const league = await League.findByPk(req.params.id);
   if (!league) return res.redirect('/seasons');
+  // admin, ktorý oficiálnu súťaž založil, z nej môže odísť (ďalej ju spravuje,
+  // ale nesúťaží — zmažú sa aj jeho tipy, aby nebol v rebríčku)
+  const me = await User.findByPk(userId, { attributes: ['id', 'role'] });
+  if (adminMayLeave(me, league)) {
+    const parent = await Season.findByPk(league.seasonId, { attributes: ['id', 'mode'] });
+    const standalone = parent && parent.mode === 'standalone';
+    await stopCompeting(userId, standalone ? { seasonId: league.seasonId } : { leagueIds: [league.id] });
+    return res.redirect(standalone ? '/seasons/' + league.seasonId : '/leagues/' + league.id);
+  }
   if (league.creatorId === userId) {
     return res.status(400).render('error-page', { message: 'Zakladateľ nemôže opustiť ligu — môžeš ju zmazať.' });
   }

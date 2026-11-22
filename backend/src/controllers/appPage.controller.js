@@ -612,6 +612,8 @@ const liga = asyncHandler(async (req, res) => {
       locked: !access.ok,
       hasPassword: !!league.hasPassword,
       creator: league.creatorId === meId,
+      // admin, ktorý oficiálnu ligu založil, v nej môže prestať súťažiť
+      stopCompeting: league.creatorId === meId && league.type === 'official' && req.session.userRole === 'admin',
       joinCode: access.ok ? league.joinCode : null,
       description: access.ok ? (league.description || '') : '',
       seasonId: league.seasonId,
@@ -771,6 +773,7 @@ const sezona = asyncHandler(async (req, res) => {
       inviteCode: canView ? season.inviteCode : null,
     },
     isMember, isCreator, canManage, canCreateLeague, locked: !canView,
+    stopCompeting: isCreator && isAdmin && season.type === 'official',
   };
   if (!canView) return res.render('app/sezona', { ...base, leagues: [], board: [], news: [], rules: '', participants: 0, myRank: null, myPoints: 0 });
 
