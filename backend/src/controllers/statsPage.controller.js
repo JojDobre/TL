@@ -4,10 +4,72 @@
 // naprieč všetkými ligami. Len reálne dáta; trendy/história poradia (ktoré
 // netrackujeme) sa nezobrazujú.
 
-const { Tip, Match, Round, Team, League, User, Sequelize } = require('../models');
-const Op = Sequelize.Op;
+const { Tip, Match, Round, Team, League, User, sequelize, Sequelize } = require('../models');
 const { tipQualityWeight } = require('../utils/accuracy.util');
 const { asyncHandler } = require('../middleware/error.middleware');
+const { cached } = require('../utils/standings.util');
+const dt = require('../utils/datetime.util');
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const dayFmt = new Intl.DateTimeFormat('en-CA', { timeZone: dt.TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+const dayKey = (d) => dayFmt.format(d);   // YYYY-MM-DD v zóne appky
+
+// Body všetkých hráčov v oficiálnych ligách — agregované v SQL (nie stovky
+// tisíc tipov do pamäte servera, to blokovalo celý server). Všetko pred
+// 30-dňovým oknom = jeden riadok na hráča (h = 0), v okne po hodinách
+// vyhodnotenia (Match.updatedAt). Rovnaké pre všetkých → cache 2 min.
+function officialPointsByHour(windowStart) {
+  return cached(`stats:rankAgg:${dayKey(windowStart)}`, 2 * 60 * 1000, async () => {
+    const rows = await sequelize.query(`
+      SELECT t.user_id AS userId,
+             CASE WHEN m.updated_at < :start THEN 0 ELSE FLOOR(UNIX_TIMESTAMP(m.updated_at) / 3600) END AS h,
+             SUM(t.points) AS points
+      FROM tips t
+      JOIN matches m ON m.id = t.match_id AND m.status = 'finished'
+      JOIN rounds r ON r.id = m.round_id
+      JOIN leagues l ON l.id = r.league_id AND l.type = 'official'
+      WHERE t.points IS NOT NULL
+      GROUP BY t.user_id, h`, { replacements: { start: windowStart }, type: Sequelize.QueryTypes.SELECT });
+    return rows.map((r) => ({ userId: Number(r.userId), h: Number(r.h), points: Number(r.points) || 0 }));
+  });
+}
+
+// VÝVOJ POZÍCIE V REBRÍČKU — posledných 30 dní: pozícia naprieč VŠETKÝMI
+// oficiálnymi ligami spolu, z kumulatívnych bodov ku koncu každého dňa.
+async function rankProgressOf(meId) {
+  const todayKey = dayKey(new Date());
+  // začiatok okna: polnoc (v zóne appky) pred 29 dňami — s rezervou o deň
+  // skôr, presné rozdelenie podľa dní urobí dayKey nižšie
+  const days = [];
+  for (let i = 29; i >= 0; i--) days.push(dayKey(new Date(Date.now() - i * DAY_MS)));
+  if (days[days.length - 1] !== todayKey) days.push(todayKey);
+  const startKey = days[0];
+  const windowStart = new Date(Date.now() - 31 * DAY_MS);
+  windowStart.setUTCMinutes(0, 0, 0);
+
+  const rows = await officialPointsByHour(windowStart);
+  if (!rows.length) return [];
+  const cumByUser = new Map();
+  const perDay = new Map();   // day -> Map(user -> points)
+  rows.forEach((r) => {
+    const k = r.h === 0 ? null : dayKey(new Date(r.h * 3600 * 1000));
+    if (k === null || k < startKey) { cumByUser.set(r.userId, (cumByUser.get(r.userId) || 0) + r.points); return; }
+    if (!perDay.has(k)) perDay.set(k, new Map());
+    const m = perDay.get(k);
+    m.set(r.userId, (m.get(r.userId) || 0) + r.points);
+  });
+  const out = [];
+  days.slice(-30).forEach((k) => {
+    const per = perDay.get(k);
+    if (per) per.forEach((p, uid) => cumByUser.set(uid, (cumByUser.get(uid) || 0) + p));
+    if (!cumByUser.has(meId)) return;
+    const myTotal = cumByUser.get(meId);
+    let rank = 1;
+    cumByUser.forEach((p) => { if (p > myTotal) rank += 1; });
+    out.push({ date: k, rank, points: myTotal, players: cumByUser.size });
+  });
+  return out;
+}
 
 // GET /stats
 const statsPage = asyncHandler(async (req, res) => {
@@ -82,75 +144,7 @@ const statsPage = asyncHandler(async (req, res) => {
   // Pozícia hráča naprieč VŠETKÝMI oficiálnymi ligami spolu (ako leaderboards),
   // počítaná z kumulatívnych bodov ku koncu každého dňa (23:59). Body pribúdajú
   // podľa toho, kedy bol zápas vyhodnotený (Match.updatedAt pre finished zápasy).
-  let rankProgress = [];
-  const officialLeagues = await League.findAll({ where: { type: 'official' }, attributes: ['id'] });
-  const offLeagueIds = officialLeagues.map((l) => l.id);
-
-  if (offLeagueIds.length) {
-    const offRounds = await Round.findAll({
-      where: { leagueId: { [Op.in]: offLeagueIds } },
-      attributes: ['id'],
-    });
-    const offRoundIds = offRounds.map((r) => r.id);
-
-    if (offRoundIds.length) {
-      const allTips = await Tip.findAll({
-        where: { points: { [Op.ne]: null } },
-        attributes: ['userId', 'points', 'matchId'],
-        include: [{
-          model: Match,
-          attributes: ['id', 'roundId', 'status', 'updatedAt'],
-          where: { status: 'finished', roundId: { [Op.in]: offRoundIds } },
-          required: true,
-        }],
-      });
-
-      if (allTips.length) {
-        function dayKey(d) {
-          const x = new Date(d);
-          return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
-        }
-        const pointsByDayUser = {};
-        allTips.forEach((t) => {
-          const when = t.Match.updatedAt || t.Match.createdAt;
-          const k = dayKey(when);
-          if (!pointsByDayUser[k]) pointsByDayUser[k] = {};
-          pointsByDayUser[k][t.userId] = (pointsByDayUser[k][t.userId] || 0) + (t.points || 0);
-        });
-
-        const today = new Date();
-        const startWin = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        startWin.setDate(startWin.getDate() - 29); // 30 dní vrátane dnes
-        const startKey = dayKey(startWin);
-
-        const cumByUser = {};
-        const allDays = Object.keys(pointsByDayUser).sort();
-        // 1) napočítaj všetko PRED oknom do kumulatívu
-        allDays.forEach((k) => {
-          if (k < startKey) {
-            const per = pointsByDayUser[k];
-            Object.keys(per).forEach((uid) => { cumByUser[uid] = (cumByUser[uid] || 0) + per[uid]; });
-          }
-        });
-        // 2) prejdi 30 dní okna
-        for (let i = 0; i < 30; i++) {
-          const d = new Date(startWin);
-          d.setDate(startWin.getDate() + i);
-          const k = dayKey(d);
-          const per = pointsByDayUser[k];
-          if (per) {
-            Object.keys(per).forEach((uid) => { cumByUser[uid] = (cumByUser[uid] || 0) + per[uid]; });
-          }
-          if (cumByUser[meId] != null) {
-            const myTotal = cumByUser[meId];
-            let rank = 1;
-            Object.keys(cumByUser).forEach((uid) => { if (cumByUser[uid] > myTotal) rank += 1; });
-            rankProgress.push({ date: k, rank, points: myTotal, players: Object.keys(cumByUser).length });
-          }
-        }
-      }
-    }
-  }
+  const rankProgress = await rankProgressOf(meId);
 
   const avgPerRound = roundPoints.length ? (roundPoints.reduce((a, b) => a + b, 0) / roundPoints.length) : 0;
   const bestRound = roundPoints.length ? Math.max(...roundPoints) : 0;
