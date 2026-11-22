@@ -208,6 +208,7 @@ app.use(async (req, res, next) => {
 
   res.locals.currentUserId = req.session.userId || null;
   res.locals.currentUserRole = req.session.userRole || null;
+  res.locals.googleAuth = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
   res.locals.currentUserName = req.session.userName || null;
   // Analytics/Ads: šablóny vložia skripty len ak sú ID nastavené v .env
   res.locals.gaMeasurementId = process.env.GA_MEASUREMENT_ID || '';

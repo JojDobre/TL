@@ -201,6 +201,7 @@
           <div class="row g-2 score-action" style="justify-content:flex-end;margin-top:18px"><button class="btn btn-primary" type="submit">Uložiť pravidlá</button></div>
         <% } %>
       </form>
+      <%- include('partials/joker-card', { lg: league }) %>
     </section>
 
     <!-- NASTAVENIA + NEBEZPEČNÁ ZÓNA -->
@@ -283,6 +284,10 @@
     el.textContent=msg; document.getElementById('toastWrap').appendChild(el);
     setTimeout(function(){ el.style.transition='opacity .3s'; el.style.opacity='0'; setTimeout(function(){el.remove();},300); }, 2600);
   }
+
+  // ---- otvorenie záložky z adresy (#scoring) + potvrdenie uloženia ----
+  if (location.hash) { var ht = document.querySelector('.ac-tabs [data-ct="' + location.hash.slice(1) + '"]'); if (ht) ht.click(); }
+  if (/[?&]saved=joker/.test(location.search)) toast('Nastavenie žolíka uložené.', true);
 
   // ---- potvrdzovanie pri form tlačidlách ----
   document.querySelectorAll('[data-confirm]').forEach(function(b){ b.addEventListener('click', function(e){ if(!confirm(b.getAttribute('data-confirm'))){ e.preventDefault(); } }); });

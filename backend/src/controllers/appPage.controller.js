@@ -223,7 +223,7 @@ async function openMatches(meId) {
   if (!leagueIds.length) return [];
   const rounds = await Round.findAll({
     where: { leagueId: leagueIds, startDate: { [Op.lte]: now }, endDate: { [Op.gt]: now } },
-    include: [{ model: League, attributes: ['id', 'name', 'ended', 'image'], include: [{ model: Season, attributes: ['id', 'name', 'ended', 'endDate', 'startDate'] }] }],
+    include: [{ model: League, attributes: ['id', 'name', 'ended', 'image', 'jokerEnabled'], include: [{ model: Season, attributes: ['id', 'name', 'ended', 'endDate', 'startDate'] }] }],
   });
   const openRounds = rounds.filter((r) => !isLeagueLocked(r.League));
   if (!openRounds.length) return [];
@@ -237,9 +237,10 @@ async function openMatches(meId) {
     order: [['matchTime', 'ASC']],
   });
   const tips = matches.length
-    ? await Tip.findAll({ where: { userId: meId, matchId: matches.map((m) => m.id) }, attributes: ['matchId', 'homeScore', 'awayScore', 'winner'] })
+    ? await Tip.findAll({ where: { userId: meId, matchId: matches.map((m) => m.id) }, attributes: ['matchId', 'homeScore', 'awayScore', 'winner', 'isJoker'] })
     : [];
   const tipBy = new Map(tips.map((t) => [t.matchId, t]));
+  const lockedJoker = await require('../utils/joker.util').lockedJokerRounds(meId, openRounds.filter((r) => r.League.jokerEnabled).map((r) => r.id), now);
   return matches.map((m) => {
     const r = roundById.get(m.roundId);
     const deadline = new Date(Math.min(new Date(m.matchTime).getTime(), new Date(r.endDate).getTime()));
@@ -261,6 +262,7 @@ async function openMatches(meId) {
       away: { name: m.awayTeam ? m.awayTeam.name : '?', abbr: teamAbbr(m.awayTeam), logo: m.awayTeam && m.awayTeam.logo, grad: grad(m.awayTeam && m.awayTeam.name) },
       tip: t ? { home: t.homeScore, away: t.awayScore, winner: t.winner } : null,
       tipped,
+      joker: r.League.jokerEnabled ? { active: !!(t && t.isJoker), locked: lockedJoker.has(r.id) } : null,
     };
   }).filter((m) => m.deadline > now).sort((a, b) => a.deadline - b.deadline);
 }
@@ -684,6 +686,12 @@ const kolo = asyncHandler(async (req, res) => {
 
   const open = [];
   const done = [];
+  // žolík: povolený v lige? je už nasadený na zápase, ktorý sa začal?
+  const jokerOn = !!league.jokerEnabled;
+  const jokerLocked = jokerOn && [...mine.values()].some((t) => {
+    const mm = matches.find((x) => x.id === t.matchId);
+    return t.isJoker && mm && (mm.status !== 'scheduled' || new Date(Math.min(new Date(mm.matchTime), new Date(round.endDate))) <= now);
+  });
   matches.forEach((m) => {
     const t = mine.get(m.id);
     const deadline = new Date(Math.min(new Date(m.matchTime).getTime(), new Date(round.endDate).getTime()));
@@ -693,6 +701,7 @@ const kolo = asyncHandler(async (req, res) => {
       open.push({
         id: m.id, type: m.tipType, home: team(m.homeTeam), away: team(m.awayTeam),
         tip: t ? { home: t.homeScore, away: t.awayScore, winner: t.winner } : null, tipped,
+        joker: jokerOn ? { active: !!(t && t.isJoker), locked: jokerLocked } : null,
         soon: ms < 3 * 3600 * 1000, when: ms < 3 * 3600 * 1000 ? `${hm(deadline)} · ${untilLabel(ms, L)}` : whenLabel(deadline, now, L),
       });
       return;
@@ -701,7 +710,7 @@ const kolo = asyncHandler(async (req, res) => {
     // tipy ostatných až po začiatku zápasu (dovtedy by sa dali odpísať)
     const os = started ? (others.get(m.id) || []).map((o) => ({
       name: userName(o.User), initials: userInitials(o.User), image: o.User && o.User.profileImage, color: avColor(o.userId),
-      tip: tipText(m.tipType, o), points: o.points,
+      tip: tipText(m.tipType, o), points: o.points, joker: !!o.isJoker,
     })).sort((a, b) => (b.points || 0) - (a.points || 0)) : [];
     done.push({
       id: m.id, type: m.tipType, home: team(m.homeTeam), away: team(m.awayTeam),
@@ -709,6 +718,7 @@ const kolo = asyncHandler(async (req, res) => {
       result: m.status === 'finished' && m.homeScore != null ? `${m.homeScore}:${m.awayScore}` : null,
       when: dt.fmtDate(m.matchTime) + ' · ' + hm(m.matchTime),
       myTip: tipText(m.tipType, t), myPoints: t && m.status === 'finished' ? (t.points || 0) : null,
+      myJoker: !!(t && t.isJoker),
       others: os,
     });
   });
@@ -722,7 +732,30 @@ const kolo = asyncHandler(async (req, res) => {
   const s = league.scoringSystem || { exactScore: 10, correctWinner: 3, goalDifference: 2, correctGoals: 1 };
   const season = league.Season;
 
+  // ZDIEĽANIE VÝSLEDKU (obrázok do story) — keď mám aspoň jeden vyhodnotený tip
+  const finishedMine = matches.filter((m) => m.status === 'finished' && mine.has(m.id));
+  let share = null;
+  if (access.member && finishedMine.length) {
+    const base = (t) => (t.isJoker ? Math.floor((t.points || 0) / 2) : (t.points || 0));
+    const exact = finishedMine.filter((m) => m.tipType === 'exact_score' && base(mine.get(m.id)) >= (s.exactScore || 10)).length;
+    share = {
+      league: league.name, round: round.name, initials: initials(league.name), grad: grad(league.name),
+      points: myPoints, rank: meRow ? meRow.rank : null, players: board.length,
+      exact, hits: finishedMine.filter((m) => (mine.get(m.id).points || 0) > 0).length,
+      tips: mine.size, joker: [...mine.values()].some((t) => t.isJoker),
+      code: league.hasPassword ? null : league.joinCode,
+      url: 'https://tifo.sk',
+      labels: {
+        got: L.t('share.got'), pts: L.tn(myPoints, 'point'), rank: L.t('share.rank'),
+        exact: L.t('share.exact'), hits: L.t('share.hits'), tips: L.tn(mine.size, 'tip'),
+        joker: L.t('share.joker'), cta: L.t('share.cta'), code: L.t('share.code'),
+        text: L.t('share.text', { p: myPoints, r: round.name }),
+      },
+    };
+  }
+
   res.render('app/kolo', {
+    share,
     title: round.name, screen: 'kolo', appTab: 'home',
     round: {
       id: round.id, name: round.name, description: round.description || '', status,
@@ -733,7 +766,7 @@ const kolo = asyncHandler(async (req, res) => {
       grad: grad(league.name), initials: initials(league.name), member: access.member, locked,
     },
     isManager, canEdit: isManager && !league.templateId,
-    canTip, open, done,
+    canTip, open, done, jokerOn,
     total: open.length + done.length,
     tippedOpen: open.filter((m) => m.tipped).length,
     myPoints, myRank: meRow ? meRow.rank : null,

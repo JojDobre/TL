@@ -9,6 +9,8 @@
   .auth-logo { display:flex; align-items:center; gap:11px; }
   .auth-form { display:flex; align-items:center; justify-content:center; padding:40px 24px; }
   .auth-card { width:100%; max-width:420px; }
+  .divider-or { display:flex; align-items:center; gap:14px; color:var(--text-4); font-size:var(--fs-sm); margin:20px 0; }
+  .divider-or::before, .divider-or::after { content:""; height:1px; flex:1; background:var(--line); }
   .auth-card h1 { font-size:1.9rem; }
   .field-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
   .pw-meter { height:6px; background:var(--surface-3); border-radius:99px; overflow:hidden; margin-top:8px; display:flex; gap:3px; }
@@ -45,6 +47,7 @@
         <label class="check" style="margin-bottom:22px;align-items:flex-start"><input type="checkbox" name="agree" required> <span style="font-size:var(--fs-sm)" data-en-html="I agree to the &lt;a href=&quot;/podmienky&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot; class=&quot;brand&quot;&gt;terms&lt;/a&gt; and the &lt;a href=&quot;/sukromie&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot; class=&quot;brand&quot;&gt;privacy policy&lt;/a&gt;.">Súhlasím s <a href="/podmienky" target="_blank" rel="noopener" class="brand">podmienkami</a> a <a href="/sukromie" target="_blank" rel="noopener" class="brand">zásadami súkromia</a>.</span></label>
         <button class="btn btn-primary btn-lg btn-block" type="submit" data-en="Create account">Vytvoriť účet</button>
       </form>
+      <%- include('partials/google-btn', { intent: 'register' }) %>
       <p class="muted center" style="margin-top:24px;font-size:var(--fs-sm)"><span data-en="Already have an account?">Už máš účet?</span> <a href="/login" class="brand" style="font-weight:700" data-en="Log in">Prihlás sa</a></p>
     </div>
   </div>

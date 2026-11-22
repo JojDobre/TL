@@ -38,7 +38,7 @@ async function computeStats(userId) {
         { model: Team, as: 'awayTeam', attributes: ['id', 'sport'] },
       ],
     }],
-    attributes: ['id', 'userId', 'points', 'createdAt'],
+    attributes: ['id', 'userId', 'points', 'isJoker', 'createdAt'],
     // raw + nest: obyčajné objekty namiesto Sequelize inštancií — pri hráčoch
     // s tisíckami tipov to šetrí väčšinu času procesora
     raw: true,
@@ -116,7 +116,9 @@ async function computeStats(userId) {
     // presný výsledok sa týka len exact_score tipov
     if (match.tipType === 'winner' || match.tipType === 'winner_no_draw') continue;
     const exactScore = (league && league.scoringSystem && league.scoringSystem.exactScore) || DEFAULT_EXACT;
-    if ((t.points || 0) >= exactScore) {
+    // žolík body zdvojnásobil — presný výsledok sa posudzuje podľa základných bodov
+    const basePts = t.isJoker ? Math.floor((t.points || 0) / 2) : (t.points || 0);
+    if (basePts >= exactScore) {
       exactTotal += 1;
       exactByRound[match.roundId] = (exactByRound[match.roundId] || 0) + 1;
       if (roundAgg[match.roundId]) roundAgg[match.roundId].exact += 1;

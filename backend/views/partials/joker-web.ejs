@@ -1,0 +1,4 @@
+<%# Tlačidlo ŽOLÍKA na webových stránkach tipovania. jm = { id, roundId, active, locked, tipped } %>
+<button type="button" class="joker-btn<%= jm.active ? ' on' : '' %>" data-joker-web data-match-id="<%= jm.id %>" data-round="<%= jm.roundId %>" data-locked="<%= jm.locked ? 1 : 0 %>" aria-pressed="<%= jm.active ? 'true' : 'false' %>"<%= jm.locked && !jm.active ? ' disabled' : '' %> title="Žolík — za tento zápas dvojnásobné body (jeden v kole)">
+  <span>🃏</span><span class="jt"><%= jm.active ? 'Žolík nasadený' : (jm.locked ? 'Žolík v tomto kole už hrá' : 'Nasadiť žolíka') %></span><span class="jx">2×</span>
+</button>

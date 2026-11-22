@@ -70,6 +70,14 @@ function calculatePoints(tip, match, scoring) {
   return points;
 }
 
+// Body za tip vrátane ŽOLÍKA: ak ho hráč na tento zápas nasadil, body sa
+// zdvojnásobia. Nasadiť sa dá len v lige so zapnutým žolíkom; pri vypnutí sa
+// žolíky na ešte nevyhodnotených zápasoch zrušia (league.controller), takže
+// isJoker = true znamená vždy dvojnásobok (aj pri opätovnom vyhodnotení).
+function tipPoints(tip, match, league) {
+  const base = calculatePoints(tip, match, (league && league.scoringSystem) || DEFAULT_SCORING);
+  return tip.isJoker ? base * 2 : base;
+}
 
 // Hromadný zápis bodov: tipy zoskupené podľa výslednej hodnoty bodov.
 async function writePoints(tips, pointsOf, transaction) {
@@ -94,7 +102,7 @@ async function writePoints(tips, pointsOf, transaction) {
 async function propagateToClones(sourceMatch, transaction) {
   const clones = await Match.findAll({
     where: { sourceMatchId: sourceMatch.id },
-    include: [{ model: Tip }, { model: Round, include: [{ model: League, attributes: ['scoringSystem'] }] }],
+    include: [{ model: Tip }, { model: Round, include: [{ model: League, attributes: ['scoringSystem', 'jokerEnabled'] }] }],
     transaction,
   });
   const tipperIds = [];
@@ -104,9 +112,9 @@ async function propagateToClones(sourceMatch, transaction) {
     clone.status = sourceMatch.status;
     await clone.save({ transaction });
 
-    const scoring = (clone.Round && clone.Round.League && clone.Round.League.scoringSystem) || DEFAULT_SCORING;
+    const league = clone.Round && clone.Round.League;
     const tips = clone.Tips || [];
-    await writePoints(tips, (tip) => (clone.status === 'finished' ? calculatePoints(tip, clone, scoring) : 0), transaction);
+    await writePoints(tips, (tip) => (clone.status === 'finished' ? tipPoints(tip, clone, league) : 0), transaction);
     tips.forEach((t) => tipperIds.push(t.userId));
   }
   return tipperIds;
@@ -120,7 +128,7 @@ function loadForEvaluation(id) {
         model: Round,
         include: [{
           model: League,
-          attributes: ['id', 'name', 'seasonId', 'scoringSystem', 'creatorId', 'isTemplate'],
+          attributes: ['id', 'name', 'seasonId', 'scoringSystem', 'jokerEnabled', 'creatorId', 'isTemplate'],
           include: [{ model: Season, attributes: ['id', 'creatorId'] }],
         }],
       },
@@ -164,8 +172,8 @@ async function applyResult(match, result, opts = {}) {
     }
     await match.save({ transaction });
 
-    const scoring = (match.Round && match.Round.League && match.Round.League.scoringSystem) || DEFAULT_SCORING;
-    await writePoints(tips, (tip) => (match.status === 'finished' ? calculatePoints(tip, match, scoring) : 0), transaction);
+    const league = match.Round && match.Round.League;
+    await writePoints(tips, (tip) => (match.status === 'finished' ? tipPoints(tip, match, league) : 0), transaction);
 
     return propagateToClones(match, transaction);
   });
@@ -197,6 +205,7 @@ async function applyResult(match, result, opts = {}) {
 module.exports = {
   DEFAULT_SCORING,
   calculatePoints,
+  tipPoints,
   propagateToClones,
   loadForEvaluation,
   applyResult,

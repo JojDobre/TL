@@ -1,6 +1,6 @@
 <%# karta zápasu na TIPOVANIE (obrazovky Tipovať a Kolo): m = zápas z openMatches, meta = text vľavo hore.
     Ukladá sa automaticky (public/js/app.js → bindTipCards). %>
-<article class="a-match <%= m.tipped ? 'tipped' : 'untipped' %>" data-match="<%= m.id %>" data-type="<%= m.type %>">
+<article class="a-match <%= m.tipped ? 'tipped' : 'untipped' %><%= m.joker && m.joker.active ? ' joker' : '' %>" data-match="<%= m.id %>" data-type="<%= m.type %>" data-round="<%= m.roundId || '' %>">
   <div class="meta"><% if (meta && m.roundId) { %><a href="/app/kolo/<%= m.roundId %>" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><%= meta %></a><% } else { %><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><%= meta %></span><% } %><span class="when <%= m.soon ? 'soon' : '' %>"><svg class="i" width="13" height="13"><use href="#i-clock"/></svg><%= m.when %></span></div>
   <% if (m.type === 'exact_score') { %>
   <div class="teams">
@@ -25,4 +25,9 @@
   </div>
   <% } %>
   <div class="a-saved <%= m.tipped ? '' : 'busy' %>"><% if (m.tipped) { %><svg class="i"><use href="#i-check"/></svg><%= t('tip.saved') %><% } else { %><%= t('tip.notYet') %><% } %></div>
+  <% if (m.joker) { %>
+  <button type="button" class="a-joker<%= m.joker.active ? ' on' : '' %>" data-joker aria-pressed="<%= m.joker.active ? 'true' : 'false' %>"<%= (m.joker.locked && !m.joker.active) || !m.tipped ? ' disabled' : '' %> data-locked="<%= m.joker.locked ? 1 : 0 %>">
+    <span class="jk">🃏</span><span class="jt"><%= m.joker.active ? t('joker.active') : (m.joker.locked ? t('joker.used') : t('joker.set')) %></span><span class="jx">2×</span>
+  </button>
+  <% } %>
 </article>

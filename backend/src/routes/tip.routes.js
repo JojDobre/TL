@@ -7,6 +7,7 @@ const {
   getUserTipForMatch,
   getUserTips,
   createOrUpdateTip,
+  setJoker,
 } = require('../controllers/tip.controller');
 const { apiRequireLogin } = require('../middleware/page-auth.middleware');
 
@@ -17,5 +18,6 @@ router.use(apiRequireLogin);
 router.get('/match/:matchId', getUserTipForMatch);
 router.get('/user', getUserTips);
 router.post('/', createOrUpdateTip);
+router.post('/joker', setJoker);
 
 module.exports = router;

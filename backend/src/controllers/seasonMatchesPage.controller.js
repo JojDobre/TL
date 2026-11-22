@@ -29,7 +29,7 @@ const seasonMatchesPage = asyncHandler(async (req, res) => {
   if (!season) return res.status(404).render('error-page', { message: 'Sezóna nebola nájdená.' });
 
   // ligy v sezóne, do ktorých je hráč pripojený
-  const seasonLeagues = await League.findAll({ where: { seasonId: season.id }, attributes: ['id', 'name', 'scoringSystem'] });
+  const seasonLeagues = await League.findAll({ where: { seasonId: season.id }, attributes: ['id', 'name', 'scoringSystem', 'jokerEnabled'] });
   const seasonLeagueIds = seasonLeagues.map((l) => l.id);
   let myLeagues = [];
   if (seasonLeagueIds.length) {
@@ -70,6 +70,10 @@ const seasonMatchesPage = asyncHandler(async (req, res) => {
     const leagueById = {};
     myLeagues.forEach((l) => { leagueById[l.id] = l; });
 
+    // žolík: kolá, kde je už nasadený na zápase, ktorý sa začal
+    const jokerRoundIds = rounds.filter((r) => leagueById[r.leagueId] && leagueById[r.leagueId].jokerEnabled).map((r) => r.id);
+    const lockedJoker = await require('../utils/joker.util').lockedJokerRounds(meId, jokerRoundIds, now);
+
     const byRound = {};
     matches.forEach((m) => {
       const r = roundById[m.roundId];
@@ -79,6 +83,8 @@ const seasonMatchesPage = asyncHandler(async (req, res) => {
           roundName: r ? r.name : 'Kolo',
           leagueName: r && leagueById[r.leagueId] ? leagueById[r.leagueId].name : '',
           endDate: r ? r.endDate : null,
+          jokerOn: !!(r && leagueById[r.leagueId] && leagueById[r.leagueId].jokerEnabled),
+          jokerLocked: lockedJoker.has(m.roundId),
           matches: [],
         };
       }
@@ -88,7 +94,7 @@ const seasonMatchesPage = asyncHandler(async (req, res) => {
         ...mj,
         homeAbbr: teamAbbr(mj.homeTeam && mj.homeTeam.name),
         awayAbbr: teamAbbr(mj.awayTeam && mj.awayTeam.name),
-        myTip: my ? { homeScore: my.homeScore, awayScore: my.awayScore, winner: my.winner } : null,
+        myTip: my ? { homeScore: my.homeScore, awayScore: my.awayScore, winner: my.winner, isJoker: !!my.isJoker } : null,
       });
     });
     groups = Object.values(byRound).sort((a, b) => new Date(a.endDate || 0) - new Date(b.endDate || 0));

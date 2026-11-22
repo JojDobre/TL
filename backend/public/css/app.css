@@ -607,3 +607,13 @@ html.is-app .match-row .tip-step { width: 50px; }
 /* logo ligy/súťaže roztiahnuté na celú výšku aj šírku okienka */
 .a-crest.lg img { width: 100%; height: 100%; object-fit: cover; }
 .a-crest.lg .lg-bg { display: none; }
+
+/* ŽOLÍK — dvojnásobné body za jeden zápas v kole */
+.a-match.joker { border-color: rgba(250, 204, 21, .6); box-shadow: 0 0 0 1px rgba(250, 204, 21, .25), 0 10px 30px rgba(250, 204, 21, .08); }
+.a-joker { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 12px; padding: 10px 12px; border-radius: 14px; border: 1px dashed rgba(250, 204, 21, .45); background: transparent; color: var(--a-t2); font: 700 13px var(--a-body); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .2s, color .2s, border-color .2s; }
+.a-joker .jk { font-size: 16px; line-height: 1; }
+.a-joker .jx { margin-left: auto; padding: 2px 8px; border-radius: 8px; background: var(--a-gold-soft); color: var(--a-gold); font-size: 12px; }
+.a-joker.on { border-style: solid; border-color: var(--a-gold); background: var(--a-gold); color: var(--a-gold-ink); }
+.a-joker.on .jx { background: rgba(0, 0, 0, .14); color: var(--a-gold-ink); }
+.a-joker:disabled { opacity: .45; cursor: default; }
+.a-joker.busy { opacity: .7; }

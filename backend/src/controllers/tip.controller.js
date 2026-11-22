@@ -136,7 +136,57 @@ const createOrUpdateTip = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: 'Tip bol úspešne uložený.', data: tip });
 });
 
+// je tip na zápas ešte otvorený? (rovnaká uzávierka ako pri tipovaní)
+function isOpen(match, now = new Date()) {
+  if (match.status && match.status !== 'scheduled') return false;
+  const start = new Date(match.matchTime);
+  const roundEnd = match.Round && match.Round.endDate ? new Date(match.Round.endDate) : null;
+  const deadline = roundEnd && roundEnd < start ? roundEnd : start;
+  return now < deadline;
+}
+
+// POST /api/tips/joker { matchId, on } — nasadiť / zrušiť ŽOLÍKA (dvojnásobné
+// body). Najviac jeden v kole; presunúť sa dá, kým sa pôvodný zápas nezačal.
+const setJoker = asyncHandler(async (req, res) => {
+  const userId = req.userId;
+  const matchId = Number(req.body.matchId);
+  const on = req.body.on !== false && req.body.on !== 'false';
+  if (!matchId) throw new ApiError(400, 'Chýba zápas.');
+
+  const match = await Match.findByPk(matchId, { include: [{ model: Round, attributes: ['id', 'startDate', 'endDate', 'leagueId'] }] });
+  if (!match || !match.Round) throw new ApiError(404, 'Zápas nebol nájdený.');
+  const league = await League.findByPk(match.Round.leagueId, { include: [{ model: Season, attributes: ['id', 'endDate', 'ended'] }] });
+  if (!league || !league.jokerEnabled) throw new ApiError(403, 'Žolík nie je v tejto lige povolený.');
+  if (isLeagueLocked(league)) throw new ApiError(403, 'Liga je ukončená.');
+  if (!(await UserLeague.findOne({ where: { userId, leagueId: league.id } }))) {
+    throw new ApiError(403, 'Žolíka môžeš nasadiť len v lige, ktorej si členom.');
+  }
+  if (!isOpen(match)) throw new ApiError(403, 'Zápas sa už začal — žolíka tu už nemožno meniť.');
+
+  const tip = await Tip.findOne({ where: { userId, matchId } });
+  if (!tip) throw new ApiError(400, 'Najprv zápas tipni, potom nasaď žolíka.');
+
+  let movedFrom = null;
+  if (on) {
+    // žolík na inom zápase toho istého kola?
+    const other = await Tip.findOne({
+      where: { userId, isJoker: true, matchId: { [Op.ne]: matchId } },
+      include: [{ model: Match, required: true, where: { roundId: match.roundId }, include: [{ model: Round, attributes: ['id', 'endDate'] }] }],
+    });
+    if (other) {
+      if (!isOpen(other.Match)) throw new ApiError(409, 'Žolíka v tomto kole už máš na zápase, ktorý sa začal.');
+      other.isJoker = false;
+      await other.save({ hooks: false });
+      movedFrom = other.matchId;
+    }
+  }
+  tip.isJoker = on;
+  await tip.save({ hooks: false });
+  res.json({ success: true, on, movedFrom, message: on ? (movedFrom ? 'Žolík presunutý — za tento zápas dostaneš dvojnásobok.' : 'Žolík nasadený — za tento zápas dostaneš dvojnásobok.') : 'Žolík zrušený.' });
+});
+
 module.exports = {
+  setJoker,
   getUserTipForMatch,
   getUserTips,
   createOrUpdateTip,

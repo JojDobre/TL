@@ -191,6 +191,7 @@
               <div class="team away"><% if (m.awayTeam && m.awayTeam.logo) { %><span class="team-logo" style="background:none;border:none"><img src="<%= m.awayTeam.logo %>" alt="" style="width:100%;height:100%;object-fit:contain"></span><% } else { %><span class="team-logo" style="background:var(--surface-3)"><%= m.awayAbbr %></span><% } %><span class="team-name"><%= m.awayTeam ? m.awayTeam.name : '—' %></span></div>
             </div>
             <% } %>
+            <% if (g.jokerOn) { %><%- include('partials/joker-web', { jm: { id: m.id, roundId: g.roundId, active: !!(m.myTip && m.myTip.isJoker), locked: g.jokerLocked } }) %><% } %>
           </div>
           <% }); %>
         </div>

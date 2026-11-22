@@ -1,0 +1,14 @@
+<%# Prepínač ŽOLÍKA v správe ligy / turnaja. lg = liga (id, jokerEnabled, isTemplate) %>
+<% if (!lg.isTemplate) { %>
+<form class="card card-pad2" method="POST" action="/leagues/<%= lg.id %>/joker" style="margin-top:18px">
+  <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+  <h3>🃏 Žolík</h3>
+  <p class="sub">Každý hráč si v každom kole môže označiť jeden zápas, za ktorý dostane <b class="hi">dvojnásobné body</b>. Žolíka nasadí aj presunie až do začiatku zápasu.</p>
+  <label class="check" style="display:flex;align-items:center;gap:10px">
+    <input type="checkbox" name="jokerEnabled" <%= lg.jokerEnabled ? 'checked' : '' %>>
+    <span>Povoliť žolíka v tejto lige</span>
+  </label>
+  <p class="hint" style="margin-top:8px">Vypnutie zruší žolíky na zápasoch, ktoré ešte nie sú vyhodnotené. Už pridelené body sa nemenia.</p>
+  <div class="row g-2" style="justify-content:flex-end;margin-top:14px"><button class="btn btn-primary" type="submit">Uložiť</button></div>
+</form>
+<% } %>

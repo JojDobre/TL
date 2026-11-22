@@ -38,7 +38,7 @@ const myTipsPage = asyncHandler(async (req, res) => {
     // ligy s detailmi (názov, sezóna, bodovanie)
     const leagues = await League.findAll({
       where: { id: { [Op.in]: myLeagueIds } },
-      attributes: ['id', 'name', 'seasonId', 'scoringSystem'],
+      attributes: ['id', 'name', 'seasonId', 'scoringSystem', 'jokerEnabled'],
       include: [{ model: Season, attributes: ['id', 'name', 'type', 'image'] }],
     });
     const leagueById = {};
@@ -74,6 +74,10 @@ const myTipsPage = asyncHandler(async (req, res) => {
     const myTips = {};
     myTipsArr.forEach((t) => { myTips[t.matchId] = t; });
 
+    // žolík: kolá, kde je už nasadený na zápase, ktorý sa začal
+    const lockedJoker = await require('../utils/joker.util').lockedJokerRounds(meId,
+      openRounds.filter((r) => leagueById[r.leagueId] && leagueById[r.leagueId].jokerEnabled).map((r) => r.id), new Date());
+
     // zoskup: sezóna -> kolo -> zápasy
     // bySeason[seasonId] = { seasonId, seasonName, seasonType, rounds: { roundId -> group } }
     const bySeason = {};
@@ -98,6 +102,8 @@ const myTipsPage = asyncHandler(async (req, res) => {
           roundName: round ? round.name : 'Kolo',
           leagueName: league ? league.name : '',
           endDate: round ? round.endDate : null,
+          jokerOn: !!(league && league.jokerEnabled),
+          jokerLocked: lockedJoker.has(m.roundId),
           matches: [],
         };
       }
@@ -111,7 +117,7 @@ const myTipsPage = asyncHandler(async (req, res) => {
         ...mj,
         homeAbbr: teamAbbr(mj.homeTeam && mj.homeTeam.name),
         awayAbbr: teamAbbr(mj.awayTeam && mj.awayTeam.name),
-        myTip: my ? { homeScore: my.homeScore, awayScore: my.awayScore, winner: my.winner } : null,
+        myTip: my ? { homeScore: my.homeScore, awayScore: my.awayScore, winner: my.winner, isJoker: !!my.isJoker } : null,
       });
     });
 

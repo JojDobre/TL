@@ -31,6 +31,11 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
+      // prihlásenie cez Google: stabilné ID účtu (sub z Google ID tokenu)
+      googleId: {
+        type: DataTypes.STRING(64),
+        allowNull: true,
+      },
       profileImage: {
         type: DataTypes.STRING,            // URL k profilovému obrázku
         allowNull: true,

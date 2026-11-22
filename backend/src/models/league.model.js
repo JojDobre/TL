@@ -105,6 +105,8 @@ module.exports = (sequelize, DataTypes) => {
       externalSyncCursor: { type: DataTypes.INTEGER, allowNull: true },     // import celej sezóny: ďalšie kolo
       externalSyncedAt: { type: DataTypes.DATE, allowNull: true },
       externalSyncNote: { type: DataTypes.STRING(500), allowNull: true },   // posledná správa synchronizácie
+      // ŽOLÍK: hráč si v každom kole označí jeden zápas s dvojnásobnými bodmi
+      jokerEnabled: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     }, {
       tableName: 'leagues',
       timestamps: true,

@@ -363,6 +363,8 @@
           .then(function () {
             if (my !== seq) return;
             card.classList.add('tipped'); card.classList.remove('untipped');
+            var jb = card.querySelector('[data-joker]');
+            if (jb && jb.getAttribute('data-locked') !== '1') jb.disabled = false;
             setStatus('', tr('saved', 'Uložené'));
             updateRing();
             haptic(12);
@@ -401,6 +403,39 @@
           });
         });
       }
+    });
+
+    // ŽOLÍK — jeden zápas v kole s dvojnásobnými bodmi
+    function jokerLabel(b, state) {
+      b.querySelector('.jt').textContent = state === 'on' ? tr('jokerActive', 'Žolík nasadený') : tr('jokerSet', 'Nasadiť žolíka');
+    }
+    document.querySelectorAll('[data-joker]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (b.disabled || b.classList.contains('busy')) return;
+        var card = b.closest('.a-match');
+        var on = !b.classList.contains('on');
+        b.classList.add('busy');
+        api('/api/tips/joker', { method: 'POST', body: { matchId: Number(card.getAttribute('data-match')), on: on } })
+          .then(function (j) {
+            var round = card.getAttribute('data-round');
+            // v tom istom kole môže byť len jeden → ostatným karty zhasni
+            if (on) {
+              document.querySelectorAll('.a-match' + (round ? '[data-round="' + round + '"]' : '')).forEach(function (c) {
+                if (c === card) return;
+                var ob = c.querySelector('[data-joker]');
+                c.classList.remove('joker');
+                if (ob) { ob.classList.remove('on'); ob.setAttribute('aria-pressed', 'false'); jokerLabel(ob, 'off'); }
+              });
+            }
+            b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+            card.classList.toggle('joker', on);
+            jokerLabel(b, on ? 'on' : 'off');
+            toast(on ? tr('jokerToast', 'Žolík nasadený — za tento zápas dostaneš dvojnásobok.') : tr('jokerOff', 'Žolík zrušený.'));
+            haptic(on ? 20 : 8);
+          })
+          .catch(function (e) { toast(e.message, true); haptic(40); })
+          .then(function () { b.classList.remove('busy'); });
+      });
     });
 
     // pás dní → posun na deň

@@ -41,7 +41,7 @@ const roundDetailPage = asyncHandler(async (req, res) => {
   const round = await Round.findByPk(req.params.id, {
     include: [{
       model: League,
-      attributes: ['id', 'name', 'seasonId', 'scoringSystem', 'creatorId', 'templateId'],
+      attributes: ['id', 'name', 'seasonId', 'scoringSystem', 'jokerEnabled', 'creatorId', 'templateId', 'joinCode', 'hasPassword'],
       include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'ended', 'endDate', 'mode', 'showRules', 'showNews', 'image'] }],
     }],
   });
@@ -103,12 +103,13 @@ const roundDetailPage = asyncHandler(async (req, res) => {
       ...mj,
       homeAbbr: teamAbbr(mj.homeTeam && mj.homeTeam.name),
       awayAbbr: teamAbbr(mj.awayTeam && mj.awayTeam.name),
-      myTip: my ? { homeScore: my.homeScore, awayScore: my.awayScore, winner: my.winner, points: my.points } : null,
+      myTip: my ? { homeScore: my.homeScore, awayScore: my.awayScore, winner: my.winner, points: my.points, isJoker: !!my.isJoker, basePoints: basePts(my) } : null,
       others: (othersByMatch[m.id] || []).map((t) => ({
         userId: t.userId,
         name: [t.User.firstName, t.User.lastName].filter(Boolean).join(' ') || t.User.username || 'Hráč',
         abbr: teamAbbr([t.User.firstName, t.User.lastName].filter(Boolean).join(' ') || t.User.username),
         homeScore: t.homeScore, awayScore: t.awayScore, winner: t.winner, points: t.points,
+        joker: !!t.isJoker, basePoints: basePts(t),
       })),
     };
   });
@@ -128,18 +129,44 @@ const roundDetailPage = asyncHandler(async (req, res) => {
   const myExactCount = matchData.filter((m) => {
     if (!m.myTip || m.status !== 'finished') return false;
     if (m.tipType === 'winner' || m.tipType === 'winner_no_draw') return false;
-    return (m.myTip.points || 0) >= _exactPts;
+    return m.myTip.basePoints >= _exactPts;
   }).length;
   const myPartialCount = matchData.filter((m) => {
     if (!m.myTip || m.status !== 'finished') return false;
-    const pts = m.myTip.points || 0;
+    const pts = m.myTip.basePoints;
     if (m.tipType === 'winner' || m.tipType === 'winner_no_draw') return pts > 0;
     return pts > 0 && pts < _exactPts;
   }).length;
 
+  // žolík: povolený? je už nasadený na zápase, ktorý sa začal (nedá sa presunúť)?
+  const jokerOn = !!(league && league.jokerEnabled);
+  const jokerLocked = jokerOn && matchData.some((m) => m.myTip && m.myTip.isJoker
+    && (m.status !== 'scheduled' || new Date(m.matchTime) <= new Date()));
+
+  // ZDIEĽANIE VÝSLEDKU ako obrázka (story) — len člen s vyhodnoteným tipom
+  const evaluatedMine = matchData.filter((m) => m.myTip && m.status === 'finished');
+  const initialsOf = (n) => (n || 'T').replace(/[^A-Za-zÀ-ž0-9 ]/g, '').split(' ').filter(Boolean).map((w) => w[0]).join('').substring(0, 2).toUpperCase() || 'T';
+  const share = isMember && evaluatedMine.length ? {
+    league: league.name, round: round.name, initials: initialsOf(league.name),
+    points: myPoints, rank: myRank, players: leaderboard.length,
+    exact: myExactCount, hits: evaluatedMine.filter((m) => (m.myTip.points || 0) > 0).length,
+    tips: tippedCount, joker: matchData.some((m) => m.myTip && m.myTip.isJoker),
+    code: league.hasPassword ? null : league.joinCode, url: 'https://tifo.sk',
+    labels: {
+      got: 'V tomto kole mám', pts: myPoints === 1 ? 'bod' : (myPoints >= 2 && myPoints <= 4 ? 'body' : 'bodov'),
+      rank: '{r}. miesto z {n}', exact: 'presné výsledky', hits: 'bodované tipy',
+      tips: tippedCount === 1 ? 'tip' : (tippedCount >= 2 && tippedCount <= 4 ? 'tipy' : 'tipov'),
+      joker: 'Žolík v hre', cta: 'Tipuj so mnou na Tifo', code: 'kód ligy',
+      text: `Mám ${myPoints} b v kole ${round.name} na Tifo ⚽`,
+    },
+  } : null;
+
   res.render('roundDetail', {
     round: { ...round.toJSON(), status },
     league,
+    share,
+    jokerOn,
+    jokerLocked,
     scoring,
     matches: matchData,
     tippedCount,
@@ -156,12 +183,15 @@ const roundDetailPage = asyncHandler(async (req, res) => {
   });
 });
 
+// body BEZ žolíka (žolík ich zdvojnásobil) — na posúdenie presného zásahu
+const basePts = (t) => (t ? (t.isJoker ? Math.floor((t.points || 0) / 2) : (t.points || 0)) : 0);
+
 // kvalita môjho tipu na zápas (pre farebné zvýraznenie vo výsledkoch)
 function tipQuality(myTip, match, exactPts) {
   if (!match || match.status === 'canceled') return 'canceled';
   if (match.status !== 'finished') return 'pending';
   if (!myTip) return 'none';
-  const pts = myTip.points || 0;
+  const pts = basePts(myTip);
   if (match.tipType !== 'winner' && match.tipType !== 'winner_no_draw' && pts >= exactPts) return 'exact';
   if (pts > 0) return 'partial';
   return 'zero';
@@ -172,7 +202,7 @@ const roundResultsPage = asyncHandler(async (req, res) => {
   const round = await Round.findByPk(req.params.id, {
     include: [{
       model: League,
-      attributes: ['id', 'name', 'seasonId', 'scoringSystem', 'creatorId', 'templateId'],
+      attributes: ['id', 'name', 'seasonId', 'scoringSystem', 'jokerEnabled', 'creatorId', 'templateId'],
       include: [{ model: Season, attributes: ['id', 'name', 'creatorId', 'ended', 'endDate', 'mode', 'showRules', 'showNews', 'image'] }],
     }],
   });
@@ -231,7 +261,8 @@ const roundResultsPage = asyncHandler(async (req, res) => {
       name: [t.User.firstName, t.User.lastName].filter(Boolean).join(' ') || t.User.username || 'Hráč',
       abbr: teamAbbr([t.User.firstName, t.User.lastName].filter(Boolean).join(' ') || t.User.username),
       homeScore: t.homeScore, awayScore: t.awayScore, winner: t.winner,
-      exact: (mj.tipType !== 'winner' && mj.tipType !== 'winner_no_draw' && (t.points || 0) >= exactPts),
+      exact: (mj.tipType !== 'winner' && mj.tipType !== 'winner_no_draw' && basePts(t) >= exactPts),
+      joker: !!t.isJoker,
     }));
     return {
       id: mj.id,
@@ -242,7 +273,7 @@ const roundResultsPage = asyncHandler(async (req, res) => {
       homeAbbr: teamAbbr(mj.homeTeam && mj.homeTeam.name),
       awayAbbr: teamAbbr(mj.awayTeam && mj.awayTeam.name),
       homeScore: mj.homeScore, awayScore: mj.awayScore, status: mj.status, tipType: mj.tipType,
-      myTip: my ? { homeScore: my.homeScore, awayScore: my.awayScore, winner: my.winner, points: my.points } : null,
+      myTip: my ? { homeScore: my.homeScore, awayScore: my.awayScore, winner: my.winner, points: my.points, isJoker: !!my.isJoker, basePoints: basePts(my) } : null,
       quality,
       othersCount: (othersByMatch[m.id] || []).length,
       others: others.slice(0, 4),     // zobrazíme prvé 4, zvyšok "+N ďalších"

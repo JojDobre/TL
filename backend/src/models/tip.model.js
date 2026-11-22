@@ -34,6 +34,12 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.BOOLEAN,  // Či bol tip odoslaný
         defaultValue: false,
       },
+      // žolík — za tento zápas dvojnásobné body (najviac jeden v kole, ak ho liga povolí)
+      isJoker: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
     }, {
       tableName: 'tips',
       timestamps: true,

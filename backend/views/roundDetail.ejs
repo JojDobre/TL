@@ -264,6 +264,11 @@
           <% } else if (locked && m.status === 'scheduled') { %>
             <div class="muted" style="font-size:var(--fs-xs);margin-top:8px;text-align:center">Tipovanie tohto zápasu je už uzavreté.</div>
           <% } %>
+          <% if (typeof jokerOn !== 'undefined' && jokerOn && canTip && !locked) { %>
+            <%- include('partials/joker-web', { jm: { id: m.id, roundId: round.id, active: !!(m.myTip && m.myTip.isJoker), locked: jokerLocked } }) %>
+          <% } else if (m.myTip && m.myTip.isJoker) { %>
+            <div style="margin-top:10px;text-align:center"><span class="joker-badge">🃏 Žolík · 2× body</span></div>
+          <% } %>
         </div>
         <% }); %>
       </div>
@@ -279,7 +284,10 @@
     <section>
       <div class="between title" style="margin-bottom:16px">
         <h3 style="font-size:var(--fs-h4)">Výsledky &amp; Body</h3>
-        <span class="pts-pill max">Tvoje kolo: +<%= myPoints %> pts</span>
+        <div class="row g-2" style="align-items:center">
+          <span class="pts-pill max">Tvoje kolo: +<%= myPoints %> pts</span>
+          <% if (typeof share !== 'undefined' && share) { %><button type="button" class="btn btn-secondary btn-sm" data-share-card="<%= JSON.stringify(share) %>">↗ Zdieľať výsledok</button><% } %>
+        </div>
       </div>
       <div class="match-list">
         <% matches.forEach(function (m) { var canceled = m.status === 'canceled'; var done = m.status === 'finished';
@@ -287,7 +295,7 @@
              var hitHome = done && !isWin && m.myTip && m.myTip.homeScore != null && m.myTip.homeScore === m.homeScore;
              var hitAway = done && !isWin && m.myTip && m.myTip.awayScore != null && m.myTip.awayScore === m.awayScore;
         %>
-        <div class="match"<%= canceled ? ' style=\"opacity:.78\"' : (m.myTip && m.myTip.points >= (s.exactScore||10) ? ' style=\"border-color:var(--brand-line)\"' : '') %>>
+        <div class="match"<%= canceled ? ' style=\"opacity:.78\"' : (m.myTip && m.myTip.basePoints >= (s.exactScore||10) ? ' style=\"border-color:var(--brand-line)\"' : '') %>>
           <div class="match-head"><span class="match-meta"><%= fmtDT(m.matchTime) %></span>
             <% if (canceled) { %><span class="tag tag-muted"><span class="dot"></span>Zrušený</span><% } else if (done) { %><span class="tag tag-success"><span class="dot"></span>Vyhodnotené</span><% } else { %><span class="tag tag-warning"><span class="dot"></span>Čaká na výsledok</span><% } %>
           </div>
@@ -300,11 +308,11 @@
             <% var winLbl = function(w){ return w==='home'?'1 (domáci)':w==='draw'?'X (remíza)':w==='away'?'2 (hosť)':'—'; };
                var isWin = (m.tipType === 'winner' || m.tipType === 'winner_no_draw');
                var hasMy = m.myTip && (isWin ? m.myTip.winner : m.myTip.homeScore != null);
-               var full = m.myTip && m.myTip.points >= (isWin ? (s.correctWinner||3) : (s.exactScore||10)); %>
+               var full = m.myTip && m.myTip.basePoints >= (isWin ? (s.correctWinner||3) : (s.exactScore||10)); %>
             <% if (canceled) { %>
               <span class="muted" style="font-size:var(--fs-sm)">Zápas zrušený — body sa neprideľujú</span><span class="pts-pill zero">0 pts</span>
             <% } else if (hasMy) { %>
-              <span class="muted" style="font-size:var(--fs-sm)">Tvoj tip: <b class="<%= full ? 'tip-correct' : 'hi' %>"><%= isWin ? winLbl(m.myTip.winner) : (m.myTip.homeScore + ' : ' + m.myTip.awayScore) %></b></span><span class="pts-pill<%= full ? ' max' : (m.myTip.points ? '' : ' zero') %>">+<%= m.myTip.points || 0 %></span>
+              <span class="muted" style="font-size:var(--fs-sm)">Tvoj tip: <b class="<%= full ? 'tip-correct' : 'hi' %>"><%= isWin ? winLbl(m.myTip.winner) : (m.myTip.homeScore + ' : ' + m.myTip.awayScore) %></b></span><% if (m.myTip.isJoker) { %><span class="joker-badge" title="Žolík — dvojnásobné body">🃏 2×</span><% } %><span class="pts-pill<%= full ? ' max' : (m.myTip.points ? '' : ' zero') %>">+<%= m.myTip.points || 0 %></span>
             <% } else { %>
               <span class="muted" style="font-size:var(--fs-sm)">Netipoval si tento zápas</span><span class="pts-pill zero">0</span>
             <% } %>
@@ -319,7 +327,7 @@
             <% } %>
             <div data-others-list>
             <% m.others.forEach(function (o) { %>
-            <div class="other-tip" data-name="<%= (o.name||'').toLowerCase() %>"><span class="avatar avatar-sm" style="background:var(--surface-3)"><%= initials(o.name) %></span><span class="nm"><% if (o.userId) { %><a class="player-link" href="/player/<%= o.userId %>"><%= o.name %></a><% } else { %><%= o.name %><% } %></span><% var oIsWin = (m.tipType === 'winner' || m.tipType === 'winner_no_draw'); %><b class="<%= o.points >= (oIsWin ? (s.correctWinner||3) : (s.exactScore||10)) ? 'tip-correct' : 'hi' %>"><%= oIsWin ? (o.winner==='home'?'1':o.winner==='draw'?'X':o.winner==='away'?'2':'–') : ((o.homeScore != null ? o.homeScore : '–') + ' : ' + (o.awayScore != null ? o.awayScore : '–')) %></b><span class="pts-pill<%= o.points >= (oIsWin ? (s.correctWinner||3) : (s.exactScore||10)) ? ' max' : (o.points ? '' : ' zero') %>">+<%= o.points || 0 %></span></div>
+            <div class="other-tip" data-name="<%= (o.name||'').toLowerCase() %>"><span class="avatar avatar-sm" style="background:var(--surface-3)"><%= initials(o.name) %></span><span class="nm"><% if (o.userId) { %><a class="player-link" href="/player/<%= o.userId %>"><%= o.name %></a><% } else { %><%= o.name %><% } %></span><% var oIsWin = (m.tipType === 'winner' || m.tipType === 'winner_no_draw'); %><b class="<%= (o.basePoints != null ? o.basePoints : o.points) >= (oIsWin ? (s.correctWinner||3) : (s.exactScore||10)) ? 'tip-correct' : 'hi' %>"><%= oIsWin ? (o.winner==='home'?'1':o.winner==='draw'?'X':o.winner==='away'?'2':'–') : ((o.homeScore != null ? o.homeScore : '–') + ' : ' + (o.awayScore != null ? o.awayScore : '–')) %></b><% if (o.joker) { %><span title="Žolík">🃏</span><% } %><span class="pts-pill<%= (o.basePoints != null ? o.basePoints : o.points) >= (oIsWin ? (s.correctWinner||3) : (s.exactScore||10)) ? ' max' : (o.points ? '' : ' zero') %>">+<%= o.points || 0 %></span></div>
             <% }); %>
             </div>
             <div class="others-pager" data-others-pager style="display:none;align-items:center;justify-content:center;gap:14px;margin-top:10px">
@@ -364,6 +372,7 @@
         <div class="between"><span class="muted">Víťaz / remíza</span><span class="pts-pill">+<%= s.correctWinner != null ? s.correctWinner : 3 %></span></div>
         <div class="between"><span class="muted">Gólový rozdiel</span><span class="pts-pill">+<%= s.goalDifference != null ? s.goalDifference : 2 %></span></div>
         <div class="between"><span class="muted">Presný počet gólov tímu</span><span class="pts-pill">+<%= s.correctGoals != null ? s.correctGoals : 1 %></span></div>
+        <% if (typeof jokerOn !== 'undefined' && jokerOn) { %><div class="between"><span class="muted">🃏 Žolík (1 zápas v kole)</span><span class="pts-pill max">2×</span></div><% } %>
       </div>
     </div>
 
@@ -502,4 +511,5 @@
 })();
 </script>
 
+<script src="/js/share-card.js?v=<%= assetV %>" defer></script>
 <%- include('partials/footer') %>

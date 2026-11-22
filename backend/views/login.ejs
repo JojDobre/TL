@@ -52,7 +52,7 @@
         <label class="check" style="margin:6px 0 22px"><input type="checkbox" name="remember" checked> <span data-en="Remember me">Zapamätať si ma</span></label>
         <button class="btn btn-primary btn-lg btn-block" type="submit" data-en="Log in">Prihlásiť sa</button>
       </form>
-      <div class="divider-or" data-en="or">alebo</div>
+      <%- include('partials/google-btn', { intent: 'login' }) %>
       <p class="muted center" style="margin-top:26px;font-size:var(--fs-sm)"><span data-en="No account yet?">Nemáš účet?</span> <a href="/register" class="brand" style="font-weight:700" data-en="Sign up">Zaregistruj sa</a></p>
     </div>
   </div>

@@ -21,7 +21,7 @@ const {
   templatesListPage, templateCreate, templateEditPage,
   templateUpdateMeta, templateDelete, templateEvaluatePage,
 } = require('../controllers/adminTemplate.controller');
-const { leagueDetailPage, joinLeagueSubmit, createLeaguePage, createLeagueSubmit, editLeaguePage, editLeagueSubmit, deleteLeagueSubmit, leaveLeagueSubmit, leagueMembersPage, leagueMemberAction, endLeagueSubmit, manageLeaguePage } = require('../controllers/leaguePage.controller');
+const { leagueDetailPage, joinLeagueSubmit, createLeaguePage, createLeagueSubmit, editLeaguePage, editLeagueSubmit, deleteLeagueSubmit, leaveLeagueSubmit, jokerSubmit, leagueMembersPage, leagueMemberAction, endLeagueSubmit, manageLeaguePage } = require('../controllers/leaguePage.controller');
 const { roundDetailPage, roundResultsPage } = require('../controllers/roundPage.controller');
 const { createRoundPage, createRoundSubmit, editRoundPage } = require('../controllers/roundPageCreate.controller');
 const { createMatchesPage } = require('../controllers/matchPage.controller');
@@ -80,6 +80,10 @@ router.get('/ads.txt', adsTxt);
 // Auth (mutujúce POST-y majú rate limiting proti brute-force)
 router.get('/login', loginPage);
 router.post('/login', loginLimiter, loginSubmit);
+// prihlásenie / registrácia cez Google (zobrazí sa len s GOOGLE_CLIENT_ID/SECRET)
+const googleAuth = require('../controllers/googleAuth.controller');
+router.get('/auth/google', loginLimiter, googleAuth.start);
+router.get('/auth/google/callback', loginLimiter, googleAuth.callback);
 router.get('/register', registerPage);
 router.post('/register', registerLimiter, registerSubmit);
 router.get('/forgot-password', forgotPasswordPage);
@@ -128,6 +132,7 @@ router.get('/leagues/:id/edit', requireLogin, editLeaguePage);
 router.post('/leagues/:id/edit', requireLogin, editLeagueSubmit);
 router.post('/leagues/:id/delete', requireLogin, deleteLeagueSubmit);
 router.post('/leagues/:id/leave', requireLogin, leaveLeagueSubmit);
+router.post('/leagues/:id/joker', requireLogin, jokerSubmit);
 router.get('/leagues/:id/members', requireLogin, leagueMembersPage);
 router.post('/leagues/:id/members/:userId', requireLogin, leagueMemberAction);
 router.post('/leagues/:id/end', requireLogin, endLeagueSubmit);

@@ -535,6 +535,33 @@ const deleteLeagueSubmit = asyncHandler(async (req, res) => {
   res.redirect('/seasons/' + seasonId);
 });
 
+// POST /leagues/:id/joker — zapnúť/vypnúť žolíka (správca ligy)
+const jokerSubmit = asyncHandler(async (req, res) => {
+  const userId = Number(req.session.userId);
+  const league = await League.findByPk(req.params.id, { include: [{ model: Season, attributes: ['id', 'creatorId', 'mode'] }] });
+  if (!league) return res.redirect('/seasons');
+  if (!(await isLeagueManager(league, userId))) {
+    return res.status(403).render('error-page', { message: 'Nemáš oprávnenie upraviť túto ligu.' });
+  }
+  const on = req.body.jokerEnabled === 'on' || req.body.jokerEnabled === 'true';
+  league.jokerEnabled = on;
+  await league.save();
+  // vypnutie: zruš žolíky na zápasoch, ktoré ešte nie sú vyhodnotené (už
+  // pridelené dvojnásobné body ostávajú)
+  if (!on) {
+    const rounds = await Round.findAll({ where: { leagueId: league.id }, attributes: ['id'] });
+    if (rounds.length) {
+      const open = await Match.findAll({
+        where: { roundId: { [Sequelize.Op.in]: rounds.map((r) => r.id) }, status: { [Sequelize.Op.ne]: 'finished' } },
+        attributes: ['id'],
+      });
+      if (open.length) await Tip.update({ isJoker: false }, { where: { matchId: { [Sequelize.Op.in]: open.map((m) => m.id) }, isJoker: true }, hooks: false });
+    }
+  }
+  const back = league.Season && league.Season.mode === 'standalone' ? `/seasons/${league.seasonId}/manage` : `/leagues/${league.id}/manage`;
+  res.redirect(back + '?saved=joker#scoring');
+});
+
 // POST /leagues/:id/leave
 const leaveLeagueSubmit = asyncHandler(async (req, res) => {
   const userId = Number(req.session.userId);
@@ -699,4 +726,4 @@ const manageLeaguePage = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { isLeagueManager, leagueDetailPage, joinLeagueSubmit, createLeaguePage, createLeagueSubmit, editLeaguePage, editLeagueSubmit, deleteLeagueSubmit, leaveLeagueSubmit, leagueMembersPage, leagueMemberAction, endLeagueSubmit, manageLeaguePage };
+module.exports = { jokerSubmit, isLeagueManager, leagueDetailPage, joinLeagueSubmit, createLeaguePage, createLeagueSubmit, editLeaguePage, editLeagueSubmit, deleteLeagueSubmit, leaveLeagueSubmit, leagueMembersPage, leagueMemberAction, endLeagueSubmit, manageLeaguePage };

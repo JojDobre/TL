@@ -27,7 +27,9 @@
     </div>
     <div class="bn-actions">
       <% if (open.length) { %><button class="a-btn gold" type="button" data-kolo-go><svg class="i" width="18" height="18"><use href="#i-ball"/></svg><%= t('noti.tip') %></button>
+      <% } else if (share) { %><button class="a-btn gold" type="button" data-share-card="<%= JSON.stringify(share) %>"><svg class="i" width="18" height="18"><use href="#i-share"/></svg><%= t('share.btn') %></button>
       <% } else { %><button class="a-btn ghost" type="button" onclick="document.querySelector('[data-tab=rebricek]').click()"><%= t('kolo.board') %></button><% } %>
+      <% if (open.length && share) { %><button class="bn-ib" type="button" data-share-card="<%= JSON.stringify(share) %>" aria-label="<%= t('share.btn') %>"><svg class="i"><use href="#i-share"/></svg></button><% } %>
       <a class="bn-ib" href="/app/liga/<%= league.id %>" aria-label="<%= t('kolo.openLeague') %>"><svg class="i"><use href="#i-trophy"/></svg></a>
       <button class="bn-ib" type="button" data-kolo-menu aria-label="<%= t('kolo.menu') %>"><svg class="i"><use href="#i-list"/></svg></button>
     </div>
@@ -77,6 +79,7 @@
       <div class="a-row"><span style="flex:1"><%= t('liga.winner') %></span><b class="a-num"><%= scoring.correctWinner %> <%= t('common.pts') %></b></div>
       <div class="a-row"><span style="flex:1"><%= t('liga.diff') %></span><b class="a-num"><%= scoring.goalDifference %> <%= t('common.pts') %></b></div>
       <div class="a-row"><span style="flex:1"><%= t('liga.goals') %></span><b class="a-num"><%= scoring.correctGoals %> <%= t('common.pts') %></b></div>
+      <% if (jokerOn) { %><div class="a-row"><span style="flex:1">🃏 <%= t('joker.rule') %></span><b class="a-num" style="color:var(--a-gold)">2×</b></div><% } %>
     </div>
   </section>
 
@@ -97,4 +100,5 @@
     <% } %>
   </template>
 </main>
+<script src="/js/share-card.js?v=<%= assetV %>" defer></script>
 <%- include('_foot') %>
